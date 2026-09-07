@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ta réponse est enregistrée — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    /* La page qu'atteint le coach en cliquant dans l'e-mail. Elle reprend
+       `auth-layout` : c'est la seule mise en page du projet qui s'affiche sans
+       session, et le coach n'est justement pas connecté en y arrivant.
+
+       Le ton reste celui de l'e-mail (tutoiement) : cette page en est la suite
+       immédiate, à quelques centièmes de seconde du clic. Les pages d'auth
+       vouvoient — l'écart est assumé, il suit d'où l'on vient. */
+
+    .answer-mark {
+      width: 72px; height: 72px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px; margin: 0 auto; color: var(--white);
+    }
+    .answer-mark--yes     { background: var(--green); }
+    .answer-mark--no      { background: var(--dark-3); }
+    .answer-mark--expired { background: rgba(255,107,53,0.15); color: var(--orange); }
+    .answer-mark--invalid { background: var(--dark-6); color: var(--dark-3); }
+
+    /* Le récapitulatif : ce qui vient d'être enregistré, en toutes lettres.
+       Le coach a cliqué depuis sa boîte mail, souvent sans relire l'e-mail —
+       la page doit redire pour quelle équipe et quelle journée, sans quoi il
+       ne peut pas vérifier qu'il n'a pas répondu pour la mauvaise. */
+    .recap {
+      background: var(--dark-6); border-radius: 10px;
+      padding: var(--p1) var(--p2); text-align: left;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .recap-row { display: flex; justify-content: space-between; gap: var(--p1); font-size: var(--text-tiny); }
+    .recap-label { color: var(--dark-3); }
+    .recap-value { color: var(--dark-1); font-weight: 700; text-align: right; }
+
+    .answer-status {
+      font-size: var(--text-tiny); font-weight: 700;
+      letter-spacing: 0.4px; text-transform: uppercase;
+    }
+    .answer-status--yes { color: #3F6B5C; }   /* --green assombri : lisible sur --dark-6 */
+    .answer-status--no  { color: var(--dark-3); }
+
+    .switch-note { font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.6; }
+    .btn-switch {
+      background: transparent; color: var(--dark-2);
+      border: 1px solid var(--dark-4); border-radius: 10px;
+      width: 100%; min-height: 40px; padding: var(--p1) var(--p2);
+      font-family: var(--font-body); font-size: var(--text-small);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-switch:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* ── Sélecteur de maquette ── */
+    .demo-switcher {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10;
+      background: var(--dark-6); border: 1px dashed var(--dark-4); border-radius: 8px;
+      padding: var(--p05) var(--p1);
+      display: flex; gap: var(--p05); align-items: center; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); margin-right: var(--p05); }
+    .state-pill {
+      border: 1px solid var(--dark-4); background: var(--white); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); color: var(--dark-2); cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body x-data="{ etat: 'oui' }">
+
+  <!-- Sélecteur de maquette (hors livrable) -->
+  <div class="demo-switcher">
+    <span class="demo-switcher-label">Aperçu maquette :</span>
+    <button class="state-pill" :class="{ active: etat === 'oui' }"      @click="etat = 'oui'">Présence confirmée</button>
+    <button class="state-pill" :class="{ active: etat === 'non' }"      @click="etat = 'non'">Absence enregistrée</button>
+    <button class="state-pill" :class="{ active: etat === 'expire' }"   @click="etat = 'expire'">Sondage clos</button>
+    <button class="state-pill" :class="{ active: etat === 'invalide' }" @click="etat = 'invalide'">Lien inconnu</button>
+  </div>
+
+  <div class="auth-layout">
+    <div class="auth-left">
+
+      <!-- ── Présence confirmée ─────────────────────────────────── -->
+      <div class="auth-card flex-col gap-1 text-center" x-show="etat === 'oui'" x-cloak>
+        <div class="answer-mark answer-mark--yes">✓</div>
+
+        <div class="pt-1">
+          <div class="h2-gras">C'est noté, tu es attendu</div>
+        </div>
+        <div class="pb-1">
+          <div class="text-small text-dark-2">
+            Ton équipe entre dans le tirage au sort de la journée. Tu recevras ton adversaire
+            dès que l'organisation aura lancé les appariements.
+          </div>
+        </div>
+
+        <div class="recap">
+          <div class="recap-row">
+            <span class="recap-label">Compétition</span>
+            <span class="recap-value">Ligue de Condate — Saison 5</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Journée</span>
+            <span class="recap-value">Journée 3 · du 12 au 19 octobre</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Ton équipe</span>
+            <span class="recap-value">Les Rats d'Égouts</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Ta réponse</span>
+            <span class="recap-value answer-status answer-status--yes">Présent</span>
+          </div>
+        </div>
+
+        <div class="pt-1 pb-1">
+          <div class="switch-note">
+            Un empêchement ? Tu peux te rétracter jusqu'au <strong>10 octobre</strong>.
+          </div>
+        </div>
+
+        <button class="btn-switch" @click="etat = 'non'">Finalement, je ne pourrai pas</button>
+
+        <div class="pt-1">
+          <button class="btn btn-text" onclick="window.location.href='app-competition-detail.html'">
+            Voir la compétition
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Absence enregistrée ────────────────────────────────── -->
+      <div class="auth-card flex-col gap-1 text-center" x-show="etat === 'non'" x-cloak>
+        <div class="answer-mark answer-mark--no">—</div>
+
+        <div class="pt-1">
+          <div class="h2-gras">Dommage, ce sera pour la prochaine</div>
+        </div>
+        <div class="pb-1">
+          <div class="text-small text-dark-2">
+            Ton équipe ne sera pas appariée pour cette journée. L'organisation est prévenue,
+            tu n'as rien d'autre à faire.
+          </div>
+        </div>
+
+        <div class="recap">
+          <div class="recap-row">
+            <span class="recap-label">Compétition</span>
+            <span class="recap-value">Ligue de Condate — Saison 5</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Journée</span>
+            <span class="recap-value">Journée 3 · du 12 au 19 octobre</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Ton équipe</span>
+            <span class="recap-value">Les Rats d'Égouts</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Ta réponse</span>
+            <span class="recap-value answer-status answer-status--no">Absent</span>
+          </div>
+        </div>
+
+        <div class="pt-1 pb-1">
+          <div class="switch-note">
+            Tu peux encore changer d'avis jusqu'au <strong>10 octobre</strong>.
+          </div>
+        </div>
+
+        <button class="btn-switch" @click="etat = 'oui'">Finalement, je serai là</button>
+
+        <div class="pt-1">
+          <button class="btn btn-text" onclick="window.location.href='app-competition-detail.html'">
+            Voir la compétition
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Sondage clos ───────────────────────────────────────────
+           Le lien a bien été reconnu, mais l'échéance est passée. Dire
+           « lien expiré » laisserait croire à une panne ; le coach doit
+           comprendre que c'est la date qui a tranché, et à qui parler. -->
+      <div class="auth-card flex-col gap-1 text-center" x-show="etat === 'expire'" x-cloak>
+        <div class="answer-mark answer-mark--expired">⏳</div>
+
+        <div class="pt-1">
+          <div class="h2-gras">Le sondage est clos</div>
+        </div>
+        <div class="pb-1">
+          <div class="text-small text-dark-2">
+            Les réponses pour la journée 3 étaient attendues avant le <strong>10 octobre</strong>.
+            Les appariements ont peut-être déjà été tirés.
+          </div>
+        </div>
+
+        <div class="recap">
+          <div class="recap-row">
+            <span class="recap-label">Journée</span>
+            <span class="recap-value">Journée 3 · du 12 au 19 octobre</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Ton équipe</span>
+            <span class="recap-value">Les Rats d'Égouts</span>
+          </div>
+          <div class="recap-row">
+            <span class="recap-label">Dernière réponse reçue</span>
+            <span class="recap-value">aucune</span>
+          </div>
+        </div>
+
+        <div class="pt-1 pb-1">
+          <div class="switch-note">
+            Si tu peux venir malgré tout, préviens un organisateur : il peut encore
+            t'ajouter à la journée.
+          </div>
+        </div>
+
+        <button class="btn btn-outline" onclick="window.location.href='app-competition-detail.html'">
+          Voir la compétition
+        </button>
+      </div>
+
+      <!-- ── Lien inconnu ───────────────────────────────────────────
+           Jeton illisible, révoqué, ou tronqué par le client mail. On ne dit
+           pas si le jeton a existé : la page est publique. -->
+      <div class="auth-card flex-col gap-1 text-center" x-show="etat === 'invalide'" x-cloak>
+        <div class="answer-mark answer-mark--invalid">?</div>
+
+        <div class="pt-1">
+          <div class="h2-gras">Ce lien ne mène nulle part</div>
+        </div>
+        <div class="pb-2">
+          <div class="text-small text-dark-2">
+            Il est peut-être incomplet — certains logiciels de messagerie coupent les
+            adresses longues. Réessaie depuis l'e-mail d'origine, ou réponds directement
+            depuis la page de la compétition une fois connecté.
+          </div>
+        </div>
+
+        <button class="btn btn-outline" onclick="window.location.href='auth-login.html'">
+          Me connecter
+        </button>
+      </div>
+
+    </div>
+
+    <div class="auth-right">
+      <div class="fancy-logo">
+        <div class="fancy-logo-emblem">
+          <div class="fancy-logo-emblem-inner">BBC</div>
+        </div>
+        <div class="fancy-logo-title">Blood Bowl<br>Club</div>
+        <div class="fancy-logo-subtitle">La plateforme de gestion<br>de vos ligues de Blood Bowl</div>
+        <div class="fancy-logo-dots">
+          <div class="fancy-logo-dot"></div>
+          <div class="fancy-logo-dot"></div>
+          <div class="fancy-logo-dot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

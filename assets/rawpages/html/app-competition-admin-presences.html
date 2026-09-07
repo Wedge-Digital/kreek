@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Présences — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    /* ── Layout ──
+       Repris tel quel de app-competition-admin-schedule.html : l'onglet
+       Présences vit dans le même bandeau et les mêmes onglets que ses voisins.
+       Toute divergence ici se lirait comme une erreur, pas comme une intention. */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Banner (partagé) ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--white); }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs (partagé) ── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px;
+      padding: 6px; border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1); border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Panneaux (partagé) ── */
+    .admin-panel {
+      background: var(--white); border-radius: 12px;
+      padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; gap: var(--p1); }
+    .panel-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover:not(:disabled) { opacity: 0.9; }
+    .btn-primary-sm:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .btn-danger-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-3);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
+
+    .info-note { font-size: var(--text-tiny); color: var(--dark-3); display: flex; align-items: center; gap: 6px; }
+
+    /* ── Sélecteur de maquette ── */
+    .demo-switcher {
+      background: var(--dark-6); border: 1px dashed var(--dark-4); border-radius: 8px;
+      padding: var(--p05) var(--p1);
+      display: flex; gap: var(--p05); align-items: center; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); margin-right: var(--p05); }
+    .state-pill {
+      border: 1px solid var(--dark-4); background: var(--white); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); color: var(--dark-2); cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    /* ── Split journées / campagne ──
+       Même géométrie que l'onglet Calendrier : la colonne des journées est au
+       même endroit d'un onglet à l'autre, donc l'œil ne se réoriente pas. */
+    .presence-layout { display: flex; gap: var(--p2); align-items: flex-start; }
+
+    .round-sidebar {
+      width: 236px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 4px;
+      background: var(--white); border-radius: 12px; padding: var(--p1);
+    }
+    .round-sidebar-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+      padding: 0 8px var(--p1) 8px;
+      border-bottom: 2px solid var(--dark-5); margin-bottom: 4px;
+    }
+    .round-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      cursor: pointer; transition: all 0.12s;
+      text-decoration: none; border: 1px solid transparent;
+      background: none; width: 100%; text-align: left; font: inherit;
+    }
+    .round-item:hover { background: var(--dark-7); }
+    .round-item.active { background: rgba(0,48,73,0.06); border-color: var(--main-blue); }
+    .round-item-num {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      flex-shrink: 0; background: var(--dark-6); color: var(--dark-2);
+    }
+    .round-item-body { flex: 1; min-width: 0; }
+    .round-item-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .round-item-meta { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+    /* Le point d'état du sondage. Une pastille et non une couleur de fond :
+       l'état de la journée (repos, jouée) occupe déjà le carré du numéro. */
+    .round-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .round-dot--none    { background: var(--dark-4); }
+    .round-dot--running { background: var(--orange); }
+    .round-dot--closed  { background: var(--main-blue); }
+    .round-dot--paired  { background: var(--green); }
+    .round-item--rest .round-item-name { color: var(--dark-3); font-style: italic; }
+
+    .presence-panel { flex: 1; display: flex; flex-direction: column; gap: var(--p2); min-width: 0; }
+
+    /* ── En-tête de la journée ── */
+    .round-head {
+      background: var(--white); border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+    }
+    .round-head-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); }
+    .round-head-dates { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 3px; }
+    .round-head-main { flex: 1; min-width: 0; }
+    .round-badge {
+      font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+      background: rgba(0,48,73,0.08); color: var(--main-blue);
+    }
+
+    /* ── Bandeau de campagne ── */
+    .campaign-bar {
+      display: flex; align-items: center; gap: var(--p2); flex-wrap: wrap;
+    }
+    .campaign-bar-main { flex: 1; min-width: 220px; }
+    .campaign-state {
+      font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.4px;
+      text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .campaign-state--running { color: var(--orange); }
+    .campaign-state--closed  { color: var(--main-blue); }
+    .campaign-state--paired  { color: var(--green); }
+    .campaign-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 6px; line-height: 1.5; }
+    .campaign-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Avancement des réponses ──
+       Une barre segmentée plutôt que trois grands nombres : la question de
+       l'organisateur n'est pas « combien de présents » mais « ai-je assez de
+       réponses pour tirer ». Une proportion répond ; trois compteurs isolés
+       obligent à faire la division de tête. Les comptes exacts vivent dans
+       l'en-tête de chaque colonne, là où ils servent à trier. */
+    .answer-bar {
+      display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+      background: var(--dark-5); margin-top: var(--p1);
+    }
+    .answer-seg--yes  { background: var(--green); }
+    .answer-seg--no   { background: var(--red); }
+    .answer-seg--none { background: var(--dark-4); }
+    .answer-legend {
+      display: flex; gap: var(--p2); flex-wrap: wrap;
+      font-size: var(--text-tiny); color: var(--dark-2); margin-top: 8px;
+    }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-swatch { width: 10px; height: 10px; border-radius: 3px; }
+
+    /* ── Les trois colonnes ── */
+    .presence-columns {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--p1);
+      align-items: start;
+    }
+    .presence-col {
+      background: var(--white); border-radius: 12px; padding: var(--p1);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .col-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 8px var(--p1) 8px; border-bottom: 2px solid var(--dark-5);
+      margin-bottom: 4px;
+    }
+    .col-head-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .col-head-name { font-family: var(--font-title); font-size: var(--text-small); font-weight: 700; color: var(--dark-1); flex: 1; }
+    .col-head-count {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      background: var(--dark-6); border-radius: 20px; padding: 2px 10px;
+    }
+
+    .team-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px; border-radius: 8px; transition: background 0.12s;
+    }
+    .team-card:hover { background: var(--dark-7); }
+    .team-avatar {
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 13px;
+      color: var(--white); background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+    }
+    .team-card-body { flex: 1; min-width: 0; }
+    .team-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .team-coach { font-size: 11px; color: var(--dark-3); margin-top: 2px; }
+    .team-when { font-size: 11px; color: var(--dark-3); white-space: nowrap; }
+    /* Corriger une réponse tient en un clic, et sans calque : deux boutons
+       posés sur la carte plutôt qu'un menu au « ⋯ ». Un menu aurait demandé un
+       `x-data` par carte et un calque qu'un parent en `overflow` peut rogner —
+       le tout pour ajouter un clic à chaque correction. */
+    .team-acts { display: flex; gap: 4px; flex-shrink: 0; }
+    .team-act {
+      border: 1px solid var(--dark-5); background: var(--white);
+      color: var(--dark-2); border-radius: 6px;
+      font-family: var(--font-body); font-size: 11px; font-weight: 600;
+      padding: 4px 9px; cursor: pointer; white-space: nowrap;
+      transition: all 0.12s;
+    }
+    .team-act:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    /* Une réponse posée par l'organisateur et non par le coach doit se
+       distinguer d'une réponse reçue : c'est la seule ligne dont il est
+       lui-même la source, et le tirage la comptera comme les autres. */
+    .team-flag {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+      background: rgba(0,48,73,0.08); color: var(--main-blue); white-space: nowrap;
+    }
+    .col-note {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      text-align: center; padding: var(--p2) var(--p1); line-height: 1.5;
+    }
+
+    /* ── Lancement (état vierge) ── */
+    .launch-grid { display: flex; gap: var(--p2); align-items: flex-start; flex-wrap: wrap; }
+    .launch-main { flex: 1.4; min-width: 260px; display: flex; flex-direction: column; gap: var(--p1); }
+    .launch-side { flex: 1; min-width: 240px; }
+    .launch-lead { font-size: var(--text-small); color: var(--dark-2); line-height: 1.6; }
+    .launch-steps { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+    .launch-step { display: flex; gap: 10px; align-items: flex-start; font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.5; }
+    .launch-step-num {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      background: var(--dark-6); color: var(--dark-2);
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--p1); }
+    .form-label { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-2); }
+    .form-hint { font-size: 11px; color: var(--dark-3); line-height: 1.5; }
+    .date-input {
+      border: 1px solid var(--dark-5); border-radius: 7px;
+      padding: 8px 10px; font-size: var(--text-tiny); color: var(--dark-1);
+      font-family: var(--font-body); background: var(--white);
+    }
+    .date-input:focus { outline: 2px solid var(--main-blue); outline-offset: 1px; border-color: var(--main-blue); }
+    .check-row { display: flex; gap: 8px; align-items: flex-start; font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.4; }
+    .recipients-box {
+      background: var(--dark-6); border-radius: 10px; padding: var(--p1);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .recipients-line { display: flex; justify-content: space-between; font-size: var(--text-tiny); }
+    .recipients-label { color: var(--dark-3); }
+    .recipients-value { color: var(--dark-1); font-weight: 700; }
+    .link-inline {
+      font-size: var(--text-tiny); color: var(--link-blue);
+      text-decoration: none; font-weight: 600;
+    }
+    .link-inline:hover { text-decoration: underline; }
+
+    /* ── Tirage ── */
+    .draw-note {
+      background: rgba(0,48,73,0.05); border-radius: 8px;
+      padding: var(--p1); font-size: var(--text-tiny);
+      color: var(--dark-2); line-height: 1.6;
+    }
+    .draw-list { display: flex; flex-direction: column; }
+    .draw-row {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: 12px 8px; border-bottom: 1px solid var(--dark-5);
+    }
+    .draw-row:last-child { border-bottom: none; }
+    .draw-num {
+      width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0;
+      background: var(--dark-6); color: var(--dark-2);
+      font-family: var(--font-title); font-weight: 700; font-size: 11px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .draw-teams { flex: 1; font-size: var(--text-tiny); color: var(--dark-1); font-weight: 600; }
+    .draw-vs { color: var(--dark-3); font-weight: 400; padding: 0 8px; }
+    .draw-tag {
+      font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .draw-tag--new    { background: rgba(98,149,132,0.14); color: #3F6B5C; }
+    .draw-tag--rematch{ background: rgba(255,107,53,0.14); color: #B8410F; }
+    .draw-tag--bye    { background: var(--dark-6); color: var(--dark-2); }
+    .draw-row--bye .draw-teams { color: var(--dark-2); }
+    .draw-swap {
+      border: none; background: none; color: var(--dark-3);
+      cursor: pointer; font-size: var(--text-tiny); padding: 2px 6px; border-radius: 4px;
+    }
+    .draw-row:hover .draw-swap { color: var(--link-blue); }
+    .draw-swap:hover { background: rgba(0,99,247,0.08); }
+
+    /* ── Défection après le tirage ──
+       Une seule rencontre est touchée, et les autres ne bougent pas. Les coachs
+       concernés ont déjà noté leur adversaire : refaire le tirage entier pour
+       une défection ferait trois mécontents pour en soulager un. */
+    .alert-box {
+      display: flex; align-items: flex-start; gap: var(--p1);
+      background: rgba(255,107,53,0.10); border-radius: 10px;
+      padding: var(--p1) var(--p2);
+    }
+    .alert-mark {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      background: var(--orange); color: var(--white);
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .alert-text { flex: 1; font-size: var(--text-tiny); color: var(--dark-1); line-height: 1.5; }
+
+    .draw-row--dropped .draw-teams { color: var(--dark-3); text-decoration: line-through; }
+    .draw-tag--dropped  { background: rgba(224,32,32,0.12); color: #A81717; }
+    /* La rencontre que le système propose en remplacement : teintée, pas
+       encadrée. Un filet coloré la ferait passer pour un avertissement alors
+       qu'elle est la sortie de secours. */
+    .draw-row--proposed { background: rgba(0,48,73,0.05); border-radius: 8px; }
+    .draw-tag--proposed { background: rgba(0,48,73,0.10); color: var(--main-blue); }
+
+    /* ── Journée appariée ── */
+    .done-box {
+      display: flex; align-items: center; gap: var(--p1);
+      background: rgba(98,149,132,0.10); border-radius: 10px; padding: var(--p1) var(--p2);
+    }
+    .done-mark {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      background: var(--green); color: var(--white);
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .done-text { flex: 1; font-size: var(--text-tiny); color: var(--dark-1); line-height: 1.5; }
+
+    /* ── Sous 768px : les colonnes s'empilent, la liste des journées passe en
+         bandeau défilant. Le breakpoint unique du projet. ── */
+    @media (max-width: 768px) {
+      .presence-layout { flex-direction: column; }
+      .round-sidebar { width: 100%; flex-direction: row; overflow-x: auto; gap: 6px; }
+      .round-sidebar-title { display: none; }
+      .round-item { width: auto; flex-shrink: 0; }
+      .presence-columns { grid-template-columns: 1fr; }
+      .campaign-actions { width: 100%; }
+      .campaign-actions button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container" x-data="{ etat: 'vierge' }">
+
+          <!-- ══ Sélecteur de maquette (hors livrable) ══════════════ -->
+          <div class="demo-switcher">
+            <span class="demo-switcher-label">Aperçu maquette :</span>
+            <button class="state-pill" :class="{ active: etat === 'vierge' }"  @click="etat = 'vierge'">Aucun sondage</button>
+            <button class="state-pill" :class="{ active: etat === 'encours' }" @click="etat = 'encours'">Sondage en cours</button>
+            <button class="state-pill" :class="{ active: etat === 'clos' }"    @click="etat = 'clos'">Sondage clos</button>
+            <button class="state-pill" :class="{ active: etat === 'tirage' }"  @click="etat = 'tirage'">Tirage proposé</button>
+            <button class="state-pill" :class="{ active: etat === 'apparie' }" @click="etat = 'apparie'">Journée appariée</button>
+            <button class="state-pill" :class="{ active: etat === 'defection' }" @click="etat = 'defection'">Défection après tirage</button>
+          </div>
+
+          <!-- ══ Banner ════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab" href="app-competition-admin.html">📋 Résumé</a>
+            <a class="admin-tab" href="app-competition-admin-enrollments.html">📋 Inscriptions</a>
+            <a class="admin-tab" href="app-competition-admin-groups.html">🎲 Poules</a>
+            <a class="admin-tab" href="app-competition-admin-schedule.html">📅 Calendrier</a>
+            <a class="admin-tab active" href="#">📣 Présences</a>
+            <a class="admin-tab" href="app-competition-admin-settings.html">⚙️ Paramètres</a>
+          </div>
+
+          <div class="presence-layout">
+
+            <!-- ══ Colonne des journées ═══════════════════════════ -->
+            <div class="round-sidebar">
+              <div class="round-sidebar-title">Journées</div>
+
+              <button class="round-item">
+                <div class="round-item-num">1</div>
+                <div class="round-item-body">
+                  <div class="round-item-name">Journée 1</div>
+                  <div class="round-item-meta">12 présents · appariée</div>
+                </div>
+                <span class="round-dot round-dot--paired"></span>
+              </button>
+
+              <button class="round-item">
+                <div class="round-item-num">2</div>
+                <div class="round-item-body">
+                  <div class="round-item-name">Journée 2</div>
+                  <div class="round-item-meta">11 présents · appariée</div>
+                </div>
+                <span class="round-dot round-dot--paired"></span>
+              </button>
+
+              <button class="round-item round-item--rest">
+                <div class="round-item-num">—</div>
+                <div class="round-item-body">
+                  <div class="round-item-name">Trêve d'automne</div>
+                  <div class="round-item-meta">Journée de repos</div>
+                </div>
+              </button>
+
+              <button class="round-item active">
+                <div class="round-item-num">3</div>
+                <div class="round-item-body">
+                  <div class="round-item-name">Journée 3</div>
+                  <div class="round-item-meta"
+                       x-text="{ vierge: 'Aucun sondage', encours: '10 réponses sur 14', clos: '9 présents · clos', tirage: '9 présents · clos', apparie: '4 matchs créés', defection: '1 défection à traiter' }[etat]"></div>
+                </div>
+                <span class="round-dot"
+                      :class="{ 'round-dot--none': etat === 'vierge', 'round-dot--running': etat === 'encours' || etat === 'defection', 'round-dot--closed': etat === 'clos' || etat === 'tirage', 'round-dot--paired': etat === 'apparie' }"></span>
+              </button>
+
+              <button class="round-item">
+                <div class="round-item-num">4</div>
+                <div class="round-item-body">
+                  <div class="round-item-name">Journée 4</div>
+                  <div class="round-item-meta">Aucun sondage</div>
+                </div>
+                <span class="round-dot round-dot--none"></span>
+              </button>
+
+              <button class="round-item">
+                <div class="round-item-num">5</div>
+                <div class="round-item-body">
+                  <div class="round-item-name">Journée 5</div>
+                  <div class="round-item-meta">Aucun sondage</div>
+                </div>
+                <span class="round-dot round-dot--none"></span>
+              </button>
+            </div>
+
+            <!-- ══ Panneau de la journée ══════════════════════════ -->
+            <div class="presence-panel">
+
+              <!-- En-tête de journée, commun à tous les états -->
+              <div class="round-head">
+                <div class="round-head-main">
+                  <div class="round-head-title">Journée 3</div>
+                  <div class="round-head-dates">Du 12 au 19 octobre 2026</div>
+                </div>
+                <span class="round-badge">Plage</span>
+              </div>
+
+              <!-- ─────────────────────────────────────────────────────
+                   ÉTAT 1 — aucun sondage lancé sur cette journée.
+                   L'état vide enseigne le mécanisme : trois lignes suffisent
+                   à dire ce que le bouton déclenche, et personne n'a besoin
+                   d'essayer pour savoir. -->
+              <div class="admin-panel" x-show="etat === 'vierge'" x-cloak>
+                <div class="panel-header">
+                  <div class="panel-title">Sonder les présences</div>
+                </div>
+
+                <div class="launch-grid">
+                  <div class="launch-main">
+                    <div class="launch-lead">
+                      Aucun sondage n'a été lancé pour cette journée.
+                    </div>
+                    <div class="launch-steps">
+                      <div class="launch-step">
+                        <span class="launch-step-num">1</span>
+                        <span>Chaque coach reçoit un e-mail par équipe engagée, avec deux boutons : <strong>je viens</strong> ou <strong>je ne viens pas</strong>. Un clic suffit, sans se connecter.</span>
+                      </div>
+                      <div class="launch-step">
+                        <span class="launch-step-num">2</span>
+                        <span>Les réponses arrivent ici au fil de l'eau. Vous pouvez relancer ceux qui n'ont pas répondu, ou trancher à leur place.</span>
+                      </div>
+                      <div class="launch-step">
+                        <span class="launch-step-num">3</span>
+                        <span>Une fois le sondage clos, le tirage au sort apparie les présents en évitant les équipes qui se sont déjà rencontrées.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="launch-side">
+                    <div class="recipients-box">
+                      <div class="recipients-line">
+                        <span class="recipients-label">Équipes engagées</span>
+                        <span class="recipients-value">14</span>
+                      </div>
+                      <div class="recipients-line">
+                        <span class="recipients-label">Coachs destinataires</span>
+                        <span class="recipients-value">12</span>
+                      </div>
+                      <div class="recipients-line">
+                        <span class="recipients-label">Sans adresse connue</span>
+                        <span class="recipients-value">0</span>
+                      </div>
+                    </div>
+
+                    <div class="form-row" style="margin-top: var(--p1);">
+                      <label class="form-label" for="deadline">Date limite de réponse</label>
+                      <input class="date-input" id="deadline" type="date" value="2026-10-10">
+                      <span class="form-hint">Passé cette date, les liens des e-mails ne répondent plus et le sondage se clôt tout seul.</span>
+                    </div>
+
+                    <div class="check-row">
+                      <input type="checkbox" id="relance" checked>
+                      <label for="relance">Relancer automatiquement les sans-réponse la veille de l'échéance</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="panel-header">
+                  <a class="link-inline" href="../email/email-sondage-presence.html">Voir l'e-mail qui sera envoyé →</a>
+                  <button class="btn-primary-sm" @click="etat = 'encours'">Lancer le sondage · 12 e-mails</button>
+                </div>
+              </div>
+
+              <!-- ─────────────────────────────────────────────────────
+                   ÉTATS 2 et 3 — sondage en cours, puis clos.
+                   Même écran : ce qui change est le bandeau et les actions
+                   offertes. Un second écran forcerait à réapprendre la même
+                   lecture. -->
+              <div class="admin-panel" x-show="etat === 'encours' || etat === 'clos'" x-cloak>
+                <div class="campaign-bar">
+                  <div class="campaign-bar-main">
+                    <span class="campaign-state"
+                          :class="etat === 'encours' ? 'campaign-state--running' : 'campaign-state--closed'"
+                          x-text="etat === 'encours' ? 'Sondage en cours' : 'Sondage clos'"></span>
+                    <div class="campaign-sub" x-show="etat === 'encours'">
+                      Envoyé le 5 octobre à 12 coachs · Réponses attendues avant le <strong>10 octobre</strong>
+                      <br>Relance automatique programmée le 9 octobre.
+                    </div>
+                    <div class="campaign-sub" x-show="etat === 'clos'">
+                      Envoyé le 5 octobre, clos le 10 octobre · Les liens des e-mails ne répondent plus.
+                    </div>
+                  </div>
+                  <div class="campaign-actions">
+                    <button class="btn-outline-sm" x-show="etat === 'encours'">Relancer les 4 sans-réponse</button>
+                    <button class="btn-danger-sm"  x-show="etat === 'encours'" @click="etat = 'clos'">Clore le sondage</button>
+                    <button class="btn-outline-sm" x-show="etat === 'clos'">Rouvrir le sondage</button>
+                    <button class="btn-primary-sm" @click="etat = 'tirage'">Apparier les présents</button>
+                  </div>
+                </div>
+
+                <div>
+                  <!-- 10 réponses sur 14 en cours ; 11 une fois clos, la 11ᵉ
+                       ayant été posée par l'organisateur. -->
+                  <div class="answer-bar">
+                    <div class="answer-seg--yes"  :style="etat === 'encours' ? 'flex: 8'  : 'flex: 9'"></div>
+                    <div class="answer-seg--no"   style="flex: 2"></div>
+                    <div class="answer-seg--none" :style="etat === 'encours' ? 'flex: 4'  : 'flex: 3'"></div>
+                  </div>
+                  <div class="answer-legend">
+                    <span class="legend-item"><span class="legend-swatch" style="background: var(--green);"></span>
+                      <span x-text="etat === 'encours' ? '8 présents' : '9 présents'"></span></span>
+                    <span class="legend-item"><span class="legend-swatch" style="background: var(--red);"></span>2 absents</span>
+                    <span class="legend-item"><span class="legend-swatch" style="background: var(--dark-4);"></span>
+                      <span x-text="etat === 'encours' ? '4 sans réponse' : '3 sans réponse'"></span></span>
+                    <span class="legend-item" style="color: var(--dark-3);">sur 14 équipes engagées</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="presence-columns" x-show="etat === 'encours' || etat === 'clos'" x-cloak>
+
+                <!-- ── Présents ── -->
+                <div class="presence-col">
+                  <div class="col-head">
+                    <span class="col-head-swatch" style="background: var(--green);"></span>
+                    <span class="col-head-name">Présents</span>
+                    <span class="col-head-count" x-text="etat === 'encours' ? '8' : '9'"></span>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar">RE</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Les Rats d'Égouts</div>
+                      <div class="team-coach">Kervadec</div>
+                    </div>
+                    <span class="team-when">5 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--green), var(--main-blue));">NR</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Nurgle's Rotters</div>
+                      <div class="team-coach">Pacha</div>
+                    </div>
+                    <span class="team-when">6 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, #6F35A5, var(--dark-1));">GÉ</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Gouffre Éternel</div>
+                      <div class="team-coach">Mortadell</div>
+                    </div>
+                    <span class="team-when">6 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--orange), var(--dark-0));">MK</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Marteaux de Karak</div>
+                      <div class="team-coach">reQQy</div>
+                    </div>
+                    <span class="team-when">5 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--green), var(--dark-0));">SR</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Sylvanie Rangers</div>
+                      <div class="team-coach">Tackorion</div>
+                    </div>
+                    <span class="team-when">5 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--red), var(--dark-0));">CC</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Les Crocs du Chaos</div>
+                      <div class="team-coach">Lepandawan · 2 équipes</div>
+                    </div>
+                    <span class="team-when">6 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--dark-2), var(--main-blue));">EN</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Étoiles de Naggaroth</div>
+                      <div class="team-coach">Kervadec · 2 équipes</div>
+                    </div>
+                    <span class="team-when">6 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--main-blue), #6F35A5);">BF</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Bordeciel FC</div>
+                      <div class="team-coach">Ghorak</div>
+                    </div>
+                    <span class="team-when">7 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <!-- Réponse posée par l'organisateur après clôture -->
+                  <div class="team-card" x-show="etat === 'clos'">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--dark-0), var(--green));">OG</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Orcs de Gorbag</div>
+                      <div class="team-coach">Bramble</div>
+                    </div>
+                    <span class="team-flag">saisi par vous</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+                </div>
+
+                <!-- ── Absents ── -->
+                <div class="presence-col">
+                  <div class="col-head">
+                    <span class="col-head-swatch" style="background: var(--red);"></span>
+                    <span class="col-head-name">Absents</span>
+                    <span class="col-head-count">2</span>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--dark-3), var(--dark-1));">CB</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Les Choux de Bruxelles</div>
+                      <div class="team-coach">Lepandawan · 2 équipes</div>
+                    </div>
+                    <span class="team-when">6 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer présente">présent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--dark-1), var(--light-1));">TO</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Tombeaux d'Ombre</div>
+                      <div class="team-coach">Slyth</div>
+                    </div>
+                    <span class="team-when">5 oct.</span>
+                    <div class="team-acts"><button class="team-act" title="Marquer présente">présent</button></div>
+                  </div>
+
+                  <div class="col-note" style="padding-top: var(--p1);">
+                    Une équipe absente ne sera pas appariée.
+                  </div>
+                </div>
+
+                <!-- ── Sans réponse ── -->
+                <div class="presence-col">
+                  <div class="col-head">
+                    <span class="col-head-swatch" style="background: var(--dark-4);"></span>
+                    <span class="col-head-name">Sans réponse</span>
+                    <span class="col-head-count" x-text="etat === 'encours' ? '4' : '3'"></span>
+                  </div>
+
+                  <div class="team-card" x-show="etat === 'encours'">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--dark-0), var(--green));">OG</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Orcs de Gorbag</div>
+                      <div class="team-coach">Bramble</div>
+                    </div>
+                    <div class="team-acts"><button class="team-act" title="Marquer présente">présent</button><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--dark-2), var(--dark-0));">SS</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Skavenblight Scramblers</div>
+                      <div class="team-coach">Nina</div>
+                    </div>
+                    <div class="team-acts"><button class="team-act" title="Marquer présente">présent</button><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--light-1), var(--main-blue));">LF</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Les Fossoyeurs</div>
+                      <div class="team-coach">Odilon</div>
+                    </div>
+                    <div class="team-acts"><button class="team-act" title="Marquer présente">présent</button><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="team-card">
+                    <div class="team-avatar" style="background: linear-gradient(135deg, var(--red-badge), var(--dark-1));">FS</div>
+                    <div class="team-card-body">
+                      <div class="team-name">Fer &amp; Sang</div>
+                      <div class="team-coach">Vhalt</div>
+                    </div>
+                    <div class="team-acts"><button class="team-act" title="Marquer présente">présent</button><button class="team-act" title="Marquer absente">absent</button></div>
+                  </div>
+
+                  <div class="col-note" style="padding-top: var(--p1);">
+                    Sans réponse, une équipe est traitée comme absente par le tirage.
+                  </div>
+                </div>
+              </div>
+
+              <!-- ─────────────────────────────────────────────────────
+                   ÉTAT 4 — le tirage proposé, avant écriture.
+                   Rien n'est écrit au calendrier tant que l'organisateur n'a
+                   pas validé : un tirage est une proposition, et le refuser
+                   doit coûter un clic, pas une suppression. -->
+              <div class="admin-panel" x-show="etat === 'tirage'" x-cloak>
+                <div class="panel-header">
+                  <div class="panel-title">Tirage proposé — 9 présents</div>
+                  <span class="info-note">Rien n'est encore écrit au calendrier</span>
+                </div>
+
+                <div class="draw-note">
+                  <strong>3 duels inédits</strong> et <strong>1 revanche</strong>.
+                  Les Marteaux de Karak et Les Crocs du Chaos se sont déjà rencontrés
+                  en journée 1 : toutes les autres paires possibles étaient elles aussi
+                  déjà jouées, ou mobilisaient une équipe déjà appariée.
+                  <br>Le nombre de présents étant impair, une équipe est exemptée — elle est
+                  tirée au sort parmi celles qui ne l'ont jamais été.
+                </div>
+
+                <div class="draw-list">
+                  <div class="draw-row">
+                    <div class="draw-num">1</div>
+                    <div class="draw-teams">Les Rats d'Égouts <span class="draw-vs">contre</span> Sylvanie Rangers</div>
+                    <span class="draw-tag draw-tag--new">1<sup>re</sup> rencontre</span>
+                    <button class="draw-swap" title="Échanger cette équipe avec une autre">échanger</button>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">2</div>
+                    <div class="draw-teams">Nurgle's Rotters <span class="draw-vs">contre</span> Bordeciel FC</div>
+                    <span class="draw-tag draw-tag--new">1<sup>re</sup> rencontre</span>
+                    <button class="draw-swap" title="Échanger cette équipe avec une autre">échanger</button>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">3</div>
+                    <div class="draw-teams">Gouffre Éternel <span class="draw-vs">contre</span> Étoiles de Naggaroth</div>
+                    <span class="draw-tag draw-tag--new">1<sup>re</sup> rencontre</span>
+                    <button class="draw-swap" title="Échanger cette équipe avec une autre">échanger</button>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">4</div>
+                    <div class="draw-teams">Marteaux de Karak <span class="draw-vs">contre</span> Les Crocs du Chaos</div>
+                    <span class="draw-tag draw-tag--rematch">2<sup>e</sup> rencontre · J1</span>
+                    <button class="draw-swap" title="Échanger cette équipe avec une autre">échanger</button>
+                  </div>
+                  <div class="draw-row draw-row--bye">
+                    <div class="draw-num">—</div>
+                    <div class="draw-teams">Orcs de Gorbag</div>
+                    <span class="draw-tag draw-tag--bye">exempte</span>
+                    <button class="draw-swap" title="Exempter une autre équipe">échanger</button>
+                  </div>
+                </div>
+
+                <div class="panel-header">
+                  <button class="btn-outline-sm" @click="etat = 'clos'">Annuler</button>
+                  <div style="display: flex; gap: 8px;">
+                    <button class="btn-outline-sm">Retirer au sort</button>
+                    <button class="btn-primary-sm" @click="etat = 'apparie'">Valider et écrire au calendrier</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ─────────────────────────────────────────────────────
+                   ÉTAT 5 — la journée est appariée. -->
+              <div class="admin-panel" x-show="etat === 'apparie'" x-cloak>
+                <div class="done-box">
+                  <div class="done-mark">✓</div>
+                  <div class="done-text">
+                    <strong>4 matchs créés</strong> pour la journée 3, le 10 octobre.
+                    Orcs de Gorbag est exempte.
+                    <br>Les coachs concernés le verront sur la page de la compétition.
+                  </div>
+                  <a class="link-inline" href="app-competition-admin-schedule.html">Ouvrir le calendrier →</a>
+                </div>
+
+                <div class="draw-list">
+                  <div class="draw-row">
+                    <div class="draw-num">1</div>
+                    <div class="draw-teams">Les Rats d'Égouts <span class="draw-vs">contre</span> Sylvanie Rangers</div>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">2</div>
+                    <div class="draw-teams">Nurgle's Rotters <span class="draw-vs">contre</span> Bordeciel FC</div>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">3</div>
+                    <div class="draw-teams">Gouffre Éternel <span class="draw-vs">contre</span> Étoiles de Naggaroth</div>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">4</div>
+                    <div class="draw-teams">Marteaux de Karak <span class="draw-vs">contre</span> Les Crocs du Chaos</div>
+                  </div>
+                  <div class="draw-row draw-row--bye">
+                    <div class="draw-num">—</div>
+                    <div class="draw-teams">Orcs de Gorbag</div>
+                    <span class="draw-tag draw-tag--bye">exempte</span>
+                  </div>
+                </div>
+
+                <div class="panel-header">
+                  <span class="info-note">Le détail des réponses reste consultable.</span>
+                  <button class="btn-danger-sm" @click="etat = 'clos'">Défaire le tirage</button>
+                </div>
+              </div>
+
+              <!-- ─────────────────────────────────────────────────────
+                   ÉTAT 6 — une équipe se décommande après le tirage.
+                   Le cas de la veille au soir, et celui qui décide de la forme
+                   du tirage : seule la rencontre touchée est refaite. Les trois
+                   autres coachs ont déjà noté leur adversaire — refaire le
+                   tirage entier pour une défection ferait trois mécontents pour
+                   en soulager un.
+
+                   L'exempte reprend du service, et c'est tout l'intérêt du
+                   retirage partiel sur « l'adversaire devient exempt » : il
+                   reste un match à jouer là où l'autre règle en perdait deux. -->
+              <div class="admin-panel" x-show="etat === 'defection'" x-cloak>
+                <div class="alert-box">
+                  <div class="alert-mark">!</div>
+                  <div class="alert-text">
+                    <strong>Sylvanie Rangers s'est décommandée</strong> le 9 octobre, après le tirage.
+                    Sa rencontre tombe, et <strong>Les Rats d'Égouts</strong> se retrouve sans adversaire.
+                    <br>Les trois autres matchs ne sont pas touchés.
+                  </div>
+                </div>
+
+                <div class="draw-note">
+                  <strong>Orcs de Gorbag</strong> était exempte : elle peut reprendre la place laissée
+                  libre, et la journée retombe alors sur <strong>4 matchs, sans exemption</strong>.
+                  Les deux équipes ne se sont jamais rencontrées.
+                </div>
+
+                <div class="draw-list">
+                  <div class="draw-row draw-row--dropped">
+                    <div class="draw-num">1</div>
+                    <div class="draw-teams">Les Rats d'Égouts <span class="draw-vs">contre</span> Sylvanie Rangers</div>
+                    <span class="draw-tag draw-tag--dropped">annulé · absente</span>
+                  </div>
+                  <div class="draw-row draw-row--proposed">
+                    <div class="draw-num">1</div>
+                    <div class="draw-teams">Les Rats d'Égouts <span class="draw-vs">contre</span> Orcs de Gorbag</div>
+                    <span class="draw-tag draw-tag--proposed">proposé · 1<sup>re</sup> rencontre</span>
+                    <button class="draw-swap" title="Choisir un autre adversaire">échanger</button>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">2</div>
+                    <div class="draw-teams">Nurgle's Rotters <span class="draw-vs">contre</span> Bordeciel FC</div>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">3</div>
+                    <div class="draw-teams">Gouffre Éternel <span class="draw-vs">contre</span> Étoiles de Naggaroth</div>
+                  </div>
+                  <div class="draw-row">
+                    <div class="draw-num">4</div>
+                    <div class="draw-teams">Marteaux de Karak <span class="draw-vs">contre</span> Les Crocs du Chaos</div>
+                  </div>
+                </div>
+
+                <div class="panel-header">
+                  <button class="btn-outline-sm">Laisser Les Rats d'Égouts exempte</button>
+                  <button class="btn-primary-sm" @click="etat = 'apparie'">Valider la nouvelle rencontre</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>[x-cloak] { display: none !important; }</style>
+</body>
+</html>

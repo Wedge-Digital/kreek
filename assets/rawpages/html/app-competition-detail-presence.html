@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ligue de Condate — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ─── Layout ─── */
+    .detail-layout    { display: flex; gap: var(--p1); height: 100%; }
+    .detail-left      { flex: 1; }
+    .detail-right     { flex: 4; overflow-y: auto; }
+
+    /* ─── Left panel ─── */
+    .left-panel {
+      background: var(--white); border-radius: 10px; padding: var(--p2);
+      display: flex; flex-direction: column; gap: var(--p2); position: sticky; top: 0;
+    }
+    .league-banner {
+      border-radius: 8px; height: 120px;
+      background: linear-gradient(135deg, #003049 0%, #555770 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 36px; font-weight: 900; color: var(--white);
+    }
+    .league-meta       { display: flex; flex-direction: column; gap: 8px; }
+    .league-meta-item  { display: flex; justify-content: space-between; font-size: var(--text-tiny); }
+    .league-meta-label { color: var(--dark-3); }
+    .league-meta-value { color: var(--dark-1); font-weight: 500; }
+
+    /* ─── Navigation d'onglets mobile ─── */
+    /* Masquée par défaut : le desktop garde la barre d'onglets classique. */
+    .tab-select { display: none; }
+    .tab-select-label {
+      font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 700;
+    }
+    .tab-select-input {
+      width: 100%; padding: 10px var(--p1); border-radius: 8px;
+      border: 1px solid var(--dark-5); background: var(--white);
+      font-family: inherit; font-size: var(--text-small); font-weight: 600; color: var(--dark-0);
+    }
+
+    /* ─── Standings ─── */
+    .standings-table { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+    .standings-head  {
+      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
+      padding: 12px 16px; gap: 8px; align-items: center;
+      background: var(--dark-0); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .standings-row {
+      display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
+      padding: 12px 16px; gap: 8px; align-items: center;
+      border-bottom: 1px solid var(--dark-6); font-size: var(--text-tiny);
+    }
+    .standings-row:last-child      { border-bottom: none; }
+    .standings-row:nth-child(even) { background: var(--dark-7); }
+    .standings-row:hover           { background: var(--dark-6); cursor: pointer; }
+    .s-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
+    /* Variante à colonne Bonus — une colonne de plus, déclarée ici plutôt qu'en
+       style inline : un style inline ne peut pas être surchargé par une media
+       query, et le CLAUDE.md les interdit dans les templates. */
+    .standings-table--bonus .standings-head,
+    .standings-table--bonus .standings-row {
+      grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px 60px;
+    }
+    .s-team {
+      font-weight: 600; color: var(--dark-1); font-size: var(--text-small);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .s-num  { text-align: center; color: var(--dark-2); }
+    .s-pts  { text-align: center; font-weight: 700; color: var(--dark-0); }
+
+    /* ─── Classement détaillé ─── */
+    /* Le nombre de colonnes dépend des critères de départage actifs de la
+       compétition (1 à 7) : d'où un vrai <table> plutôt qu'une grille à
+       template fixe, dans un conteneur qui scrolle horizontalement. */
+    .sd-scroll { overflow-x: auto; background: var(--white); border-radius: 10px; }
+    .sd-table  { border-collapse: collapse; width: 100%; min-width: 720px; font-size: var(--text-tiny); }
+    .sd-table th, .sd-table td { padding: 10px 8px; text-align: center; white-space: nowrap; }
+    .sd-group-head th {
+      background: var(--dark-1); color: var(--white);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      border-left: 1px solid var(--dark-0);
+    }
+    .sd-col-head th {
+      background: var(--dark-0); color: var(--white); position: sticky; top: 0;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .sd-table tbody tr { border-bottom: 1px solid var(--dark-6); }
+    .sd-table tbody tr:last-child      { border-bottom: none; }
+    .sd-table tbody tr:nth-child(even) { background: var(--dark-7); }
+    .sd-rank  { color: var(--dark-3); font-weight: 700; }
+    .sd-team  { text-align: left !important; font-weight: 600; color: var(--dark-1); font-size: var(--text-small); }
+    .sd-num   { color: var(--dark-2); }
+    .sd-bonus { color: var(--dark-2); font-weight: 600; }
+    /* Les points manuels entrent dans le total AVANT les départages : ils sont
+       donc dans le groupe « Points », pas à côté des départages. Signés, comme
+       le bonus — ils se lisent comme une contribution, jamais comme un état. */
+    .sd-manual        { color: var(--dark-2); font-weight: 600; }
+    .sd-manual--zero  { color: var(--dark-4); font-weight: 400; }
+    /* Un point manuel non nul est un lien vers les lignes de cette équipe : on
+       voit un chiffre qui surprend, on veut savoir d'où il vient. Le zéro n'en
+       est pas un — il n'y a rien à aller lire. */
+    .sd-manual a {
+      color: inherit; text-decoration: none;
+      border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+    }
+    .sd-manual a:hover { border-bottom-style: solid; }
+    .sd-manual--plus  a { color: var(--green); }
+    .sd-manual--minus a { color: var(--red); }
+
+    /* Bandeau d'action au-dessus du classement — réservé aux administrateurs */
+    .st-actions {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1); flex-wrap: wrap; margin-bottom: var(--p1);
+    }
+    .st-actions-note { font-size: var(--text-tiny); color: var(--dark-3); }
+    .st-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 16px; border-radius: 7px; cursor: pointer;
+      border: 1px solid var(--dark-4); background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; font-family: inherit;
+      text-decoration: none; transition: all 0.15s;
+    }
+    .st-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* Colonne « Man. » du classement simple. Une colonne plutôt qu'une pastille
+       collée au nom : le total doit s'additionner sous les yeux du lecteur, et
+       une pastille hors du tableau laisse la soustraction à faire de tête. */
+    .s-man--zero  { color: var(--dark-4); }
+    .s-man a {
+      color: inherit; text-decoration: none;
+      border-bottom: 1px dotted currentColor; padding-bottom: 1px;
+    }
+    .s-man a:hover { border-bottom-style: solid; }
+    .s-man--plus  a { color: var(--green);  font-weight: 600; }
+    .s-man--minus a { color: var(--red);    font-weight: 600; }
+    .sd-total { font-weight: 700; color: var(--dark-0); background: rgba(0,0,0,0.03); }
+    /* Bloc des départages : visuellement détaché des colonnes de points. */
+    .sd-tb        { color: var(--dark-2); background: rgba(51,102,255,0.04); }
+    .sd-tb-first  { border-left: 2px solid var(--main-blue); }
+    /* Colonne qui a effectivement départagé une égalité. */
+    .sd-decisive  { color: var(--main-blue); font-weight: 700; }
+    .sd-tied      { color: var(--dark-3); }
+    .sd-legend    { font-size: var(--text-tiny); color: var(--dark-3); margin-top: var(--p1); line-height: 1.6; }
+    .sd-legend b  { color: var(--dark-2); }
+
+    /* ─── Section block (shared) ─── */
+    .section-block        { background: var(--white); border-radius: 10px; overflow: hidden; margin-bottom: var(--p1); }
+    .section-block-header {
+      padding: 14px var(--p2); border-bottom: 1px solid var(--dark-5);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--dark-7);
+    }
+    .section-label { font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--dark-1); text-transform: uppercase; letter-spacing: 0.8px; }
+    .section-sub   { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    /* ─── Match widget (Résultats) ─── */
+    .match-row {
+      display: grid; grid-template-columns: 1fr 140px 1fr;
+      align-items: center; padding: 12px var(--p2);
+      border-bottom: 1px solid var(--dark-6);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .match-row:last-child      { border-bottom: none; }
+    .match-row:hover           { background: var(--dark-7); }
+    .match-row.in-progress-row { background: rgba(0,48,73,0.02); }
+
+    .team-side       { display: flex; align-items: center; gap: 10px; }
+    .team-side-away  { justify-content: flex-end; }
+
+    .team-logo {
+      width: 64px; height: 64px; border-radius: 10px; flex-shrink: 0;
+      overflow: hidden; background: var(--dark-5);
+    }
+    .team-logo-initials {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 16px; font-weight: 900; color: var(--white);
+      background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+    }
+    .team-logo img   { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .team-info       { display: flex; flex-direction: column; gap: 2px; }
+    .team-info-right { text-align: right; }
+    .team-name       { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .team-sub        { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    .score-block  { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .score-tds    { display: flex; align-items: center; gap: 6px; }
+    .score-num    { font-family: var(--font-title); font-size: var(--h5); font-weight: 900; color: var(--dark-0); min-width: 18px; text-align: center; }
+    .score-sep    { color: var(--dark-3); }
+    .score-cas    { display: flex; align-items: center; gap: 4px; }
+    .cas-num      { font-size: var(--text-tiny); color: var(--dark-3); min-width: 14px; text-align: center; }
+    .cas-sep      { font-size: var(--text-tiny); color: var(--dark-4); }
+    .match-date   { font-size: var(--text-tiny); color: var(--dark-4); margin-top: 2px; }
+
+    .status-badge             { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 6px; padding: 3px 10px; }
+    .status-badge-in-progress { color: var(--white); background: var(--main-blue); animation: pulse-badge 2s ease-in-out infinite; }
+    @keyframes pulse-badge    { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
+
+    .in-progress-block { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .report-link {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--main-blue);
+      border: 1.5px solid var(--main-blue); border-radius: 6px;
+      padding: 3px 10px; text-decoration: none; white-space: nowrap; transition: all 0.15s;
+    }
+    .report-link:hover { background: var(--main-blue); color: var(--white); }
+
+    /* ─── Calendar rows ─── */
+    .cal-row {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; gap: 12px; padding: 10px var(--p2);
+      border-bottom: 1px solid var(--dark-6);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .cal-row:last-child { border-bottom: none; }
+    .cal-row:hover      { background: var(--dark-7); }
+
+    .cal-team      { display: flex; align-items: center; gap: 8px; }
+    .cal-team-away { justify-content: flex-end; }
+
+    .cal-logo {
+      width: 38px; height: 38px; border-radius: 7px; flex-shrink: 0;
+      overflow: hidden; background: var(--dark-5);
+    }
+    .cal-logo-initials {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--white);
+      background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+    }
+    .cal-logo img   { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cal-name       { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .cal-coach      { font-size: var(--text-tiny); color: var(--dark-3); }
+    .cal-name-right  { text-align: right; }
+    .cal-coach-right { text-align: right; }
+
+    .cal-center { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+    .cal-vs     { font-family: var(--font-title); font-size: 11px; font-weight: 900; color: var(--dark-4); letter-spacing: 0.5px; }
+    .cal-date   { font-size: 10px; color: var(--dark-3); white-space: nowrap; }
+
+    /* ─── Misc ─── */
+    .scroll-sentinel { padding: var(--p2); text-align: center; color: var(--dark-4); font-size: var(--text-tiny); }
+    .tab-placeholder { background: var(--white); border-radius: 10px; padding: var(--p2); color: var(--dark-3); font-size: var(--text-small); text-align: center; }
+    .text-center     { text-align: center; }
+
+    /* ─── Responsive ───────────────────────────────────────────────────────
+       Un seul breakpoint de référence : 768px, conformément au CLAUDE.md.
+       Les valeurs 900px et 640px de la version précédente de cette maquette
+       ont été fondues ici — elles introduisaient un palier intermédiaire que
+       le reste de l'application ne connaît pas.
+       Le palier 400px est conservé pour les seules lignes de match, dont la
+       densité ne tient plus sur les très petits écrans. */
+
+    @media (max-width: 768px) {
+      /* Chrome global — repris de `layout-app.css`, qui masque déjà la barre
+         latérale et le menu sous 768px. Dupliqué ici uniquement pour que
+         l'aperçu de la maquette soit fidèle : en production, aucune page de
+         contenu n'a à s'en occuper (CLAUDE.md, « Chrome global »). */
+      .sidebar  { display: none !important; }
+      .menu-bar { display: none !important; }
+      .app-layout { display: block; height: auto; overflow: visible; }
+      .main-area  { margin-left: 0; width: 100%; }
+
+      /* Le panneau de gauche passe au-dessus du contenu, en bandeau compact :
+         l'information reste lisible d'un coup d'œil, sans interaction ni
+         défilement supplémentaire. La masquer la rendrait inatteignable sur
+         mobile. */
+      .detail-layout { flex-direction: column; gap: var(--p1); }
+      .detail-left   { flex: none; }
+      .detail-right  { flex: none; overflow-y: visible; }
+
+      .left-panel {
+        position: static; flex-direction: row; flex-wrap: wrap;
+        align-items: center; gap: var(--p1); padding: var(--p1);
+      }
+      .league-banner    { height: 44px; width: 44px; flex-shrink: 0; font-size: 14px; }
+      .league-meta      { flex-direction: row; width: 100%; gap: 0; }
+      .league-meta-item {
+        flex: 1; flex-direction: column; align-items: center; gap: 2px;
+        border-left: 1px solid var(--dark-6);
+      }
+      .league-meta-item:first-child { border-left: none; }
+
+      /* La barre d'onglets cède la place au sélecteur : 6 onglets dont un
+         libellé long ne tiennent pas, et une barre défilante cacherait les
+         quatre derniers. */
+      .tabs       { display: none; }
+      .tab-select { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--p1); }
+
+      /* Match en attente de saisie : le badge et le lien font 110px à eux deux
+         et venaient se coller au nom de l'équipe adverse. Ils passent sur leur
+         propre ligne, sous les deux équipes. */
+      /* `.match-row.in-progress-row` et non `.in-progress-row` seul : à
+         spécificité égale, la règle `.match-row` qui suit l'emporterait. */
+      .match-row.in-progress-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: "home away" "status status";
+        row-gap: 8px;
+      }
+      .in-progress-row .team-side              { grid-area: home; }
+      .in-progress-row .team-side-away         { grid-area: away; }
+      .in-progress-row .score-block            { grid-area: status; }
+      .in-progress-row .in-progress-block      { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+      /* Lignes de match et de calendrier */
+      .match-row        { grid-template-columns: 1fr 80px 1fr; padding: 8px 10px; gap: 4px; }
+      .team-logo        { width: 36px; height: 36px; border-radius: 6px; }
+      .team-logo-initials { font-size: 10px; }
+      .team-name        { font-size: 13px; }
+      .team-sub         { display: none; }
+      .team-side        { gap: 6px; }
+      .score-num        { font-size: 15px; min-width: 14px; }
+      .score-cas        { display: none; }
+      .match-date       { font-size: 10px; }
+      .status-badge     { font-size: 9px; padding: 2px 7px; }
+      .report-link      { font-size: 10px; padding: 2px 7px; }
+
+      .cal-row          { padding: 7px 10px; gap: 6px; }
+      .cal-logo         { width: 28px; height: 28px; border-radius: 5px; }
+      .cal-logo-initials { font-size: 8px; }
+      .cal-name         { font-size: 13px; }
+      .cal-coach        { display: none; }
+      .cal-team         { gap: 6px; }
+
+      /* Classement simple : colonnes numériques resserrées et nom tronqué
+         plutôt que replié sur trois lignes. Toutes les colonnes tiennent — les
+         masquer priverait le lecteur de la décomposition du total. */
+      .standings-head, .standings-row {
+        grid-template-columns: 22px 1fr 28px 28px 28px 28px 34px;
+        padding: 10px var(--p1); gap: 4px;
+      }
+      /* La colonne Bonus reçoit 40px : son en-tête est le plus long des huit
+         et débordait sur PTS à 30px. */
+      .standings-table--bonus .standings-head,
+      .standings-table--bonus .standings-row {
+        grid-template-columns: 20px 1fr 24px 22px 22px 22px 40px 30px;
+      }
+      .s-team { font-size: 13px; }
+
+      /* Le classement détaillé garde toutes ses colonnes : c'est un onglet de
+         vérification, en amputer une le viderait de son sens. Il défile dans
+         son propre conteneur — jamais le body. */
+      .sd-table { font-size: 10px; min-width: 640px; }
+      .sd-table th, .sd-table td { padding: 8px 6px; }
+
+      .section-block-header { padding: 10px; }
+    }
+
+    /* ─── Très petits écrans (≤ 400px) ─── */
+    @media (max-width: 400px) {
+      .match-row { grid-template-columns: 1fr 70px 1fr; }
+      .team-logo { display: none; }
+      .team-name { font-size: 12px; }
+      .cal-name  { font-size: 12px; }
+    }
+
+    /* ═══ Appel à présence ═══════════════════════════════════════════════
+       Ce que voit le coach connecté pendant qu'un sondage est ouvert. C'est le
+       second chemin de réponse : l'e-mail se perd, atterrit en indésirables, ou
+       arrive quand on n'a pas le temps — et le coach qui vient de toute façon
+       consulter le calendrier doit pouvoir répondre là, sans rouvrir sa boîte.
+
+       Au-dessus des onglets, pas dans le panneau de gauche : c'est une demande
+       qui expire, pas une donnée de la compétition. Le panneau de gauche est
+       une carte d'identité, il ne clignote pas. Et l'encart disparaît en entier
+       dès le sondage clos — rien ne reste à l'écran pour dire qu'il a existé.
+
+       Même vocabulaire que le bandeau de défection de l'écran d'admin : fond
+       teinté et pastille, sans filet latéral. Deux teintes pour deux natures —
+       orange tant qu'on attend une réponse, vert une fois qu'elle est donnée. */
+    /* Avant la règle d'affichage : `display: flex` posé sur une classe l'emporte
+       sur le `display: none` que l'agent utilisateur attache à `hidden`, et les
+       quatre variantes s'empilaient toutes à l'écran. */
+    .presence-call[hidden] { display: none; }
+    .presence-call {
+      display: flex; align-items: center; gap: var(--p1);
+      border-radius: 12px; padding: var(--p1) var(--p2);
+      margin-bottom: var(--p1);
+      background: rgba(255,107,53,0.10);
+    }
+    .presence-call--answered { background: rgba(98,149,132,0.12); }
+    .presence-call--declined { background: var(--dark-6); }
+
+    .pc-mark {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: var(--white); font-size: 17px;
+    }
+    .pc-mark--yes { background: #4A7364; }
+    .pc-mark--no  { background: var(--dark-3); }
+
+    .pc-main { flex: 1; min-width: 0; }
+    .pc-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+    }
+    .pc-sub { font-size: var(--text-tiny); color: var(--dark-2); margin-top: 4px; line-height: 1.5; }
+    .pc-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+
+    /* Le vert du projet (#629584) ne porte que 3,3:1 sous du blanc : assombri
+       ici comme dans l'e-mail, qui porte la même action. */
+    .pc-btn {
+      padding: 10px 18px; border-radius: 8px;
+      font-family: var(--font-body); font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: 1px solid transparent; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .pc-btn--yes { background: #4A7364; color: var(--white); }
+    .pc-btn--yes:hover { opacity: 0.9; }
+    .pc-btn--no {
+      background: var(--white); color: var(--dark-2); border-color: var(--dark-4);
+    }
+    .pc-btn--no:hover { border-color: var(--dark-2); }
+    .pc-btn--switch {
+      background: transparent; color: var(--dark-2); border-color: var(--dark-4);
+      font-weight: 600;
+    }
+    .pc-btn--switch:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    /* Deux équipes engagées : une ligne par équipe, chacune sa réponse.
+       C'est le cas qui interdit de raccourcir la réponse au coach — il vient
+       avec une équipe et pas l'autre, et un seul couple de boutons obligerait
+       à choisir pour les deux. */
+    .pc-teams { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .pc-team-row {
+      display: flex; align-items: center; gap: var(--p1);
+      background: var(--white); border-radius: 8px; padding: 10px var(--p1);
+    }
+    .pc-team-name { flex: 1; font-size: var(--text-tiny); font-weight: 700; color: var(--dark-1); }
+    .pc-team-state { font-size: var(--text-tiny); font-weight: 700; }
+    .pc-team-state--yes { color: #3F6B5C; }
+    .pc-team-state--no  { color: var(--dark-3); }
+    .pc-stack { display: flex; flex-direction: column; gap: var(--p1); width: 100%; }
+
+    /* ── Sélecteur de maquette ── */
+    .demo-switcher {
+      background: var(--dark-6); border: 1px dashed var(--dark-4); border-radius: 8px;
+      padding: var(--p05) var(--p1); margin-bottom: var(--p1);
+      display: flex; gap: var(--p05); align-items: center; flex-wrap: wrap;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); margin-right: var(--p05); }
+    .state-pill {
+      border: 1px solid var(--dark-4); background: var(--white); border-radius: 20px;
+      padding: 4px 12px; font-size: var(--text-tiny); color: var(--dark-2); cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    @media (max-width: 768px) {
+      .presence-call { flex-direction: column; align-items: stretch; }
+      .pc-actions { width: 100%; }
+      .pc-actions .pc-btn { flex: 1; }
+      .pc-team-row { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <!-- Menu bar -->
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <!-- Page content -->
+      <div class="page-content-wide">
+        <div class="detail-layout">
+
+          <!-- Left panel -->
+          <div class="detail-left">
+            <div class="left-panel card-shadow">
+              <div class="league-banner">LC</div>
+              <div>
+                <div class="h5-gras">Ligue de Condate</div>
+                <div class="text-tiny text-dark-2" style="margin-top:4px;">Saison 2024 · BB 2020</div>
+              </div>
+              <div class="league-meta">
+                <div class="league-meta-item">
+                  <span class="league-meta-label">Type</span>
+                  <span class="league-meta-value">Ligue</span>
+                </div>
+                <div class="league-meta-item">
+                  <span class="league-meta-label">Équipes</span>
+                  <span class="league-meta-value">12</span>
+                </div>
+                <div class="league-meta-item">
+                  <span class="league-meta-label">Journées</span>
+                  <span class="league-meta-value">8/22</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right panel -->
+          <div class="detail-right">
+
+            <!-- ══ Sélecteur de maquette (hors livrable) ══════════════ -->
+            <div class="demo-switcher">
+              <span class="demo-switcher-label">Aperçu maquette :</span>
+              <button class="state-pill active" data-pc="attente"  onclick="setPresence('attente')">Réponse attendue</button>
+              <button class="state-pill"        data-pc="present"  onclick="setPresence('present')">A répondu présent</button>
+              <button class="state-pill"        data-pc="absent"   onclick="setPresence('absent')">A répondu absent</button>
+              <button class="state-pill"        data-pc="deux"     onclick="setPresence('deux')">Deux équipes engagées</button>
+              <button class="state-pill"        data-pc="aucun"    onclick="setPresence('aucun')">Aucun sondage ouvert</button>
+            </div>
+
+            <!-- ══ Appel à présence ═══════════════════════════════════
+                 Un seul de ces blocs est affiché à la fois. En production,
+                 c'est le serveur qui choisit — le coach ne voit jamais les
+                 autres, et l'état « aucun sondage » ne rend rien du tout. -->
+
+            <div class="presence-call" data-pc-state="attente">
+              <div class="pc-main">
+                <div class="pc-title">Seras-tu là pour la journée 3 ?</div>
+                <div class="pc-sub">
+                  Du 12 au 19 octobre · réponse attendue avant le <strong>10 octobre</strong>
+                  · 9 équipes ont déjà confirmé
+                </div>
+              </div>
+              <div class="pc-actions">
+                <button class="pc-btn pc-btn--yes" onclick="setPresence('present')">Je serai là</button>
+                <button class="pc-btn pc-btn--no"  onclick="setPresence('absent')">Je ne pourrai pas</button>
+              </div>
+            </div>
+
+            <div class="presence-call presence-call--answered" data-pc-state="present" hidden>
+              <div class="pc-mark pc-mark--yes">&check;</div>
+              <div class="pc-main">
+                <div class="pc-title">Tu es attendu à la journée 3</div>
+                <div class="pc-sub">
+                  Les Rats d'Égouts · réponse enregistrée le 6 octobre.
+                  Ton adversaire te sera communiqué après le tirage.
+                </div>
+              </div>
+              <div class="pc-actions">
+                <button class="pc-btn pc-btn--switch" onclick="setPresence('absent')">Finalement, je ne pourrai pas</button>
+              </div>
+            </div>
+
+            <div class="presence-call presence-call--declined" data-pc-state="absent" hidden>
+              <div class="pc-mark pc-mark--no">&ndash;</div>
+              <div class="pc-main">
+                <div class="pc-title">Tu ne joues pas la journée 3</div>
+                <div class="pc-sub">
+                  Les Rats d'Égouts · absence enregistrée le 6 octobre.
+                  Tu peux revenir sur ta réponse jusqu'au <strong>10 octobre</strong>.
+                </div>
+              </div>
+              <div class="pc-actions">
+                <button class="pc-btn pc-btn--switch" onclick="setPresence('present')">Finalement, je serai là</button>
+              </div>
+            </div>
+
+            <div class="presence-call" data-pc-state="deux" hidden>
+              <div class="pc-stack">
+                <div class="pc-main">
+                  <div class="pc-title">Seras-tu là pour la journée 3 ?</div>
+                  <div class="pc-sub">
+                    Tu engages deux équipes dans cette compétition — réponds pour chacune.
+                    Réponse attendue avant le <strong>10 octobre</strong>.
+                  </div>
+                </div>
+                <div class="pc-teams">
+                  <div class="pc-team-row">
+                    <span class="pc-team-name">Les Crocs du Chaos</span>
+                    <span class="pc-team-state pc-team-state--yes">Présent</span>
+                    <button class="pc-btn pc-btn--switch">Changer</button>
+                  </div>
+                  <div class="pc-team-row">
+                    <span class="pc-team-name">Les Choux de Bruxelles</span>
+                    <div class="pc-actions">
+                      <button class="pc-btn pc-btn--yes">Je serai là</button>
+                      <button class="pc-btn pc-btn--no">Je ne pourrai pas</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5 onglets -->
+            <div class="tabs" style="margin-bottom: var(--p1);">
+              <div class="tab" data-tab="classement" onclick="showTab('classement', this)">Classement</div>
+              <div class="tab" data-tab="classement-detaille" onclick="showTab('classement-detaille', this)">Classement détaillé</div>
+              <div class="tab active" data-tab="resultats" onclick="showTab('resultats', this)">Résultats</div>
+              <div class="tab" data-tab="calendrier" onclick="showTab('calendrier', this)">Calendrier</div>
+              <div class="tab" data-tab="equipes" onclick="showTab('equipes', this)">Équipes</div>
+              <div class="tab" data-tab="stats" onclick="showTab('stats', this)">Statistiques</div>
+            </div>
+
+            <!-- Navigation d'onglets — mobile uniquement (≤ 768px).
+                 En production ce sera un <kreek-select>, composant imposé par le
+                 CLAUDE.md pour tout sélecteur. Ici un <select> natif : les
+                 maquettes sont explicitement autorisées à valider le rendu avec
+                 les contrôles natifs.
+                 Choisi plutôt qu'une barre défilante : avec 6 onglets dont un
+                 libellé long, on ne verrait que deux onglets sur un écran de
+                 375px, et le défilement horizontal passe largement inaperçu. -->
+            <div class="tab-select">
+              <span class="tab-select-label">Onglet</span>
+              <select class="tab-select-input" id="tab-nav" onchange="showTabFromSelect(this)">
+                <option value="classement">Classement</option>
+                <option value="classement-detaille">Classement détaillé</option>
+                <option value="resultats" selected>Résultats</option>
+                <option value="calendrier">Calendrier</option>
+                <option value="equipes">Équipes</option>
+                <option value="stats">Statistiques</option>
+              </select>
+            </div>
+
+            <!-- ── Classement ── -->
+            <div id="tab-classement" class="tab-content" style="display:none;">
+
+              <!-- Action du CLASSEMENT, donc répétée dans ses deux onglets et
+                   nulle part ailleurs. Au-dessus des onglets, elle se serait
+                   affichée sur Calendrier, Équipes et Statistiques, où elle n'a
+                   rien à faire. La duplication est le prix de cette justesse.
+                   Le bouton ne s'affiche qu'aux administrateurs ; la page qu'il
+                   ouvre est consultable par tous — un total qui ne s'explique
+                   pas est un total contesté. -->
+              <div class="st-actions">
+                <span class="st-actions-note">Une équipe porte des points attribués manuellement.</span>
+                <a class="st-btn" href="app-manual-ranking-points.html">⚖️ Points manuels</a>
+              </div>
+
+              <div class="standings-table card-shadow">
+                <div class="standings-head">
+                  <div>#</div><div>Équipe</div>
+                  <div class="text-center">MJ</div><div class="text-center">V</div>
+                  <div class="text-center">N</div><div class="text-center">D</div>
+                  <div class="text-center" title="Points attribués manuellement">Man.</div>
+                  <div class="text-center">Pts</div>
+                </div>
+                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">19</div></div>
+                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">17</div></div>
+                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">16</div></div>
+                <div class="standings-row"><div class="s-rank">4</div><div class="s-team">Dwarf Ironbreakers</div><div class="s-num">8</div><div class="s-num">4</div><div class="s-num">1</div><div class="s-num">3</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">13</div></div>
+                <div class="standings-row"><div class="s-rank">5</div><div class="s-team">Chaos Warriors</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">2</div><div class="s-num">3</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">11</div></div>
+                <div class="standings-row"><div class="s-rank">6</div><div class="s-team">Dark Elves Ravens</div><div class="s-num">8</div><div class="s-num">3</div><div class="s-num">1</div><div class="s-num">4</div><div class="s-num s-man s-man--minus"><a href="app-manual-ranking-points.html" title="Voir les points manuels de cette équipe">−1</a></div><div class="s-pts">10</div></div>
+              </div>
+            </div>
+
+            <!-- ── Classement — variante avec colonne Bonus (si la compétition définit des points bonus ; maquette de revue) ── -->
+            <div style="margin-top: var(--p3);">
+              <p class="section-label" style="margin-bottom: var(--p1);">Classement — variante avec points bonus (colonne conditionnelle, seulement si la compétition en définit)</p>
+              <div class="standings-table standings-table--bonus card-shadow">
+                <div class="standings-head">
+                  <div>#</div><div>Équipe</div>
+                  <div class="text-center">MJ</div><div class="text-center">V</div>
+                  <div class="text-center">N</div><div class="text-center">D</div>
+                  <div class="text-center">Bonus</div>
+                  <div class="text-center" title="Points attribués manuellement">Man.</div>
+                  <div class="text-center">Pts</div>
+                </div>
+                <div class="standings-row"><div class="s-rank">1</div><div class="s-team">🏆 Les Korrigans FC</div><div class="s-num">8</div><div class="s-num">6</div><div class="s-num">1</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">19</div></div>
+                <div class="standings-row"><div class="s-rank">2</div><div class="s-team">Orc Boyz United</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num">0</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">17</div></div>
+                <div class="standings-row"><div class="s-rank">3</div><div class="s-team">Skaven Speedsters</div><div class="s-num">8</div><div class="s-num">5</div><div class="s-num">1</div><div class="s-num">2</div><div class="s-num">1</div><div class="s-num s-man s-man--zero">—</div><div class="s-pts">16</div></div>
+              </div>
+            </div>
+
+            <!-- ── Classement — états vides (maquette de revue uniquement, hors bascule d'onglets réelle) ── -->
+            <div style="margin-top: var(--p3); padding-top: var(--p3); border-top: 2px dashed var(--dark-6);">
+              <p class="section-label" style="margin-bottom: var(--p1);">Classement — état vide : aucune équipe inscrite</p>
+              <div class="tab-empty-state card-shadow">
+                Aucune équipe dans la compétition.
+              </div>
+              <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement — état vide : équipes inscrites, aucun match joué</p>
+              <div class="tab-empty-state card-shadow">
+                Aucun match n'a encore été joué.
+              </div>
+              <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement — état d'erreur : règles de classement non configurées pour la saison</p>
+              <div class="table-error-zone card-shadow" style="padding: var(--p2);">
+                <p class="table-error">Impossible d'afficher le classement : les règles de classement ne sont pas configurées pour cette saison.</p>
+              </div>
+            </div>
+
+            <!-- ── Classement détaillé ── -->
+            <!-- Onglet de vérification : chaque nombre qui compose le total est
+                 exposé, puis les compteurs de départage dans l'ordre de priorité
+                 configuré pour la compétition. Lecture de gauche à droite. -->
+            <div id="tab-classement-detaille" class="tab-content" style="display:none;">
+
+              <!-- Action du CLASSEMENT, donc répétée dans ses deux onglets et
+                   nulle part ailleurs. Au-dessus des onglets, elle se serait
+                   affichée sur Calendrier, Équipes et Statistiques, où elle n'a
+                   rien à faire. La duplication est le prix de cette justesse.
+                   Le bouton ne s'affiche qu'aux administrateurs ; la page qu'il
+                   ouvre est consultable par tous — un total qui ne s'explique
+                   pas est un total contesté. -->
+              <div class="st-actions">
+                <span class="st-actions-note">Une équipe porte des points attribués manuellement.</span>
+                <a class="st-btn" href="app-manual-ranking-points.html">⚖️ Points manuels</a>
+              </div>
+              <div class="sd-scroll card-shadow">
+                <table class="sd-table">
+                  <thead>
+                    <tr class="sd-group-head">
+                      <th colspan="2"></th>
+                      <th colspan="4">Matchs</th>
+                      <th colspan="3">Points</th>
+                      <th colspan="4">Départages — ordre de priorité →</th>
+                    </tr>
+                    <tr class="sd-col-head">
+                      <th>#</th>
+                      <th class="sd-team">Équipe</th>
+                      <th title="Matchs joués">MJ</th>
+                      <th title="Gagnés">G</th>
+                      <th title="Nuls">N</th>
+                      <th title="Perdus">D</th>
+                      <th title="Points bonus cumulés">Bonus</th>
+                      <th title="Points attribués manuellement par un administrateur">Manuel</th>
+                      <th title="Total de points de classement — bonus et points manuels compris">Total</th>
+                      <th title="1er départage — Différence de touchdowns">1 · Δ TD</th>
+                      <th title="2e départage — Touchdowns marqués">2 · TD+</th>
+                      <th title="3e départage — Blessures infligées">3 · Bl.</th>
+                      <th title="4e départage — Touchdowns encaissés">4 · TD−</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="sd-rank">1</td>
+                      <td class="sd-team">🏆 Les Korrigans FC</td>
+                      <td class="sd-num">8</td><td class="sd-num">6</td><td class="sd-num">1</td><td class="sd-num">1</td>
+                      <td class="sd-bonus">+2</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">21</td>
+                      <td class="sd-tb sd-tb-first">+14</td><td class="sd-tb">24</td><td class="sd-tb">11</td><td class="sd-tb">10</td>
+                    </tr>
+                    <!-- Égalité à 17 points, départagée par la différence de TD -->
+                    <tr>
+                      <td class="sd-rank">2</td>
+                      <td class="sd-team">Orc Boyz United</td>
+                      <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">2</td><td class="sd-num">1</td>
+                      <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">17</td>
+                      <td class="sd-tb sd-tb-first sd-decisive">+9</td><td class="sd-tb">19</td><td class="sd-tb">8</td><td class="sd-tb">10</td>
+                    </tr>
+                    <tr>
+                      <td class="sd-rank">3</td>
+                      <td class="sd-team">Skaven Speedsters</td>
+                      <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">1</td><td class="sd-num">2</td>
+                      <td class="sd-bonus">+1</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">17</td>
+                      <td class="sd-tb sd-tb-first sd-decisive">+4</td><td class="sd-tb">18</td><td class="sd-tb">14</td><td class="sd-tb">14</td>
+                    </tr>
+                    <!-- Égalité non résolue par le 1er critère : on lit le 2e -->
+                    <tr>
+                      <td class="sd-rank">4</td>
+                      <td class="sd-team">Dwarf Ironbreakers</td>
+                      <td class="sd-num">8</td><td class="sd-num">4</td><td class="sd-num">1</td><td class="sd-num">3</td>
+                      <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">13</td>
+                      <td class="sd-tb sd-tb-first sd-tied">+2</td><td class="sd-tb sd-decisive">16</td><td class="sd-tb">9</td><td class="sd-tb">14</td>
+                    </tr>
+                    <tr>
+                      <td class="sd-rank">5</td>
+                      <td class="sd-team">Chaos Warriors</td>
+                      <td class="sd-num">8</td><td class="sd-num">4</td><td class="sd-num">1</td><td class="sd-num">3</td>
+                      <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">13</td>
+                      <td class="sd-tb sd-tb-first sd-tied">+2</td><td class="sd-tb sd-decisive">12</td><td class="sd-tb">6</td><td class="sd-tb">10</td>
+                    </tr>
+                    <!-- Deux équipes que TOUS les critères de départage donnaient
+                         ex æquo — même bonus, mêmes TD, mêmes blessures. C'est un
+                         point manuel qui les sépare, et il le fait AVANT les
+                         départages : il entre dans le total, pas après lui. -->
+                    <tr>
+                      <td class="sd-rank">6</td>
+                      <td class="sd-team">Wood Elves Wanderers</td>
+                      <td class="sd-num">8</td><td class="sd-num">3</td><td class="sd-num">1</td><td class="sd-num">4</td>
+                      <td class="sd-bonus">+1</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">11</td>
+                      <td class="sd-tb sd-tb-first">−3</td><td class="sd-tb">10</td><td class="sd-tb">7</td><td class="sd-tb">13</td>
+                    </tr>
+                    <tr>
+                      <td class="sd-rank">7</td>
+                      <td class="sd-team">Dark Elves Ravens</td>
+                      <td class="sd-num">8</td><td class="sd-num">3</td><td class="sd-num">1</td><td class="sd-num">4</td>
+                      <td class="sd-bonus">+1</td><td class="sd-manual sd-manual--minus"><a href="app-manual-ranking-points.html" title="Voir les points manuels de cette équipe">−1</a></td><td class="sd-total">10</td>
+                      <td class="sd-tb sd-tb-first">−3</td><td class="sd-tb">10</td><td class="sd-tb">7</td><td class="sd-tb">13</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="sd-legend">
+                <b>Bonus</b> : points bonus cumulés, déjà inclus dans le total. <b>Total</b> = points de victoire/nul/défaite + bonus.<br>
+                <b>Départages</b> : seuls les critères activés pour cette compétition sont affichés, dans leur ordre de priorité. En bleu, le critère qui a effectivement départagé une égalité de points.<br>
+                Deux équipes restent <b>ex æquo</b> (même rang) lorsque tous les critères activés donnent la même valeur.
+              </p>
+
+              <!-- ── Variante : les 7 critères de départage activés (pire cas de largeur) ── -->
+              <div style="margin-top: var(--p3);">
+                <p class="section-label" style="margin-bottom: var(--p1);">Classement détaillé — variante : 7 critères de départage activés (le tableau scrolle horizontalement)</p>
+                <div class="sd-scroll card-shadow">
+                  <table class="sd-table">
+                    <thead>
+                      <tr class="sd-group-head">
+                        <th colspan="2"></th>
+                        <th colspan="4">Matchs</th>
+                        <th colspan="3">Points</th>
+                        <th colspan="7">Départages — ordre de priorité →</th>
+                      </tr>
+                      <tr class="sd-col-head">
+                        <th>#</th>
+                        <th class="sd-team">Équipe</th>
+                        <th title="Matchs joués">MJ</th>
+                        <th title="Gagnés">G</th>
+                        <th title="Nuls">N</th>
+                        <th title="Perdus">D</th>
+                        <th title="Points bonus cumulés">Bonus</th>
+                        <th title="Points attribués manuellement">Manuel</th>
+                        <th title="Total — bonus et points manuels compris">Total</th>
+                        <th title="1er départage — Différence de touchdowns">1 · Δ TD</th>
+                        <th title="2e départage — Touchdowns marqués">2 · TD+</th>
+                        <th title="3e départage — Touchdowns encaissés">3 · TD−</th>
+                        <th title="4e départage — Blessures infligées">4 · Bl.</th>
+                        <th title="5e départage — Victoires">5 · V</th>
+                        <th title="6e départage — Fautes commises">6 · Fa.</th>
+                        <th title="7e départage — Réussites">7 · Réu.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="sd-rank">1</td>
+                        <td class="sd-team">🏆 Les Korrigans FC</td>
+                        <td class="sd-num">8</td><td class="sd-num">6</td><td class="sd-num">1</td><td class="sd-num">1</td>
+                        <td class="sd-bonus">+2</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">21</td>
+                        <td class="sd-tb sd-tb-first">+14</td><td class="sd-tb">24</td><td class="sd-tb">10</td><td class="sd-tb">11</td><td class="sd-tb">6</td><td class="sd-tb">4</td><td class="sd-tb">9</td>
+                      </tr>
+                      <tr>
+                        <td class="sd-rank">2</td>
+                        <td class="sd-team">Orc Boyz United</td>
+                        <td class="sd-num">8</td><td class="sd-num">5</td><td class="sd-num">2</td><td class="sd-num">1</td>
+                        <td class="sd-bonus">+0</td><td class="sd-manual sd-manual--zero">—</td><td class="sd-total">17</td>
+                        <td class="sd-tb sd-tb-first">+9</td><td class="sd-tb">19</td><td class="sd-tb">10</td><td class="sd-tb">8</td><td class="sd-tb">5</td><td class="sd-tb">7</td><td class="sd-tb">5</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- ── Classement détaillé — états vides et erreur (maquette de revue) ── -->
+              <div style="margin-top: var(--p3); padding-top: var(--p3); border-top: 2px dashed var(--dark-6);">
+                <p class="section-label" style="margin-bottom: var(--p1);">Classement détaillé — état vide : aucune équipe inscrite</p>
+                <div class="tab-empty-state card-shadow">
+                  Aucune équipe dans la compétition.
+                </div>
+                <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement détaillé — état vide : équipes inscrites, aucun match joué</p>
+                <div class="tab-empty-state card-shadow">
+                  Aucun match n'a encore été joué — tous les compteurs sont à zéro.
+                </div>
+                <p class="section-label" style="margin: var(--p2) 0 var(--p1);">Classement détaillé — état d'erreur : règles de classement non configurées</p>
+                <div class="table-error-zone card-shadow" style="padding: var(--p2);">
+                  <p class="table-error">Impossible d'afficher le classement détaillé : les règles de classement ne sont pas configurées pour cette saison.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Résultats ── -->
+            <div id="tab-resultats" class="tab-content">
+
+              <!-- Journée 8 — mixte -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 8</span>
+                  <span class="section-sub">4 matchs</span>
+                </div>
+
+                <!-- terminé -->
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">GN</div></div>
+                    <div class="team-info">
+                      <div class="team-name">Guerriers du Nord</div>
+                      <div class="team-sub">Nordiques · CoachAlpha</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds">
+                      <span class="score-num">2</span><span class="score-sep">–</span><span class="score-num">1</span>
+                    </div>
+                    <div class="score-cas">
+                      <span class="cas-num">3</span><span class="cas-sep">sor.</span><span class="cas-num">1</span>
+                    </div>
+                    <div class="match-date">18 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Chaos United</div>
+                      <div class="team-sub">ChaosBoss · Chaos</div>
+                    </div>
+                    <div class="team-logo"><div class="team-logo-initials">CU</div></div>
+                  </div>
+                </div>
+
+                <!-- en cours de saisie -->
+                <div class="match-row in-progress-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">WF</div></div>
+                    <div class="team-info">
+                      <div class="team-name">Waaagh! FC</div>
+                      <div class="team-sub">Orques · WaaghMaster</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="in-progress-block">
+                      <div class="status-badge status-badge-in-progress">En cours de saisie</div>
+                      <a href="#" class="report-link">Accéder au rapport →</a>
+                      <div class="match-date">18 mai</div>
+                    </div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Elfes Sylvains SC</div>
+                      <div class="team-sub">ElveRunner · Elfes</div>
+                    </div>
+                    <div class="team-logo"><div class="team-logo-initials">ES</div></div>
+                  </div>
+                </div>
+
+                <!-- terminé -->
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">NF</div></div>
+                    <div class="team-info">
+                      <div class="team-name">Nains de Fer</div>
+                      <div class="team-sub">Nains · IronBeard</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds">
+                      <span class="score-num">1</span><span class="score-sep">–</span><span class="score-num">1</span>
+                    </div>
+                    <div class="score-cas">
+                      <span class="cas-num">2</span><span class="cas-sep">sor.</span><span class="cas-num">2</span>
+                    </div>
+                    <div class="match-date">19 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Skavens du Sous-sol</div>
+                      <div class="team-sub">SkavRunner · Skavens</div>
+                    </div>
+                    <div class="team-logo"><div class="team-logo-initials">SD</div></div>
+                  </div>
+                </div>
+
+                <!-- terminé avec logo image -->
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><img src="https://placehold.co/64x64/003049/ffffff?text=HO" alt="HO"></div>
+                    <div class="team-info">
+                      <div class="team-name">Humains Ordinaires</div>
+                      <div class="team-sub">Humains · HumanCoach</div>
+                    </div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds">
+                      <span class="score-num">2</span><span class="score-sep">–</span><span class="score-num">0</span>
+                    </div>
+                    <div class="score-cas">
+                      <span class="cas-num">1</span><span class="cas-sep">sor.</span><span class="cas-num">4</span>
+                    </div>
+                    <div class="match-date">19 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right">
+                      <div class="team-name">Halflings United</div>
+                      <div class="team-sub">TinyCoach · Halflings</div>
+                    </div>
+                    <div class="team-logo"><img src="https://placehold.co/64x64/b41e1e/ffffff?text=HU" alt="HU"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Journée 7 -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 7</span>
+                  <span class="section-sub">4 matchs</span>
+                </div>
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">CU</div></div>
+                    <div class="team-info"><div class="team-name">Chaos United</div><div class="team-sub">Chaos · ChaosBoss</div></div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds"><span class="score-num">1</span><span class="score-sep">–</span><span class="score-num">2</span></div>
+                    <div class="score-cas"><span class="cas-num">4</span><span class="cas-sep">sor.</span><span class="cas-num">2</span></div>
+                    <div class="match-date">11 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right"><div class="team-name">Waaagh! FC</div><div class="team-sub">WaaghMaster · Orques</div></div>
+                    <div class="team-logo"><div class="team-logo-initials">WF</div></div>
+                  </div>
+                </div>
+                <div class="match-row">
+                  <div class="team-side">
+                    <div class="team-logo"><div class="team-logo-initials">ES</div></div>
+                    <div class="team-info"><div class="team-name">Elfes Sylvains SC</div><div class="team-sub">Elfes · ElveRunner</div></div>
+                  </div>
+                  <div class="score-block">
+                    <div class="score-tds"><span class="score-num">0</span><span class="score-sep">–</span><span class="score-num">3</span></div>
+                    <div class="score-cas"><span class="cas-num">0</span><span class="cas-sep">sor.</span><span class="cas-num">1</span></div>
+                    <div class="match-date">11 mai</div>
+                  </div>
+                  <div class="team-side team-side-away">
+                    <div class="team-info team-info-right"><div class="team-name">Guerriers du Nord</div><div class="team-sub">CoachAlpha · Nordiques</div></div>
+                    <div class="team-logo"><div class="team-logo-initials">GN</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="scroll-sentinel">↓ Chargement de la journée suivante…</div>
+            </div>
+
+            <!-- ── Calendrier ── -->
+            <div id="tab-calendrier" class="tab-content" style="display:none;">
+
+              <!-- Journée 9 -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 9</span>
+                  <span class="section-sub">25 – 26 mai 2026 · 3 matchs</span>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">GN</div></div>
+                    <div><div class="cal-name">Guerriers du Nord</div><div class="cal-coach">CoachAlpha</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">25 mai</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Waaagh! FC</div><div class="cal-coach cal-coach-right">WaaghMaster</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">WF</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">CU</div></div>
+                    <div><div class="cal-name">Chaos United</div><div class="cal-coach">ChaosBoss</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">25 mai</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Elfes Sylvains SC</div><div class="cal-coach cal-coach-right">ElveRunner</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">ES</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">NF</div></div>
+                    <div><div class="cal-name">Nains de Fer</div><div class="cal-coach">IronBeard</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">26 mai</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Orques Sauvages</div><div class="cal-coach cal-coach-right">GreenFist</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">OS</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Journée 10 -->
+              <div class="section-block card-shadow">
+                <div class="section-block-header">
+                  <span class="section-label">Journée 10</span>
+                  <span class="section-sub">1 – 2 juin 2026 · 4 matchs</span>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><img src="https://placehold.co/38x38/003049/ffffff?text=HO" alt="HO"></div>
+                    <div><div class="cal-name">Humains Ordinaires</div><div class="cal-coach">HumanCoach</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">1 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Skavens du Sous-sol</div><div class="cal-coach cal-coach-right">SkavRunner</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">SD</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">HU</div></div>
+                    <div><div class="cal-name">Halflings United</div><div class="cal-coach">TinyCoach</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">1 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Nécromants XI</div><div class="cal-coach cal-coach-right">NecroMind</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">NX</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">WF</div></div>
+                    <div><div class="cal-name">Waaagh! FC</div><div class="cal-coach">WaaghMaster</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">2 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Nains de Fer</div><div class="cal-coach cal-coach-right">IronBeard</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">NF</div></div>
+                  </div>
+                </div>
+                <div class="cal-row">
+                  <div class="cal-team">
+                    <div class="cal-logo"><div class="cal-logo-initials">CU</div></div>
+                    <div><div class="cal-name">Chaos United</div><div class="cal-coach">ChaosBoss</div></div>
+                  </div>
+                  <div class="cal-center"><span class="cal-vs">VS</span><span class="cal-date">2 juin</span></div>
+                  <div class="cal-team cal-team-away">
+                    <div><div class="cal-name cal-name-right">Guerriers du Nord</div><div class="cal-coach cal-coach-right">CoachAlpha</div></div>
+                    <div class="cal-logo"><div class="cal-logo-initials">GN</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="scroll-sentinel">↓ Chargement de la journée suivante…</div>
+            </div>
+
+            <!-- ── Équipes ── -->
+            <div id="tab-equipes" class="tab-content" style="display:none;">
+              <div class="tab-placeholder card-shadow">Widget équipes (chargement HTMX)</div>
+            </div>
+
+            <!-- ── Statistiques ── -->
+            <div id="tab-stats" class="tab-content" style="display:none;">
+              <div class="tab-placeholder card-shadow">Statistiques (à venir)</div>
+            </div>
+
+          </div><!-- /detail-right -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(name, el) {
+      document.querySelectorAll('.tab-content').forEach(function(t) { t.style.display = 'none'; });
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.getElementById('tab-' + name).style.display = '';
+      el.classList.add('active');
+      // Les deux navigations coexistent dans le DOM ; celle qui est masquée doit
+      // rester juste, sinon une rotation d'écran afficherait un onglet faux.
+      document.getElementById('tab-nav').value = name;
+    }
+
+    function showTabFromSelect(select) {
+      showTab(select.value, document.querySelector('.tab[data-tab="' + select.value + '"]'));
+    }
+  </script>
+<script>
+  // Sélecteur de maquette — hors livrable. JS nu et non Alpine : la page hôte
+  // n'embarque pas Alpine, et l'y ajouter pour un sélecteur de maquette aurait
+  // fait diverger le fichier de son original.
+  function setPresence(nom) {
+    document.querySelectorAll('[data-pc-state]').forEach(function (b) {
+      b.hidden = b.dataset.pcState !== nom;
+    });
+    document.querySelectorAll('.state-pill').forEach(function (p) {
+      p.classList.toggle('active', p.dataset.pc === nom);
+    });
+  }
+</script>
+</body>
+</html>
