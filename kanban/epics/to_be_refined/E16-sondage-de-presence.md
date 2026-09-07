@@ -1,9 +1,9 @@
 # E16 — Sondage de présence
 
-**État :** `to_be_refined` — 16 cartes prêtes (507 à 522), zéro faite. Elles
-couvrent la **première des trois unités** de la fonction ; les deux autres — la
-réponse par e-mail et l'encart du coach connecté — n'ont pas encore de cartes.
-C'est ce qui tient l'épic en `to_be_refined/` : son périmètre n'est pas
+**État :** `to_be_refined` — 22 cartes prêtes (507 à 528), zéro faite. Elles
+couvrent **deux des trois unités** : l'onglet de l'organisateur et la réponse du
+coach par e-mail. La troisième — l'encart du coach connecté — n'a pas encore de
+cartes. C'est ce qui tient l'épic en `to_be_refined/` : son périmètre n'est pas
 entièrement conçu, et non pas une carte qui resterait floue.
 Spécifiée par le workflow feature les 2026-09-06 et 07.
 **Conception :** `docs/specs/sondage-presence/`
@@ -58,6 +58,12 @@ et `match_report`, l'infrastructure d'e-mails avec sa table
 | 520 | Le panneau, six états | 4 |
 | 521 | Les neuf actions | 4 |
 | 522 | Les tests e2e de l'onglet | 4 |
+| 523 | Le dépôt sait retrouver une campagne par son jeton | 5 — le chemin public |
+| 524 | La page de réponse sait ce qu'elle a à dire | 5 |
+| 525 | La route publique, et le verrou qui la tient | 5 |
+| 526 | L'e-mail de sondage et sa relance | 6 — l'expédition |
+| 527 | L'expédition remplace le journal qui n'envoyait rien | 6 |
+| 528 | Les tests e2e du parcours depuis le lien | 6 |
 
 ## Ce qui commande l'ordre
 
@@ -76,7 +82,15 @@ première construit.
 **519 avant 520 avant 521** — la coquille, puis ce qu'elle contient, puis ce qui
 la mute.
 
-Le reste est du confort : 514 et 516 se livrent quand leurs dépendances sont là.
+**523 avant 524 avant 525** — charger, puis nommer, puis afficher.
+
+**526 avant 527** — le mailer rend des gabarits ; sans eux il ne compile pas. Et
+**515 avant 527**, la seule dépendance qui remonte d'une unité à l'autre : c'est
+elle qui pose le trait d'expédition et son implémentation provisoire, que la 527
+remplace.
+
+Le reste est du confort : 514, 516 et 526 se livrent quand leurs dépendances sont
+là — la 526 n'en ayant aucune, elle peut partir à tout moment.
 
 ## Ce que l'épic ne couvre pas
 

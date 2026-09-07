@@ -128,7 +128,8 @@ les unités remplacent les pages.
 **`reponse-coach/` n'a pas de phase 2, et ce n'est pas un oubli.** Un e-mail n'a
 pas d'architecture front, et la page de réponse est un rendu serveur complet :
 ni HTMX, ni widget, ni événement DOM. Le bouton « finalement je ne pourrai pas »
-est un lien vers l'autre jeton, pas un swap. C'est inscrit dans le tableau
+est un lien vers le même jeton et l'autre verbe, pas un swap — la phase 3 de
+l'unité a tranché la forme du lien, cf. R25. C'est inscrit dans le tableau
 plutôt que laissé vide, pour la raison qui a fait trancher R5 ailleurs : une
 case vide laisse croire à un trou, une case renseignée explique.
 
@@ -180,10 +181,12 @@ décision.
 | Unité | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
 | onglet-presences | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| reponse-coach | — | | | | | | |
+| reponse-coach | — | ✅ | ✅ | ✅ | — | ✅ | ✅ |
 | encart-competition | | | | | | | |
 
-`—` : sans objet, cf. ci-dessus.
+`—` : sans objet — la phase 2 pour un e-mail sans front, la phase 6 pour une
+unité qui n'ajoute rien au domaine (l'agrégat a été conçu d'un bloc en unité 1).
+Chaque cas est expliqué dans le fichier correspondant plutôt que laissé vide.
 
 ## Règles métier — tranchées en phase 1
 
@@ -478,6 +481,47 @@ affichage.
 **Conséquence** : `enregistrer` reçoit un `EtatJournee { figee, appariee,
 rencontre_de }` là où il recevait `figee` seul — mêmes faits venus du dehors,
 même agrégat qui décide. Cf. `onglet-presences/07-integration.md`.
+
+### R25 — Le jeton désigne la réponse, pas le sens de la réponse
+
+Apparue en phase 3 de `reponse-coach`, en tranchant la forme du lien. Un jeton
+identifie **quelle équipe répond dans quelle campagne** ; ce que le coach répond
+est porté par le chemin — `/presence/{token}/oui`, `/presence/{token}/non`.
+
+La phase 1 écrivait « un lien vers l'autre jeton », ce qui aurait demandé deux
+colonnes pour distinguer deux liens désignant la même réponse — sans rien
+protéger, puisqu'ils arrivent dans le même e-mail.
+
+**Conséquence assumée** : le lien reste utilisable pour changer d'avis jusqu'à la
+clôture. C'est R4 — un lien à usage unique rendrait irréversible une réponse
+qu'un antivirus a pu poser tout seul.
+
+### R26 — La page publique ne dit pas si un jeton a existé
+
+Apparue en phase 4 de `reponse-coach`. Un jeton inconnu, révoqué ou tronqué par
+un client mail rendent la **même page**, et le view model de cet état ne porte
+aucun champ — il n'a donc rien à divulguer même par mégarde.
+
+La route est publique et le jeton est énumérable en principe : une page qui
+distinguerait « n'a jamais existé » de « ne répond plus » ferait de la page un
+oracle des jetons vivants.
+
+Le coût est assumé : un coach dont le lien a été tronqué ne saura pas que c'est
+la cause. La page le lui suggère sans rien confirmer.
+
+### R27 — Une page qui ne prend plus de réponse dit laquelle des trois causes
+
+Apparue en phase 5 de `reponse-coach`, en cherchant où tombe le refus de R13.
+
+L'échéance passée, la clôture décidée et la journée déjà jouée ferment toutes le
+chemin du coach — et la phase 4 les faisait tomber sur les mêmes mots. **La
+troisième n'est pourtant pas une clôture** : la campagne peut être ouverte, son
+échéance à venir, et la journée pourtant figée par un rapport publié, ce qui
+arrive dès qu'un match se joue en avance. « Le sondage est clos » serait alors
+démenti par l'échéance affichée juste en dessous.
+
+Ne contredit pas R26 : là-bas on tait ce qu'on sait d'un jeton dont on ignore
+s'il appartient à quelqu'un ; ici le porteur est légitime.
 
 ## Ce que ces règles impliquent pour les phases suivantes
 

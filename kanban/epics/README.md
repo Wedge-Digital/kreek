@@ -53,7 +53,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E13 — Gestion des erreurs coûteuses](done/E13-gestion-des-erreurs-couteuses.md) | `done` · 4/4 | 4 |
 | [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 7/10 | 10 |
 | [E15 — Recruter un journalier](ready_to_be_done/E15-recruter-un-journalier.md) | `ready_to_be_done` · 0/6 | 6 |
-| [E16 — Sondage de présence](to_be_refined/E16-sondage-de-presence.md) | `to_be_refined` · 0/16 | 16 |
+| [E16 — Sondage de présence](to_be_refined/E16-sondage-de-presence.md) | `to_be_refined` · 0/22 | 22 |
 
 ## Les cartes sans épic
 
