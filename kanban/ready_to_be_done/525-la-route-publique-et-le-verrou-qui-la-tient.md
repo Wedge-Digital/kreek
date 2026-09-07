@@ -64,6 +64,9 @@ la même raison : il lit ce que le routeur fait, pas ce qu'on croit lui avoir di
 que par leurs mots — même encadré, même récapitulatif, même bouton opposé. Les
 séparer aurait dupliqué un markup qui doit rester en phase.
 
+Le use case reçoit **`Repondant::Jeton`** (R28) : ici c'est le lien qui
+autorise, pas une session — il n'y a aucun propriétaire d'équipe à confronter.
+
 **R19 est inatteignable par ce chemin** et n'a donc pas d'écran : le jeton *est*
 la désignation de la réponse, l'équipe est dans la campagne par construction. Une
 page pour ce cas serait un écran que personne ne peut atteindre, et que personne

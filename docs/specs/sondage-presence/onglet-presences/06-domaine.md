@@ -33,6 +33,7 @@ l'agrégat ont été présentées et validées avant écriture.
 | R12 | Une modification de présence ne refait que les rencontres touchées | 1 | `enregistrer`, `desaccord` |
 | R16 | Une arrivée tardive se traite comme une défection, en sens inverse | 2 | idem |
 | R24 | Les rencontres appartiennent à la journée, la campagne retient l'exemption | 7 | `Appariement`, `EtatJournee`, `desaccord` |
+| R28 | Un coach connecté ne répond que pour ses propres équipes | 2 (unité 3) | `Repondant`, `enregistrer` |
 | R13 | La correction se ferme au premier rapport de match publié | 1 | `enregistrer`, `rouvrir` |
 | R14 | Une équipe non appariée ne vaut rien au classement | 1 | *rien* — c'est une non-action |
 
@@ -176,6 +177,52 @@ service après une défection, elle n'a finalement pas été exemptée, et la
 compter comme telle la ferait passer devant à la journée suivante pour une
 exemption qu'elle n'a pas subie.
 
+### R28 — Trois chemins, trois autorisations
+
+**Corrigé en phase 2 de l'unité `encart-competition`.** `Repondant` valait
+`Coach | Organisateur(CoachId)`, et fondait deux chemins qui n'ont pas la même
+autorisation :
+
+| Chemin | Ce qui autorise |
+|---|---|
+| le jeton reçu par e-mail | **le jeton lui-même** — qui le détient répond |
+| l'encart du coach connecté | **la session**, et rien ne vérifiait que l'équipe est la sienne |
+| l'organisateur | `require_admin_access`, et le badge de R6 |
+
+R19 vérifie que l'équipe est **dans la campagne**, jamais qu'elle appartient au
+répondant : depuis l'encart, un `team_id` forgé aurait posé une présence pour
+l'équipe d'un autre.
+
+```rust
+pub enum Repondant { Jeton, Coach(CoachId), Organisateur(CoachId) }
+```
+
+`enregistrer` refuse un `Coach(id)` dont l'identifiant ne correspond pas au
+`coach_id` de la réponse — **`Reponse` le porte déjà**, le domaine savait
+répondre, personne ne lui posait la question.
+
+`Jeton` n'est pas contrôlé, et ce n'est pas un oubli : le jeton *est*
+l'autorisation, comme R7 le dit. Lui faire porter un `CoachId` aurait produit un
+contrôle circulaire — comparer la réponse à elle-même.
+
+**Le canal ne se persiste pas, et c'est délibéré.** La table garde deux cas —
+`saisi_par_admin` renseigné ou `NULL` — parce que c'est tout ce qu'un lecteur
+demande : R6 distingue l'organisateur du coach, jamais le jeton de l'encart. À
+la relecture, `NULL` redonne `Coach(coach_id de la réponse)`, qui est
+exactement vrai : le coach a répondu. **Le canal est un fait d'autorisation,
+vivant le temps de l'écriture** — pas une propriété de la réponse.
+
+Une colonne de plus l'aurait conservé, et personne n'aurait su quoi en faire :
+la question qu'on se pose après coup est « qui a dit qu'il venait », et elle a
+deux réponses possibles, pas trois.
+
+**Ce que ça dit du pari « l'agrégat se conçoit d'un bloc ».** Il le passe à
+moitié : la forme était bonne — `Repondant` existait, les trois unités appellent
+bien le même `enregistrer` — mais deux chemins avaient été fondus en une
+variante, et seule la troisième unité l'a fait voir. C'est l'argument du workflow
+retourné : la troisième méthode révèle que les deux premières avaient la mauvaise
+signature, et ici c'est le troisième **appelant**.
+
 ### Requêtes
 
 `statut(maintenant)`, `presents()`, `compte_presents()`, `compte_absents()`,
@@ -247,6 +294,7 @@ implémente `Display` à la main — son message sert de corps de réponse.
 SurveyOnRestDay,                                   // R2
 TeamNotInSurvey        { team: String },           // R19
 SurveyClosedForCoach,                              // R21
+TeamNotOwnedByCoach    { team: String },           // R28
 RoundFrozenByReport,                               // R13
 NotEnoughPresent       { presents: usize },        // R15
 ForbiddenPair          { home: String, away: String },  // R10
@@ -283,7 +331,8 @@ l'agrégat.
 | R15 | `peut_tirer` avec un seul présent rend `NotEnoughPresent { presents: 1 }` |
 | R17 | deux tirages sur deux graines différentes diffèrent, à effectif suffisant |
 | R19 | `enregistrer` sur une équipe hors campagne rend `TeamNotInSurvey` |
-| R21 | campagne close : `Coach` est refusé, `Organisateur` accepté |
+| R21 | campagne close : `Coach` et `Jeton` sont refusés, `Organisateur` accepté |
+| R28 | `Coach(id)` sur l'équipe d'un autre coach rend `TeamNotOwnedByCoach` ; `Jeton` n'est pas contrôlé |
 | R22 | `valider_proposition` refuse une équipe absente, une paire interdite, une équipe en double |
 | R23 | `statut` rend `Close(Echeance)` sans `Decidee` ; `rouvrir` avec une échéance passée est refusé |
 

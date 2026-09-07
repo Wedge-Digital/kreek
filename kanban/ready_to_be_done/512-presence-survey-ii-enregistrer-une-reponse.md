@@ -12,6 +12,20 @@
 seules, et que les trois unités appellent : l'organisateur depuis les boutons de
 la carte, le coach depuis son jeton, le coach connecté depuis l'encart.
 
+## R28 — trois chemins, trois autorisations
+
+`Repondant` vaut `Jeton | Coach(CoachId) | Organisateur(CoachId)`. R19 vérifie
+que l'équipe est **dans la campagne**, jamais qu'elle appartient au répondant :
+sans R28, un `team_id` forgé depuis l'encart poserait une présence pour l'équipe
+d'un autre coach.
+
+Le domaine savait répondre — **`Reponse` porte déjà `coach_id`** — personne ne
+lui posait la question.
+
+`Jeton` n'est pas contrôlé, et ce n'est pas un oubli : le jeton *est*
+l'autorisation (R7). Lui faire porter un `CoachId` produirait un contrôle
+circulaire, comparant la réponse à elle-même.
+
 ## `enregistrer`
 
 ```rust
@@ -43,7 +57,8 @@ Les règles portées :
 |---|---|
 | R19 | un `TeamId` qui n'est pas dans la campagne — `TeamNotInSurvey` |
 | R13 | une journée figée par un rapport publié — `RoundFrozenByReport` |
-| R21 | le chemin du **coach** sur une campagne close — `SurveyClosedForCoach`. L'organisateur, lui, passe |
+| R21 | les chemins du coach — `Jeton` et `Coach` — sur une campagne close : `SurveyClosedForCoach`. L'organisateur, lui, passe |
+| R28 | un `Coach(id)` dont l'identifiant ne correspond pas au `coach_id` de la réponse — `TeamNotOwnedByCoach` |
 | R6 | `Repondant::Organisateur(id)` est conservé dans `Presence::Declaree` |
 | R12/R16 | si la journée est appariée et que la rencontre de l'équipe est touchée, rend `EnregistreeRencontreARefaire` |
 
@@ -72,10 +87,12 @@ Calendrier rendaient impossible.
 - [ ] `enregistrer` — R19, R13, R21, R6, R12/R16
 - [ ] `desaccord`
 - [ ] `DomainError` : `TeamNotInSurvey { team }`, `SurveyClosedForCoach`,
-      `RoundFrozenByReport`
+      `RoundFrozenByReport`, `TeamNotOwnedByCoach { team }`
 - [ ] Tests : R6 (l'identifiant de l'organisateur est conservé) ·
       R12 (présent -> absent après appariement) · R16 (absent -> présent aussi) ·
       R13 (journée figée refusée) · R19 (équipe hors campagne) ·
-      R21 (close : `Coach` refusé, `Organisateur` accepté) ·
+      R21 (close : `Coach` et `Jeton` refusés, `Organisateur` accepté) ·
+      R28 (`Coach(id)` sur l'équipe d'un autre est refusé ; `Jeton` n'est pas
+      contrôlé — le jeton *est* l'autorisation) ·
       R24 (`desaccord` sur une journée vidée au Calendrier)
 - [ ] `make lint`, `make check-arch`, `make test`

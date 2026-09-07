@@ -211,7 +211,7 @@ mettrait la forme du lien dans du HTML d'e-mail, hors de portée de tout test.
 | Type | Émis par | Consommé par |
 |---|---|---|
 | `PresenceLinkPath` | le navigateur, depuis l'e-mail | `presence_response.rs` |
-| `RecordAnswerCommand` (`Repondant::Coach`) | `presence_response.rs` | `record_answer_use_case` — celui de l'unité 1 |
+| `RecordAnswerCommand` (`Repondant::Jeton` — R28) | `presence_response.rs` | `record_answer_use_case` — celui de l'unité 1 |
 | `PresenceSurvey` | `find_by_token` | le handler, puis `presence_landing_service` |
 | `LandingLabelsDto` | `IPresenceSurveyRepository` | **`presence_landing_service` seul** |
 | `TeamInfoDto` | `ITeamInfoPort::find_team_names` | **`presence_landing_service` seul** — jamais un handler ni un gabarit |

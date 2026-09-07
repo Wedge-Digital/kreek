@@ -37,7 +37,7 @@ Aucun identifiant nouveau : `SeasonId`, `MatchId` (la journée), `PairingId`,
 | `AutoRemind` | `nutype(bool)` | le champ de la case à cocher |
 | `Presence` | enum à données portées (03-back) | R5, R6 |
 | `Venue` | `Presente` \| `Absente` | — |
-| `Repondant` | `Coach` \| `Organisateur(CoachId)` | R6 |
+| `Repondant` | `Jeton` \| `Coach(CoachId)` \| `Organisateur(CoachId)` | R6, R28 |
 | `ReponduLe` | `nutype` sur `OffsetDateTime` | — |
 | `SurveyStatus` | `Ouverte` \| `Close { le }` | 03-back |
 

@@ -19,12 +19,18 @@ répondre dès sa conception à « un coach répond depuis un jeton », et il le
 | Ce que cette unité appelle | Posé par |
 |---|---|
 | `reponse_par_jeton(token)` | carte 511 |
-| `enregistrer(team, venue, Repondant::Coach, journee, maintenant)` | carte 512 |
+| `enregistrer(team, venue, Repondant::Jeton, journee, maintenant)` | carte 512 |
 | `statut(maintenant)` — R7, la validité du jeton se lit sur la campagne | carte 511 |
 | `Presence`, `Venue`, `Repondant`, `SurveyToken` | carte 511 |
 
 Les refus qu'elle rencontre — `SurveyClosedForCoach` (R21) et
 `RoundFrozenByReport` (R13) — sont eux aussi déjà dans `DomainError`.
+
+**Une nuance ajoutée après coup, par R28** : `Repondant` a gagné une troisième
+variante, `Jeton`, séparée de `Coach(CoachId)`. Cette unité passe `Jeton`. Le
+pari « l'agrégat se conçoit d'un bloc » n'est donc pas tout à fait gagné — la
+forme était bonne, mais deux chemins étaient fondus en une variante, et c'est la
+troisième unité qui l'a vu.
 
 ## La seule chose que cette unité ajoute au domaine
 
@@ -36,7 +42,7 @@ déjà les quatre autres.
 ## Ce que ça prouve, et qu'il vaut la peine de noter
 
 Concevoir l'agrégat d'un bloc, à la fin de l'unité 1, a rendu cette phase-ci
-vide. C'était le pari du découpage en unités — et l'inverse aurait été visible
+presque vide — à la variante `Jeton` près, ajoutée par R28 depuis l'unité 3. C'était le pari du découpage en unités — et l'inverse aurait été visible
 ici : une méthode `enregistrer` conçue pour le seul organisateur n'aurait pas
 porté `Repondant`, et cette unité aurait dû la rouvrir pour y ajouter un
 paramètre que trois appelants doivent renseigner.

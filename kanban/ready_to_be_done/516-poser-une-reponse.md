@@ -39,6 +39,16 @@ charge les faits une fois et les passe ; l'agrégat décide.
 signale qu'une rencontre est à refaire — c'est la carte 518 qui répare, sur
 décision de l'organisateur.
 
+## R28 — l'appelant dit qui répond, l'agrégat vérifie
+
+`Repondant` vaut `Jeton | Coach(CoachId) | Organisateur(CoachId)`. Cet écran-ci
+passe `Organisateur(id du connecté)` ; la route publique passera `Jeton`, et
+l'encart `Coach(id du connecté)`.
+
+Le use case ne contrôle rien : il transmet, et l'agrégat refuse un `Coach(id)`
+qui ne correspond pas au `coach_id` de la réponse (carte 512). C'est la règle
+« le use case fournit les faits, le domaine décide », appliquée à l'identité.
+
 ## `Repondant` est un champ de la commande
 
 Jamais une déduction du handler. Si l'auteur se déduisait de la route, la page
@@ -55,7 +65,7 @@ CLAUDE.md — consultation bloquante, port synchrone, jamais cache local.
 
 ## Checklist
 
-- [ ] `RecordAnswerCommand` avec `Venue` et `Repondant` typés
+- [ ] `RecordAnswerCommand` avec `Venue` et `Repondant` typés — trois variantes
 - [ ] Le use case, instrumenté, son enum d'erreur
 - [ ] `EtatJournee` composé des deux sources
 - [ ] Tests unitaires : R6 (l'organisateur pose une réponse, l'auteur est gardé) ·

@@ -182,7 +182,7 @@ décision.
 |---|---|---|---|---|---|---|---|
 | onglet-presences | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | reponse-coach | — | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| encart-competition | | | | | | | |
+| encart-competition | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 `—` : sans objet — la phase 2 pour un e-mail sans front, la phase 6 pour une
 unité qui n'ajoute rien au domaine (l'agrégat a été conçu d'un bloc en unité 1).
@@ -522,6 +522,61 @@ démenti par l'échéance affichée juste en dessous.
 
 Ne contredit pas R26 : là-bas on tait ce qu'on sait d'un jeton dont on ignore
 s'il appartient à quelqu'un ; ici le porteur est légitime.
+
+### R28 — Un coach connecté ne répond que pour ses propres équipes
+
+Apparue en phase 2 de `encart-competition`. `Repondant` valait `Coach |
+Organisateur(CoachId)` et fondait deux chemins qui n'ont pas la même
+autorisation : par jeton, le lien *est* l'autorisation ; depuis l'encart, c'est
+la session — et **rien ne vérifiait que l'équipe est celle du coach connecté**.
+R19 contrôle que l'équipe est dans la campagne, jamais à qui elle appartient.
+
+```rust
+pub enum Repondant { Jeton, Coach(CoachId), Organisateur(CoachId) }
+```
+
+L'agrégat refuse un `Coach(id)` dont l'identifiant ne correspond pas au
+`coach_id` de la réponse — **`Reponse` le porte déjà**, le domaine savait
+répondre, personne ne lui posait la question. `Jeton` n'est pas contrôlé : lui
+faire porter un `CoachId` comparerait la réponse à elle-même.
+
+**Le canal ne se persiste pas.** `saisi_par_admin` garde ses deux cas, et un
+`NULL` relu rend `Coach(coach_id de la réponse)`. La question qu'on se pose
+après coup — « qui a dit qu'il venait » — a deux réponses possibles, pas trois.
+
+**Ce que ça dit du pari « l'agrégat se conçoit d'un bloc »** : il le passe à
+moitié. La forme était bonne, les trois unités appellent bien le même
+`enregistrer` — mais deux chemins avaient été fondus en une variante, et seul le
+troisième appelant l'a fait voir.
+
+### R29 — L'encart dit combien, jamais qui
+
+Apparue en phase 4 de `encart-competition`. Le sous-titre annonce « 9 équipes
+ont déjà confirmé » ; il n'annoncera jamais lesquelles, ni qui a décliné.
+
+Une réponse est donnée à l'organisateur, qui apparie — elle n'est pas publiée
+aux autres coachs. Afficher la liste ferait de l'encart un tableau de présence
+collectif, avec la pression sur celui qui n'a pas répondu, et la possibilité de
+choisir sa soirée selon les adversaires présents — ce que le tirage au sort
+existe précisément pour empêcher.
+
+Vaut pour l'encart et la page publique. L'onglet d'administration montre les
+noms : c'est son objet.
+
+### R30 — Un désistement après tirage le dit, et ne promet rien
+
+Apparue en phase 5 de `encart-competition`, en croisant R12 et R16 avec le fait
+que l'encart existe : les deux règles décrivaient la défection **vue de
+l'organisateur**, seul écran qui existait alors.
+
+Quand la réponse d'un coach défait une rencontre déjà tirée, l'encart le lui dit
+et s'arrête là. **Il n'annonce pas de nouvel adversaire** — la réparation est une
+proposition que l'organisateur valide, et annoncer un remplacement non confirmé
+produirait deux coachs qui se croient appariés et un match qui n'existe pas.
+
+**Il ne se tait pas non plus** : un désistement silencieux laisserait le coach
+croire qu'il a changé une case, alors qu'il vient de défaire un match que son
+adversaire avait noté.
 
 ## Ce que ces règles impliquent pour les phases suivantes
 

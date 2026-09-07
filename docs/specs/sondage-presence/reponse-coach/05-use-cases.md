@@ -6,7 +6,9 @@ deux structs d'e-mail, le service d'hydratation.
 ## Aucun use case nouveau, et c'est le résultat de la phase
 
 La réponse par jeton appelle **`record_answer_use_case`**, écrit en unité 1, avec
-`Repondant::Coach`.
+`Repondant::Jeton` — la variante que R28 a séparée de `Coach(CoachId)` : ici
+c'est le lien qui autorise, et il n'y a aucune session à confronter au
+propriétaire de l'équipe.
 
 R1 porte sur l'équipe et jamais sur le coach : le jeton désigne une réponse, donc
 un `TeamId` dans une campagne — exactement ce que la commande attend. Un use case
@@ -29,6 +31,7 @@ sur un `500`.
 | `SurveyClosedForCoach` (R21) | sondage clos, motif « échéance » ou « décision » |
 | `RoundFrozenByReport` (R13) | sondage clos, motif « journée déjà jouée » |
 | `TeamNotInSurvey` (R19) | **ne peut pas se produire** — cf. ci-dessous |
+| `TeamNotOwnedByCoach` (R28) | **ne peut pas se produire** — `Jeton` n'est pas contrôlé |
 | erreur de dépôt | `500`, journalisée |
 
 **R19 est inatteignable par ce chemin, et il faut le dire plutôt que le coder.**

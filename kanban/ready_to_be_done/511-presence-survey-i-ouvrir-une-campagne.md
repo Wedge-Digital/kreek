@@ -40,7 +40,7 @@ pub enum Presence {
     SansReponse,
     Declaree { venue: Venue, le: ReponduLe, par: Repondant },
 }
-pub enum Repondant { Coach, Organisateur(CoachId) }
+pub enum Repondant { Jeton, Coach(CoachId), Organisateur(CoachId) }   // R28
 ```
 
 **Aucun champ n'est `pub`.** Le seul chemin d'écriture d'une `Presence` est
@@ -52,6 +52,15 @@ que ni le compilateur, ni `check-arch`, ni la revue ne signaleraient.
 L'horodatage et l'auteur n'ont de sens que là où une réponse existe ; un enum
 plat avec deux `Option` à côté remplacerait un `Option` par deux et laisserait
 construire une réponse déclarée sans horodatage.
+
+**`Repondant` a trois variantes pour trois chemins** (R28) : le jeton reçu par
+e-mail, le coach connecté depuis l'encart, l'organisateur depuis l'onglet. Elles
+n'ont pas la même autorisation — le jeton *est* l'autorisation, la session ne
+l'est pas — et c'est la carte 512 qui pose le contrôle.
+
+**Le canal ne se persiste pas** : `saisi_par_admin` garde ses deux cas, et un
+`NULL` relu rend `Coach(coach_id de la réponse)`. R6 distingue l'organisateur du
+coach, jamais le jeton de l'encart.
 
 **`SurveyToken` n'est pas un `EntityId`**, bien qu'il en ait la forme : un
 identifiant technique et un secret d'URL n'ont ni le même cycle de vie ni les

@@ -199,8 +199,9 @@ validité se lit sur l'état de la campagne.
 ## Ce que cette unité n'ajoute pas
 
 **Aucun use case.** La réponse par jeton appelle `record_answer` avec
-`Repondant::Coach` — le use case existe, et R1 porte sur l'équipe, jamais sur le
-coach. Un use case propre à la route publique aurait fait un second endroit où
+`Repondant::Jeton` — le use case existe, et R1 porte sur l'équipe, jamais sur le
+coach. La variante `Jeton` est distincte de `Coach(CoachId)` depuis R28 : ici
+c'est le lien qui autorise, pas une session. Un use case propre à la route publique aurait fait un second endroit où
 tenir R13 et R19.
 
 **Aucun domain event, aucun app event.** Personne hors du BC n'a à savoir qu'un

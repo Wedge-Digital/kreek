@@ -53,7 +53,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E13 — Gestion des erreurs coûteuses](done/E13-gestion-des-erreurs-couteuses.md) | `done` · 4/4 | 4 |
 | [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 7/10 | 10 |
 | [E15 — Recruter un journalier](ready_to_be_done/E15-recruter-un-journalier.md) | `ready_to_be_done` · 0/6 | 6 |
-| [E16 — Sondage de présence](to_be_refined/E16-sondage-de-presence.md) | `to_be_refined` · 0/22 | 22 |
+| [E16 — Sondage de présence](ready_to_be_done/E16-sondage-de-presence.md) | `ready_to_be_done` · 0/26 | 26 |
 
 ## Les cartes sans épic
 
@@ -86,6 +86,8 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `533-le-middleware-csrf-decrit-n-existe-pas` | Trois commentaires — dont le `CLAUDE.md` — décrivent un middleware CSRF que `grep -ri csrf src/` ne trouve pas. La protection tient par le cookie `SameSite::Lax` seul ; c'est sa description qui est fausse, et une description fausse est ce qui fait retirer la vraie garde en croyant l'autre en place |
+| `534-admin-scope-ne-verifie-rien-d-administratif` | Cinq vérifications « cette ressource appartient-elle à ce parent », aucune administrative, dans un module nommé `admin_scope` — qu'un handler atteint par n'importe quel coach va importer. Le risque n'est pas de croire le droit contrôlé, c'est de réécrire la vérification à côté |
 | `506-affecte-par-montre-un-identifiant` | Sous « Affecté par », la liste des points de classement manuels imprime un identifiant de vingt-six caractères au lieu du nom du commissaire : rien ne le traduit sur toute la pile. Portait le numéro 500, déjà pris par une carte close |
 | `497-le-menu-du-selecteur-etait-rogne-par-son-panneau` | Le menu du `kreek-select` était coupé par l'`overflow: hidden` du panneau, posé pour ses coins arrondis — un `z-index` ne franchit pas un `overflow`. Et `getBoundingClientRect` ne voit pas ce défaut : le rectangle est le même, coupé ou non ; seul `elementFromPoint` dit ce qui est peint |
 | `490-les-coachs-sont-deconnectes-trop-souvent` | Le cookie de session n'avait ni `Max-Age` ni `Expires` — le navigateur le jetait à sa fermeture, alors que le serveur gardait la session deux semaines. Et `SameSite: Strict` ne l'envoyait pas quand on arrivait par un lien externe. Deux lignes, plus la décision d'écarter Redis pour de bon |

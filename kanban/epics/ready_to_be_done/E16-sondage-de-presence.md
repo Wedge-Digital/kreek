@@ -1,11 +1,9 @@
 # E16 — Sondage de présence
 
-**État :** `to_be_refined` — 22 cartes prêtes (507 à 528), zéro faite. Elles
-couvrent **deux des trois unités** : l'onglet de l'organisateur et la réponse du
-coach par e-mail. La troisième — l'encart du coach connecté — n'a pas encore de
-cartes. C'est ce qui tient l'épic en `to_be_refined/` : son périmètre n'est pas
-entièrement conçu, et non pas une carte qui resterait floue.
-Spécifiée par le workflow feature les 2026-09-06 et 07.
+**État :** `ready_to_be_done` — 26 cartes prêtes (507 à 532), zéro faite. Les
+trois unités sont conçues : l'onglet de l'organisateur, la réponse du coach par
+e-mail, et l'encart du coach connecté. Spécifiée par le workflow feature du
+2026-09-06 au 2026-09-07.
 **Conception :** `docs/specs/sondage-presence/`
 
 ## La fonction
@@ -64,6 +62,10 @@ et `match_report`, l'infrastructure d'e-mails avec sa table
 | 526 | L'e-mail de sondage et sa relance | 6 — l'expédition |
 | 527 | L'expédition remplace le journal qui n'envoyait rien | 6 |
 | 528 | Les tests e2e du parcours depuis le lien | 6 |
+| 529 | L'encart sait quelles campagnes sont ouvertes | 7 — l'encart |
+| 530 | La garde de saison quitte l'administration | 7 |
+| 531 | L'encart du coach connecté | 7 |
+| 532 | Les tests e2e de l'encart | 7 |
 
 ## Ce qui commande l'ordre
 
@@ -89,6 +91,9 @@ la mute.
 elle qui pose le trait d'expédition et son implémentation provisoire, que la 527
 remplace.
 
+**529 et 530 avant 531** — la requête et la garde ; la 530 est utile en soi, elle
+sort une vérification de saison de dessous le contrôle d'admin.
+
 Le reste est du confort : 514, 516 et 526 se livrent quand leurs dépendances sont
 là — la 526 n'en ayant aucune, elle peut partir à tout moment.
 
@@ -100,7 +105,12 @@ pas touché (R14).
 
 **Le middleware CSRF.** L'investigation a trouvé qu'il n'existe pas, malgré trois
 commentaires qui le décrivent. Cela ne bloque rien ici — la route publique de
-réponse n'a aucune session à protéger — et mérite sa carte, hors de cette épic.
+réponse n'a aucune session à protéger. **Carte 533**, hors épic.
+
+**Le nom d'`admin_scope`.** La carte 530 y range une cinquième vérification, et
+la 531 le fait importer par un handler que n'importe quel coach atteint. Aucune
+de ses fonctions ne vérifie quoi que ce soit d'administratif. **Carte 534**, hors
+épic.
 
 **Le vert du design system.** `--green` porte 3,3:1 sous du blanc, sous le seuil.
 Les maquettes l'assombrissent localement ; corriger le token dépasse ce chantier.

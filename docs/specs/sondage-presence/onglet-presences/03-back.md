@@ -174,7 +174,8 @@ pub enum Presence {
 }
 
 pub enum Repondant {
-    Coach,                    // par son jeton, ou depuis l'encart
+    Jeton,                    // le lien reçu par e-mail — corrigé en phase 2 de l'unité 3, R28
+    Coach(CoachId),           // l'encart du coach connecté
     Organisateur(CoachId),    // R6 — le badge « saisi par vous »
 }
 ```
@@ -191,6 +192,13 @@ Ce que l'enum porté fait gagner concrètement :
 | « compte pour le tirage ? » | `matches!(self, Declaree { venue: Presente, .. })` — R5 tient dans le type |
 | « qui a répondu ? » | `Repondant`, jamais absent quand une réponse existe — R6 |
 | « depuis quand ? » | `ReponduLe`, jamais absent non plus |
+
+**Le troisième variant de `Repondant` ne change pas le schéma** (R28, corrigé en
+phase 2 de l'unité 3). `saisi_par_admin` garde ses deux cas : renseigné pour
+l'organisateur, `NULL` pour le coach — que celui-ci ait cliqué son lien ou
+répondu depuis l'encart. La relecture d'un `NULL` rend `Coach(coach_id de la
+réponse)`, ce qui est exactement vrai. Le canal est un fait d'autorisation, il
+vit le temps de l'écriture.
 
 **Les `NULL` restent en base, et n'en sortent pas.** Postgres n'a pas de type
 somme : les trois colonnes ci-dessus sont la projection à plat de l'enum, et le
