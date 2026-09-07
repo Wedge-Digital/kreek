@@ -212,6 +212,13 @@ mod tests {
         async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> {
             Ok(())
         }
+        async fn save_pairings(
+            &self,
+            _: &str,
+            _: &[(Pairing, NewPairingProjection)],
+        ) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
         async fn save_pairing(
             &self,
             _: &str,

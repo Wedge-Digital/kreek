@@ -74,12 +74,25 @@ pub struct NewPairingProjection {
 #[derive(Debug)]
 pub enum MatchDayRepositoryError {
     Database(String),
+    /// La journée porte déjà des appariements — R11, constatée **sous le
+    /// verrou** et non avant lui.
+    ///
+    /// Le use case vérifie déjà cette condition en chargeant la journée, mais
+    /// il la lit hors transaction : deux organisateurs qui régénèrent la même
+    /// journée franchissent tous les deux la garde avant que l'un ait écrit.
+    /// Le verrou seul ne les départagerait pas — il sérialiserait deux
+    /// écritures fautives. C'est la relecture sous verrou qui refuse la
+    /// seconde.
+    PairingsAlreadyExist,
 }
 
 impl std::fmt::Display for MatchDayRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Database(e) => write!(f, "database error: {}", e),
+            Self::PairingsAlreadyExist => {
+                write!(f, "la journée porte déjà des appariements")
+            }
         }
     }
 }
@@ -100,6 +113,27 @@ pub trait IMatchDayRepository: Send + Sync {
 
     async fn delete_match_day(&self, match_day_id: &str) -> Result<(), MatchDayRepositoryError>;
 
+    /// Écrit **tous** les appariements d'une journée, ou aucun.
+    ///
+    /// Elle ouvre une transaction, verrouille la journée, revérifie qu'elle est
+    /// vide, puis écrit les paires et leurs projections ensemble. Une panne au
+    /// troisième appariement ne laisse donc pas une journée à moitié appariée,
+    /// et deux générations concurrentes ne peuvent pas se superposer.
+    ///
+    /// **Pas d'implémentation par défaut qui bouclerait sur `save_pairing`** :
+    /// elle compilerait, les faux de test n'auraient rien à changer, et le vrai
+    /// dépôt resterait non atomique le jour où quelqu'un oublierait de la
+    /// redéfinir. Un verrou qui se laisse oublier n'est pas un verrou.
+    async fn save_pairings(
+        &self,
+        match_day_id: &str,
+        pairings: &[(Pairing, NewPairingProjection)],
+    ) -> Result<(), MatchDayRepositoryError>;
+
+    /// Écrit **un** appariement, sur une journée qui peut déjà en porter —
+    /// l'ajout manuel d'un match, la recréation d'une rencontre annulée.
+    /// Contrairement à `save_pairings`, elle ne juge pas de l'état de la
+    /// journée.
     async fn save_pairing(
         &self,
         match_day_id: &str,

@@ -120,6 +120,16 @@ mod tests {
         async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> {
             Ok(())
         }
+        async fn save_pairings(
+            &self,
+            _: &str,
+            _: &[(
+                Pairing,
+                crate::app::competitions::domain::match_day_repository_port::NewPairingProjection,
+            )],
+        ) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
         async fn save_pairing(
             &self,
             _: &str,

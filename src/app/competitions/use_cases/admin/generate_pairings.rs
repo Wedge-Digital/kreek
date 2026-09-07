@@ -1,7 +1,9 @@
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::group_repository_port::{GroupWithTeams, IGroupRepository};
 use crate::app::competitions::domain::match_day::{MatchDay, Pairing};
-use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
+use crate::app::competitions::domain::match_day_repository_port::{
+    IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection,
+};
 use crate::app::competitions::domain::tirage::{
     paire, tirer, DrawInput, ProposedPairing, RencontresJouees,
 };
@@ -96,6 +98,7 @@ pub async fn execute(
 
     let mut outcome = GenerateOutcome::default();
     let mut skipped_team_ids: Vec<String> = Vec::new();
+    let mut a_ecrire: Vec<AppariementAEcrire> = Vec::new();
     for group in &groups {
         let (filtered_ids, skipped) = filter_enrolled_team_ids(&group.team_ids, &team_display);
         skipped_team_ids.extend(skipped);
@@ -103,13 +106,50 @@ pub async fn execute(
             outcome.skipped_group_names.push(group.group_name.clone());
             continue;
         }
-        if !apparier_le_groupe(&ctx, &filtered_ids, &mut historique, &mut rng).await? {
+        let (paires, prouve) =
+            apparier_le_groupe(&ctx, &filtered_ids, &mut historique, &mut rng).await?;
+        a_ecrire.extend(paires);
+        if !prouve {
             outcome.unproven_group_names.push(group.group_name.clone());
         }
     }
 
+    ecrire_la_journee(&ctx, &a_ecrire).await?;
+
     outcome.skipped_team_names = resolve_team_names(skipped_team_ids, team_port).await;
     Ok(outcome)
+}
+
+/// Écrit toutes les rencontres de la journée, **puis** les annonce.
+///
+/// L'émission vient après le commit, jamais dedans : un listener qui réagit à
+/// un `PairingCreated` dont la transaction est ensuite annulée aurait travaillé
+/// sur un fait qui n'a pas eu lieu, et rien ne le lui dirait. L'ordre inverse
+/// paraît plus naturel — « tout dans la même unité » — et c'est le piège.
+async fn ecrire_la_journee(
+    ctx: &Contexte<'_>,
+    a_ecrire: &[AppariementAEcrire],
+) -> Result<(), GenerateError> {
+    if a_ecrire.is_empty() {
+        return Ok(());
+    }
+    ctx.match_day_repo
+        .save_pairings(&ctx.match_day.id.to_string(), a_ecrire)
+        .await
+        .map_err(|e| match e {
+            MatchDayRepositoryError::PairingsAlreadyExist => GenerateError::PairingsAlreadyExist,
+            autre => GenerateError::Repository(autre.to_string()),
+        })?;
+
+    for (pairing, _) in a_ecrire {
+        emit_pairing_created(
+            ctx,
+            &pairing.home_team_id.to_string(),
+            &pairing.away_team_id.to_string(),
+            pairing,
+        );
+    }
+    Ok(())
 }
 
 /// Ce que l'écriture d'une rencontre demande, et qui ne change pas d'une poule
@@ -150,12 +190,19 @@ async fn load_groups(
 }
 
 /// Rend `false` quand le tirage n'a pas pu prouver son optimum.
+/// Rend les appariements de la poule — **sans rien écrire** — et si le tirage
+/// a pu prouver son optimum.
+///
+/// L'écriture attend d'avoir toutes les poules : une transaction par poule
+/// laisserait encore une journée à moitié appariée si la troisième échouait.
+type AppariementAEcrire = (Pairing, NewPairingProjection);
+
 async fn apparier_le_groupe(
     ctx: &Contexte<'_>,
     team_ids: &[String],
     historique: &mut RencontresJouees,
     rng: &mut StdRng,
-) -> Result<bool, GenerateError> {
+) -> Result<(Vec<AppariementAEcrire>, bool), GenerateError> {
     let equipes: Vec<TeamId> = team_ids
         .iter()
         .map(|id| TeamId::try_new(id).expect("valid team id"))
@@ -175,10 +222,12 @@ async fn apparier_le_groupe(
         rng,
     );
 
-    for rencontre in &proposition.rencontres {
-        ecrire_rencontre(ctx, rencontre, historique).await?;
-    }
-    Ok(proposition.optimum_prouve)
+    let ecrites = proposition
+        .rencontres
+        .iter()
+        .map(|r| batir_appariement(ctx, r, historique))
+        .collect();
+    Ok((ecrites, proposition.optimum_prouve))
 }
 
 /// R10 — deux équipes d'un même coach ne se rencontrent jamais.
@@ -211,11 +260,11 @@ fn meme_coach(a: &TeamId, b: &TeamId, team_display: &HashMap<String, TeamInfoDto
     }
 }
 
-async fn ecrire_rencontre(
+fn batir_appariement(
     ctx: &Contexte<'_>,
     rencontre: &ProposedPairing,
     historique: &mut RencontresJouees,
-) -> Result<(), GenerateError> {
+) -> AppariementAEcrire {
     let (home, away) = (rencontre.home.to_string(), rencontre.away.to_string());
     let pairing = Pairing {
         id: PairingId::new(),
@@ -224,22 +273,17 @@ async fn ecrire_rencontre(
     };
     let projection =
         build_new_pairing_projection(&home, &away, ctx.season_id, ctx.match_day, ctx.team_display);
-    ctx.match_day_repo
-        .save_pairing(&ctx.match_day.id.to_string(), &pairing, &projection)
-        .await
-        .map_err(|e| GenerateError::Repository(e.to_string()))?;
-
-    emit_pairing_created(ctx, &home, &away, &pairing);
 
     // Les poules étant disjointes, cela ne change rien aujourd'hui — mais une
-    // rencontre écrite est une rencontre jouée, et l'historique doit le dire.
+    // rencontre appariée est une rencontre à venir, et l'historique doit le
+    // dire à la poule suivante.
     historique.enregistrer(
         &rencontre.home,
         &rencontre.away,
         ctx.match_day.position,
         ctx.match_day.name.clone(),
     );
-    Ok(())
+    (pairing, projection)
 }
 
 /// L'historique de la saison, **compté** par paire, la journée en cours exclue.
@@ -317,11 +361,16 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
     use async_trait::async_trait;
 
-    struct FakeMatchDayRepo(MatchDay, std::sync::Mutex<Vec<(String, String)>>);
+    struct FakeMatchDayRepo(MatchDay, std::sync::Mutex<Vec<(String, String)>>, bool);
 
     impl FakeMatchDayRepo {
         fn new(day: MatchDay) -> Self {
-            Self(day, std::sync::Mutex::new(vec![]))
+            Self(day, std::sync::Mutex::new(vec![]), false)
+        }
+        /// Un dépôt qui refuse d'écrire — pour éprouver ce qui se passe *après*
+        /// l'échec, et notamment ce qui n'est pas émis.
+        fn en_panne(day: MatchDay) -> Self {
+            Self(day, std::sync::Mutex::new(vec![]), true)
         }
         /// Les appariements écrits, normalisés et triés — de quoi comparer deux
         /// générations sans dépendre de l'ordre.
@@ -355,6 +404,26 @@ mod tests {
             Ok(())
         }
         async fn delete_match_day(&self, _: &str) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
+        async fn save_pairings(
+            &self,
+            _: &str,
+            pairings: &[(
+                Pairing,
+                crate::app::competitions::domain::match_day_repository_port::NewPairingProjection,
+            )],
+        ) -> Result<(), MatchDayRepositoryError> {
+            if self.2 {
+                return Err(MatchDayRepositoryError::Database("panne simulée".into()));
+            }
+            let mut ecrits = self.1.lock().expect("mutex de test");
+            for (pairing, _) in pairings {
+                ecrits.push((
+                    pairing.home_team_id.to_string(),
+                    pairing.away_team_id.to_string(),
+                ));
+            }
             Ok(())
         }
         async fn save_pairing(
@@ -661,6 +730,53 @@ mod tests {
         assert!(
             vus.len() > 1,
             "dix générations ont donné exactement le même appariement"
+        );
+    }
+
+    /// Un dépôt en échec ne laisse **rien** passer : ni appariement, ni
+    /// événement.
+    ///
+    /// C'est tout l'objet de la carte 509. Avant, les appariements partaient un
+    /// par un et leurs événements avec : une panne au troisième laissait une
+    /// journée à moitié appariée, et des listeners avaient déjà réagi à des
+    /// rencontres qui n'existeraient jamais.
+    #[tokio::test]
+    async fn un_depot_en_echec_n_ecrit_ni_n_emet_rien() {
+        let equipes: Vec<TeamInfoDto> = (0..4)
+            .map(|i| TeamInfoDto {
+                team_id: TeamId::new().to_string(),
+                team_name: format!("Équipe {i}"),
+                coach_id: TeamId::new().to_string(),
+                coach_name: format!("Coach {i}"),
+                roster_name: "Humains".to_string(),
+                logo_url: None,
+            })
+            .collect();
+
+        let depot = FakeMatchDayRepo::en_panne(match_day_with_pairings(vec![]));
+        let bus = crate::common::services::event_bus::event_bus::new_bus();
+        let mut abonne = bus.subscribe();
+
+        let resultat = execute(
+            "d1",
+            "s1",
+            "c1",
+            "sp1",
+            &depot,
+            &FakeGroupRepo,
+            &FakeTeamInfoPortWithEnrolled(equipes),
+            &bus,
+        )
+        .await;
+
+        assert!(
+            matches!(resultat, Err(GenerateError::Repository(_))),
+            "l'échec d'écriture doit remonter"
+        );
+        assert!(depot.ecrits().is_empty(), "rien ne doit être écrit");
+        assert!(
+            abonne.try_recv().is_err(),
+            "aucun PairingCreated ne doit être émis quand l'écriture échoue"
         );
     }
 }

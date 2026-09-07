@@ -202,70 +202,51 @@ impl IMatchDayRepository for MatchDayRepository {
         .map_err(db_err)
     }
 
+    /// Tout ou rien : la journée est verrouillée, revérifiée vide, puis
+    /// écrite d'un bloc. Cf. la documentation du port.
+    async fn save_pairings(
+        &self,
+        match_day_id: &str,
+        pairings: &[(Pairing, NewPairingProjection)],
+    ) -> Result<(), MatchDayRepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
+
+        // Le verrou porte sur la **journée** et non sur ses appariements : il
+        // n'y a rien à verrouiller dans une table vide, et c'est justement le
+        // cas qui nous intéresse. Deux générations concurrentes se sérialisent
+        // donc ici, et la seconde trouvera la journée pourvue.
+        sqlx::query("SELECT id FROM competition_match_days WHERE id = $1 FOR UPDATE")
+            .bind(match_day_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(db_err)?;
+
+        let deja: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM competition_match_day_pairings WHERE match_day_id = $1",
+        )
+        .bind(match_day_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(db_err)?;
+        if deja > 0 {
+            return Err(MatchDayRepositoryError::PairingsAlreadyExist);
+        }
+
+        for (pairing, projection) in pairings {
+            ecrire_appariement(&mut tx, match_day_id, pairing, projection).await?;
+        }
+        tx.commit().await.map_err(db_err)?;
+        Ok(())
+    }
+
     async fn save_pairing(
         &self,
         match_day_id: &str,
         pairing: &Pairing,
         projection: &NewPairingProjection,
     ) -> Result<(), MatchDayRepositoryError> {
-        let pairing_id = pairing.id.to_string();
-        let home_team_id = pairing.home_team_id.to_string();
-        let away_team_id = pairing.away_team_id.to_string();
-        let home_initials = initials(&projection.home_team_name);
-        let away_initials = initials(&projection.away_team_name);
-
         let mut tx = self.pool.begin().await.map_err(db_err)?;
-        sqlx::query(
-            "INSERT INTO competition_match_day_pairings (id, match_day_id, home_team_id, away_team_id)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (id) DO NOTHING",
-        )
-        .bind(&pairing_id)
-        .bind(match_day_id)
-        .bind(&home_team_id)
-        .bind(&away_team_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(db_err)?;
-
-        sqlx::query(
-            r#"INSERT INTO competition_match_display_proj (
-                pairing_id, season_id, round_id, round_name, round_position,
-                round_date_start, round_date_end, round_day_type,
-                home_team_id, home_team_name, home_roster_name, home_coach_name, home_logo_url, home_initials,
-                away_team_id, away_team_name, away_roster_name, away_coach_name, away_logo_url, away_initials,
-                match_status
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8,
-                $9, $10, $11, $12, $13, $14,
-                $15, $16, $17, $18, $19, $20,
-                'upcoming'
-            ) ON CONFLICT (pairing_id) DO NOTHING"#,
-        )
-        .bind(&pairing_id)
-        .bind(&projection.season_id)
-        .bind(match_day_id)
-        .bind(&projection.round_name)
-        .bind(projection.round_position)
-        .bind(&projection.round_date_start)
-        .bind(&projection.round_date_end)
-        .bind(&projection.round_day_type)
-        .bind(&home_team_id)
-        .bind(&projection.home_team_name)
-        .bind(&projection.home_roster_name)
-        .bind(&projection.home_coach_name)
-        .bind(&projection.home_logo_url)
-        .bind(&home_initials)
-        .bind(&away_team_id)
-        .bind(&projection.away_team_name)
-        .bind(&projection.away_roster_name)
-        .bind(&projection.away_coach_name)
-        .bind(&projection.away_logo_url)
-        .bind(&away_initials)
-        .execute(&mut *tx)
-        .await
-        .map_err(db_err)?;
-
+        ecrire_appariement(&mut tx, match_day_id, pairing, projection).await?;
         tx.commit().await.map_err(db_err)?;
         Ok(())
     }
@@ -776,4 +757,76 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].pairing_id, "p-a");
     }
+}
+
+/// Les deux écritures d'un appariement — la paire et sa projection — dans une
+/// transaction fournie par l'appelant.
+///
+/// Extraite telle quelle du corps de `save_pairing`, pour que la version
+/// plurielle n'en soit pas une seconde écriture : deux copies du même `INSERT`
+/// divergeraient à la première colonne ajoutée.
+async fn ecrire_appariement(
+    tx: &mut sqlx::PgConnection,
+    match_day_id: &str,
+    pairing: &Pairing,
+    projection: &NewPairingProjection,
+) -> Result<(), MatchDayRepositoryError> {
+    let pairing_id = pairing.id.to_string();
+    let home_team_id = pairing.home_team_id.to_string();
+    let away_team_id = pairing.away_team_id.to_string();
+    let home_initials = initials(&projection.home_team_name);
+    let away_initials = initials(&projection.away_team_name);
+
+    sqlx::query(
+        "INSERT INTO competition_match_day_pairings (id, match_day_id, home_team_id, away_team_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(&pairing_id)
+    .bind(match_day_id)
+    .bind(&home_team_id)
+    .bind(&away_team_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(db_err)?;
+
+    sqlx::query(
+            r#"INSERT INTO competition_match_display_proj (
+                pairing_id, season_id, round_id, round_name, round_position,
+                round_date_start, round_date_end, round_day_type,
+                home_team_id, home_team_name, home_roster_name, home_coach_name, home_logo_url, home_initials,
+                away_team_id, away_team_name, away_roster_name, away_coach_name, away_logo_url, away_initials,
+                match_status
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8,
+                $9, $10, $11, $12, $13, $14,
+                $15, $16, $17, $18, $19, $20,
+                'upcoming'
+            ) ON CONFLICT (pairing_id) DO NOTHING"#,
+        )
+        .bind(&pairing_id)
+        .bind(&projection.season_id)
+        .bind(match_day_id)
+        .bind(&projection.round_name)
+        .bind(projection.round_position)
+        .bind(&projection.round_date_start)
+        .bind(&projection.round_date_end)
+        .bind(&projection.round_day_type)
+        .bind(&home_team_id)
+        .bind(&projection.home_team_name)
+        .bind(&projection.home_roster_name)
+        .bind(&projection.home_coach_name)
+        .bind(&projection.home_logo_url)
+        .bind(&home_initials)
+        .bind(&away_team_id)
+        .bind(&projection.away_team_name)
+        .bind(&projection.away_roster_name)
+        .bind(&projection.away_coach_name)
+        .bind(&projection.away_logo_url)
+        .bind(&away_initials)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_err)?;
+
+    Ok(())
 }

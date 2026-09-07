@@ -196,6 +196,19 @@ mod tests {
         > {
             Ok(())
         }
+        async fn save_pairings(
+            &self,
+            _: &str,
+            _: &[(
+                Pairing,
+                crate::app::competitions::domain::match_day_repository_port::NewPairingProjection,
+            )],
+        ) -> Result<
+            (),
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(())
+        }
         async fn save_pairing(
             &self,
             _: &str,

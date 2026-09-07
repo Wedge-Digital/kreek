@@ -315,6 +315,13 @@ mod tests {
                 .push(match_day_id.to_string());
             Ok(())
         }
+        async fn save_pairings(
+            &self,
+            _: &str,
+            _: &[(Pairing, NewPairingProjection)],
+        ) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
         async fn save_pairing(
             &self,
             _: &str,
