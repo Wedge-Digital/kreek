@@ -86,6 +86,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `535-la-suite-e2e-ment-une-fois-sur-deux` | Cinq passages de `make test-impacted`, quatre ensembles d'échecs différents, aucun reproductible en isolation — et le même fichier tombe avec et sans la modification en cours. Tous sont des dépassements de délai sur des attentes asynchrones. Le coût réel n'est pas le temps des faux échecs, c'est l'enquête à mener chaque fois pour savoir s'il faut les croire |
 | `533-le-middleware-csrf-decrit-n-existe-pas` | Trois commentaires — dont le `CLAUDE.md` — décrivent un middleware CSRF que `grep -ri csrf src/` ne trouve pas. La protection tient par le cookie `SameSite::Lax` seul ; c'est sa description qui est fausse, et une description fausse est ce qui fait retirer la vraie garde en croyant l'autre en place |
 | `534-admin-scope-ne-verifie-rien-d-administratif` | Cinq vérifications « cette ressource appartient-elle à ce parent », aucune administrative, dans un module nommé `admin_scope` — qu'un handler atteint par n'importe quel coach va importer. Le risque n'est pas de croire le droit contrôlé, c'est de réécrire la vérification à côté |
 | `506-affecte-par-montre-un-identifiant` | Sous « Affecté par », la liste des points de classement manuels imprime un identifiant de vingt-six caractères au lieu du nom du commissaire : rien ne le traduit sur toute la pile. Portait le numéro 500, déjà pris par une carte close |
