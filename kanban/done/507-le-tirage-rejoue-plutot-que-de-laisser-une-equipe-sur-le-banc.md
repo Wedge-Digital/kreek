@@ -73,9 +73,35 @@ pub struct DrawInput {
 production. `random_draw.rs` isole la partie déterministe du `shuffle` non
 testé ; l'injection fait mieux, en rendant testable l'ensemble.
 
-**Énumération avec élagage**, pas de couplage maximum pondéré. À vingt équipes
-au plus, elle suffit ; écrire l'algorithme optimal serait payer une complexité
-pour un cas qui n'existe pas dans une ligue amateur.
+### L'algorithme — corrigé en cours de carte
+
+La spec annonçait une **énumération avec élagage**, « à vingt équipes au plus ».
+Deux mesures ont défait cette prémisse, dans cet ordre.
+
+**L'énumération ne tient pas.** À vingt équipes, c'est 19!! ≈ 6,5 × 10⁸
+appariements complets, et le pire cas — historique vide, aucune paire interdite
+— est justement celui où l'élagage n'élague rien.
+
+**La programmation dynamique sur masque de bits non plus.** Elle est exacte et
+au temps prévisible, mais garde 2ⁿ cases : 24 Mo à vingt équipes, 1,5 Go à
+vingt-six. Et le plafond qu'elle impose tombe **sous la taille réelle des
+ligues** — la base de développement porte une saison à vingt-deux équipes, et
+trois cent quarante-deux saisons sans poule, dont toutes les équipes partent en
+un seul appel.
+
+**Forme retenue : un retour sur trace avec propagation de contraintes.** Chaque
+équipe a un univers d'adversaires possibles ; on traite d'abord la plus
+contrainte (*fail-first*), on essaie ses adversaires du moins cher au plus cher,
+on abandonne une branche dès qu'elle coûte plus que la meilleure solution
+connue, et l'on s'arrête si l'on atteint la borne inférieure du problème.
+
+Mémoire en **O(n²)**, plus de plafond. Le prix est un pire cas non borné, tenu
+par un budget de nœuds — et quand il coupe, `DrawProposal` le dit au lieu de
+laisser croire à un optimum.
+
+Mesuré : millisecondes jusqu'à 70 % d'historique quelle que soit la taille ; une
+à deux secondes en profil `dev` à 90 %, où presque toutes les paires ont été
+jouées. **Décupler le budget ne change pas le résultat**, seulement l'attente.
 
 `generate_round_pairings` **reste en place** dans cette carte — c'est la 508 qui
 la retire, après avoir migré son appelant. Livrer les deux d'un coup mêlerait un
@@ -87,7 +113,8 @@ algorithme neuf et une migration dans le même diff.
       déjà joué A-B A-C B-C, attendre **deux** rencontres dont une revanche.
       C'est le cas qu'aucun des six tests actuels ne couvre.
 - [ ] `RencontresJouees` — comptes par paire, avec la journée de la dernière
-- [ ] `tirer` : R10 en filtre préalable, puis maximisation, puis minimisation
+- [ ] `tirer` : R10 en filtre préalable, univers par équipe, *fail-first*
+- [ ] Le budget de nœuds, et `optimum_prouve` qui dit qu'il a coupé
 - [ ] R9 — l'exemptée tirée parmi celles qui ne l'ont jamais été
 - [ ] R17 — départage au sort des combinaisons ex æquo
 - [ ] `Historique::{Inedite, Revanche { fois, derniere }}` sur chaque rencontre :

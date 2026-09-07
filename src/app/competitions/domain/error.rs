@@ -29,13 +29,6 @@ pub enum DomainError {
     },
     /// `field` est un `&'static str` et non un `String` : il ne peut venir que
     /// du code qui a détecté l'écart, jamais d'une requête.
-    /// Le tirage refuse au-delà de `tirage::MAX_EQUIPES` : la programmation
-    /// dynamique y demanderait plus de mémoire que le problème ne vaut. Une
-    /// journée de ligue amateur en compte huit à quatorze.
-    TropDEquipesPourLeTirage {
-        equipes: usize,
-    },
-
     ImmutableTierField {
         tier: String,
         field: &'static str,
@@ -71,12 +64,6 @@ impl fmt::Display for DomainError {
                 write!(
                     f,
                     "Le nombre de tiers ne peut pas changer ici : {before} avant, {after} reçus."
-                )
-            }
-            Self::TropDEquipesPourLeTirage { equipes } => {
-                write!(
-                    f,
-                    "Le tirage ne sait pas apparier {equipes} équipes en une journée."
                 )
             }
             Self::ImmutableTierField { tier, field } => {

@@ -19,25 +19,51 @@
 //! Seul le rang 1 refuse ; les autres cèdent dans l'ordre. **Une revanche est
 //! préférable à une équipe qui rentre chez elle sans avoir joué.**
 //!
-//! # Programmation dynamique sur masque de bits
+//! # Un parcours avec retour sur trace, pas une table
 //!
-//! La spec annonçait « énumération avec élagage ». Vérifié : à vingt équipes
-//! c'est 19!! ≈ 6,5 × 10⁸ appariements complets, et le pire cas — aucune paire
-//! interdite, historique vide — est justement celui où l'élagage n'élague rien.
+//! Deux voies ont été essayées. **La programmation dynamique sur masque de
+//! bits** — une case par sous-ensemble d'équipes — est exacte et au temps
+//! prévisible, mais elle garde 2ⁿ cases en mémoire : 24 Mo à vingt équipes,
+//! 1,5 Go à vingt-six. C'est la **mémoire** qui bornait, pas le temps, et le
+//! plafond tombait sous la taille réelle des ligues — la base de développement
+//! porte une saison à vingt-deux équipes, et trois cent quarante-deux saisons
+//! sans poule, dont toutes les équipes partent en un seul appel.
 //!
-//! La DP visite 2ⁿ états, une vingtaine de transitions chacun. Elle est
-//! **exacte**, et surtout plus facile à prouver juste qu'un branch-and-bound.
+//! Ce qui est écrit ici raisonne comme un organisateur devant sa feuille :
 //!
-//! Mesuré en profil `dev` — la production tourne en `release`, plus rapide d'un
-//! ordre de grandeur :
+//! 1. chaque équipe a un **univers** — les adversaires que rien n'interdit ;
+//! 2. on traite d'abord **l'équipe la plus contrainte**, celle qui a le moins
+//!    de choix : si une impasse existe, autant la rencontrer tout de suite ;
+//! 3. on essaie ses adversaires **du moins cher au plus cher** — inédit
+//!    d'abord, puis la revanche la plus ancienne ;
+//! 4. dès qu'une branche coûte déjà plus que la meilleure solution connue, on
+//!    l'abandonne ;
+//! 5. si l'on retombe sur la borne inférieure du problème, on s'arrête : rien
+//!    ne peut faire mieux.
 //!
-//! | Équipes | 8 | 12 | 14 | 16 | 18 | 20 |
-//! |---|---|---|---|---|---|---|
-//! | Durée | 0,8 ms | 1,5 ms | 6,4 ms | 34 ms | 130 ms | 557 ms |
+//! La mémoire est en O(n²) — les univers — au lieu de 2ⁿ. **Il n'y a plus de
+//! plafond.** Le prix est un pire cas non borné, tenu par `BUDGET_NOEUDS`.
 //!
-//! Le doublement à chaque paire d'équipes se lit dans le tableau. Une journée
-//! de ligue amateur en compte huit à quatorze, où le tirage est instantané ;
-//! `MAX_EQUIPES` borne le reste, et **refuse plutôt que de faire attendre**.
+//! # Ce que ça donne, mesuré
+//!
+//! Profil `dev` ; la production tourne en `release`, environ dix fois plus vite.
+//! L'historique est la proportion de paires déjà jouées — 90 % est une fin de
+//! saison où presque tout le monde s'est rencontré.
+//!
+//! | Historique | 14 éq. | 20 éq. | 24 éq. | 26 éq. | 31 éq. |
+//! |---|---|---|---|---|---|
+//! | 30 % | 1,8 ms | 0,9 ms | 1,2 ms | 0,9 ms | 1,4 ms |
+//! | 50 % | 0,5 ms | 1,0 ms | 1,2 ms | 0,9 ms | 1,4 ms |
+//! | 70 % | 1,7 ms | 0,9 ms | 1,5 ms | 18 ms | 1,4 ms |
+//! | 90 % | 2,8 ms | 2,0 ms | 1,24 s | 1,00 s | 2,0 s ✂ |
+//!
+//! ✂ : le budget a coupé. **Le tirage rendu restait maximal** — quinze
+//! rencontres sur trente et une équipes, soit tout ce qui est possible ; seule
+//! l'optimalité du départage des revanches n'était pas prouvée.
+//!
+//! **Décupler le budget ne referme pas ce cas** : vingt millions de nœuds
+//! coûtent vingt secondes au lieu de deux, pour le même appariement. Le budget
+//! borne l'attente ; ce n'est pas un bouton « chercher plus fort ».
 //!
 //! # L'aléa reste au bord
 //!
@@ -45,16 +71,17 @@
 //! c'est ce qui rend R8 testable. Le générateur n'intervient qu'au moment de
 //! reconstruire, pour départager les combinaisons restées à égalité (R17).
 
-use crate::app::competitions::domain::error::DomainError;
 use crate::app::competitions::domain::match_day::{MatchDayName, MatchDayPosition};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use rand::seq::IndexedRandom;
+use rand::seq::{IndexedRandom, SliceRandom};
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
 
-/// Au-delà, la DP demanderait plus de mémoire que le problème ne vaut. Une
-/// journée de ligue amateur en compte huit à quatorze.
-pub const MAX_EQUIPES: usize = 20;
+/// Le pire cas d'un retour sur trace n'est pas borné. Plutôt que de faire
+/// attendre indéfiniment, on arrête l'exploration au bout de ce nombre de
+/// nœuds et l'on rend la meilleure solution trouvée — `DrawProposal` dit alors
+/// que l'optimum n'est **pas prouvé**, plutôt que de le laisser croire.
+const BUDGET_NOEUDS: u32 = 2_000_000;
 
 // ── Ce que le tirage sait de l'histoire ──────────────────────────────────────
 
@@ -191,11 +218,26 @@ pub struct ProposedPairing {
 ///
 /// `ecartees` reste vide ici : les équipes désengagées depuis leur réponse
 /// (R18) sont filtrées par le use case, qui seul connaît les inscriptions.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DrawProposal {
     pub rencontres: Vec<ProposedPairing>,
     pub exemptee: Option<TeamId>,
     pub ecartees: Vec<TeamId>,
+    /// Faux quand le budget de nœuds a coupé la recherche : la proposition est
+    /// un appariement valide, mais rien ne dit qu'il soit le meilleur. L'écran
+    /// le signale plutôt que de laisser croire à un optimum.
+    pub optimum_prouve: bool,
+}
+
+impl Default for DrawProposal {
+    fn default() -> Self {
+        Self {
+            rencontres: vec![],
+            exemptee: None,
+            ecartees: vec![],
+            optimum_prouve: true,
+        }
+    }
 }
 
 // ── Le coût d'une combinaison ────────────────────────────────────────────────
@@ -231,9 +273,6 @@ impl Cout {
     };
 
     fn plus(self, autre: Cout) -> Cout {
-        if self == Cout::INFINI || autre == Cout::INFINI {
-            return Cout::INFINI;
-        }
         Cout {
             perdues: self.perdues + autre.perdues,
             revanches: self.revanches + autre.revanches,
@@ -249,55 +288,64 @@ impl Cout {
 ///
 /// Déterministe jusqu'au départage : deux appels sur la même entrée rendent des
 /// appariements également optimaux, mais pas forcément les mêmes (R17).
-pub fn tirer(input: &DrawInput, rng: &mut impl Rng) -> Result<DrawProposal, DomainError> {
-    let n = input.equipes.len();
-    if n > MAX_EQUIPES {
-        return Err(DomainError::TropDEquipesPourLeTirage { equipes: n });
+pub fn tirer(input: &DrawInput, rng: &mut impl Rng) -> DrawProposal {
+    if input.equipes.len() < 2 {
+        return DrawProposal::default();
     }
-    if n < 2 {
-        return Ok(DrawProposal::default());
-    }
-
-    let table = Table::batir(input);
-    let dp = table.resoudre();
-    let (paires, exemptees) = table.reconstruire(&dp, rng);
-
-    Ok(DrawProposal {
-        rencontres: table.rencontres(input, &paires),
-        exemptee: exemptees.first().map(|&i| input.equipes[i]),
-        ecartees: vec![],
-    })
+    let mut recherche = Recherche::batir(input);
+    let mut libres = vec![true; input.equipes.len()];
+    let mut courant = Solution::default();
+    recherche.explorer(&mut libres, &mut courant, Cout::ZERO, rng);
+    recherche.proposition(input)
 }
 
-/// Les données du problème, indexées par position plutôt que par identifiant :
-/// la DP manipule des `usize` et des masques, jamais des ULID.
-struct Table {
+#[derive(Debug, Clone, Default)]
+struct Solution {
+    paires: Vec<(usize, usize)>,
+    exemptees: Vec<usize>,
+}
+
+/// L'état de la recherche. Les équipes y sont des indices : on manipule des
+/// `usize`, jamais des ULID.
+struct Recherche {
     n: usize,
+    /// R10 en filtre préalable : une paire interdite n'entre jamais dans un
+    /// univers, donc aucun objectif ne peut la rattraper.
     autorisee: Vec<Vec<bool>>,
     poids: Vec<Vec<(u32, i64)>>,
     deja_exemptee: Vec<bool>,
+    /// Ce qu'aucune solution ne peut battre. L'atteindre arrête tout.
+    plancher: Cout,
+    budget: u32,
+    budget_epuise: bool,
+    meilleur_cout: Cout,
+    meilleure: Solution,
 }
 
-impl Table {
-    fn batir(input: &DrawInput) -> Table {
+impl Recherche {
+    fn batir(input: &DrawInput) -> Recherche {
         let n = input.equipes.len();
-        let mut table = Table {
+        let mut recherche = Recherche {
             n,
             autorisee: vec![vec![false; n]; n],
             poids: vec![vec![(0, 0); n]; n],
             deja_exemptee: vec![false; n],
+            plancher: Cout::ZERO,
+            budget: BUDGET_NOEUDS,
+            budget_epuise: false,
+            meilleur_cout: Cout::INFINI,
+            meilleure: Solution::default(),
         };
         for i in 0..n {
-            table.deja_exemptee[i] = !input.jamais_exemptees.contains(&input.equipes[i]);
+            recherche.deja_exemptee[i] = !input.jamais_exemptees.contains(&input.equipes[i]);
             for j in 0..n {
-                table.remplir(input, i, j);
+                recherche.remplir(input, i, j);
             }
         }
-        table
+        recherche.plancher = recherche.plancher();
+        recherche
     }
 
-    /// R10 en filtre préalable : une paire interdite n'entre jamais dans la DP,
-    /// donc aucun objectif ne peut la rattraper.
     fn remplir(&mut self, input: &DrawInput, i: usize, j: usize) {
         if i == j {
             return;
@@ -307,26 +355,144 @@ impl Table {
         self.poids[i][j] = input.historique.poids(a, b);
     }
 
-    /// `dp[masque]` = le meilleur coût pour résoudre exactement ces équipes,
-    /// chacune appariée à l'intérieur du masque ou laissée de côté.
-    fn resoudre(&self) -> Vec<Cout> {
-        let mut dp = vec![Cout::INFINI; 1usize << self.n];
-        dp[0] = Cout::ZERO;
-        for masque in 1..(1usize << self.n) {
-            let i = masque.trailing_zeros() as usize;
-            let reste = masque & !(1usize << i);
-            let mut meilleur = dp[reste].plus(self.cout_exemption(i));
-            for j in self.partenaires(i, reste) {
-                let suivant = reste & !(1usize << j);
-                meilleur = meilleur.min(dp[suivant].plus(self.cout_paire(i, j)));
-            }
-            dp[masque] = meilleur;
+    /// La borne inférieure du problème : la parité impose une exemption, et si
+    /// toutes les équipes ont déjà été exemptées, R9 sera fatalement violée.
+    /// Une solution qui l'atteint est optimale — inutile de chercher plus loin.
+    fn plancher(&self) -> Cout {
+        let perdues = (self.n % 2) as u32;
+        let toutes_deja = self.deja_exemptee.iter().all(|&d| d);
+        Cout {
+            perdues,
+            exemptions_repetees: u32::from(perdues == 1 && toutes_deja),
+            ..Cout::ZERO
         }
-        dp
     }
 
-    fn partenaires(&self, i: usize, reste: usize) -> impl Iterator<Item = usize> + '_ {
-        (0..self.n).filter(move |&j| reste & (1usize << j) != 0 && self.autorisee[i][j])
+    /// Rend `true` quand il faut arrêter toute l'exploration — plancher atteint
+    /// ou budget épuisé.
+    fn explorer(
+        &mut self,
+        libres: &mut [bool],
+        courant: &mut Solution,
+        cout: Cout,
+        rng: &mut impl Rng,
+    ) -> bool {
+        if self.budget == 0 {
+            self.budget_epuise = true;
+            return true;
+        }
+        self.budget -= 1;
+        if cout >= self.meilleur_cout {
+            return false;
+        }
+        let Some(i) = self.plus_contrainte(libres, rng) else {
+            return self.enregistrer(courant, cout);
+        };
+        libres[i] = false;
+        let arret = self.essayer(i, libres, courant, cout, rng);
+        libres[i] = true;
+        arret
+    }
+
+    fn essayer(
+        &mut self,
+        i: usize,
+        libres: &mut [bool],
+        courant: &mut Solution,
+        cout: Cout,
+        rng: &mut impl Rng,
+    ) -> bool {
+        for option in self.univers(i, libres, rng) {
+            let arret = match option {
+                Some(j) => self.essayer_paire(i, j, libres, courant, cout, rng),
+                None => self.essayer_exemption(i, libres, courant, cout, rng),
+            };
+            if arret {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn essayer_paire(
+        &mut self,
+        i: usize,
+        j: usize,
+        libres: &mut [bool],
+        courant: &mut Solution,
+        cout: Cout,
+        rng: &mut impl Rng,
+    ) -> bool {
+        libres[j] = false;
+        courant.paires.push((i, j));
+        let arret = self.explorer(libres, courant, cout.plus(self.cout_paire(i, j)), rng);
+        courant.paires.pop();
+        libres[j] = true;
+        arret
+    }
+
+    fn essayer_exemption(
+        &mut self,
+        i: usize,
+        libres: &mut [bool],
+        courant: &mut Solution,
+        cout: Cout,
+        rng: &mut impl Rng,
+    ) -> bool {
+        courant.exemptees.push(i);
+        let arret = self.explorer(libres, courant, cout.plus(self.cout_exemption(i)), rng);
+        courant.exemptees.pop();
+        arret
+    }
+
+    fn enregistrer(&mut self, courant: &Solution, cout: Cout) -> bool {
+        if cout < self.meilleur_cout {
+            self.meilleur_cout = cout;
+            self.meilleure = courant.clone();
+        }
+        self.meilleur_cout <= self.plancher
+    }
+
+    /// L'équipe libre au plus petit univers — *fail-first*. Si une impasse
+    /// existe, on la rencontre tout de suite plutôt qu'après dix choix à
+    /// défaire ; c'est ce qui fait tenir la recherche.
+    fn plus_contrainte(&self, libres: &[bool], rng: &mut impl Rng) -> Option<usize> {
+        let mut candidats: Vec<usize> = Vec::new();
+        let mut plus_petit = usize::MAX;
+        for i in (0..self.n).filter(|&i| libres[i]) {
+            let taille = self.taille_univers(i, libres);
+            if taille < plus_petit {
+                plus_petit = taille;
+                candidats.clear();
+            }
+            if taille == plus_petit {
+                candidats.push(i);
+            }
+        }
+        candidats.choose(rng).copied()
+    }
+
+    fn taille_univers(&self, i: usize, libres: &[bool]) -> usize {
+        (0..self.n)
+            .filter(|&j| j != i && libres[j] && self.autorisee[i][j])
+            .count()
+    }
+
+    /// Les adversaires possibles de `i`, **du moins cher au plus cher**, puis
+    /// l'exemption — qui coûte toujours davantage, R8.1 dominant.
+    ///
+    /// Le mélange précède un tri **stable** : l'ordre des coûts est respecté,
+    /// et le sort ne départage que les égalités. C'est R17, et c'est aussi ce
+    /// qui fait que la première descente est déjà une bonne solution.
+    fn univers(&self, i: usize, libres: &[bool], rng: &mut impl Rng) -> Vec<Option<usize>> {
+        let mut partenaires: Vec<usize> = (0..self.n)
+            .filter(|&j| libres[j] && self.autorisee[i][j])
+            .collect();
+        partenaires.shuffle(rng);
+        partenaires.sort_by_key(|&j| self.poids[i][j]);
+        let mut options: Vec<Option<usize>> = partenaires.into_iter().map(Some).collect();
+        options.push(None);
+        options
     }
 
     fn cout_exemption(&self, i: usize) -> Cout {
@@ -346,51 +512,18 @@ impl Table {
         }
     }
 
-    /// Redescend la table en choisissant **au sort** parmi les transitions qui
-    /// atteignent l'optimum — c'est R17, et c'est le seul endroit où le
-    /// générateur intervient.
-    fn reconstruire(&self, dp: &[Cout], rng: &mut impl Rng) -> (Vec<(usize, usize)>, Vec<usize>) {
-        let (mut paires, mut exemptees) = (Vec::new(), Vec::new());
-        let mut masque = (1usize << self.n) - 1;
-        while masque != 0 {
-            let i = masque.trailing_zeros() as usize;
-            let reste = masque & !(1usize << i);
-            match self.choisir(dp, i, reste, rng) {
-                Some(j) => {
-                    paires.push((i, j));
-                    masque = reste & !(1usize << j);
-                }
-                None => {
-                    exemptees.push(i);
-                    masque = reste;
-                }
-            }
+    fn proposition(&self, input: &DrawInput) -> DrawProposal {
+        DrawProposal {
+            rencontres: self.rencontres(input),
+            exemptee: self.meilleure.exemptees.first().map(|&i| input.equipes[i]),
+            ecartees: vec![],
+            optimum_prouve: !self.budget_epuise,
         }
-        (paires, exemptees)
     }
 
-    /// Le partenaire retenu pour `i`, ou `None` s'il faut l'exempter.
-    ///
-    /// La liste des candidats n'est jamais vide : l'exemption est toujours une
-    /// transition possible, et `dp` est le minimum sur exactement ces
-    /// transitions. Le `flatten` dégrade donc un cas qui ne se produit pas — et
-    /// s'il se produisait, il laisserait une équipe de côté, jamais une paire
-    /// fausse.
-    fn choisir(&self, dp: &[Cout], i: usize, reste: usize, rng: &mut impl Rng) -> Option<usize> {
-        let optimum = dp[reste | (1usize << i)];
-        let mut candidats: Vec<Option<usize>> = self
-            .partenaires(i, reste)
-            .filter(|&j| dp[reste & !(1usize << j)].plus(self.cout_paire(i, j)) == optimum)
-            .map(Some)
-            .collect();
-        if dp[reste].plus(self.cout_exemption(i)) == optimum {
-            candidats.push(None);
-        }
-        candidats.choose(rng).copied().flatten()
-    }
-
-    fn rencontres(&self, input: &DrawInput, paires: &[(usize, usize)]) -> Vec<ProposedPairing> {
-        paires
+    fn rencontres(&self, input: &DrawInput) -> Vec<ProposedPairing> {
+        self.meilleure
+            .paires
             .iter()
             .map(|&(i, j)| ProposedPairing {
                 home: input.equipes[i],
@@ -464,7 +597,7 @@ mod tests {
         jouee(&mut input, 0, 2, 2);
         jouee(&mut input, 1, 2, 3);
 
-        let p = tirer(&input, &mut graine(1)).unwrap();
+        let p = tirer(&input, &mut graine(1));
 
         assert_eq!(p.rencontres.len(), 2, "obtenu : {:?}", p.rencontres);
         assert!(p.exemptee.is_none());
@@ -485,7 +618,7 @@ mod tests {
             jouee(&mut input, a, b, 1);
         }
 
-        let p = tirer(&input, &mut graine(2)).unwrap();
+        let p = tirer(&input, &mut graine(2));
 
         assert_eq!(p.rencontres.len(), 2);
     }
@@ -508,7 +641,7 @@ mod tests {
             jouee(&mut input, a, b, 1);
         }
 
-        let p = tirer(&input, &mut graine(3)).unwrap();
+        let p = tirer(&input, &mut graine(3));
 
         let attendu: HashSet<(TeamId, TeamId)> = HashSet::from([
             paire(&input.equipes[0], &input.equipes[2]),
@@ -529,7 +662,7 @@ mod tests {
         jouee(&mut input, 1, 3, 5);
         jouee(&mut input, 2, 3, 5);
 
-        let p = tirer(&input, &mut graine(4)).unwrap();
+        let p = tirer(&input, &mut graine(4));
 
         assert!(
             appariees(&p).contains(&paire(&input.equipes[0], &input.equipes[1])),
@@ -545,7 +678,7 @@ mod tests {
         jouee(&mut input, 0, 1, 2);
         jouee(&mut input, 0, 1, 7);
 
-        let p = tirer(&input, &mut graine(5)).unwrap();
+        let p = tirer(&input, &mut graine(5));
 
         assert_eq!(
             p.rencontres[0].historique,
@@ -564,7 +697,7 @@ mod tests {
         input.jamais_exemptees = HashSet::from([input.equipes[3]]);
 
         for graine_n in 0..20 {
-            let p = tirer(&input, &mut graine(graine_n)).unwrap();
+            let p = tirer(&input, &mut graine(graine_n));
             assert_eq!(p.rencontres.len(), 2);
             assert_eq!(p.exemptee, Some(input.equipes[3]));
         }
@@ -581,7 +714,7 @@ mod tests {
         input.jamais_exemptees = HashSet::from([input.equipes[0]]);
         jouee(&mut input, 1, 2, 1);
 
-        let p = tirer(&input, &mut graine(6)).unwrap();
+        let p = tirer(&input, &mut graine(6));
 
         assert_ne!(
             p.exemptee,
@@ -603,7 +736,7 @@ mod tests {
         let mut input = entree(equipes(2));
         input.interdites = HashSet::from([paire(&input.equipes[0], &input.equipes[1])]);
 
-        let p = tirer(&input, &mut graine(7)).unwrap();
+        let p = tirer(&input, &mut graine(7));
 
         assert!(p.rencontres.is_empty(), "obtenu : {:?}", p.rencontres);
     }
@@ -614,7 +747,7 @@ mod tests {
         input.interdites = HashSet::from([paire(&input.equipes[0], &input.equipes[1])]);
 
         for graine_n in 0..20 {
-            let p = tirer(&input, &mut graine(graine_n)).unwrap();
+            let p = tirer(&input, &mut graine(graine_n));
             assert_eq!(p.rencontres.len(), 2);
             assert!(!appariees(&p).contains(&paire(&input.equipes[0], &input.equipes[1])));
         }
@@ -631,7 +764,7 @@ mod tests {
 
         let vus: HashSet<Vec<(TeamId, TeamId)>> = (0..30)
             .map(|g| {
-                let p = tirer(&input, &mut graine(g)).unwrap();
+                let p = tirer(&input, &mut graine(g));
                 let mut paires: Vec<_> = appariees(&p).into_iter().collect();
                 paires.sort_by_key(|(a, b)| (a.to_string(), b.to_string()));
                 paires
@@ -652,7 +785,7 @@ mod tests {
         jouee(&mut input, 2, 3, 1);
 
         for graine_n in 0..30 {
-            let p = tirer(&input, &mut graine(graine_n)).unwrap();
+            let p = tirer(&input, &mut graine(graine_n));
             assert_eq!(p.rencontres.len(), 3);
             let revanches = p
                 .rencontres
@@ -667,12 +800,8 @@ mod tests {
 
     #[test]
     fn moins_de_deux_equipes_ne_donne_aucune_rencontre() {
-        assert!(tirer(&entree(vec![]), &mut graine(8))
-            .unwrap()
-            .rencontres
-            .is_empty());
+        assert!(tirer(&entree(vec![]), &mut graine(8)).rencontres.is_empty());
         assert!(tirer(&entree(equipes(1)), &mut graine(8))
-            .unwrap()
             .rencontres
             .is_empty());
     }
@@ -680,30 +809,28 @@ mod tests {
     #[test]
     fn un_effectif_impair_exempte_exactement_une_equipe() {
         let input = entree(equipes(7));
-        let p = tirer(&input, &mut graine(9)).unwrap();
+        let p = tirer(&input, &mut graine(9));
 
         assert_eq!(p.rencontres.len(), 3);
         assert!(p.exemptee.is_some());
     }
 
+    /// Il n'y a plus de plafond : la recherche tient en O(n²) de mémoire, et la
+    /// base de développement porte déjà une saison à vingt-deux équipes.
     #[test]
-    fn au_dela_du_plafond_le_tirage_refuse_et_le_dit() {
-        let input = entree(equipes(MAX_EQUIPES + 1));
-
-        let refus = tirer(&input, &mut graine(10));
-
-        assert_eq!(
-            refus,
-            Err(DomainError::TropDEquipesPourLeTirage {
-                equipes: MAX_EQUIPES + 1
-            })
-        );
+    fn une_grande_ligue_est_appariee_sans_plafond() {
+        for n in [22, 26, 31] {
+            let p = tirer(&entree(equipes(n)), &mut graine(10));
+            assert_eq!(p.rencontres.len(), n / 2, "{n} équipes");
+            assert_eq!(p.exemptee.is_some(), n % 2 == 1);
+            assert!(p.optimum_prouve, "{n} équipes : budget épuisé");
+        }
     }
 
     /// `ecartees` appartient au use case, qui seul connaît les inscriptions.
     #[test]
     fn le_tirage_n_ecarte_personne_lui_meme() {
-        let p = tirer(&entree(equipes(4)), &mut graine(11)).unwrap();
+        let p = tirer(&entree(equipes(4)), &mut graine(11));
         assert!(p.ecartees.is_empty());
     }
 }
