@@ -21,6 +21,7 @@ pub struct GenerateAllOutcome {
     pub skipped_team_names: Vec<String>,
     pub skipped_round_names: Vec<String>,
     pub skipped_group_names: Vec<String>,
+    pub unproven_group_names: Vec<String>,
 }
 
 #[tracing::instrument(skip_all, fields(season_id = ?season_id))]
@@ -41,6 +42,7 @@ pub async fn execute(
     let mut skipped_team_names: Vec<String> = Vec::new();
     let mut skipped_round_names: Vec<String> = Vec::new();
     let mut skipped_group_names: Vec<String> = Vec::new();
+    let mut unproven_group_names: Vec<String> = Vec::new();
     for day in &days {
         if day.is_rest() {
             continue;
@@ -60,6 +62,7 @@ pub async fn execute(
             Ok(outcome) => {
                 skipped_team_names.extend(outcome.skipped_team_names);
                 skipped_group_names.extend(outcome.skipped_group_names);
+                unproven_group_names.extend(outcome.unproven_group_names);
             }
             Err(generate_pairings::GenerateError::PairingsAlreadyExist) => {
                 skipped_round_names.push(day.name.to_string());
@@ -72,10 +75,13 @@ pub async fn execute(
     skipped_team_names.dedup();
     skipped_group_names.sort();
     skipped_group_names.dedup();
+    unproven_group_names.sort();
+    unproven_group_names.dedup();
     Ok(GenerateAllOutcome {
         skipped_team_names,
         skipped_round_names,
         skipped_group_names,
+        unproven_group_names,
     })
 }
 

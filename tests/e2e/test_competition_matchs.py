@@ -233,7 +233,7 @@ def paired_competition(browser, space_id):
     d'une compétition vide)."""
     from competition_lifecycle import build_full_competition
 
-    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2)
+    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2, with_pairings=True)
     return {
         "space_id": space_id,
         "competition_id": full["competition_id"],

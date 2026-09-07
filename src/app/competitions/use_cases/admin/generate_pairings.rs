@@ -1,8 +1,10 @@
 use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::group_repository_port::{GroupWithTeams, IGroupRepository};
-use crate::app::competitions::domain::match_day::generate_round_pairings;
 use crate::app::competitions::domain::match_day::{MatchDay, Pairing};
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
+use crate::app::competitions::domain::tirage::{
+    paire, tirer, DrawInput, ProposedPairing, RencontresJouees,
+};
 use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
     build_new_pairing_projection, filter_enrolled_team_ids, load_enrolled_teams, resolve_team_names,
@@ -12,6 +14,8 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::EventId;
 use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -30,10 +34,16 @@ pub enum GenerateError {
 /// — aucun appariement possible, sans quoi la génération réussirait
 /// silencieusement à 0 rencontre pour cette poule (BR : signaler explicitement
 /// plutôt que de laisser l'admin croire que la génération a échoué).
+/// `unproven_group_names` : poules dont le tirage a épuisé son budget
+/// d'exploration. L'appariement rendu reste **maximal** — personne n'est laissé
+/// sur le banc sans raison — mais rien ne prouve que le départage des revanches
+/// soit le meilleur. Signalé plutôt que tu, pour la même raison que les deux
+/// autres champs : l'admin doit savoir ce que la génération a concédé.
 #[derive(Debug, Default)]
 pub struct GenerateOutcome {
     pub skipped_team_names: Vec<String>,
     pub skipped_group_names: Vec<String>,
+    pub unproven_group_names: Vec<String>,
 }
 
 #[tracing::instrument(skip_all, fields(match_day_id = ?match_day_id))]
@@ -69,37 +79,50 @@ pub async fn execute(
         .find_by_season(season_id)
         .await
         .map_err(|e| GenerateError::Repository(e.to_string()))?;
-    let mut already_played = build_played_set(&all_days, match_day_id);
+    let mut historique = build_historique(&all_days, match_day_id);
 
+    // `from_os_rng()` comme `random_draw.rs`, et créé **une fois** : un
+    // générateur par poule reproduirait le même état pour chacune.
+    let mut rng = StdRng::from_os_rng();
+    let ctx = Contexte {
+        match_day: &match_day,
+        competition_id,
+        season_id,
+        space_id,
+        team_display: &team_display,
+        match_day_repo,
+        event_bus,
+    };
+
+    let mut outcome = GenerateOutcome::default();
     let mut skipped_team_ids: Vec<String> = Vec::new();
-    let mut skipped_group_names: Vec<String> = Vec::new();
     for group in &groups {
         let (filtered_ids, skipped) = filter_enrolled_team_ids(&group.team_ids, &team_display);
         skipped_team_ids.extend(skipped);
         if filtered_ids.len() < 2 {
-            skipped_group_names.push(group.group_name.clone());
+            outcome.skipped_group_names.push(group.group_name.clone());
             continue;
         }
-        generate_and_save_group_pairings(
-            &filtered_ids,
-            &mut already_played,
-            match_day_id,
-            competition_id,
-            season_id,
-            space_id,
-            &match_day,
-            &team_display,
-            match_day_repo,
-            event_bus,
-        )
-        .await?;
+        if !apparier_le_groupe(&ctx, &filtered_ids, &mut historique, &mut rng).await? {
+            outcome.unproven_group_names.push(group.group_name.clone());
+        }
     }
 
-    let skipped_team_names = resolve_team_names(skipped_team_ids, team_port).await;
-    Ok(GenerateOutcome {
-        skipped_team_names,
-        skipped_group_names,
-    })
+    outcome.skipped_team_names = resolve_team_names(skipped_team_ids, team_port).await;
+    Ok(outcome)
+}
+
+/// Ce que l'écriture d'une rencontre demande, et qui ne change pas d'une poule
+/// à l'autre. Rassemblé pour que les fonctions qui suivent tiennent en une
+/// poignée de paramètres plutôt qu'en dix.
+struct Contexte<'a> {
+    match_day: &'a MatchDay,
+    competition_id: &'a str,
+    season_id: &'a str,
+    space_id: &'a str,
+    team_display: &'a HashMap<String, TeamInfoDto>,
+    match_day_repo: &'a dyn IMatchDayRepository,
+    event_bus: &'a EventBus,
 }
 
 async fn load_groups(
@@ -126,98 +149,134 @@ async fn load_groups(
     }])
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn generate_and_save_group_pairings(
+/// Rend `false` quand le tirage n'a pas pu prouver son optimum.
+async fn apparier_le_groupe(
+    ctx: &Contexte<'_>,
     team_ids: &[String],
-    already_played: &mut HashSet<(String, String)>,
-    match_day_id: &str,
-    competition_id: &str,
-    season_id: &str,
-    space_id: &str,
-    match_day: &MatchDay,
-    team_display: &HashMap<String, TeamInfoDto>,
-    match_day_repo: &dyn IMatchDayRepository,
-    event_bus: &EventBus,
-) -> Result<(), GenerateError> {
-    let pairings = generate_round_pairings(team_ids, already_played);
+    historique: &mut RencontresJouees,
+    rng: &mut StdRng,
+) -> Result<bool, GenerateError> {
+    let equipes: Vec<TeamId> = team_ids
+        .iter()
+        .map(|id| TeamId::try_new(id).expect("valid team id"))
+        .collect();
 
-    for (home, away) in pairings {
-        let pairing = Pairing {
-            id: PairingId::new(),
-            home_team_id: TeamId::try_new(&home).expect("valid team id"),
-            away_team_id: TeamId::try_new(&away).expect("valid team id"),
-        };
-        let projection =
-            build_new_pairing_projection(&home, &away, season_id, match_day, team_display);
-        match_day_repo
-            .save_pairing(match_day_id, &pairing, &projection)
-            .await
-            .map_err(|e| GenerateError::Repository(e.to_string()))?;
+    let proposition = tirer(
+        &DrawInput {
+            interdites: build_interdites(&equipes, ctx.team_display),
+            equipes,
+            historique: historique.clone(),
+            // Le Calendrier ne tient aucun historique d'exemption : R9 ne
+            // s'applique donc pas ici, et l'exemptée est tirée uniformément —
+            // le comportement d'avant, ni meilleur ni pire. C'est l'onglet
+            // Présences qui apportera cette mémoire.
+            jamais_exemptees: HashSet::new(),
+        },
+        rng,
+    );
 
-        emit_pairing_created(
-            &home,
-            &away,
-            &pairing,
-            competition_id,
-            season_id,
-            space_id,
-            match_day,
-            team_display,
-            event_bus,
-        );
-
-        let norm = if home < away {
-            (home, away)
-        } else {
-            (away, home)
-        };
-        already_played.insert(norm);
+    for rencontre in &proposition.rencontres {
+        ecrire_rencontre(ctx, rencontre, historique).await?;
     }
+    Ok(proposition.optimum_prouve)
+}
+
+/// R10 — deux équipes d'un même coach ne se rencontrent jamais.
+///
+/// La règle est métier, sa **matière** est inter-BC : la relation équipe → coach
+/// arrive par `ITeamInfoPort`. Le domaine reçoit des paires interdites, il n'a
+/// pas à savoir qu'un coach existe.
+fn build_interdites(
+    equipes: &[TeamId],
+    team_display: &HashMap<String, TeamInfoDto>,
+) -> HashSet<(TeamId, TeamId)> {
+    let mut interdites = HashSet::new();
+    for (rang, a) in equipes.iter().enumerate() {
+        for b in equipes.iter().skip(rang + 1) {
+            if meme_coach(a, b, team_display) {
+                interdites.insert(paire(a, b));
+            }
+        }
+    }
+    interdites
+}
+
+fn meme_coach(a: &TeamId, b: &TeamId, team_display: &HashMap<String, TeamInfoDto>) -> bool {
+    match (
+        team_display.get(&a.to_string()),
+        team_display.get(&b.to_string()),
+    ) {
+        (Some(x), Some(y)) => x.coach_id == y.coach_id,
+        _ => false,
+    }
+}
+
+async fn ecrire_rencontre(
+    ctx: &Contexte<'_>,
+    rencontre: &ProposedPairing,
+    historique: &mut RencontresJouees,
+) -> Result<(), GenerateError> {
+    let (home, away) = (rencontre.home.to_string(), rencontre.away.to_string());
+    let pairing = Pairing {
+        id: PairingId::new(),
+        home_team_id: rencontre.home,
+        away_team_id: rencontre.away,
+    };
+    let projection =
+        build_new_pairing_projection(&home, &away, ctx.season_id, ctx.match_day, ctx.team_display);
+    ctx.match_day_repo
+        .save_pairing(&ctx.match_day.id.to_string(), &pairing, &projection)
+        .await
+        .map_err(|e| GenerateError::Repository(e.to_string()))?;
+
+    emit_pairing_created(ctx, &home, &away, &pairing);
+
+    // Les poules étant disjointes, cela ne change rien aujourd'hui — mais une
+    // rencontre écrite est une rencontre jouée, et l'historique doit le dire.
+    historique.enregistrer(
+        &rencontre.home,
+        &rencontre.away,
+        ctx.match_day.position,
+        ctx.match_day.name.clone(),
+    );
     Ok(())
 }
 
-fn build_played_set(days: &[MatchDay], exclude_id: &str) -> HashSet<(String, String)> {
-    let mut played = HashSet::new();
-    for day in days {
-        if day.id.to_string() == exclude_id {
-            continue;
-        }
+/// L'historique de la saison, **compté** par paire, la journée en cours exclue.
+///
+/// Un `HashSet` ne disait que « déjà jouée » : c'est ce choix de type qui
+/// rendait la minimisation de R8.2 impossible.
+fn build_historique(days: &[MatchDay], exclude_id: &str) -> RencontresJouees {
+    let mut historique = RencontresJouees::new();
+    for day in days.iter().filter(|d| d.id.to_string() != exclude_id) {
         for p in &day.pairings {
-            let home = p.home_team_id.to_string();
-            let away = p.away_team_id.to_string();
-            let pair = if home < away {
-                (home, away)
-            } else {
-                (away, home)
-            };
-            played.insert(pair);
+            historique.enregistrer(
+                &p.home_team_id,
+                &p.away_team_id,
+                day.position,
+                day.name.clone(),
+            );
         }
     }
-    played
+    historique
 }
 
-fn emit_pairing_created(
-    home: &str,
-    away: &str,
-    pairing: &Pairing,
-    competition_id: &str,
-    season_id: &str,
-    space_id: &str,
-    match_day: &MatchDay,
-    team_display: &HashMap<String, TeamInfoDto>,
-    event_bus: &EventBus,
-) {
-    // Invariant garanti par le filtrage fait avant l'appel à generate_round_pairings :
+fn emit_pairing_created(ctx: &Contexte<'_>, home: &str, away: &str, pairing: &Pairing) {
+    // Invariant garanti par le filtrage fait avant l'appel au tirage :
     // home/away ne peuvent être ici que des ids déjà présents dans team_display.
-    let home_info = team_display
+    let home_info = ctx
+        .team_display
         .get(home)
         .expect("home team filtré comme enrôlé avant appariement");
-    let away_info = team_display
+    let away_info = ctx
+        .team_display
         .get(away)
         .expect("away team filtré comme enrôlé avant appariement");
+    let (competition_id, season_id, space_id) = (ctx.competition_id, ctx.season_id, ctx.space_id);
+    let match_day = ctx.match_day;
 
     emettre(
-        event_bus,
+        ctx.event_bus,
         CompetitionsDomainEvent::PairingCreated {
             event_id: EventId::new(),
             pairing_id: pairing.id.to_string(),
@@ -258,7 +317,32 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
     use async_trait::async_trait;
 
-    struct FakeMatchDayRepo(MatchDay);
+    struct FakeMatchDayRepo(MatchDay, std::sync::Mutex<Vec<(String, String)>>);
+
+    impl FakeMatchDayRepo {
+        fn new(day: MatchDay) -> Self {
+            Self(day, std::sync::Mutex::new(vec![]))
+        }
+        /// Les appariements écrits, normalisés et triés — de quoi comparer deux
+        /// générations sans dépendre de l'ordre.
+        fn ecrits(&self) -> Vec<(String, String)> {
+            let mut v: Vec<(String, String)> = self
+                .1
+                .lock()
+                .expect("mutex de test")
+                .iter()
+                .map(|(a, b)| {
+                    if a <= b {
+                        (a.clone(), b.clone())
+                    } else {
+                        (b.clone(), a.clone())
+                    }
+                })
+                .collect();
+            v.sort();
+            v
+        }
+    }
     #[async_trait]
     impl IMatchDayRepository for FakeMatchDayRepo {
         async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> {
@@ -276,9 +360,13 @@ mod tests {
         async fn save_pairing(
             &self,
             _: &str,
-            _: &Pairing,
+            pairing: &Pairing,
             _: &crate::app::competitions::domain::match_day_repository_port::NewPairingProjection,
         ) -> Result<(), MatchDayRepositoryError> {
+            self.1.lock().expect("mutex de test").push((
+                pairing.home_team_id.to_string(),
+                pairing.away_team_id.to_string(),
+            ));
             Ok(())
         }
         async fn find_pairing_id(
@@ -453,7 +541,7 @@ mod tests {
             home_team_id: TeamId::try_new("01ARZ3NDEKTSV4RRFFQ69G5FAV").unwrap(),
             away_team_id: TeamId::try_new("01ARZ3NDEKTSV4RRFFQ69G5FAW").unwrap(),
         };
-        let match_day_repo = FakeMatchDayRepo(match_day_with_pairings(vec![existing]));
+        let match_day_repo = FakeMatchDayRepo::new(match_day_with_pairings(vec![existing]));
         let group_repo = FakeGroupRepo;
         let team_port = FakeTeamInfoPort;
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
@@ -475,7 +563,7 @@ mod tests {
 
     #[tokio::test]
     async fn proceeds_when_match_day_has_no_pairings() {
-        let match_day_repo = FakeMatchDayRepo(match_day_with_pairings(vec![]));
+        let match_day_repo = FakeMatchDayRepo::new(match_day_with_pairings(vec![]));
         let group_repo = FakeGroupRepo;
         let team_port = FakeTeamInfoPort;
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
@@ -498,7 +586,7 @@ mod tests {
 
     #[tokio::test]
     async fn reports_group_with_fewer_than_two_teams_as_skipped_instead_of_silent_success() {
-        let match_day_repo = FakeMatchDayRepo(match_day_with_pairings(vec![]));
+        let match_day_repo = FakeMatchDayRepo::new(match_day_with_pairings(vec![]));
         let group_repo = FakeGroupRepoWithEmptyGroup("Poule 1");
         let team_port = FakeTeamInfoPortWithEnrolled(vec![TeamInfoDto {
             team_id: "t1".into(),
@@ -524,5 +612,55 @@ mod tests {
         .expect("ne doit pas échouer, juste signaler la poule ignorée");
 
         assert_eq!(outcome.skipped_group_names, vec!["Poule 1".to_string()]);
+    }
+
+    /// Non-régression de la carte 507 : « Générer les rencontres » deux fois de
+    /// suite doit donner deux appariements différents.
+    ///
+    /// Le test vit **ici** et pas seulement dans le domaine : celui du domaine
+    /// prouve que `tirer` sait varier à graines différentes ; celui-ci prouve
+    /// que le use case lui donne bien un générateur neuf. Une graine fixe
+    /// oubliée dans `execute` passerait le premier et échouerait ici.
+    #[tokio::test]
+    async fn regenerer_une_journee_ne_redonne_pas_le_meme_appariement() {
+        let equipes: Vec<TeamInfoDto> = (0..6)
+            .map(|i| TeamInfoDto {
+                team_id: TeamId::new().to_string(),
+                team_name: format!("Équipe {i}"),
+                coach_id: TeamId::new().to_string(),
+                coach_name: format!("Coach {i}"),
+                roster_name: "Humains".to_string(),
+                logo_url: None,
+            })
+            .collect();
+
+        let mut vus: HashSet<Vec<(String, String)>> = HashSet::new();
+        for _ in 0..10 {
+            let match_day_repo = FakeMatchDayRepo::new(match_day_with_pairings(vec![]));
+            let outcome = execute(
+                "d1",
+                "s1",
+                "c1",
+                "sp1",
+                &match_day_repo,
+                &FakeGroupRepo,
+                &FakeTeamInfoPortWithEnrolled(equipes.clone()),
+                &crate::common::services::event_bus::event_bus::new_bus(),
+            )
+            .await
+            .expect("génération");
+            assert!(outcome.unproven_group_names.is_empty());
+            assert_eq!(
+                match_day_repo.ecrits().len(),
+                3,
+                "six équipes, trois matchs"
+            );
+            vus.insert(match_day_repo.ecrits());
+        }
+
+        assert!(
+            vus.len() > 1,
+            "dix générations ont donné exactement le même appariement"
+        );
     }
 }

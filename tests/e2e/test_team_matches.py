@@ -68,7 +68,7 @@ def _paires(round_id: str) -> list[tuple[str, str]]:
 
 @pytest.fixture(scope="module")
 def matchs_ctx(browser, space_id):
-    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2)
+    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2, with_pairings=True)
     # **On joue la SECONDE journée et on laisse la première à venir.**
     #
     # L'inverse serait plus naturel et ne prouverait rien : le match à venir

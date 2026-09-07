@@ -47,8 +47,8 @@ def deux_competitions(browser, space_id):
     inventée ne prouverait rien — elle rendrait `404` pour la seule raison
     qu'elle n'existe pas.
     """
-    a = build_full_competition(browser, space_id, num_teams=2, num_rounds=2)
-    b = build_full_competition(browser, space_id, num_teams=2, num_rounds=2)
+    a = build_full_competition(browser, space_id, num_teams=2, num_rounds=2, with_pairings=True)
+    b = build_full_competition(browser, space_id, num_teams=2, num_rounds=2, with_pairings=True)
     return {"space_id": space_id, "a": a, "b": b}
 
 

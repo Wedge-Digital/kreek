@@ -29,7 +29,7 @@ def contexte(browser, space_id):
 
     # Quatre équipes : `generate-all` apparie deux couples, et il en reste
     # d'autres que rien ne programme — la matière d'un rapport manuel.
-    return build_full_competition(browser, space_id, num_teams=4, num_rounds=1)
+    return build_full_competition(browser, space_id, num_teams=4, num_rounds=1, with_pairings=True)
 
 
 def _confirmer(space_id, mr_id, champs):

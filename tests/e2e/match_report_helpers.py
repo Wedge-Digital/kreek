@@ -147,25 +147,59 @@ def play_match(
 
     Les tours sont numérotés en continu par équipe ; leur valeur n'a aucune
     incidence sur le classement, seuls comptent le nombre et le type d'actions.
+
+    **`home_team_id` désigne l'équipe, pas le côté.** Tout ce que l'appelant
+    préfixe `home_` — touchdowns, sorties, gains — suit cette équipe, quel que
+    soit le côté du rapport où elle atterrit. Voir `_cotes` ci-dessous.
     """
     mr_id = create_draft(space_id, ctx, round_id, home_team_id, away_team_id)
     ensure_pre_match(space_id, mr_id, ctx, round_id, home_team_id, away_team_id)
     ensure_inducements(space_id, mr_id)
 
-    home_player = first_player_id(mr_id, "home")
+    cote, cote_adverse = _cotes(mr_id, home_team_id)
+
+    joueur = first_player_id(mr_id, cote)
     for turn in range(home_td):
-        record_action_api(space_id, mr_id, "home", home_player, turn=turn + 1, action_type="TOUCHDOWN")
+        record_action_api(space_id, mr_id, cote, joueur, turn=turn + 1, action_type="TOUCHDOWN")
     for i in range(home_sorties):
-        record_action_api(space_id, mr_id, "home", home_player, turn=home_td + i + 1, action_type="SORTIE")
+        record_action_api(space_id, mr_id, cote, joueur, turn=home_td + i + 1, action_type="SORTIE")
 
     if away_td:
-        away_player = first_player_id(mr_id, "away")
+        joueur_adverse = first_player_id(mr_id, cote_adverse)
         for turn in range(away_td):
-            record_action_api(space_id, mr_id, "away", away_player, turn=turn + 1, action_type="TOUCHDOWN")
+            record_action_api(
+                space_id, mr_id, cote_adverse, joueur_adverse, turn=turn + 1, action_type="TOUCHDOWN"
+            )
 
-    post_step5(space_id, mr_id, home_gain=home_gain, away_gain=away_gain)
+    gains = {"home_gain": home_gain, "away_gain": away_gain}
+    if cote == "away":
+        gains = {"home_gain": away_gain, "away_gain": home_gain}
+    post_step5(space_id, mr_id, **gains)
     publish(space_id, mr_id)
     return mr_id
+
+
+def _cotes(mr_id, equipe_id):
+    """Les côtés du rapport, vus depuis `equipe_id` : (le sien, celui d'en face).
+
+    Le rapport n'adopte pas forcément l'orientation demandée à sa création. Le
+    Calendrier crée un brouillon par appariement — avec l'orientation de
+    l'appariement — et `create_match_report_use_case` retrouve ce brouillon par
+    `find_id_by_round_and_teams` puis le confirme, plutôt que d'en créer un
+    second. C'est le calendrier qui décide qui reçoit, pas celui qui ouvre le
+    rapport.
+
+    Ce helper promettait « cette équipe marque » et lisait en fait le côté
+    `home`. Les deux coïncidaient tant que le tirage émettait ses paires dans
+    l'ordre des indices — l'équipe 0 recevait dans tous ses matchs. Depuis que
+    le tirage est un vrai tirage (carte 507), l'orientation varie, et
+    l'hypothèse tombe. Elle n'était écrite nulle part.
+    """
+    rows = query_db(
+        f"SELECT home_team_id FROM match_report_proj WHERE match_report_id = '{mr_id}'"
+    )
+    assert rows, f"rapport {mr_id} absent de la projection"
+    return ("home", "away") if rows[0].strip() == equipe_id else ("away", "home")
 
 
 def wait_ranking_points(season_id, team_id, timeout_s=20):

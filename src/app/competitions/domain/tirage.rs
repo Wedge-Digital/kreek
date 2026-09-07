@@ -833,4 +833,95 @@ mod tests {
         let p = tirer(&entree(equipes(4)), &mut graine(11));
         assert!(p.ecartees.is_empty());
     }
+
+    // ── Les six tests hérités de `generate_round_pairings` ───────────────────
+    //
+    // Ils portent sur des **propriétés** — nombre de rencontres, absence de
+    // doublon, normalisation — et non sur des appariements nommés. C'est ce qui
+    // rend leur reprise possible telle quelle : seuls les types changent, pas
+    // une seule assertion. Ils n'ont jamais vu le cas qui casse, mais ils
+    // décrivent ce qui ne doit pas régresser.
+
+    #[test]
+    fn quatre_equipes_sans_historique_donnent_deux_rencontres() {
+        let p = tirer(&entree(equipes(4)), &mut graine(20));
+
+        assert_eq!(p.rencontres.len(), 2);
+        let mut vues: HashSet<TeamId> = HashSet::new();
+        for r in &p.rencontres {
+            assert!(vues.insert(r.home), "équipe appariée deux fois");
+            assert!(vues.insert(r.away), "équipe appariée deux fois");
+        }
+    }
+
+    #[test]
+    fn la_journee_suivante_ne_rejoue_aucune_paire_de_la_premiere() {
+        let mut input = entree(equipes(4));
+        let premiere = tirer(&input, &mut graine(21));
+        assert_eq!(premiere.rencontres.len(), 2);
+        for r in &premiere.rencontres {
+            let (a, b) = (r.home, r.away);
+            let (pos, nom) = journee(1);
+            input.historique.enregistrer(&a, &b, pos, nom);
+        }
+
+        let seconde = tirer(&input, &mut graine(22));
+
+        assert_eq!(seconde.rencontres.len(), 2);
+        let deja = appariees(&premiere);
+        for r in &seconde.rencontres {
+            assert!(!deja.contains(&paire(&r.home, &r.away)), "paire répétée");
+        }
+    }
+
+    #[test]
+    fn trois_journees_epuisent_les_six_paires_puis_le_cycle_reprend() {
+        let mut input = entree(equipes(4));
+        let mut toutes: HashSet<(TeamId, TeamId)> = HashSet::new();
+
+        for numero in 1..=3 {
+            let p = tirer(&input, &mut graine(30 + numero as u64));
+            for r in &p.rencontres {
+                toutes.insert(paire(&r.home, &r.away));
+                let (pos, nom) = journee(numero);
+                input.historique.enregistrer(&r.home, &r.away, pos, nom);
+            }
+        }
+
+        assert_eq!(toutes.len(), 6, "les six paires devaient être épuisées");
+        assert_eq!(tirer(&input, &mut graine(34)).rencontres.len(), 2);
+    }
+
+    #[test]
+    fn trois_equipes_donnent_une_rencontre() {
+        assert_eq!(
+            tirer(&entree(equipes(3)), &mut graine(23)).rencontres.len(),
+            1
+        );
+    }
+
+    #[test]
+    fn zero_ou_une_equipe_ne_donne_rien() {
+        assert!(tirer(&entree(vec![]), &mut graine(24))
+            .rencontres
+            .is_empty());
+        assert!(tirer(&entree(equipes(1)), &mut graine(24))
+            .rencontres
+            .is_empty());
+    }
+
+    #[test]
+    fn la_normalisation_traite_ab_et_ba_comme_une_seule_paire() {
+        let mut input = entree(equipes(4));
+        let (pos, nom) = journee(1);
+        let (a, b) = (input.equipes[1], input.equipes[0]);
+        input.historique.enregistrer(&a, &b, pos, nom);
+
+        let p = tirer(&input, &mut graine(25));
+
+        assert!(
+            !appariees(&p).contains(&paire(&input.equipes[0], &input.equipes[1])),
+            "la paire enregistrée dans l'autre sens n'a pas été reconnue"
+        );
+    }
 }

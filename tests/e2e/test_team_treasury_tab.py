@@ -115,6 +115,7 @@ def tresorerie_ctx(browser, space_id):
     full = build_full_competition(
         browser, space_id, num_teams=4, num_rounds=1,
         roster_uids=[ROSTER] * 4,
+        with_pairings=True,
     )
     round_id = full["round_ids"][0]
     paires = query_db(

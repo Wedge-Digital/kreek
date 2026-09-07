@@ -99,7 +99,7 @@ def _delete_pairing(space_id: str, ctx: dict, pairing_id: str) -> requests.Respo
 
 @pytest.fixture(scope="module")
 def deletion_ctx(browser, space_id):
-    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2)
+    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2, with_pairings=True)
     return {
         "competition_id": full["competition_id"],
         "season_id": full["season_id"],
@@ -111,7 +111,7 @@ def deletion_ctx(browser, space_id):
 def bulk_ctx(browser, space_id):
     """Compétition dédiée au vidage d'une journée : il faut deux rencontres sur
     la même journée, dont une seule publiée."""
-    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=1)
+    full = build_full_competition(browser, space_id, num_teams=4, num_rounds=1, with_pairings=True)
     return {
         "competition_id": full["competition_id"],
         "season_id": full["season_id"],
@@ -126,7 +126,7 @@ def published_ctx(browser, space_id):
     Séparée de `deletion_ctx` : le premier test y verrouille des équipes sur un
     nouveau rapport, et jouer un match avec elles échouerait — les deux
     scénarios doivent rester indépendants de leur ordre d'exécution."""
-    full = build_full_competition(browser, space_id, num_teams=2, num_rounds=1)
+    full = build_full_competition(browser, space_id, num_teams=2, num_rounds=1, with_pairings=True)
     return {
         "competition_id": full["competition_id"],
         "season_id": full["season_id"],

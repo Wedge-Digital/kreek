@@ -44,6 +44,10 @@ struct ScheduleActionResult {
     skipped_groups: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     skipped_matches: Vec<String>,
+    /// Poules dont le tirage a épuisé son budget d'exploration : l'appariement
+    /// reste maximal, mais le départage des revanches n'est pas prouvé optimal.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    unproven_groups: Vec<String>,
 }
 
 /// Suppression en masse : les rencontres à rapport publié sont conservées, le
@@ -78,12 +82,14 @@ fn schedule_changed_with_warning(
     skipped_teams: Vec<String>,
     skipped_rounds: Vec<String>,
     skipped_groups: Vec<String>,
+    unproven_groups: Vec<String>,
 ) -> Response {
     let mut response = Json(ScheduleActionResult {
         skipped_teams,
         skipped_rounds,
         skipped_groups,
         skipped_matches: vec![],
+        unproven_groups,
     })
     .into_response();
     response
@@ -151,6 +157,7 @@ pub async fn post_generate_all(
             outcome.skipped_team_names,
             outcome.skipped_round_names,
             outcome.skipped_group_names,
+            outcome.unproven_group_names,
         ),
         Err(e) => {
             tracing::error!("post_generate_all: {e:?}");
@@ -483,6 +490,7 @@ pub async fn post_generate_round_pairings(
             outcome.skipped_team_names,
             vec![],
             outcome.skipped_group_names,
+            outcome.unproven_group_names,
         ),
         Err(generate_pairings::GenerateError::PairingsAlreadyExist) => {
             pairings_already_exist_refused()
@@ -577,7 +585,7 @@ pub async fn post_add_match(
     )
     .await
     {
-        Ok(()) => schedule_changed_with_warning(vec![], vec![], vec![]),
+        Ok(()) => schedule_changed_with_warning(vec![], vec![], vec![], vec![]),
         Err(add_match_use_case::AddMatchError::TeamsNotEnrolled(names)) => {
             add_match_refused(&names)
         }

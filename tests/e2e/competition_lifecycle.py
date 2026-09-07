@@ -519,15 +519,41 @@ def _wait_teams_enrolled(team_ids: list[str], timeout_s: int = 20) -> None:
     )
 
 
-def sync_and_generate_schedule(page: Page, space_id: str, competition_id: str, season_id: str) -> None:
+def sync_schedule(page: Page, space_id: str, competition_id: str, season_id: str) -> None:
     """Synchronise `competition_match_days` depuis la structure postée en
-    phase 3, puis génère les pairings de toutes les journées non-repos."""
+    phase 3. Les journées existent alors, vides."""
     rounds_url = f"{BASE_URL}/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/rounds"
     page.request.get(rounds_url)
 
+
+def generate_pairings(page: Page, space_id: str, competition_id: str, season_id: str) -> None:
+    """Génère les appariements de toutes les journées non-repos.
+
+    **À n'appeler que si le test porte réellement sur le calendrier.** Depuis
+    que le tirage est un vrai tirage (carte 507), les appariements varient d'une
+    exécution à l'autre — et avec eux le côté, `home` ou `away`, où chaque
+    équipe atterrit : le Calendrier crée un brouillon de rapport par
+    appariement, et `create_match_report_use_case` le retrouve puis le confirme
+    plutôt que d'en créer un second. L'orientation demandée à
+    `/match-report/new` est donc ignorée quand un appariement existe.
+
+    Une fixture qui génère des appariements sans en avoir besoin rend son test
+    dépendant du sort. C'est ce qui a fait tomber quatre tests, chacun à un
+    passage différent, au moment de brancher le nouveau tirage.
+    """
     generate_url = f"{BASE_URL}/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/generate-all"
     resp = page.request.post(generate_url, headers={"HX-Request": "true"})
     assert resp.ok, f"generate-all a échoué : {resp.status} {resp.text()[:300]}"
+
+
+def sync_and_generate_schedule(page: Page, space_id: str, competition_id: str, season_id: str) -> None:
+    """Les deux d'un coup, pour les trois tests qui demandent explicitement un
+    calendrier apparié. Conservée parce que leur appel *est* l'expression de ce
+    besoin — contrairement à la génération que `build_full_competition` faisait
+    autrefois pour tout le monde, sans que personne l'ait demandée.
+    """
+    sync_schedule(page, space_id, competition_id, season_id)
+    generate_pairings(page, space_id, competition_id, season_id)
 
 
 def build_full_competition(
@@ -539,6 +565,7 @@ def build_full_competition(
     with_default_bonuses: bool = True,
     deactivated_tiebreaks: list[str] | None = None,
     roster_uids: list[str] | None = None,
+    with_pairings: bool = False,
 ) -> dict:
     """Construit une compétition dédiée (pas partagée entre fichiers de test —
     cf. docstring du module) avec `num_teams` équipes auto-enrôlées et
@@ -578,7 +605,9 @@ def build_full_competition(
             for i in range(num_teams)
         ]
         _wait_teams_enrolled(team_ids)
-        sync_and_generate_schedule(page, space_id, competition["competition_id"], competition["season_id"])
+        sync_schedule(page, space_id, competition["competition_id"], competition["season_id"])
+        if with_pairings:
+            generate_pairings(page, space_id, competition["competition_id"], competition["season_id"])
         round_ids = query_db(
             f"SELECT id FROM competition_match_days WHERE season_id = '{competition['season_id']}' ORDER BY position;"
         )
