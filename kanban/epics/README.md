@@ -54,6 +54,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 7/10 | 10 |
 | [E15 — Recruter un journalier](ready_to_be_done/E15-recruter-un-journalier.md) | `ready_to_be_done` · 0/6 | 6 |
 | [E16 — Sondage de présence](ready_to_be_done/E16-sondage-de-presence.md) | `ready_to_be_done` · 0/26 | 26 |
+| [E17 — Corriger le calendrier sans perdre la saisie](ready_to_be_done/E17-corriger-le-calendrier-sans-perdre-la-saisie.md) | `ready_to_be_done` · 0/4 | 4 |
 
 ## Les cartes sans épic
 

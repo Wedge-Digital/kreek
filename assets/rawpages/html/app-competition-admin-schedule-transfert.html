@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Déplacer un match — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="../../static/css/components/kreek-select.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="../../static/js/kreek-select.js"></script>
+  <style>
+    body { background: #F7F8FA; padding: var(--p2) var(--p1) var(--p4); }
+
+    /* ── Sélecteur de maquette — hors livrable ── */
+    .demo-switcher {
+      max-width: 680px; margin: 0 auto var(--p2);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-2); margin-right: 6px; }
+    .state-pill {
+      font-size: var(--text-tiny); font-weight: 600; padding: 5px 11px; border-radius: 14px;
+      border: 1px solid var(--dark-5); background: var(--white);
+      color: var(--dark-2); cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    /* ══ Le panneau : la seule bordure de tout l'écran ══ */
+    .round {
+      max-width: 680px; margin: 0 auto;
+      background: var(--white);
+      border: 1px solid var(--dark-5);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* L'en-tête porte la hiérarchie de premier rang. */
+    .round-head { padding: 18px var(--p2) 14px; }
+    .round-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+      color: var(--dark-0); letter-spacing: -0.01em;
+    }
+    .round-meta { margin-top: 4px; font-size: var(--text-tiny); color: var(--dark-2); }
+    .round-meta-sep { color: var(--dark-4); margin: 0 6px; }
+
+    /* ══ La liste : des filets, pas des cadres ══ */
+    .match-list { border-top: 1px solid var(--dark-6); }
+    .match-block + .match-block { border-top: 1px solid var(--dark-6); }
+
+    .match-line {
+      display: flex; align-items: center;
+      padding: 13px var(--p2);
+      transition: background 0.12s;
+    }
+    .match-block:not(.is-moving) .match-line:hover { background: rgba(0,48,73,0.025); }
+
+    .match-home { flex: 1; text-align: right;  padding-right: 14px; }
+    .match-away { flex: 1; text-align: left;   padding-left: 14px; }
+    .match-home, .match-away {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    /* Pendant un déplacement, les autres rencontres reculent d'un cran —
+       sans descendre sous 7:1, elles restent lisibles. */
+    .is-dimmed .match-home, .is-dimmed .match-away { color: var(--dark-2); font-weight: 500; }
+    .is-moving .match-home, .is-moving .match-away { color: var(--dark-0); font-weight: 700; }
+
+    .match-score {
+      min-width: 64px; text-align: center; flex-shrink: 0;
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-0); font-variant-numeric: tabular-nums;
+    }
+    .match-score--pending {
+      font-family: var(--font-body); font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-2); letter-spacing: 0.06em; text-transform: uppercase;
+    }
+
+    .match-actions { display: flex; gap: 2px; flex-shrink: 0; width: 62px; margin-left: 12px; }
+    /* Sans elle, le bloc d'actions décale le score de 37 px vers la gauche :
+       l'axe du panneau et l'axe de la rencontre ne coïncident plus. */
+    .match-gutter { width: 74px; flex-shrink: 0; }
+    .icon-btn {
+      width: 30px; height: 30px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; color: var(--dark-3);
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+    }
+    .icon-btn:hover { background: rgba(0,48,73,0.07); color: var(--main-blue); }
+    .icon-btn--danger:hover { background: rgba(224,32,32,0.09); color: #B01818; }
+    .icon-btn.is-active { background: var(--main-blue); color: var(--white); }
+    .icon-btn.is-active:hover { background: var(--main-blue); color: var(--white); }
+    .icon-btn svg { width: 15px; height: 15px; }
+    .icon-btn:focus-visible { outline: 2px solid var(--main-blue); outline-offset: 1px; }
+
+    /* ══ Le déplacement : une seule surface, ligne et tiroir confondus ══ */
+    .match-block.is-moving { background: rgba(0,48,73,0.055); }
+    .match-drawer { padding: 2px var(--p2) 20px; }
+
+    .drawer-label {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2);
+      letter-spacing: 0.04em; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .drawer-controls { display: flex; align-items: center; gap: 10px; }
+    /* `kreek-select` est un bloc pleine largeur : sans plafond, il repousse les
+       deux boutons à la ligne, chacun étiré sur 500 px. */
+    /* `kreek-select` est `display:block; width:100%` et son libellé est en
+       `flex:1; min-width:0` : sa largeur intrinsèque vaut zéro, donc toute base
+       `auto` l'écrase. */
+    .drawer-select { flex: 0 0 340px; }
+    .drawer-controls > .mv-confirm,
+    .drawer-controls > .mv-cancel { flex: 0 0 auto; width: auto; }
+
+    .mv-confirm {
+      background: var(--main-blue); color: var(--white); border: none;
+      padding: 9px 18px; border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 700; cursor: pointer;
+    }
+    .mv-confirm:hover { background: #00253A; }
+    .mv-cancel {
+      background: transparent; color: var(--dark-2); border: none;
+      padding: 9px 10px; border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+    }
+    .mv-cancel:hover { color: var(--dark-0); background: rgba(0,48,73,0.06); }
+
+    /* Un message, pas une boîte. */
+    .drawer-msg {
+      display: flex; gap: 7px; align-items: flex-start;
+      margin-top: 12px; font-size: var(--text-tiny); line-height: 1.55;
+    }
+    .drawer-msg svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+    .drawer-msg--hint  { color: var(--dark-2); }
+    .drawer-msg--refus { color: #B01818; }
+    .drawer-msg strong { font-weight: 700; }
+
+    /* ══ Après déplacement : une bande, sans cadre ══ */
+    .moved {
+      display: flex; gap: 11px; align-items: center;
+      padding: 14px var(--p2);
+      background: rgba(98,149,132,0.12);
+      border-top: 1px solid var(--dark-6);
+    }
+    .moved svg { width: 17px; height: 17px; color: #3F6B5C; flex-shrink: 0; }
+    .moved-text { flex: 1; font-size: var(--text-tiny); line-height: 1.55; color: #2F5A4A; }
+    .moved-text strong { font-weight: 700; }
+    .moved-link {
+      font-size: var(--text-tiny); font-weight: 700; color: var(--main-blue);
+      text-decoration: none; white-space: nowrap;
+    }
+    .moved-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+    ::selection { background: rgba(0,48,73,0.15); }
+
+    /* ══ Note de maquette ══ */
+    .note {
+      max-width: 680px; margin: var(--p2) auto 0;
+      font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.7;
+    }
+    .note h2 {
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+      color: var(--dark-0); margin: 0 0 10px;
+    }
+    .note p { margin: 0 0 10px; }
+    .note strong { color: var(--dark-0); font-weight: 700; }
+    .note code {
+      background: rgba(0,48,73,0.06); padding: 1px 5px; border-radius: 4px;
+      font-size: var(--text-tiny); color: var(--dark-1);
+    }
+
+    @media (max-width: 768px) {
+      .match-line { padding: 12px var(--p1); }
+      .round-head, .match-drawer, .moved { padding-left: var(--p1); padding-right: var(--p1); }
+      .match-score { min-width: 48px; }
+      .drawer-controls { flex-wrap: wrap; }
+      .drawer-select { flex-basis: 100%; }
+      .match-gutter { display: none; }
+    }
+  </style>
+</head>
+<body x-data="{ etat: 'repos' }">
+
+  <div class="demo-switcher">
+    <span class="demo-switcher-label">Aperçu :</span>
+    <button class="state-pill" :class="{ active: etat === 'repos' }"  @click="etat = 'repos'">Au repos</button>
+    <button class="state-pill" :class="{ active: etat === 'choix' }"  @click="etat = 'choix'">Choix de la journée</button>
+    <button class="state-pill" :class="{ active: etat === 'refus' }"  @click="etat = 'refus'">Journée déjà occupée</button>
+    <button class="state-pill" :class="{ active: etat === 'fait' }"   @click="etat = 'fait'">Après déplacement</button>
+    <button class="state-pill" :class="{ active: etat === 'publie' }" @click="etat = 'publie'">Match publié</button>
+  </div>
+
+  <!-- Icônes, dessinées et de graisse unique -->
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="i-move" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12h13"/><path d="M13 7l5 5-5 5"/>
+      <path d="M20 5v14" opacity=".45"/>
+    </symbol>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round">
+      <path d="M6 6l12 12M18 6L6 18"/>
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.5h.01"/>
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.5h.01"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12.5l5.5 5.5L20 7"/>
+    </symbol>
+  </svg>
+
+  <section class="round">
+    <header class="round-head">
+      <h1 class="round-title">Journée 1</h1>
+      <div class="round-meta">
+        du 12 au 19 octobre<span class="round-meta-sep">·</span><span x-text="etat === 'fait' ? '2 matchs' : '3 matchs'"></span>
+      </div>
+    </header>
+
+    <template x-if="etat === 'fait'">
+      <div class="moved">
+        <svg><use href="#i-check"/></svg>
+        <p class="moved-text">
+          <strong>Les Filles de Nuffle – Ork'Lympic Rusé</strong> est passé en journée&nbsp;15.
+          Le rapport de match et sa saisie suivent la rencontre.
+        </p>
+        <a class="moved-link" href="#">Voir la journée 15</a>
+      </div>
+    </template>
+
+    <div class="match-list">
+
+      <!-- La rencontre concernée -->
+      <template x-if="etat !== 'fait'">
+        <div class="match-block" :class="{ 'is-moving': etat === 'choix' || etat === 'refus' }">
+          <div class="match-line">
+            <span class="match-gutter" aria-hidden="true"></span>
+            <span class="match-home">Les Filles de Nuffle</span>
+            <span class="match-score" :class="{ 'match-score--pending': etat !== 'publie' }"
+                  x-text="etat === 'publie' ? '2–1' : 'vs'"></span>
+            <span class="match-away">Ork'Lympic Rusé</span>
+            <div class="match-actions">
+              <button class="icon-btn" :class="{ 'is-active': etat === 'choix' || etat === 'refus' }"
+                      title="Déplacer vers une autre journée"
+                      aria-label="Déplacer vers une autre journée"
+                      @click="etat = (etat === 'choix' || etat === 'refus') ? 'repos' : 'choix'">
+                <svg><use href="#i-move"/></svg>
+              </button>
+              <button class="icon-btn icon-btn--danger" title="Supprimer la rencontre"
+                      aria-label="Supprimer la rencontre">
+                <svg><use href="#i-close"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <template x-if="etat === 'choix' || etat === 'refus'">
+            <div class="match-drawer">
+              <div class="drawer-label">Déplacer vers</div>
+
+              <div class="drawer-controls">
+                <!-- Options statiques : `kreek-select` y retombe quand `url` est
+                     absent, ce qui permet à la maquette de tourner sans serveur. -->
+                <template x-if="etat === 'choix'">
+                  <kreek-select class="drawer-select" name="round_id"
+                                placeholder="Choisir une journée…" selected-value="j15">
+                    <option value="j2">Journée 2 · du 19 au 26 octobre</option>
+                    <option value="j4">Journée 4 · du 2 au 9 novembre</option>
+                    <option value="j15" selected>Journée 15 · du 8 au 15 février</option>
+                  </kreek-select>
+                </template>
+                <template x-if="etat === 'refus'">
+                  <kreek-select class="drawer-select" name="round_id"
+                                placeholder="Choisir une journée…" selected-value="j4">
+                    <option value="j2">Journée 2 · du 19 au 26 octobre</option>
+                    <option value="j4" selected>Journée 4 · du 2 au 9 novembre</option>
+                    <option value="j15">Journée 15 · du 8 au 15 février</option>
+                  </kreek-select>
+                </template>
+
+                <button class="mv-confirm">Déplacer</button>
+                <button class="mv-cancel" @click="etat = 'repos'">Annuler</button>
+              </div>
+
+              <template x-if="etat === 'choix'">
+                <p class="drawer-msg drawer-msg--hint">
+                  <svg><use href="#i-info"/></svg>
+                  <span>Les journées de repos et la journée courante ne sont pas proposées.</span>
+                </p>
+              </template>
+
+              <template x-if="etat === 'refus'">
+                <p class="drawer-msg drawer-msg--refus">
+                  <svg><use href="#i-alert"/></svg>
+                  <span>La <strong>journée 4</strong> porte déjà cette affiche. Choisissez une autre
+                    journée, ou supprimez d'abord la rencontre qui s'y trouve.</span>
+                </p>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Les autres rencontres de la journée -->
+      <div class="match-block" :class="{ 'is-dimmed': etat === 'choix' || etat === 'refus' }">
+        <div class="match-line">
+          <span class="match-gutter" aria-hidden="true"></span>
+          <span class="match-home">Les Rats d'Égouts</span>
+          <span class="match-score match-score--pending">vs</span>
+          <span class="match-away">Storm Treemen</span>
+          <div class="match-actions">
+            <button class="icon-btn" title="Déplacer vers une autre journée"
+                    aria-label="Déplacer vers une autre journée"><svg><use href="#i-move"/></svg></button>
+            <button class="icon-btn icon-btn--danger" title="Supprimer la rencontre"
+                    aria-label="Supprimer la rencontre"><svg><use href="#i-close"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="match-block" :class="{ 'is-dimmed': etat === 'choix' || etat === 'refus' }">
+        <div class="match-line">
+          <span class="match-gutter" aria-hidden="true"></span>
+          <span class="match-home">Halfling Legends</span>
+          <span class="match-score">3–0</span>
+          <span class="match-away">Iron Forge</span>
+          <div class="match-actions">
+            <button class="icon-btn" title="Déplacer vers une autre journée"
+                    aria-label="Déplacer vers une autre journée"><svg><use href="#i-move"/></svg></button>
+            <button class="icon-btn icon-btn--danger" title="Supprimer la rencontre"
+                    aria-label="Supprimer la rencontre"><svg><use href="#i-close"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="note">
+    <h2>Ce que cette version corrige</h2>
+
+    <p><strong>Un seul cadre.</strong> Le panneau borde, plus rien d'autre. Les rencontres se
+      séparent par un filet, et le tiroir n'a aucune bordure : il se signale par sa teinte, qui
+      couvre la ligne <em>et</em> le tiroir d'une seule surface. On passait de trois cadres
+      concentriques à un.</p>
+
+    <p><strong>La hiérarchie vient de l'espace et du poids</strong>, pas d'un encadrement. Le titre
+      de journée mène ; les noms d'équipe sont en 13 px demi-gras ; le score est en Slab tabulaire ;
+      les libellés secondaires descendent à 11 px. Pendant un déplacement, les autres rencontres
+      reculent d'un cran, vers <code>--dark-2</code>, qui reste à 7:1 : jamais un gris illisible.</p>
+
+    <p><strong>Un rythme, au lieu d'un espacement unique.</strong> 8 px sous le libellé du tiroir,
+      12 px avant le message, 20 px au bas du tiroir. Le regard groupe sans qu'on lui dessine des
+      boîtes, là où l'ancienne version répétait <code>var(--p1)</code> partout et donnait à tout le
+      même poids.</p>
+
+    <p><strong>Deux pièges de tokens évités.</strong> Le texte d'aide était en
+      <code>--dark-3</code> (#8F90A6), soit 3,5:1 sur blanc, sous le seuil ; il passe en
+      <code>--dark-2</code>. Et <code>--dark-6</code> et <code>--dark-7</code> ne sont jamais
+      opposés : ils diffèrent d'une unité par canal, ce que la carte 448 a déjà relevé.</p>
+
+    <p><strong>Des icônes dessinées</strong> plutôt que des émojis. 📅 et ✕ changent de dessin et de
+      couleur selon la plateforme, et leur couleur propre entre en concurrence avec la hiérarchie.
+      Ici, un jeu de traits d'une seule graisse, qui prend la couleur de son bouton. C'est une
+      proposition qui déborde de ta demande : dis-le si tu préfères garder les émojis de l'écran
+      actuel.</p>
+
+    <p><strong>Le refus est un message, pas une alerte encadrée.</strong> Il commente le choix qu'on
+      vient de faire, à l'endroit où on l'a fait. Et « Annuler » perd sa bordure : deux boutons de
+      même poids obligeaient à lire pour choisir.</p>
+  </div>
+
+</body>
+</html>
