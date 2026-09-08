@@ -1,12 +1,12 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **7 faites** (507 à 513, du 2026-09-07 au
-2026-09-08) : le Calendrier tire désormais vraiment au sort, sans laisser
-d'équipe sur le banc ni de journée à moitié appariée, et **l'agrégat
-`PresenceSurvey` est complet** — il ouvre une campagne, enregistre une réponse,
-valide un tirage, et sa table existe. La vague du socle est close ; celle de
-« corriger l'existant » se rouvre pour la 541, R9 étant inerte en production
-faute d'être alimentée. Les
+**État :** `en_cours` — 27 cartes, **8 faites** (507 à 513 et 541, du 2026-09-07
+au 2026-09-08) : le Calendrier tire désormais vraiment au sort, sans laisser
+d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
+a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
+complet** — il ouvre une campagne, enregistre une réponse, valide un tirage, et
+sa table existe. Les deux premières vagues sont closes ; la suite est celle des
+use cases. Les
 trois unités sont conçues : l'onglet de l'organisateur, la réponse du coach par
 e-mail, et l'encart du coach connecté. Spécifiée par le workflow feature du
 2026-09-06 au 2026-09-07.
@@ -28,14 +28,16 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Sept cartes faites sur vingt-sept.** La vague 2 — le socle — est close ; la
-vague 1 se rouvre pour une carte, la 541, à faire avant les use cases.
+**Huit cartes faites sur vingt-sept.** Les vagues 1 et 2 — corriger l'existant,
+puis le socle — sont closes. Il reste les use cases, l'écran, et les deux unités
+du coach.
 
-Les trois premières — 507, 508 et 509 — **corrigeaient l'existant** et ne
+Quatre d'entre elles — 507, 508, 509 et 541 — **corrigeaient l'existant** et ne
 concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était ni
 aléatoire ni optimal, et il laissait des équipes sans match dans 54 à 58 % des
-tirages en milieu de saison. Le sondage s'appuie dessus, donc il l'a réparé
-d'abord — et le Calendrier en a profité.
+tirages en milieu de saison ; son critère d'exemption, lui, n'était pas
+alimenté. Le sondage s'appuie dessus, donc il l'a réparé d'abord — et le
+Calendrier en a profité.
 
 Les quatre suivantes — 511, 510, 512, 513 — posent le socle : l'agrégat
 `PresenceSurvey`, sa table et son dépôt, son unique chemin d'écriture d'une

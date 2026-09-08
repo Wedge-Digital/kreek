@@ -5,7 +5,7 @@ use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection,
 };
 use crate::app::competitions::domain::tirage::{
-    paire, tirer, DrawInput, ProposedPairing, RencontresJouees,
+    paire, tirer, DrawInput, NombreDeMatchs, ProposedPairing, RencontresJouees,
 };
 use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
@@ -82,6 +82,7 @@ pub async fn execute(
         .await
         .map_err(|e| GenerateError::Repository(e.to_string()))?;
     let mut historique = build_historique(&all_days, match_day_id);
+    let matchs_joues = build_matchs_joues(&all_days, match_day_id);
 
     // `from_os_rng()` comme `random_draw.rs`, et créé **une fois** : un
     // générateur par poule reproduirait le même état pour chacune.
@@ -92,6 +93,7 @@ pub async fn execute(
         season_id,
         space_id,
         team_display: &team_display,
+        matchs_joues: &matchs_joues,
         match_day_repo,
         event_bus,
     };
@@ -161,6 +163,10 @@ struct Contexte<'a> {
     season_id: &'a str,
     space_id: &'a str,
     team_display: &'a HashMap<String, TeamInfoDto>,
+    /// R9 — en lecture seule, contrairement à `historique` qui voyage en `&mut` :
+    /// les poules étant disjointes, aucune équipe n'apparaît dans deux groupes,
+    /// donc rien n'est à réactualiser en cours de journée.
+    matchs_joues: &'a HashMap<TeamId, NombreDeMatchs>,
     match_day_repo: &'a dyn IMatchDayRepository,
     event_bus: &'a EventBus,
 }
@@ -213,11 +219,12 @@ async fn apparier_le_groupe(
             interdites: build_interdites(&equipes, ctx.team_display),
             equipes,
             historique: historique.clone(),
-            // Le Calendrier ne tient aucun historique d'exemption : R9 ne
-            // s'applique donc pas ici, et l'exemptée est tirée uniformément —
-            // le comportement d'avant, ni meilleur ni pire. C'est l'onglet
-            // Présences qui apportera cette mémoire.
-            jamais_exemptees: HashSet::new(),
+            // R9 s'applique bien ici, et c'est nouveau (carte 541). Le critère
+            // précédent — exempter parmi celles qui ne l'ont jamais été —
+            // demandait une mémoire des exemptions que le Calendrier ne tenait
+            // pas ; il recevait donc un ensemble vide et ne départageait rien.
+            // Celui-ci se lit sur les appariements déjà écrits.
+            matchs_joues: ctx.matchs_joues.clone(),
         },
         rng,
     );
@@ -303,6 +310,27 @@ fn build_historique(days: &[MatchDay], exclude_id: &str) -> RencontresJouees {
         }
     }
     historique
+}
+
+/// R9 — le nombre d'appariements **programmés** de chaque équipe sur la saison.
+///
+/// Même boucle que `build_historique`, même exclusion de la journée tirée : les
+/// appariements qu'on s'apprête à écrire ne comptent pas contre les équipes
+/// qu'ils concernent. Une fonction séparée plutôt qu'un tuple — chacune reste
+/// courte et porte son nom.
+///
+/// Les appariements et non les rapports de match : ils vivent dans les tables du
+/// BC, donc le compte se lit sans port.
+fn build_matchs_joues(days: &[MatchDay], exclude_id: &str) -> HashMap<TeamId, NombreDeMatchs> {
+    let mut comptes: HashMap<TeamId, NombreDeMatchs> = HashMap::new();
+    for day in days.iter().filter(|d| d.id.to_string() != exclude_id) {
+        for p in &day.pairings {
+            for camp in [p.home_team_id, p.away_team_id] {
+                comptes.entry(camp).or_default().0 += 1;
+            }
+        }
+    }
+    comptes
 }
 
 fn emit_pairing_created(ctx: &Contexte<'_>, home: &str, away: &str, pairing: &Pairing) {
@@ -601,6 +629,59 @@ mod tests {
             position: MatchDayPosition::try_new(0).unwrap(),
             pairings,
         }
+    }
+
+    // ── R9 — le compte qui alimente le critère d'exemption (carte 541) ───────
+
+    fn appariement(home: &TeamId, away: &TeamId) -> Pairing {
+        Pairing {
+            id: PairingId::new(),
+            home_team_id: *home,
+            away_team_id: *away,
+        }
+    }
+
+    #[test]
+    fn build_matchs_joues_compte_les_deux_camps() {
+        let (a, b, c) = (TeamId::new(), TeamId::new(), TeamId::new());
+        let jours = vec![
+            match_day_with_pairings(vec![appariement(&a, &b)]),
+            match_day_with_pairings(vec![appariement(&a, &c)]),
+        ];
+
+        let comptes = build_matchs_joues(&jours, "aucune");
+
+        assert_eq!(comptes.get(&a), Some(&NombreDeMatchs(2)));
+        assert_eq!(comptes.get(&b), Some(&NombreDeMatchs(1)));
+        assert_eq!(comptes.get(&c), Some(&NombreDeMatchs(1)));
+    }
+
+    /// Les appariements qu'on s'apprête à écrire ne comptent pas contre les
+    /// équipes qu'ils concernent — même exclusion que `build_historique`.
+    #[test]
+    fn build_matchs_joues_ignore_la_journee_tiree() {
+        let (a, b) = (TeamId::new(), TeamId::new());
+        let jours = vec![
+            match_day_with_pairings(vec![appariement(&a, &b)]),
+            match_day_with_pairings(vec![appariement(&a, &b)]),
+        ];
+        let tiree = jours[1].id.to_string();
+
+        let comptes = build_matchs_joues(&jours, &tiree);
+
+        assert_eq!(comptes.get(&a), Some(&NombreDeMatchs(1)));
+    }
+
+    /// Le défaut que la 541 corrige : le champ arrivait vide au tirage, donc le
+    /// critère ne départageait rien. Ce test échouerait sur le code d'avant.
+    #[test]
+    fn une_saison_vierge_ne_donne_aucun_compte() {
+        let comptes = build_matchs_joues(&[], "aucune");
+
+        assert!(
+            comptes.is_empty(),
+            "aucune journée, aucun match — et toutes les équipes à égalité"
+        );
     }
 
     #[tokio::test]

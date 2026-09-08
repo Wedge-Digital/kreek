@@ -15,11 +15,19 @@ R9 dit aujourd'hui : *nombre impair de présents ⇒ une équipe est exemptée, 
 parmi celles qui ne l'ont jamais été sur la saison.*
 
 **Cette règle est inerte en production.** `generate_pairings.rs:220` passe
-`jamais_exemptees: HashSet::new()`. Avec un ensemble vide, `tirage.rs:340` marque
+`jamais_exemptees: HashSet::new()`. Avec un ensemble vide, le moteur marque
 **toutes** les équipes comme déjà exemptées, `cout_exemption` rend le même coût
-pour chacune, et le critère ne départage rien. Elle est implémentée dans le
-moteur, testée dans le moteur, et n'a jamais été alimentée — parce que personne
-n'avait de source pour « qui n'a jamais été exempté ».
+pour chacune, et le critère ne départage rien.
+
+**Et ce n'est pas un oubli** — la vérification l'a montré, contre ce que cette
+carte a d'abord écrit. Un commentaire l'assume à l'endroit même de l'appel :
+*« Le Calendrier ne tient aucun historique d'exemption : R9 ne s'applique donc
+pas ici […]. C'est l'onglet Présences qui apportera cette mémoire. »* C'était un
+report délibéré, en attente d'une mémoire des exemptions que personne n'avait.
+
+Ça ne change rien au constat, seulement à son origine : une règle qu'on ne peut
+pas alimenter n'est pas une règle, c'est une intention. Et la suite montre qu'il
+n'y avait pas de mémoire à construire — il y avait un critère à changer.
 
 Et le critère lui-même mesure la mauvaise chose. Il égalise le nombre
 d'exemptions ; ce qui se vit comme une injustice, c'est le nombre de matchs. Les
@@ -88,13 +96,35 @@ alimenter n'est pas une règle, c'est une intention.
 
 ## Checklist
 
-- [ ] `NombreDeMatchs`, `DrawInput.matchs_joues`
-- [ ] `Cout.exemption_injuste` au rang 4, et `plancher()` mis d'accord
-- [ ] `build_historique` rend aussi le compte par équipe
-- [ ] `generate_pairings.rs` alimente vraiment le champ
-- [ ] R9 réécrite dans la spec
-- [ ] Tests : l'exemptée est celle du maximum · à égalité, R17 départage au sort ·
-      le critère ne prime ni sur R8.1 ni sur R8.2 (`r9_cede_devant_…` réécrit) ·
-      l'appelant du Calendrier alimente le compte — le défaut d'aujourd'hui, qu'un
-      test aurait vu
-- [ ] `make lint`, `make check-arch`, `make test`, `make test-impacted`
+- [x] `NombreDeMatchs`, `DrawInput.matchs_joues`
+- [x] `Cout.exemption_injuste` au rang 4, `Recherche.retard`, `plancher()` simplifié
+- [x] `build_matchs_joues`, à côté de `build_historique`
+- [x] `generate_pairings.rs` alimente vraiment le champ, via `Contexte`
+- [x] **L'exemptée rapportée est la plus servie des restantes**, et non la
+      première explorée — ajout au périmètre, cf. ci-dessous
+- [x] R9 réécrite dans la spec, avec la trace de ce qui change
+- [x] Tests : cinq dans `tirage.rs`, trois dans `generate_pairings.rs`
+- [x] `make lint`, `make check-arch`, `make test`, `make test-impacted`
+
+## Ce que la réalisation a apporté
+
+**`plancher()` perd son cas dégénéré.** Il portait
+`exemptions_repetees: u32::from(perdues == 1 && toutes_deja)` : si toutes les
+équipes avaient déjà été exemptées, R9 était fatalement violée et la borne devait
+en tenir compte pour que la recherche puisse encore s'arrêter. Avec le nouveau
+critère, l'équipe la plus servie existe toujours, donc son retard est nul, donc
+`exemption_injuste` vaut zéro au plancher **sans condition**. C'est un signe que
+le critère est mieux posé.
+
+**`Solution.exemptees` est un `Vec`, et `.first()` mentait.** Quand R10 force
+plusieurs équipes à rester sur le banc, chacune y entre et coûte `perdues: 1` ;
+`proposition()` rendait la **première explorée** comme « l'exemptée », les autres
+disparaissant du rapport. Sous R9, celle qui se repose légitimement est celle qui
+a le plus joué : `.first()` devient `min_by_key(retard)`. Le coût, lui, **somme**
+les retards de toutes les restantes — la bonne mesure d'équité quand plusieurs ne
+jouent pas.
+
+**Le compte vit dans `Contexte`, pas en paramètre.** Il est en lecture seule,
+contrairement à `historique` qui voyage en `&mut` : les poules étant disjointes,
+aucune équipe n'apparaît dans deux groupes, donc rien n'est à réactualiser en
+cours de journée.

@@ -88,6 +88,15 @@ const BUDGET_NOEUDS: u32 = 2_000_000;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NombreDeRencontres(pub u32);
 
+/// Le nombre d'appariements **programmés** d'une équipe sur la saison, joués ou
+/// non. R9 s'en sert pour choisir l'exemptée.
+///
+/// Les appariements et non les rapports de match : ils vivent dans les tables du
+/// BC, donc le compte se lit sans port, et la différence ne concerne que les
+/// rencontres reportées.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub struct NombreDeMatchs(pub u32);
+
 /// Pourquoi le tirage a retenu cette paire — et ce que l'écran en dit.
 ///
 /// Il vient du domaine, qui sait *pourquoi* il a concédé. Le laisser déduire à
@@ -203,7 +212,10 @@ pub struct DrawInput {
     pub equipes: Vec<TeamId>,
     pub historique: RencontresJouees,
     pub interdites: HashSet<(TeamId, TeamId)>,
-    pub jamais_exemptees: HashSet<TeamId>,
+    /// R9 — le nombre d'appariements de chaque équipe sur la saison. Une équipe
+    /// absente de la table compte zéro : elle n'a rien joué, donc elle passe en
+    /// dernier pour l'exemption.
+    pub matchs_joues: HashMap<TeamId, NombreDeMatchs>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -253,8 +265,14 @@ struct Cout {
     /// R8.2 — la somme des positions des journées reprises. Plus petit = plus
     /// ancien, donc préférable. Une paire inédite ne pèse rien.
     anciennete: i64,
-    /// R9 — le nombre d'exemptées qui l'ont déjà été.
-    exemptions_repetees: u32,
+    /// R9 — le retard de l'exemptée sur l'équipe la plus servie du groupe. Nul
+    /// pour celle qui a le plus joué : l'exempter ne coûte rien.
+    ///
+    /// **Le retard, et non le compte brut.** `Cout` s'additionne le long de la
+    /// recherche et se compare à un plancher ; une dimension portant un nombre
+    /// de matchs absolu ferait dépendre l'élagage de l'avancement de la saison,
+    /// et un plancher calculé à la journée 1 ne vaudrait plus rien à la 15.
+    exemption_injuste: u32,
 }
 
 impl Cout {
@@ -262,14 +280,14 @@ impl Cout {
         perdues: 0,
         revanches: 0,
         anciennete: 0,
-        exemptions_repetees: 0,
+        exemption_injuste: 0,
     };
 
     const INFINI: Cout = Cout {
         perdues: u32::MAX,
         revanches: u32::MAX,
         anciennete: i64::MAX,
-        exemptions_repetees: u32::MAX,
+        exemption_injuste: u32::MAX,
     };
 
     fn plus(self, autre: Cout) -> Cout {
@@ -277,9 +295,23 @@ impl Cout {
             perdues: self.perdues + autre.perdues,
             revanches: self.revanches + autre.revanches,
             anciennete: self.anciennete + autre.anciennete,
-            exemptions_repetees: self.exemptions_repetees + autre.exemptions_repetees,
+            exemption_injuste: self.exemption_injuste + autre.exemption_injuste,
         }
     }
+}
+
+/// R9 — le retard de chaque équipe du groupe sur la plus servie.
+///
+/// Une équipe absente de `matchs_joues` compte zéro match : elle n'a rien joué,
+/// donc son retard est maximal, donc elle passe en dernier pour l'exemption.
+fn retards(input: &DrawInput) -> Vec<u32> {
+    let joues: Vec<u32> = input
+        .equipes
+        .iter()
+        .map(|t| input.matchs_joues.get(t).copied().unwrap_or_default().0)
+        .collect();
+    let plus_servie = joues.iter().copied().max().unwrap_or(0);
+    joues.iter().map(|&j| plus_servie - j).collect()
 }
 
 // ── Le tirage ────────────────────────────────────────────────────────────────
@@ -313,7 +345,12 @@ struct Recherche {
     /// univers, donc aucun objectif ne peut la rattraper.
     autorisee: Vec<Vec<bool>>,
     poids: Vec<Vec<(u32, i64)>>,
-    deja_exemptee: Vec<bool>,
+    /// R9 — pour chaque équipe, son retard sur la plus servie **du groupe tiré**.
+    ///
+    /// Du groupe, et non de la saison : c'est ce qui garantit qu'un retard nul est
+    /// toujours atteignable, donc que le plancher reste franchissable. Une poule
+    /// qui joue moins qu'une autre n'a pas à en pâtir.
+    retard: Vec<u32>,
     /// Ce qu'aucune solution ne peut battre. L'atteindre arrête tout.
     plancher: Cout,
     budget: u32,
@@ -329,7 +366,7 @@ impl Recherche {
             n,
             autorisee: vec![vec![false; n]; n],
             poids: vec![vec![(0, 0); n]; n],
-            deja_exemptee: vec![false; n],
+            retard: retards(input),
             plancher: Cout::ZERO,
             budget: BUDGET_NOEUDS,
             budget_epuise: false,
@@ -337,7 +374,6 @@ impl Recherche {
             meilleure: Solution::default(),
         };
         for i in 0..n {
-            recherche.deja_exemptee[i] = !input.jamais_exemptees.contains(&input.equipes[i]);
             for j in 0..n {
                 recherche.remplir(input, i, j);
             }
@@ -355,15 +391,17 @@ impl Recherche {
         self.poids[i][j] = input.historique.poids(a, b);
     }
 
-    /// La borne inférieure du problème : la parité impose une exemption, et si
-    /// toutes les équipes ont déjà été exemptées, R9 sera fatalement violée.
-    /// Une solution qui l'atteint est optimale — inutile de chercher plus loin.
+    /// La borne inférieure du problème : la parité impose une exemption. Une
+    /// solution qui l'atteint est optimale — inutile de chercher plus loin.
+    ///
+    /// **`exemption_injuste` y vaut zéro sans condition**, et c'est un progrès du
+    /// nouveau critère : l'équipe la plus servie existe toujours, donc son retard
+    /// est nul, donc exempter sans injustice est toujours possible. Le critère
+    /// précédent avait un cas dégénéré — toutes les équipes déjà exemptées — qu'il
+    /// fallait relever ici pour que la recherche puisse encore s'arrêter.
     fn plancher(&self) -> Cout {
-        let perdues = (self.n % 2) as u32;
-        let toutes_deja = self.deja_exemptee.iter().all(|&d| d);
         Cout {
-            perdues,
-            exemptions_repetees: u32::from(perdues == 1 && toutes_deja),
+            perdues: (self.n % 2) as u32,
             ..Cout::ZERO
         }
     }
@@ -498,7 +536,7 @@ impl Recherche {
     fn cout_exemption(&self, i: usize) -> Cout {
         Cout {
             perdues: 1,
-            exemptions_repetees: u32::from(self.deja_exemptee[i]),
+            exemption_injuste: self.retard[i],
             ..Cout::ZERO
         }
     }
@@ -515,10 +553,28 @@ impl Recherche {
     fn proposition(&self, input: &DrawInput) -> DrawProposal {
         DrawProposal {
             rencontres: self.rencontres(input),
-            exemptee: self.meilleure.exemptees.first().map(|&i| input.equipes[i]),
+            exemptee: self.exemptee_rapportee(input),
             ecartees: vec![],
             optimum_prouve: !self.budget_epuise,
         }
+    }
+
+    /// **La plus servie parmi celles qui restent**, et non la première explorée.
+    ///
+    /// `exemptees` est un `Vec` : quand R10 force plusieurs équipes à rester sur
+    /// le banc, chacune y entre. Rendre `.first()` désignait donc « l'exemptée »
+    /// par un artefact de l'ordre de parcours, les autres disparaissant du
+    /// rapport. Sous R9, celle qui se repose légitimement est celle qui a le plus
+    /// joué — retard nul, ou le plus petit.
+    ///
+    /// Le coût, lui, **somme** les retards de toutes les restantes : c'est la
+    /// bonne mesure d'équité quand plusieurs ne jouent pas.
+    fn exemptee_rapportee(&self, input: &DrawInput) -> Option<TeamId> {
+        self.meilleure
+            .exemptees
+            .iter()
+            .min_by_key(|&&i| self.retard[i])
+            .map(|&i| input.equipes[i])
     }
 
     fn rencontres(&self, input: &DrawInput) -> Vec<ProposedPairing> {
@@ -569,6 +625,12 @@ mod tests {
         let (pos, nom) = journee(position);
         let (x, y) = (input.equipes[a], input.equipes[b]);
         input.historique.enregistrer(&x, &y, pos, nom);
+    }
+
+    fn a_joue(input: &mut DrawInput, equipe: usize, matchs: u32) {
+        input
+            .matchs_joues
+            .insert(input.equipes[equipe], NombreDeMatchs(matchs));
     }
 
     fn graine(n: u64) -> StdRng {
@@ -689,12 +751,14 @@ mod tests {
         );
     }
 
-    // ── R9 — l'exemption ne se répète pas ────────────────────────────────────
+    // ── R9 — l'exemption va à celle qui a le plus joué ───────────────────────
 
     #[test]
-    fn l_exemptee_est_tiree_parmi_celles_qui_ne_l_ont_jamais_ete() {
+    fn l_exemptee_est_celle_qui_a_le_plus_joue() {
         let mut input = entree(equipes(5));
-        input.jamais_exemptees = HashSet::from([input.equipes[3]]);
+        for (equipe, matchs) in [(0, 3), (1, 4), (2, 3), (3, 7), (4, 2)] {
+            a_joue(&mut input, equipe, matchs);
+        }
 
         for graine_n in 0..20 {
             let p = tirer(&input, &mut graine(graine_n));
@@ -703,15 +767,53 @@ mod tests {
         }
     }
 
-    /// R9 cède devant R8.2 : elle est au rang 4, pas au rang 3. Exempter la
-    /// seule équipe jamais exemptée coûterait ici une revanche de plus.
-    /// Trois équipes, seule la 0 n'a jamais été exemptée, et 1-2 est déjà
-    /// jouée. L'exempter elle coûterait une revanche ; on exempte donc la 1 ou
-    /// la 2, et R9 cède.
+    /// Une équipe absente de la table n'a rien joué : son retard est maximal,
+    /// donc elle passe **en dernier** pour l'exemption. Le cas se produit dès la
+    /// première journée, où la table est vide pour tout le monde.
+    #[test]
+    fn une_equipe_sans_historique_compte_zero_match() {
+        let mut input = entree(equipes(3));
+        a_joue(&mut input, 0, 5);
+        // Les équipes 1 et 2 ne figurent pas dans `matchs_joues`.
+
+        for graine_n in 0..20 {
+            let p = tirer(&input, &mut graine(graine_n));
+            assert_eq!(
+                p.exemptee,
+                Some(input.equipes[0]),
+                "la seule qui a joué se repose, les deux autres jouent"
+            );
+        }
+    }
+
+    /// R17 — à égalité de matchs joués, plus rien ne départage, et le sort
+    /// tranche. Sans quoi la même équipe serait exemptée à chaque journée d'une
+    /// saison régulière, où tout le monde a le même compte.
+    #[test]
+    fn a_egalite_de_matchs_joues_le_sort_departage() {
+        let mut input = entree(equipes(5));
+        for equipe in 0..5 {
+            a_joue(&mut input, equipe, 4);
+        }
+
+        let exemptees: HashSet<Option<TeamId>> = (0..30)
+            .map(|n| tirer(&input, &mut graine(n)).exemptee)
+            .collect();
+
+        assert!(
+            exemptees.len() > 1,
+            "trente graines n'ont produit qu'une seule exemptée : le sort ne joue pas"
+        );
+    }
+
+    /// R9 cède devant R8.2 : elle est au rang 4, pas au rang 3. Trois équipes,
+    /// la 0 a le plus joué — c'est donc elle qu'on voudrait exempter — mais
+    /// 1-2 est déjà jouée, donc l'exempter coûterait une revanche. On exempte
+    /// la 1 ou la 2, et R9 cède.
     #[test]
     fn r9_cede_devant_le_nombre_de_revanches() {
         let mut input = entree(equipes(3));
-        input.jamais_exemptees = HashSet::from([input.equipes[0]]);
+        a_joue(&mut input, 0, 9);
         jouee(&mut input, 1, 2, 1);
 
         let p = tirer(&input, &mut graine(6));
@@ -719,13 +821,39 @@ mod tests {
         assert_ne!(
             p.exemptee,
             Some(input.equipes[0]),
-            "exempter la seule jamais exemptée aurait coûté une revanche"
+            "exempter la plus servie aurait coûté une revanche"
         );
         assert_eq!(
             p.rencontres[0].historique,
             Historique::Inedite,
             "on préfère une rencontre inédite à l'exemption souhaitée"
         );
+    }
+
+    /// Quand R10 laisse plusieurs équipes sur le banc, l'exemptée rapportée est
+    /// **la plus servie parmi elles**, et non la première explorée.
+    ///
+    /// Trois équipes d'un même coach et une quatrième : une seule rencontre est
+    /// possible, deux équipes restent. Celle qui a le plus joué se repose ; la
+    /// seconde est perdue, et le panneau de défection s'en occupe.
+    #[test]
+    fn l_exemptee_rapportee_est_la_plus_servie_parmi_les_restantes() {
+        let mut input = entree(equipes(4));
+        let (a, b, c) = (input.equipes[0], input.equipes[1], input.equipes[2]);
+        input.interdites = HashSet::from([paire(&a, &b), paire(&a, &c), paire(&b, &c)]);
+        a_joue(&mut input, 0, 1);
+        a_joue(&mut input, 1, 8);
+        a_joue(&mut input, 2, 2);
+
+        for graine_n in 0..20 {
+            let p = tirer(&input, &mut graine(graine_n));
+            assert_eq!(p.rencontres.len(), 1, "une seule paire est autorisée");
+            assert_eq!(
+                p.exemptee,
+                Some(b),
+                "la plus servie des restantes, pas la première explorée"
+            );
+        }
     }
 
     // ── R10 — deux équipes d'un même coach ne se rencontrent jamais ──────────

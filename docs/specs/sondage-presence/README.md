@@ -285,14 +285,48 @@ une revanche a déjà eu lieu, comme la maquette le montre. Un tirage qui produi
 une revanche sans l'expliquer passe pour un défaut ; le même avec son motif passe
 pour une contrainte.
 
-### R9 — L'exemption ne se répète pas
+### R9 — L'exemption va à celle qui a le plus joué
 
-Nombre impair de présents ⇒ une équipe est exemptée, tirée **parmi celles qui ne
-l'ont jamais été** sur la saison. Symétrique de R8 : on épuise les équipes
-jamais exemptées avant de rappeler les autres.
+Nombre impair de présents ⇒ une équipe est exemptée, et c'est **celle qui compte
+le plus d'appariements** sur la saison. À égalité, R17 départage au sort.
 
-Sans cette règle, le hasard peut exempter deux fois la même équipe en trois
-journées, ce qui se vit comme une injustice alors que c'est du hasard.
+Sans règle, le hasard peut exempter deux fois la même équipe en trois journées,
+ce qui se vit comme une injustice alors que ce n'est que du hasard.
+
+**Les appariements programmés, joués ou non.** Ils vivent dans les tables du BC,
+donc le compte se lit sans interroger `match_report` ; la différence ne concerne
+que les rencontres reportées, et elle ne vaut pas un port.
+
+Le maximum se prend **sur le groupe tiré**, pas sur la saison : une poule qui
+joue moins qu'une autre n'a pas à en pâtir, et un retard nul reste ainsi toujours
+atteignable — ce qui garde franchissable le plancher de la recherche.
+
+Le critère reste au **quatrième rang** des objectifs : R8.1 puis R8.2 priment.
+Exempter la plus servie cède devant une revanche évitée.
+
+#### Ce que cette règle disait avant, et pourquoi elle a changé — carte 541
+
+Elle disait : *une équipe est exemptée, tirée parmi celles qui ne l'ont jamais
+été sur la saison*. Deux défauts, l'un de mise en œuvre, l'autre de fond.
+
+**Elle n'était pas alimentable.** Le Calendrier ne tient aucune mémoire des
+exemptions passées ; `generate_pairings` passait donc un ensemble vide, le moteur
+considérait toutes les équipes comme déjà exemptées, et le critère ne
+départageait rien. Ce n'était pas un oubli — un commentaire l'assumait et
+reportait la mémoire à l'onglet Présences — mais une règle qu'on ne peut pas
+alimenter n'est pas une règle, c'est une intention.
+
+**Elle mesurait la mauvaise chose.** Elle égalise le nombre d'exemptions ; ce qui
+se vit comme une injustice, c'est le nombre de matchs. Les deux divergent dès
+qu'une équipe manque des journées en se déclarant absente : elle n'a jamais été
+exemptée, donc l'ancienne règle l'exemptait en priorité, alors qu'elle avait le
+moins joué. Dans une campagne de présence — où l'irrégularité est le sujet même —
+c'est le cas qu'il ne faut pas rater.
+
+Le nouveau critère se lit sur les appariements déjà écrits, donc il **rend la
+mémoire inutile** au lieu de la réclamer. Il n'a pas non plus de cas dégénéré :
+l'équipe la plus servie existe toujours, là où « toutes les équipes ont déjà été
+exemptées » demandait de relever le plancher de la recherche.
 
 ### R10 — Deux équipes d'un même coach ne se rencontrent jamais
 
