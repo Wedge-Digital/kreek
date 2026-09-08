@@ -395,6 +395,13 @@ impl PresenceSurvey {
         &self.appariement
     }
 
+    /// Les réponses, **en lecture seule**. Le dépôt écrit par là, comme
+    /// `save_notifications` reçoit un `&CompetitionNotifications` : un `&mut`
+    /// rendrait contournable le seul chemin d'écriture d'une `Presence`.
+    pub fn reponses(&self) -> &[Reponse] {
+        &self.reponses
+    }
+
     // ── Ce que la campagne sait dire ─────────────────────────────────────────
 
     pub fn statut(&self, aujourd_hui: &DateString) -> SurveyStatus {
@@ -458,6 +465,22 @@ impl PresenceSurvey {
         Ok(())
     }
 
+    /// Pose une réponse **sans passer par `enregistrer`**, qui n'existe pas
+    /// encore (carte 512).
+    ///
+    /// Provisoire, et `#[cfg(test)]` : elle contourne le seul chemin d'écriture
+    /// d'une `Presence`, ce que rien ne doit pouvoir faire en production. La
+    /// carte 512 la remplacera par la vraie méthode, et les tests qui s'en
+    /// servent passeront alors par les règles qu'elle porte.
+    #[cfg(test)]
+    pub fn poser_pour_test(&mut self, rang: usize, venue: Venue, par: Repondant) {
+        self.reponses[rang].presence = Presence::Declaree {
+            venue,
+            le: ReponduLe::try_new("2026-10-05".to_string()).expect("date de test"),
+            par,
+        };
+    }
+
     fn filtrer(&self, predicat: impl Fn(&Presence) -> bool) -> Vec<&Reponse> {
         self.reponses
             .iter()
@@ -467,6 +490,22 @@ impl PresenceSurvey {
 }
 
 impl Reponse {
+    /// Reconstruit une réponse depuis la base. **Réservé au dépôt** — le seul
+    /// autre chemin vers une `Presence` est `enregistrer`.
+    pub fn rehydrater(
+        team_id: TeamId,
+        coach_id: CoachId,
+        token: SurveyToken,
+        presence: Presence,
+    ) -> Self {
+        Self {
+            team_id,
+            coach_id,
+            token,
+            presence,
+        }
+    }
+
     fn attendue(d: &Destinataire) -> Self {
         Self {
             team_id: d.team_id,
@@ -527,14 +566,8 @@ mod tests {
         .expect("ouverture")
     }
 
-    /// Pose une réponse sans passer par `enregistrer`, qui n'existe pas encore
-    /// (carte 512). Réservé aux tests de lecture de cette carte-ci.
     fn declarer(survey: &mut PresenceSurvey, rang: usize, venue: Venue) {
-        survey.reponses[rang].presence = Presence::Declaree {
-            venue,
-            le: ReponduLe::try_new("2026-10-05".to_string()).unwrap(),
-            par: Repondant::Jeton,
-        };
+        survey.poser_pour_test(rang, venue, Repondant::Jeton);
     }
 
     // ── R1 — la réponse porte sur l'équipe, jamais sur le coach ──────────────

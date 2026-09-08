@@ -1,6 +1,7 @@
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
+use crate::app::competitions::domain::presence_survey_repository_port::IPresenceSurveyRepository;
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
 use crate::app::competitions::io::app_events::app_event_publisher::competitions_app_event_publisher;
 use crate::app::competitions::io::app_events::competition_ready_listener;
@@ -12,6 +13,7 @@ use crate::app::competitions::io::app_events::user_unsubscribed_listener;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::match_day_repository::MatchDayRepository;
+use crate::app::competitions::io::repository::presence_survey_repository::PresenceSurveyRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
 use crate::app::competitions::ports::{
     ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort,
@@ -28,6 +30,7 @@ pub struct CompetitionsContext {
     pub season_repository: Arc<dyn ISeasonRepository>,
     pub group_repository: Arc<dyn IGroupRepository>,
     pub match_day_repository: Arc<dyn IMatchDayRepository>,
+    pub presence_survey_repository: Arc<dyn IPresenceSurveyRepository>,
     pub team_info_port: Arc<dyn ITeamInfoPort>,
     pub reference_port: Arc<dyn ICompetitionReferencePort>,
     pub space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
@@ -109,6 +112,7 @@ impl CompetitionsContext {
             season_repository: Arc::new(SeasonRepository::new(pool.clone())),
             group_repository: Arc::new(GroupRepository::new(pool.clone())),
             match_day_repository: Arc::new(MatchDayRepository::new(pool.clone())),
+            presence_survey_repository: Arc::new(PresenceSurveyRepository::new(pool.clone())),
             team_info_port,
             reference_port,
             space_member_port,
