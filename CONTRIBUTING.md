@@ -109,7 +109,7 @@ chez vous.
 
 ```bash
 make test          # réinitialise la base de test, puis cargo test
-make e2e           # suite Playwright — exige un serveur lancé (make dev-demo)
+make e2e           # suite Playwright — exige un serveur lancé (make dev-e2e)
 ```
 
 `make test` plutôt que `cargo test` : la cible réinitialise la base de test au

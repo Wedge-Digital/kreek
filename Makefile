@@ -24,7 +24,8 @@ TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^
 # Nommé `remote.demo` et non `demo` : c'est le seul profil dont la base vit
 # ailleurs que sur la machine, et rien dans « demo » ne le disait. La confusion
 # a coûté plusieurs allers-retours pendant la carte 307, où `make dev-demo` —
-# qui ne choisit que le référentiel — a été pris pour ce profil-ci.
+# qui ne choisissait que le référentiel — a été pris pour ce profil-ci. Cette
+# cible s'appelle `dev-e2e` depuis la carte 536, ce qui referme la confusion.
 DEMO_PROFILE  := remote.demo
 DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
 
@@ -34,7 +35,7 @@ DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
 PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
-.PHONY: dev dev-demo test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: dev dev-e2e test e2e e2e_db e2e_gabarit test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
         load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -43,9 +44,9 @@ help:
 	@echo "  Développement"
 	@echo "  ─────────────────────────────────────────────────────"
 	@echo "  dev           Lance le serveur en mode watch"
-	@echo "  dev-demo      Idem, mais servant le jeu de démo (assets/references.example) — requis par e2e"
+	@echo "  dev-e2e       Le serveur de la suite e2e : jeu de démo + base dédiée kreek_e2e"
 	@echo "  test          Lance les tests (utilise .env.test)"
-	@echo "  e2e           Lance les tests E2E Playwright (nécessite \`make dev-demo\` lancé)"
+	@echo "  e2e           Lance les tests E2E Playwright (nécessite \`make dev-e2e\` lancé)"
 	@echo "  test-impacted Idem, mais uniquement les e2e impactés par le diff courant"
 	@echo "  all_tests     test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)"
 	@echo "  migrate       Échappatoire manuelle (le binaire applique déjà les migrations au boot)"
@@ -87,19 +88,37 @@ help:
 dev:
 	cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
-# Force le jeu de démonstration versionné, quelle que soit la configuration
-# locale. Utile quand `.env.dev` surcharge REFERENCES__DIR vers un jeu de
-# règles réel : la suite e2e attend les rosters de `assets/references.example`
-# (Granitiers, Zéphyriens, Lanterniers). Sans surcharge locale, `make dev`
-# sert déjà ce jeu — c'est le défaut de config/default.toml.
-dev-demo:
-	REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
+# Le serveur de la suite e2e : jeu de démonstration versionné **et base
+# dédiée**.
+#
+# Le jeu de règles est forcé quelle que soit la configuration locale — la suite
+# attend les rosters de `assets/references.example` (Granitiers, Zéphyriens,
+# Lanterniers), et un `.env.dev` qui surcharge REFERENCES__DIR vers un jeu réel
+# la ferait échouer.
+#
+# La base est `kreek_e2e`, que `scripts/e2e_db.sh` clone avant chaque passage.
+# Elle tournait auparavant dans la base de travail, que rien ne purgeait :
+# 155 Mo après une journée, dont 94 % de résidus, et 25 % de lenteur que rien ne
+# signalait (carte 536). Remplace `dev-demo`, qui ne servait qu'à ça.
+dev-e2e:
+	EXEC_PROFILE=e2e ENV=e2e REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 test: reset_test_db
 	DATABASE_URL="$(TEST_DB_URL)" cargo test
 
-e2e:
+e2e: e2e_db
 	cd tests/e2e && uv run pytest -v
+
+# Rend `kreek_e2e` identique à son gabarit — moins d'une seconde, cf. le script.
+e2e_db:
+	@./scripts/e2e_db.sh
+
+# Force la reconstruction du gabarit, quand on veut repartir de zéro sans
+# attendre qu'une migration le périme.
+e2e_gabarit:
+	@psql "$(shell grep -E '^DATABASE__URL=' .env.e2e | cut -d= -f2- | $(unquote) | sed 's#/[^/]*$$#/postgres#')" \
+	    -q -c "DROP DATABASE IF EXISTS kreek_e2e_gabarit"
+	@./scripts/e2e_db.sh
 
 # Filtre LOCAL de productivité : n'exécute que les tests e2e susceptibles
 # d'être cassés par le diff courant (cf. .claude/skills/test-impact/SKILL.md).
@@ -111,7 +130,7 @@ e2e:
 # dans le `elif` final, où une sélection vide ne déclenchait rien et la cible
 # rendait zéro : `select_tests.py` a planté des jours sur un `import tomllib`
 # sans qu'aucun test ne s'exécute, et sans que rien ne rougisse (carte 480).
-test-impacted:
+test-impacted: e2e_db
 	@tests=$$(./scripts/impact/changed_bcs.sh $(REF) | ./scripts/impact/select_tests.py); \
 	rc=$$?; \
 	if [ $$rc -eq 10 ]; then \

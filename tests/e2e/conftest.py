@@ -6,6 +6,8 @@ import urllib.request
 
 import pytest
 
+from db_helpers import query_db
+
 BASE_URL = os.environ.get("E2E_BASE_URL", "http://localhost:3210")
 
 # Roster du jeu de démonstration servant de sentinelle : sa présence atteste
@@ -74,8 +76,48 @@ def _server_serves_demo_ruleset(_server_is_running):
         pytest.exit(
             f"Le serveur ne sert pas le jeu de démonstration : le roster "
             f"{DEMO_ROSTER_UID} est absent de {url}.\n"
-            "Relance le serveur avec `make dev-demo` (ou "
+            "Relance le serveur avec `make dev-e2e` (ou "
             "REFERENCES__DIR=assets/references.example).",
+            returncode=2,
+        )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _server_serves_e2e_database(_server_is_running):
+    """Vérifie que le serveur lit bien `kreek_e2e`, et pas la base de travail.
+
+    C'est le piège que la carte 536 introduirait sans cette garde. Le clonage
+    remet `kreek_e2e` à neuf avant chaque passage ; si le développeur a lancé
+    `make dev` par habitude, le serveur lit `kreek_db` — les tests échouent
+    alors sur des données absentes, avec des messages qui n'expliquent rien.
+
+    La comparaison porte sur l'identifiant de l'espace E2E : celui que le
+    serveur résout par son nom, contre celui que porte la base clonée. Deux
+    valeurs différentes, ou une absente, et c'est que les deux ne parlent pas de
+    la même base.
+    """
+    en_base = query_db(
+        "SELECT id FROM spaces WHERE space_name = 'Espace E2E' LIMIT 1"
+    )
+    if not en_base:
+        pytest.exit(
+            "L'espace « Espace E2E » est absent de la base e2e.\n"
+            "Le clonage a-t-il tourné ? `make e2e_db`.",
+            returncode=2,
+        )
+
+    url = f"{BASE_URL}/app/spaces"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            html = resp.read().decode("utf-8")
+    except urllib.error.URLError as exc:
+        pytest.exit(f"Impossible de charger {url} ({exc}).", returncode=2)
+
+    if en_base[0] not in html:
+        pytest.exit(
+            "Le serveur ne lit pas la base e2e : l'espace « Espace E2E » y "
+            f"porte l'identifiant {en_base[0]}, absent de {url}.\n"
+            "Relance le serveur avec `make dev-e2e`.",
             returncode=2,
         )
 

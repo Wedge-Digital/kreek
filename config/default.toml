@@ -31,7 +31,7 @@ level = "info"
 [email]
 # « resend » par défaut : un déploiement qui oublierait de se prononcer envoie
 # ses emails plutôt que de les perdre en silence. Les contextes qui ne doivent
-# rien expédier posent EMAIL__PROVIDER=console — cf. la cible `dev-demo` du
+# rien expédier posent EMAIL__PROVIDER=console — cf. la cible `dev-e2e` du
 # Makefile et le job e2e de la CI.
 provider = "resend"
 

@@ -6,20 +6,24 @@ rendu HTML/HTMX/Alpine réellement produit dans un navigateur.
 
 ## Prérequis
 
-- Le serveur kreek doit déjà tourner en local avec `BYPASS_AUTH=true`
-  (ex: `ENV=dev cargo run`, ou via `.env.dev`). Les tests ne le démarrent pas
-  eux-mêmes — ils échouent immédiatement et clairement si rien ne répond sur
-  `http://localhost:3210`.
-- Le serveur doit servir le **jeu de démonstration** (`assets/references.example`),
-  sur lequel les tests s'appuient : rosters Granitiers, Zéphyriens et
-  Lanterniers. C'est le défaut de `config/default.toml`, donc `make dev`
-  suffit — sauf si ton `.env.dev` surcharge `REFERENCES__DIR` vers un jeu de
-  règles réel, auquel cas lance `make dev-demo`.
-- La base doit contenir le seed de la suite : `make seed_e2e`. Il crée un space
-  « Espace E2E », le coach `DevCoach` (celui que `BYPASS_AUTH` connecte, repéré
-  par son nom) et onze autres coachs pour alimenter les sélecteurs. Entièrement
-  synthétique et idempotent — rejouable après n'importe quel `make reset_db`, et
-  installable sur une base portant déjà les données legacy.
+- Le serveur kreek doit déjà tourner en local, **lancé par `make dev-e2e`**.
+  Les tests ne le démarrent pas eux-mêmes — ils échouent immédiatement et
+  clairement si rien ne répond sur `http://localhost:3210`, ou si le serveur
+  répond depuis une autre base que `kreek_e2e`.
+- `make dev-e2e` force le **jeu de démonstration** (`assets/references.example`)
+  sur lequel les tests s'appuient — rosters Granitiers, Zéphyriens et
+  Lanterniers — quelle que soit la configuration locale.
+- **La base est `kreek_e2e`, et elle est remise à neuf avant chaque passage.**
+  `make e2e` et `make test-impacted` la clonent depuis un gabarit (moins d'une
+  seconde) avant de lancer pytest ; il n'y a plus rien à seeder à la main.
+
+  La suite tournait auparavant dans `kreek_db`, la base de travail, que rien ne
+  purgeait : 155 Mo après une journée d'exécutions, dont 94 % de résidus, et
+  25 % de lenteur que rien ne signalait (carte 536). `kreek_db` n'est désormais
+  plus touchée par les tests.
+
+  Le gabarit se reconstruit tout seul quand les migrations changent ou qu'il
+  perd son seed. Pour le forcer : `make e2e_gabarit`.
 - `uv` installé.
 
 ## Installation (une fois)

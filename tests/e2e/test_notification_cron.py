@@ -25,6 +25,7 @@ Prérequis : serveur kreek lancé en dev, et une chaîne de compilation utilisab
 — le test invoque le binaire.
 """
 
+import os
 import subprocess
 from datetime import date, timedelta
 from pathlib import Path
@@ -32,7 +33,7 @@ from pathlib import Path
 import pytest
 
 from competition_lifecycle import build_full_competition
-from db_helpers import execute_db, query_db
+from db_helpers import e2e_database_url, execute_db, query_db
 
 RACINE = Path(__file__).resolve().parents[2]
 
@@ -44,7 +45,17 @@ DEMAIN = AUJOURDHUI + timedelta(days=1)
 
 def _lancer_le_cron(*extra: str) -> subprocess.CompletedProcess:
     """`--date` vise le jour choisi : sans lui, le test dépendrait de l'heure à
-    laquelle il tourne, et échouerait au passage de minuit."""
+    laquelle il tourne, et échouerait au passage de minuit.
+
+    **`DATABASE__URL` est posée explicitement**, sinon le binaire hérite de
+    l'environnement, charge `.env.dev` et fait tourner le cron sur la base de
+    travail — pendant que les assertions lisent `kreek_e2e`. Il rend alors
+    `seasons=0 due=0 sent=0` sans la moindre erreur, et le test échoue en
+    accusant le cron. Vu à la carte 536, avec le seed avant lui : `sqlx` lit
+    `DATABASE_URL`, l'application lit `DATABASE__URL`, et n'en poser qu'une
+    envoie le travail ailleurs en silence.
+    """
+    env = {**os.environ, "DATABASE__URL": e2e_database_url()}
     return subprocess.run(
         [
             "cargo", "run", "--quiet", "--",
@@ -54,6 +65,7 @@ def _lancer_le_cron(*extra: str) -> subprocess.CompletedProcess:
         capture_output=True,
         text=True,
         timeout=600,
+        env=env,
     )
 
 

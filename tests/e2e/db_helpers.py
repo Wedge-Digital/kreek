@@ -10,10 +10,16 @@ import subprocess
 from pathlib import Path
 
 
-def dev_database_url() -> str:
-    """Lit DATABASE__URL depuis .env.dev — même source de vérité que le
-    Makefile (`grep -E '^DATABASE__URL=' .env.dev`)."""
-    env_path = Path(__file__).resolve().parents[2] / ".env.dev"
+def e2e_database_url() -> str:
+    """Lit DATABASE__URL depuis `.env.e2e` — la base **dédiée** à la suite.
+
+    Elle lisait `.env.dev` jusqu'à la carte 536, quand la suite partageait la
+    base de travail. Depuis que `kreek_e2e` existe, pointer ici sur `.env.dev`
+    ferait lire à chaque `query_db` une base que le serveur n'écrit pas : les
+    assertions porteraient sur des données d'hier, ou sur rien, sans qu'aucun
+    message ne l'explique.
+    """
+    env_path = Path(__file__).resolve().parents[2] / ".env.e2e"
     for line in env_path.read_text().splitlines():
         if line.startswith("DATABASE__URL="):
             return line.split("=", 1)[1].strip()
@@ -38,7 +44,7 @@ def execute_db(sql: str) -> None:
     impossible le déclare, il ne le glisse pas dans une lecture.
     """
     result = subprocess.run(
-        ["psql", dev_database_url(), "-t", "-A", "-c", sql],
+        ["psql", e2e_database_url(), "-t", "-A", "-c", sql],
         capture_output=True, text=True, timeout=10,
     )
     assert result.returncode == 0, f"psql error: {result.stderr}"
@@ -46,7 +52,7 @@ def execute_db(sql: str) -> None:
 
 def query_db(sql: str) -> list[str]:
     result = subprocess.run(
-        ["psql", dev_database_url(), "-t", "-A", "-c", sql],
+        ["psql", e2e_database_url(), "-t", "-A", "-c", sql],
         capture_output=True, text=True, timeout=10,
     )
     assert result.returncode == 0, f"psql error: {result.stderr}"
