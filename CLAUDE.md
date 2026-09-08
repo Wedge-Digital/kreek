@@ -48,10 +48,21 @@ Directives de travail pour Claude Code sur ce projet.
       dessus. Les deux dates se croisent sans rapport avec ce qui tourne.
 
     ```bash
-    PID=$(pgrep -f 'target/debug/kreek' | head -1)
+    AVANT=$(pgrep -f 'target/debug/kreek' | head -1)
     touch src/main.rs   # réveille l'observateur, même si le code vient d'être édité
-    until [ "$(pgrep -f 'target/debug/kreek' | head -1)" != "$PID" ]; do sleep 1; done
+    until PID=$(pgrep -f 'target/debug/kreek' | head -1)
+          [ -n "$PID" ] && [ "$PID" != "$AVANT" ]; do sleep 1; done
     ```
+
+    **Le `-n` compte autant que le `!=`.** Pendant la recompilation, l'ancien
+    processus est déjà tué et le nouveau n'existe pas encore : `pgrep` ne rend
+    rien. Une chaîne vide **diffère** du PID précédent, donc la boucle écrite
+    sans `-n` s'arrête là — sur une fenêtre de plusieurs dizaines de secondes où
+    il n'y a aucun serveur. Elle rendait alors la main en affirmant le
+    redémarrage fait, et les tests qui suivaient tombaient sur un port muet.
+
+    Vécu, et c'est bien le piège que cette règle prétend refermer : la boucle a
+    imprimé « PID après : » suivi de rien, exit 0.
 
     **Attendre que `make test` ou `cargo build` soient finis** avant de réveiller
     l'observateur : ils tiennent le verrou de compilation, et il attend en
