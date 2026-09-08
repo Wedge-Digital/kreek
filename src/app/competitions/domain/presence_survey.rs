@@ -10,8 +10,8 @@
 //! avaient la mauvaise signature*.
 //!
 //! La carte 511 a posé les types, la construction et les lectures ; la 512
-//! ajoute `enregistrer` et `desaccord`. Restent la 513 :
-//! `valider_proposition`, `clore`, `rouvrir`, `marquer_appariee`.
+//! `enregistrer` et `desaccord` ; la 513 `valider_proposition`, `clore`,
+//! `rouvrir`, `marquer_appariee` et `defaire_appariement`. L'agrégat est complet.
 //!
 //! # Aucun champ n'est `pub`
 //!
@@ -22,12 +22,14 @@
 
 use crate::app::competitions::domain::error::DomainError;
 use crate::app::competitions::domain::match_day::MatchDay;
+use crate::app::competitions::domain::tirage::{paire, DrawProposal};
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, EntityId};
 use crate::app::shared_kernel::identity::sulid::SUlid;
 use nutype::nutype;
+use std::collections::HashSet;
 
 // ── Les value objects ────────────────────────────────────────────────────────
 
@@ -545,17 +547,37 @@ impl PresenceSurvey {
         self.reponses.iter().find(|r| &r.team_id == team_id)
     }
 
-    /// R15 — le tirage refuse en dessous de deux présents, **et le dit**.
+    /// R15 — le tirage refuse en dessous de deux **appariables**, et le dit.
     ///
     /// Sans cette garde, l'aperçu s'afficherait vide et l'organisateur croirait à
     /// une panne. Même motif que `skipped_group_names` dans `generate_pairings` :
     /// signaler explicitement plutôt que laisser croire à un échec.
-    pub fn peut_tirer(&self) -> Result<(), DomainError> {
-        let presents = self.compte_presents();
+    ///
+    /// **`inscrites` est indispensable, et son absence rendait la garde
+    /// inopérante.** Une équipe désinscrite ne participe pas au tirage : R18 la
+    /// refuse à la validation, et l'aperçu la filtre. Compter les présences seules
+    /// laissait donc passer deux présents dont une désinscrite — le bouton
+    /// s'activait, l'aperçu revenait vide, et l'organisateur tombait exactement
+    /// sur le symptôme que R15 existe pour éviter.
+    ///
+    /// C'est le même défaut de forme que `verifier_l_exemption` a rencontré un
+    /// étage plus haut : « combien peuvent réellement jouer ? » croise deux faits,
+    /// la présence et l'inscription, et un seul des deux vit dans l'agrégat.
+    pub fn peut_tirer(&self, inscrites: &HashSet<TeamId>) -> Result<(), DomainError> {
+        let presents = self.compte_appariables(inscrites);
         if presents < 2 {
             return Err(DomainError::NotEnoughPresent { presents });
         }
         Ok(())
+    }
+
+    /// Les équipes que le tirage retiendra vraiment : présentes (R5) **et**
+    /// toujours inscrites (R18).
+    pub fn compte_appariables(&self, inscrites: &HashSet<TeamId>) -> usize {
+        self.presents()
+            .iter()
+            .filter(|r| inscrites.contains(r.team_id()))
+            .count()
     }
 
     // ── Ce que la campagne accepte de changer ────────────────────────────────
@@ -604,6 +626,164 @@ impl PresenceSurvey {
             return None;
         }
         Some(d)
+    }
+
+    /// R22 — **la validation revérifie la proposition, elle ne l'écrit pas sur
+    /// parole.**
+    ///
+    /// L'aperçu ne persistant rien, la proposition part au client et revient
+    /// modifiable. Ce n'est pas de la défiance envers l'organisateur : l'état a pu
+    /// changer entre l'aperçu et la validation — une équipe désengagée, une réponse
+    /// modifiée dans un autre onglet. La proposition était juste quand elle a été
+    /// calculée, et ne l'est plus.
+    ///
+    /// **`inscrites` et non `engagees`** : l'agrégat a déjà `engagees()`, qui veut
+    /// dire « sollicitée à l'ouverture ». R18 parle d'autre chose — toujours
+    /// inscrite dans la saison — et c'est un fait du dehors. Deux notions sous un
+    /// nom, c'est le défaut de la carte 495.
+    pub fn valider_proposition(
+        &self,
+        prop: &DrawProposal,
+        inscrites: &HashSet<TeamId>,
+        interdites: &HashSet<(TeamId, TeamId)>,
+    ) -> Result<(), DomainError> {
+        for team in equipes_de(prop) {
+            self.verifier_l_equipe(&team, inscrites)?;
+        }
+        for r in &prop.rencontres {
+            verifier_la_paire(&r.home, &r.away, interdites)?;
+        }
+        verifier_l_unicite(prop)?;
+        self.verifier_l_exemption(prop, inscrites, interdites)
+    }
+
+    /// R5 puis R18 — présente, et toujours inscrite. `est_presente` est le prédicat
+    /// que `desaccord` utilise déjà : R5 dit ainsi la même chose aux deux endroits.
+    fn verifier_l_equipe(
+        &self,
+        team: &TeamId,
+        inscrites: &HashSet<TeamId>,
+    ) -> Result<(), DomainError> {
+        if !self.est_presente(team) {
+            return Err(DomainError::TeamNotPresent {
+                team: team.to_string(),
+            });
+        }
+        if !inscrites.contains(team) {
+            return Err(DomainError::TeamNoLongerEnrolled {
+                team: team.to_string(),
+            });
+        }
+        Ok(())
+    }
+
+    /// R22 — une exemptée n'est justifiée que si elle n'avait **personne** à jouer.
+    ///
+    /// C'est la règle de parité — impair ⇒ une exemptée, pair ⇒ aucune — écrite de
+    /// façon à survivre à R10. Le critère strict refuserait une proposition
+    /// légitime : quatre présents dont trois équipes d'un même coach donnent une
+    /// rencontre, une exemptée et une équipe qui rentre sans jouer, soit un effectif
+    /// pair **avec** une exemptée. `Cout::perdues` existe précisément pour ce cas.
+    ///
+    /// Sur un effectif où R10 ne mord pas, la vérification se réduit exactement à
+    /// « pair ⇒ pas d'exemptée ».
+    fn verifier_l_exemption(
+        &self,
+        prop: &DrawProposal,
+        inscrites: &HashSet<TeamId>,
+        interdites: &HashSet<(TeamId, TeamId)>,
+    ) -> Result<(), DomainError> {
+        let Some(exemptee) = prop.exemptee else {
+            return Ok(());
+        };
+        let appariees: HashSet<TeamId> = prop
+            .rencontres
+            .iter()
+            .flat_map(|r| [r.home, r.away])
+            .collect();
+
+        for r in self.presents() {
+            let t = *r.team_id();
+            if t == exemptee || appariees.contains(&t) || !inscrites.contains(&t) {
+                continue;
+            }
+            if !interdites.contains(&paire(&exemptee, &t)) {
+                return Err(DomainError::InconsistentProposal {
+                    motif: "une équipe est exemptée alors qu'une autre reste sans match",
+                });
+            }
+        }
+        Ok(())
+    }
+
+    // ── Le cycle de la campagne ──────────────────────────────────────────────
+
+    /// R23 — la clôture décidée, celle qui prime sur l'échéance.
+    ///
+    /// **Idempotente** : sur une campagne déjà close par décision, elle garde la
+    /// première date. C'est la décision qui compte, et sa date est celle où elle a
+    /// été prise — pas celle du second clic.
+    pub fn clore(&mut self, maintenant: &DateString) -> Result<(), DomainError> {
+        if let Fermeture::Decidee { .. } = self.fermeture {
+            return Ok(());
+        }
+        let le =
+            FermeeLe::try_new(maintenant.to_string()).map_err(|_| DomainError::InvalidFermeeLe)?;
+        self.fermeture = Fermeture::Decidee { le };
+        Ok(())
+    }
+
+    /// R13 et R23 — rouvrir **exige une nouvelle échéance**.
+    ///
+    /// La clôture étant calculée, rouvrir sans repousser la date rouvrirait sur une
+    /// campagne close dans la seconde. Le seuil est `nouvelle < aujourd'hui` et non
+    /// `<=` : `statut_de` ne clôt que **le lendemain** de l'échéance, donc une
+    /// échéance au jour même laisse encore la journée pour répondre.
+    ///
+    /// Elle refuse une journée figée par un rapport publié : rouvrir réarme les
+    /// anciens liens (R7), donc rouvrir une journée jouée ouvrirait la porte à des
+    /// réponses sur un fait accompli. Une journée **appariée mais non jouée** reste
+    /// permise — c'est le chemin normal quand une défection arrive après le tirage.
+    ///
+    /// Elle n'exige pas que la campagne soit close : rouvrir une campagne ouverte,
+    /// c'est la prolonger, et rien ne s'y oppose.
+    pub fn rouvrir(
+        &mut self,
+        nouvelle: SurveyDeadline,
+        journee: &EtatJournee,
+        maintenant: &DateString,
+    ) -> Result<(), DomainError> {
+        if journee.figee {
+            return Err(DomainError::RoundFrozenByReport);
+        }
+        if nouvelle.as_ref() < maintenant.as_ref() {
+            return Err(DomainError::DeadlineInThePast {
+                deadline: nouvelle.to_string(),
+            });
+        }
+        self.deadline = nouvelle;
+        self.fermeture = Fermeture::Aucune;
+        Ok(())
+    }
+
+    /// R9 — **enregistre l'exemption qui a eu lieu, pas celle qui était proposée.**
+    ///
+    /// La nuance vient de R9 croisée à R12 : quand l'exemptée reprend du service
+    /// après une défection, elle n'a finalement pas été exemptée, et la compter
+    /// comme telle la ferait passer devant à la journée suivante pour une exemption
+    /// qu'elle n'a pas subie. C'est aussi pourquoi la réparation rappelle cette
+    /// méthode avec la nouvelle exemptée au lieu d'un `remplacer_rencontre`
+    /// distinct : les rencontres ayant quitté l'agrégat (R24), il n'y resterait rien
+    /// à remplacer.
+    ///
+    /// Sans `Result` : aucune invariante à défendre ici, `valider_proposition` a
+    /// déjà tranché.
+    pub fn marquer_appariee(&mut self, exemptee: Option<TeamId>) {
+        self.appariement = Appariement::Fait { exemptee };
+    }
+
+    pub fn defaire_appariement(&mut self) {
+        self.appariement = Appariement::Aucun;
     }
 
     /// R19 — une réponse ne vaut que pour une équipe de la campagne : désengagée
@@ -703,6 +883,45 @@ impl PresenceSurvey {
     }
 }
 
+/// Toutes les équipes que la proposition nomme — rencontres **et** exemptée.
+/// L'exemptée doit subir R5 et R18 comme les autres : exempter une absente ou une
+/// désinscrite est aussi faux qu'apparier l'une des deux.
+fn equipes_de(prop: &DrawProposal) -> Vec<TeamId> {
+    prop.rencontres
+        .iter()
+        .flat_map(|r| [r.home, r.away])
+        .chain(prop.exemptee)
+        .collect()
+}
+
+/// R10 — normalisée par `paire`, la fonction du tirage. Sans elle, `(a, b)` et
+/// `(b, a)` seraient deux entrées et l'interdiction ne tiendrait que dans un sens.
+fn verifier_la_paire(
+    home: &TeamId,
+    away: &TeamId,
+    interdites: &HashSet<(TeamId, TeamId)>,
+) -> Result<(), DomainError> {
+    if interdites.contains(&paire(home, away)) {
+        return Err(DomainError::ForbiddenPair {
+            home: home.to_string(),
+            away: away.to_string(),
+        });
+    }
+    Ok(())
+}
+
+/// R22 — une équipe au plus une fois dans toute la proposition, exemption comprise.
+fn verifier_l_unicite(prop: &DrawProposal) -> Result<(), DomainError> {
+    let equipes = equipes_de(prop);
+    let uniques: HashSet<&TeamId> = equipes.iter().collect();
+    if uniques.len() == equipes.len() {
+        return Ok(());
+    }
+    Err(DomainError::InconsistentProposal {
+        motif: "une équipe y figure deux fois",
+    })
+}
+
 /// R12 / R16 — la conséquence immédiate d'une réponse, jamais sa réparation.
 ///
 /// Fonction libre : elle ne lit rien de la campagne, seulement la journée et ce
@@ -750,6 +969,7 @@ mod tests {
     use crate::app::competitions::domain::match_day::{
         MatchDayName, MatchDayPosition, MatchDayType,
     };
+    use crate::app::competitions::domain::tirage::{Historique, ProposedPairing};
 
     fn journee(day_type: MatchDayType) -> MatchDay {
         MatchDay {
@@ -822,6 +1042,38 @@ mod tests {
             home: *a,
             away: *b,
         }
+    }
+
+    fn toutes_presentes(dests: &[Destinataire]) -> PresenceSurvey {
+        let mut survey = ouvrir(dests);
+        for rang in 0..dests.len() {
+            declarer(&mut survey, rang, Venue::Presente);
+        }
+        survey
+    }
+
+    fn inscrites(dests: &[Destinataire]) -> HashSet<TeamId> {
+        dests.iter().map(|d| d.team_id).collect()
+    }
+
+    fn proposee(a: &TeamId, b: &TeamId) -> ProposedPairing {
+        ProposedPairing {
+            home: *a,
+            away: *b,
+            historique: Historique::Inedite,
+        }
+    }
+
+    fn proposition(rencontres: Vec<ProposedPairing>, exemptee: Option<TeamId>) -> DrawProposal {
+        DrawProposal {
+            rencontres,
+            exemptee,
+            ..Default::default()
+        }
+    }
+
+    fn interdite(a: &TeamId, b: &TeamId) -> HashSet<(TeamId, TeamId)> {
+        HashSet::from([paire(a, b)])
     }
 
     // ── R1 — la réponse porte sur l'équipe, jamais sur le coach ──────────────
@@ -903,22 +1155,44 @@ mod tests {
 
     #[test]
     fn un_seul_present_ne_suffit_pas_a_tirer() {
-        let mut survey = ouvrir(&destinataires(4));
+        let dests = destinataires(4);
+        let mut survey = ouvrir(&dests);
         declarer(&mut survey, 0, Venue::Presente);
 
         assert_eq!(
-            survey.peut_tirer().unwrap_err(),
+            survey.peut_tirer(&inscrites(&dests)).unwrap_err(),
             DomainError::NotEnoughPresent { presents: 1 }
         );
     }
 
     #[test]
     fn deux_presents_suffisent() {
-        let mut survey = ouvrir(&destinataires(4));
+        let dests = destinataires(4);
+        let mut survey = ouvrir(&dests);
         declarer(&mut survey, 0, Venue::Presente);
         declarer(&mut survey, 1, Venue::Presente);
 
-        assert!(survey.peut_tirer().is_ok());
+        assert!(survey.peut_tirer(&inscrites(&dests)).is_ok());
+    }
+
+    /// Une désinscrite ne participe pas au tirage : la compter activerait le
+    /// bouton pour un aperçu qui reviendrait vide — le symptôme même que R15
+    /// existe pour éviter.
+    #[test]
+    fn une_desinscrite_ne_compte_pas_dans_les_appariables() {
+        let dests = destinataires(4);
+        let mut survey = ouvrir(&dests);
+        declarer(&mut survey, 0, Venue::Presente);
+        declarer(&mut survey, 1, Venue::Presente);
+        let mut encore_inscrites = inscrites(&dests);
+        encore_inscrites.remove(&dests[1].team_id);
+
+        assert_eq!(survey.compte_presents(), 2, "deux présences déclarées");
+        assert_eq!(
+            survey.peut_tirer(&encore_inscrites).unwrap_err(),
+            DomainError::NotEnoughPresent { presents: 1 },
+            "mais une seule appariable, et le motif dit le nombre qui compte"
+        );
     }
 
     // ── R23 — la clôture est calculée, jamais subie ──────────────────────────
@@ -1264,6 +1538,339 @@ mod tests {
             None,
             "R24 — « appariée » se lit sur la journée : plus de rencontres, plus de désaccord"
         );
+    }
+
+    // ── R22 — la validation revérifie tout, elle n'écrit pas sur parole ───────
+
+    #[test]
+    fn une_proposition_juste_passe() {
+        let dests = destinataires(5);
+        let survey = toutes_presentes(&dests);
+        let prop = proposition(
+            vec![
+                proposee(&dests[0].team_id, &dests[1].team_id),
+                proposee(&dests[2].team_id, &dests[3].team_id),
+            ],
+            Some(dests[4].team_id),
+        );
+
+        assert!(survey
+            .valider_proposition(&prop, &inscrites(&dests), &HashSet::new())
+            .is_ok());
+    }
+
+    // ── R5 — le tirage ne retient que les présences confirmées ───────────────
+
+    #[test]
+    fn une_equipe_sans_reponse_ne_peut_pas_etre_appariee() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+        declarer(&mut survey, 0, Venue::Presente);
+        // dests[1] reste silencieuse — R5 : sans réponse vaut absent pour le tirage.
+        let prop = proposition(vec![proposee(&dests[0].team_id, &dests[1].team_id)], None);
+
+        let refus = survey.valider_proposition(&prop, &inscrites(&dests), &HashSet::new());
+
+        assert_eq!(
+            refus.unwrap_err(),
+            DomainError::TeamNotPresent {
+                team: dests[1].team_id.to_string()
+            }
+        );
+    }
+
+    /// L'exemptée subit R5 comme les autres : exempter une absente est aussi faux
+    /// qu'apparier une absente, et rien dans la forme de `DrawProposal` ne le dit.
+    #[test]
+    fn une_exemptee_absente_est_refusee() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+        declarer(&mut survey, 0, Venue::Presente);
+        declarer(&mut survey, 1, Venue::Presente);
+        declarer(&mut survey, 2, Venue::Absente);
+        let prop = proposition(
+            vec![proposee(&dests[0].team_id, &dests[1].team_id)],
+            Some(dests[2].team_id),
+        );
+
+        let refus = survey.valider_proposition(&prop, &inscrites(&dests), &HashSet::new());
+
+        assert_eq!(
+            refus.unwrap_err(),
+            DomainError::TeamNotPresent {
+                team: dests[2].team_id.to_string()
+            }
+        );
+    }
+
+    // ── R18 — la présence ne dit pas que l'équipe est toujours inscrite ──────
+
+    #[test]
+    fn une_equipe_desinscrite_depuis_sa_reponse_est_refusee() {
+        let dests = destinataires(4);
+        let survey = toutes_presentes(&dests);
+        let mut encore_inscrites = inscrites(&dests);
+        encore_inscrites.remove(&dests[3].team_id);
+        let prop = proposition(
+            vec![
+                proposee(&dests[0].team_id, &dests[1].team_id),
+                proposee(&dests[2].team_id, &dests[3].team_id),
+            ],
+            None,
+        );
+
+        let refus = survey.valider_proposition(&prop, &encore_inscrites, &HashSet::new());
+
+        assert_eq!(
+            refus.unwrap_err(),
+            DomainError::TeamNoLongerEnrolled {
+                team: dests[3].team_id.to_string()
+            },
+            "R18 — les deux faits vieillissent séparément"
+        );
+    }
+
+    // ── R10 — deux équipes d'un même coach ne se rencontrent jamais ──────────
+
+    /// L'interdiction tient dans les deux sens : `paire` normalise, donc une
+    /// proposition qui inverse home et away ne la contourne pas.
+    #[test]
+    fn une_paire_interdite_est_refusee_dans_les_deux_sens() {
+        let dests = destinataires(2);
+        let survey = toutes_presentes(&dests);
+        let interdites = interdite(&dests[0].team_id, &dests[1].team_id);
+
+        for (a, b) in [(0, 1), (1, 0)] {
+            let prop = proposition(vec![proposee(&dests[a].team_id, &dests[b].team_id)], None);
+            let refus = survey.valider_proposition(&prop, &inscrites(&dests), &interdites);
+            assert_eq!(
+                refus.unwrap_err(),
+                DomainError::ForbiddenPair {
+                    home: dests[a].team_id.to_string(),
+                    away: dests[b].team_id.to_string(),
+                }
+            );
+        }
+    }
+
+    // ── R22 — la proposition ne se contredit pas elle-même ───────────────────
+
+    #[test]
+    fn une_equipe_en_double_est_refusee() {
+        let dests = destinataires(3);
+        let survey = toutes_presentes(&dests);
+        let prop = proposition(
+            vec![
+                proposee(&dests[0].team_id, &dests[1].team_id),
+                proposee(&dests[0].team_id, &dests[2].team_id),
+            ],
+            None,
+        );
+
+        assert_eq!(
+            survey
+                .valider_proposition(&prop, &inscrites(&dests), &HashSet::new())
+                .unwrap_err(),
+            DomainError::InconsistentProposal {
+                motif: "une équipe y figure deux fois"
+            }
+        );
+    }
+
+    #[test]
+    fn une_exemptee_qui_joue_aussi_est_refusee() {
+        let dests = destinataires(3);
+        let survey = toutes_presentes(&dests);
+        let prop = proposition(
+            vec![proposee(&dests[0].team_id, &dests[1].team_id)],
+            Some(dests[1].team_id),
+        );
+
+        assert_eq!(
+            survey
+                .valider_proposition(&prop, &inscrites(&dests), &HashSet::new())
+                .unwrap_err(),
+            DomainError::InconsistentProposal {
+                motif: "une équipe y figure deux fois"
+            }
+        );
+    }
+
+    /// La règle de parité : quatre présents, une seule rencontre, une exemptée —
+    /// la quatrième rentrerait sans jouer alors que rien ne l'en empêche.
+    #[test]
+    fn une_exemptee_est_refusee_quand_une_autre_reste_sans_match() {
+        let dests = destinataires(4);
+        let survey = toutes_presentes(&dests);
+        let prop = proposition(
+            vec![proposee(&dests[0].team_id, &dests[1].team_id)],
+            Some(dests[2].team_id),
+        );
+
+        assert_eq!(
+            survey
+                .valider_proposition(&prop, &inscrites(&dests), &HashSet::new())
+                .unwrap_err(),
+            DomainError::InconsistentProposal {
+                motif: "une équipe est exemptée alors qu'une autre reste sans match"
+            }
+        );
+    }
+
+    /// La seule exception, et c'est R10 qui la force : quatre présents dont trois
+    /// équipes d'un même coach donnent une rencontre, une exemptée et une équipe
+    /// qui rentre sans jouer — un effectif **pair** avec une exemptée légitime. Le
+    /// critère strict la refuserait, alors que `Cout::perdues` existe pour ce cas.
+    #[test]
+    fn une_exemptee_est_justifiee_quand_la_paire_restante_est_interdite() {
+        let dests = destinataires(4);
+        let survey = toutes_presentes(&dests);
+        let prop = proposition(
+            vec![proposee(&dests[0].team_id, &dests[1].team_id)],
+            Some(dests[2].team_id),
+        );
+        let interdites = interdite(&dests[2].team_id, &dests[3].team_id);
+
+        assert!(survey
+            .valider_proposition(&prop, &inscrites(&dests), &interdites)
+            .is_ok());
+    }
+
+    /// Une désinscrite laissée sans match ne rend pas l'exemption incohérente :
+    /// R18 l'a déjà écartée du tirage, elle n'attend pas d'adversaire.
+    #[test]
+    fn une_desinscrite_sans_match_ne_condamne_pas_l_exemption() {
+        let dests = destinataires(4);
+        let survey = toutes_presentes(&dests);
+        let mut encore_inscrites = inscrites(&dests);
+        encore_inscrites.remove(&dests[3].team_id);
+        let prop = proposition(
+            vec![proposee(&dests[0].team_id, &dests[1].team_id)],
+            Some(dests[2].team_id),
+        );
+
+        assert!(survey
+            .valider_proposition(&prop, &encore_inscrites, &HashSet::new())
+            .is_ok());
+    }
+
+    // ── R23 — clore, et rouvrir sans se refermer aussitôt ────────────────────
+
+    /// La date de la clôture est celle où la décision a été prise, pas celle du
+    /// second clic.
+    #[test]
+    fn clore_est_idempotente() {
+        let mut survey = ouvrir(&destinataires(4));
+
+        survey.clore(&date("2026-10-03")).expect("clôture");
+        survey.clore(&date("2026-10-07")).expect("re-clôture");
+
+        assert_eq!(
+            survey.fermeture(),
+            &Fermeture::Decidee {
+                le: FermeeLe::try_new("2026-10-03".to_string()).unwrap()
+            }
+        );
+        assert_eq!(
+            survey.statut(&date("2026-10-05")),
+            SurveyStatus::Close(Motif::Decision)
+        );
+    }
+
+    #[test]
+    fn rouvrir_refuse_une_echeance_deja_passee() {
+        let mut survey = ouvrir(&destinataires(4));
+        survey.clore(&date("2026-10-03")).unwrap();
+
+        let refus = survey.rouvrir(echeance("2026-10-02"), &vierge(), &date("2026-10-05"));
+
+        assert_eq!(
+            refus.unwrap_err(),
+            DomainError::DeadlineInThePast {
+                deadline: "2026-10-02".to_string()
+            },
+            "R23 — la clôture étant calculée, elle se refermerait dans la seconde"
+        );
+    }
+
+    /// Le seuil est `<` et non `<=` : `statut_de` ne clôt que le lendemain de
+    /// l'échéance, donc une échéance au jour même laisse la journée pour répondre.
+    #[test]
+    fn rouvrir_accepte_l_echeance_du_jour_meme() {
+        let mut survey = ouvrir(&destinataires(4));
+        survey.clore(&date("2026-10-03")).unwrap();
+
+        survey
+            .rouvrir(echeance("2026-10-05"), &vierge(), &date("2026-10-05"))
+            .expect("le jour même, on répond encore");
+
+        assert_eq!(survey.statut(&date("2026-10-05")), SurveyStatus::Ouverte);
+    }
+
+    // ── R13 — rouvrir réarme les jetons, donc pas sur une journée jouée ──────
+
+    #[test]
+    fn rouvrir_refuse_une_journee_figee_par_un_rapport() {
+        let mut survey = ouvrir(&destinataires(4));
+        survey.clore(&date("2026-10-03")).unwrap();
+        let figee = EtatJournee {
+            figee: true,
+            rencontres: vec![],
+        };
+
+        let refus = survey.rouvrir(echeance("2026-10-20"), &figee, &date("2026-10-05"));
+
+        assert_eq!(refus.unwrap_err(), DomainError::RoundFrozenByReport);
+    }
+
+    /// Une journée **appariée mais non jouée** reste rouvrable : c'est le chemin
+    /// normal quand une défection arrive après le tirage.
+    #[test]
+    fn rouvrir_une_journee_appariee_mais_non_jouee_reste_permis() {
+        let dests = destinataires(2);
+        let mut survey = toutes_presentes(&dests);
+        survey.clore(&date("2026-10-03")).unwrap();
+        let appariee = EtatJournee {
+            figee: false,
+            rencontres: vec![rencontre(&dests[0].team_id, &dests[1].team_id)],
+        };
+
+        survey
+            .rouvrir(echeance("2026-10-20"), &appariee, &date("2026-10-05"))
+            .expect("le chemin normal après une défection");
+
+        assert_eq!(survey.statut(&date("2026-10-05")), SurveyStatus::Ouverte);
+    }
+
+    // ── R9 — l'exemption qui a eu lieu, pas celle qui était proposée ─────────
+
+    #[test]
+    fn marquer_appariee_garde_la_derniere_exemptee() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+
+        survey.marquer_appariee(Some(dests[2].team_id));
+        // La réparation : l'exemptée reprend du service, une autre est exemptée.
+        survey.marquer_appariee(Some(dests[0].team_id));
+
+        assert_eq!(
+            survey.appariement(),
+            &Appariement::Fait {
+                exemptee: Some(dests[0].team_id)
+            },
+            "R9 — compter comme exemptée celle qui a repris du service la ferait \
+             passer devant à la journée suivante pour une exemption non subie"
+        );
+    }
+
+    #[test]
+    fn defaire_appariement_ramene_la_campagne_avant_le_tirage() {
+        let mut survey = ouvrir(&destinataires(4));
+        survey.marquer_appariee(None);
+
+        survey.defaire_appariement();
+
+        assert_eq!(survey.appariement(), &Appariement::Aucun);
     }
 
     #[test]

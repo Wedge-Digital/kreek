@@ -40,6 +40,39 @@ pub enum DomainError {
     InvalidSurveyToken,
     InvalidOpenedAt,
     InvalidReponduLe,
+    InvalidFermeeLe,
+    /// R5 — le tirage ne retient que les présences confirmées. Refusée à la
+    /// validation et non seulement au calcul : l'aperçu ne persiste rien, donc la
+    /// proposition revient du navigateur, et une réponse a pu changer entre-temps.
+    TeamNotPresent {
+        team: String,
+    },
+    /// R18 — la présence dit qu'un coach vient, elle ne dit pas qu'il est toujours
+    /// inscrit. Les deux faits vieillissent séparément.
+    TeamNoLongerEnrolled {
+        team: String,
+    },
+    /// R10 — deux équipes d'un même coach ne se rencontrent jamais. Contrainte
+    /// dure, et le seul cas où une paire est interdite indépendamment de
+    /// l'historique.
+    ForbiddenPair {
+        home: String,
+        away: String,
+    },
+    /// R22 — la proposition se contredit elle-même : une équipe deux fois, ou une
+    /// exemptée qui avait quelqu'un à jouer.
+    ///
+    /// `motif` est un `&'static str` et non un `String`, comme `ImmutableTierField`
+    /// du même enum : il ne peut venir que du code qui a détecté l'écart, jamais
+    /// d'une requête.
+    InconsistentProposal {
+        motif: &'static str,
+    },
+    /// R23 — rouvrir sans repousser l'échéance rouvrirait sur une campagne close
+    /// dans la seconde, la clôture étant calculée.
+    DeadlineInThePast {
+        deadline: String,
+    },
     /// R19 — une réponse ne vaut que pour une équipe de la campagne. Sans cette
     /// garde, un `team_id` forgé poserait une présence pour l'équipe d'une autre
     /// compétition du même espace : `require_admin_access` vérifie que la saison
@@ -110,6 +143,31 @@ impl fmt::Display for DomainError {
             Self::InvalidSurveyToken => write!(f, "Ce lien de réponse est illisible."),
             Self::InvalidOpenedAt => write!(f, "Date d'ouverture invalide."),
             Self::InvalidReponduLe => write!(f, "Date de réponse invalide."),
+            Self::InvalidFermeeLe => write!(f, "Date de clôture invalide."),
+            Self::TeamNotPresent { team } => {
+                write!(
+                    f,
+                    "L'équipe « {team} » n'a pas confirmé sa présence : elle ne peut pas être appariée."
+                )
+            }
+            Self::TeamNoLongerEnrolled { team } => {
+                write!(f, "L'équipe « {team} » n'est plus inscrite à cette saison.")
+            }
+            Self::ForbiddenPair { home, away } => {
+                write!(
+                    f,
+                    "« {home} » et « {away} » appartiennent au même coach : elles ne peuvent pas se rencontrer."
+                )
+            }
+            Self::InconsistentProposal { motif } => {
+                write!(f, "Cette proposition de tirage est incohérente : {motif}.")
+            }
+            Self::DeadlineInThePast { deadline } => {
+                write!(
+                    f,
+                    "L'échéance « {deadline} » est déjà passée : le sondage se refermerait aussitôt."
+                )
+            }
             Self::TeamNotInSurvey { team } => {
                 write!(
                     f,

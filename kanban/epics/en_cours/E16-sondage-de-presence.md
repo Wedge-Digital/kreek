@@ -1,12 +1,12 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **6 faites** (507 à 512, du 2026-09-07 au
+**État :** `en_cours` — 27 cartes, **7 faites** (507 à 513, du 2026-09-07 au
 2026-09-08) : le Calendrier tire désormais vraiment au sort, sans laisser
-d'équipe sur le banc ni de journée à moitié appariée. La vague « corriger
-l'existant » se rouvre pour la 541 — R9 est inerte en production, faute d'être
-alimentée. La vague du socle est aux trois quarts : l'agrégat sait ouvrir une
-campagne et enregistrer une réponse, et sa table existe. Il reste 513, la
-validation d'un tirage. Les
+d'équipe sur le banc ni de journée à moitié appariée, et **l'agrégat
+`PresenceSurvey` est complet** — il ouvre une campagne, enregistre une réponse,
+valide un tirage, et sa table existe. La vague du socle est close ; celle de
+« corriger l'existant » se rouvre pour la 541, R9 étant inerte en production
+faute d'être alimentée. Les
 trois unités sont conçues : l'onglet de l'organisateur, la réponse du coach par
 e-mail, et l'encart du coach connecté. Spécifiée par le workflow feature du
 2026-09-06 au 2026-09-07.
@@ -28,8 +28,8 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Six cartes faites sur vingt-sept.** La vague 2 en est à trois cartes sur
-quatre ; la vague 1 se rouvre pour une carte, la 541.
+**Sept cartes faites sur vingt-sept.** La vague 2 — le socle — est close ; la
+vague 1 se rouvre pour une carte, la 541, à faire avant les use cases.
 
 Les trois premières — 507, 508 et 509 — **corrigeaient l'existant** et ne
 concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était ni
@@ -37,9 +37,10 @@ aléatoire ni optimal, et il laissait des équipes sans match dans 54 à 58 % de
 tirages en milieu de saison. Le sondage s'appuie dessus, donc il l'a réparé
 d'abord — et le Calendrier en a profité.
 
-Les trois suivantes — 511, 510, 512 — posent le socle : l'agrégat
-`PresenceSurvey`, sa table et son dépôt, puis son unique chemin d'écriture d'une
-présence. Ce chemin unique est ce qui fait tenir R19, R13, R21 et R28 : il n'y a
+Les quatre suivantes — 511, 510, 512, 513 — posent le socle : l'agrégat
+`PresenceSurvey`, sa table et son dépôt, son unique chemin d'écriture d'une
+présence, puis les commandes qui valident un tirage et mènent le cycle de la
+campagne. Ce chemin unique est ce qui fait tenir R19, R13, R21 et R28 : il n'y a
 pas de seconde porte à contourner.
 
 Ce qui existait déjà et sera réemployé sans une ligne de plus : les deux domain

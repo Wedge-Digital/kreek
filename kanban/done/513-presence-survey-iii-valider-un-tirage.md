@@ -65,13 +65,48 @@ quitté l'agrégat (R24), il n'y resterait rien à remplacer.
 
 ## Checklist
 
-- [ ] `valider_proposition` — R5, R10, R18, R22
-- [ ] `clore`, `rouvrir` — R13, R23
-- [ ] `marquer_appariee`, `defaire_appariement` — R9
-- [ ] `DomainError` : `ForbiddenPair`, `TeamNotPresent`, `TeamNoLongerEnrolled`,
-      `InconsistentProposal { motif }`
-- [ ] Tests : R22 (équipe absente refusée, paire interdite refusée, équipe en
-      double refusée) · R23 (`rouvrir` avec une échéance passée refusé) ·
-      R13 (`rouvrir` sur journée figée refusé) ·
-      R9 (l'exemptée qui reprend du service n'est pas comptée exemptée)
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `valider_proposition` — R5, R10, R18, R22
+- [x] `clore`, `rouvrir` — R13, R23
+- [x] `marquer_appariee`, `defaire_appariement` — R9
+- [x] `DomainError` : les quatre prévues, **plus `DeadlineInThePast` et
+      `InvalidFermeeLe`**
+- [x] `peut_tirer` reçoit `inscrites` — hors périmètre initial, cf. ci-dessous
+- [x] Tests : les quatre de la liste, plus la parité dans ses deux sens, la
+      désinscrite qui ne condamne pas l'exemption, `clore` idempotente,
+      l'échéance du jour même, la journée appariée non jouée, et la désinscrite
+      qui ne compte pas comme appariable — **40 tests dans le fichier**
+- [x] `make lint`, `make check-arch`, `make test` — 1787/1787
+
+## Ce que la réalisation a corrigé
+
+**La parité, écrite pour survivre à R10.** La carte disait « exemptée cohérente
+avec la parité » sans la définir. Le critère strict — pair ⇒ pas d'exemptée —
+refuserait une proposition légitime : quatre présents dont trois équipes d'un même
+coach donnent une rencontre, une exemptée et une équipe qui rentre sans jouer,
+soit un effectif **pair avec une exemptée**. `Cout::perdues` existe précisément
+pour ce cas. La forme retenue — *une exemptée n'est justifiée que si elle n'avait
+personne à jouer* — se réduit exactement au critère strict dès que R10 ne mord
+pas. Deux tests l'encadrent.
+
+**Une désinscrite laissée sans match ne condamne pas l'exemption.** Cas non
+prévu, apparu en écrivant `verifier_l_exemption` : R18 l'a déjà écartée du
+tirage, elle n'attend pas d'adversaire. Sans cette exclusion, une seule
+désinscription rendait toute exemption incohérente.
+
+**`peut_tirer` ne connaissait pas l'inscription — et la garde R15 était donc
+inopérante.** Elle comptait `compte_presents()`, or une équipe désinscrite ne
+participe pas au tirage : deux présents dont une désinscrite activaient le
+bouton, l'aperçu revenait vide, et l'organisateur tombait exactement sur le
+symptôme que R15 existe pour éviter. Elle reçoit désormais `inscrites`, comme
+`valider_proposition`, et `compte_appariables` est exposée pour que l'écran de la
+519 cite le même nombre que la garde plutôt que de le recompter.
+
+**Deux variantes d'erreur en plus.** `DeadlineInThePast` porte la règle que la
+carte décrivait en toutes lettres — « il refuse une échéance déjà passée » — mais
+avait omise de sa liste. `InvalidFermeeLe` complète la série `InvalidOpenedAt` /
+`InvalidReponduLe` : `DateString` accepte la chaîne vide, donc `FermeeLe::try_new`
+peut échouer, et le domaine ne panique pas.
+
+**`rouvrir` reçoit `&EtatJournee` et non `figee: bool`** — la carte a été écrite
+avant que la 512 n'invente le type. Une seule forme pour « les faits de la
+journée ».
