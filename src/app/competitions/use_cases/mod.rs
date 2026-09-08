@@ -3,6 +3,7 @@ pub mod create_draft_competition;
 pub mod finalize_competition;
 pub mod notification_dispatch;
 pub mod notification_recipients;
+pub mod presences;
 pub mod save_competition_invitations;
 pub mod save_competition_notifications;
 pub mod save_competition_rules;

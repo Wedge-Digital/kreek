@@ -517,6 +517,15 @@ impl PresenceSurvey {
         self.filtrer(Presence::est_sans_reponse)
     }
 
+    /// R5 — les refus explicites, distincts des silencieux.
+    ///
+    /// Existe pour la même raison que `presents()` et `sans_reponse()` : c'est
+    /// **l'agrégat qui classe**, et le service d'hydratation qui joint. Filtrer
+    /// sur `Presence` dans la couche applicative ferait dire R5 à deux endroits.
+    pub fn absents(&self) -> Vec<&Reponse> {
+        self.filtrer(Presence::est_absente)
+    }
+
     /// Les quatre comptes existent pour que `AvancementVm` **ne dérive rien**.
     /// Le réflexe serait de faire `rows.len()` sur chaque colonne : c'est le
     /// défaut de la carte 495, où la vue recomptait ce que le domaine savait
@@ -526,7 +535,7 @@ impl PresenceSurvey {
     }
 
     pub fn compte_absents(&self) -> usize {
-        self.filtrer(Presence::est_absente).len()
+        self.absents().len()
     }
 
     pub fn compte_sans_reponse(&self) -> usize {

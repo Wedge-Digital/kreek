@@ -1,6 +1,6 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **8 faites** (507 à 513 et 541, du 2026-09-07
+**État :** `en_cours` — 27 cartes, **9 faites** (507 à 514 et 541, du 2026-09-07
 au 2026-09-08) : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
@@ -28,9 +28,10 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Huit cartes faites sur vingt-sept.** Les vagues 1 et 2 — corriger l'existant,
-puis le socle — sont closes. Il reste les use cases, l'écran, et les deux unités
-du coach.
+**Neuf cartes faites sur vingt-sept.** Les vagues 1 et 2 — corriger l'existant,
+puis le socle — sont closes, et la vague 3 est entamée : le service
+d'hydratation croise les deux ports et rend les destinataires. Il reste quatre
+use cases, l'écran, et les deux unités du coach.
 
 Quatre d'entre elles — 507, 508, 509 et 541 — **corrigeaient l'existant** et ne
 concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était ni
