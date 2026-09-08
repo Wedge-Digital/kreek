@@ -1,10 +1,11 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 26 cartes, **6 faites** (507 à 512, du 2026-09-07 au
-2026-09-08) : la vague « corriger l'existant » est close, et le Calendrier tire
-désormais vraiment au sort, sans laisser d'équipe sur le banc ni de journée à
-moitié appariée. La vague du socle est aux trois quarts : l'agrégat sait ouvrir
-une campagne et enregistrer une réponse, et sa table existe. Il reste 513, la
+**État :** `en_cours` — 27 cartes, **6 faites** (507 à 512, du 2026-09-07 au
+2026-09-08) : le Calendrier tire désormais vraiment au sort, sans laisser
+d'équipe sur le banc ni de journée à moitié appariée. La vague « corriger
+l'existant » se rouvre pour la 541 — R9 est inerte en production, faute d'être
+alimentée. La vague du socle est aux trois quarts : l'agrégat sait ouvrir une
+campagne et enregistrer une réponse, et sa table existe. Il reste 513, la
 validation d'un tirage. Les
 trois unités sont conçues : l'onglet de l'organisateur, la réponse du coach par
 e-mail, et l'encart du coach connecté. Spécifiée par le workflow feature du
@@ -27,8 +28,8 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Six cartes faites sur vingt-six.** La vague 1 est close, la vague 2 en est à
-trois cartes sur quatre.
+**Six cartes faites sur vingt-sept.** La vague 2 en est à trois cartes sur
+quatre ; la vague 1 se rouvre pour une carte, la 541.
 
 Les trois premières — 507, 508 et 509 — **corrigeaient l'existant** et ne
 concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était ni
@@ -53,6 +54,7 @@ et `match_report`, l'infrastructure d'e-mails avec sa table
 | 507 | Le tirage rejoue plutôt que de laisser une équipe sur le banc | 1 — corriger l'existant |
 | 508 | Le Calendrier passe au nouveau tirage | 1 |
 | 509 | Écrire un tirage est atomique | 1 |
+| 541 | L'exemption va à celle qui a le plus joué | 1 |
 | 511 | `PresenceSurvey` I — ouvrir une campagne | 2 — le socle |
 | 510 | La table des campagnes et son dépôt | 2 |
 | 512 | `PresenceSurvey` II — enregistrer une réponse | 2 |
@@ -82,6 +84,13 @@ et `match_report`, l'infrastructure d'e-mails avec sa table
 **507 avant 508** — la correction de l'algorithme précède son adoption, et son
 test rouge précède la correction. Le cas qui casse — quatre équipes dont trois
 paires déjà jouées — n'est couvert par aucun des six tests actuels.
+
+**541 avant 517**, et la vague 1 se rouvre pour elle. R9 — « l'exemption ne se
+répète pas » — est inerte en production : `generate_pairings` passe un
+`jamais_exemptees` vide, donc le moteur ne départage rien. La 541 remplace le
+critère par celui qui se mesure, le nombre d'appariements de la saison, et change
+la forme de `DrawInput`. La faire après la 517 obligerait à remplir deux fois le
+même type.
 
 **507 et 509 avant 517** — le tirage du sondage appelle la fonction corrigée et
 écrit par la méthode transactionnelle.
