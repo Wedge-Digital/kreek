@@ -117,6 +117,45 @@ Le même remède s'applique ici, et il reste à savoir **où** : quels helpers
 attendent une durée, lesquels attendent une condition mais avec un plafond trop
 court, et lesquels attendent la mauvaise chose.
 
+## Observation du 2026-09-08 — un cas de plus, et un détail neuf
+
+Relevé pendant la carte 541, sur `make test-impacted` (65 fichiers, 353 tests) :
+
+| Passage | Résultat |
+|---|---|
+| 1 | `test_dismissals_banner_leads_to_the_dismissals_page` — échec |
+| 2 | 346 passés, 0 échec — **même sélection, même code** |
+| le fichier seul, base au gabarit | 4 passés, 1 sauté |
+
+Même profil que le reste : attente plafonnée, dépendant de la charge, verte en
+isolation.
+
+**Le détail neuf, et il oriente le diagnostic** : l'élément attendu était
+**présent dans le DOM avec le bon texte**, et rapporté `hidden` quatre fois de
+suite.
+
+```
+expect(page.locator(".cm-verdict-title")).to_be_visible(timeout=10000)
+  4 × locator resolved to <div class="cm-verdict-title">Incident majeur</div>
+    - unexpected value "hidden"
+```
+
+Ce n'est donc **pas** une donnée qui tarde à arriver — l'hypothèse portée
+jusqu'ici, « ce que ces écrans attendent n'arrive pas par la réponse HTTP mais
+par un app event ». Le contenu était là. Ce qui manquait était sa **visibilité** :
+un `x-show`, une classe, une transition — quelque chose côté client qui n'avait
+pas encore basculé.
+
+Ça déplace une partie du soupçon du serveur vers le navigateur, et ça rejoint la
+fenêtre déjà documentée dans le `CLAUDE.md` : *« HTMX câble le contenu qu'il
+insère quelques dizaines de millisecondes après l'avoir rendu visible »*. Ici
+c'est le symétrique — le contenu est peint avant d'être révélé.
+
+**À vérifier au raffinage** : combien des échecs observés portent sur un élément
+absent du DOM, et combien sur un élément présent mais masqué. Les deux
+familles n'ont pas le même remède, et les confondre ferait chercher côté serveur
+un défaut qui vit dans la vue.
+
 ## Ce qu'il faudra trancher au raffinage
 
 **Relever les délais n'est pas la réponse.** Ça repousse le seuil sans rien
