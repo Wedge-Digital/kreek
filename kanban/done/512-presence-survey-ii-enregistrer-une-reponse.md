@@ -83,16 +83,35 @@ Calendrier rendaient impossible.
 
 ## Checklist
 
-- [ ] `EtatJournee`, `RencontreJournee`, `Desaccord`
-- [ ] `enregistrer` — R19, R13, R21, R6, R12/R16
-- [ ] `desaccord`
-- [ ] `DomainError` : `TeamNotInSurvey { team }`, `SurveyClosedForCoach`,
-      `RoundFrozenByReport`, `TeamNotOwnedByCoach { team }`
-- [ ] Tests : R6 (l'identifiant de l'organisateur est conservé) ·
-      R12 (présent -> absent après appariement) · R16 (absent -> présent aussi) ·
-      R13 (journée figée refusée) · R19 (équipe hors campagne) ·
-      R21 (close : `Coach` et `Jeton` refusés, `Organisateur` accepté) ·
-      R28 (`Coach(id)` sur l'équipe d'un autre est refusé ; `Jeton` n'est pas
-      contrôlé — le jeton *est* l'autorisation) ·
-      R24 (`desaccord` sur une journée vidée au Calendrier)
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `EtatJournee`, `RencontreJournee`, `EffetReponse`, `Desaccord`
+- [x] `enregistrer` — R19, R13, R21, R6, R12/R16
+- [x] `desaccord`
+- [x] `DomainError` : `TeamNotInSurvey { team }`, `SurveyClosedForCoach`,
+      `RoundFrozenByReport`, `TeamNotOwnedByCoach { team }`, **plus
+      `InvalidReponduLe`**
+- [x] `poser_pour_test` supprimée — les six appels de 511 passent par la vraie
+      méthode
+- [x] Tests : les huit de la liste, plus l'exemptée qui n'est pas un orphelin et
+      la journée vidée au Calendrier — 22 tests dans le fichier
+- [x] `make lint`, `make check-arch`, `make test` — 1769/1769
+
+## Ce que la réalisation a corrigé
+
+**Une cinquième variante d'erreur, `InvalidReponduLe`.** `DateString` accepte la
+chaîne vide — sa validation est `^(?:\d{4}-\d{2}-\d{2})?$` — donc
+`ReponduLe::try_new(maintenant)` peut réellement échouer. C'est exactement le
+motif qui a fait exister `InvalidOpenedAt` dans `ouvrir` : pas de `.expect()`
+dans le domaine.
+
+**Les deux listes de `Desaccord` sont disjointes.** Le premier test attendait que
+l'adversaire d'un désistant figure dans `orphelins`. Il n'y est pas, et il ne
+doit pas y être : il *est* apparié, dans une rencontre qu'il faut casser. Le
+vivier à réapparier est **l'union des deux listes**, et c'est le panneau de
+réparation qui la fait, sur décision de l'organisateur (carte 518). Les mêler
+ferait porter à `orphelins` deux sens que rien ne distinguerait ensuite.
+
+**R16 ne rend jamais `EnregistreeRencontreARefaire`**, et ce n'est pas une
+lacune : un arrivant tardif n'apparaît dans aucune rencontre, donc aucune n'est à
+refaire. `EffetReponse` dit la conséquence immédiate pour l'appelant, `desaccord`
+dit l'état complet — et c'est le bénéfice de R24, puisque cet état se recalcule à
+chaque affichage au lieu de se lire.

@@ -9,21 +9,21 @@
 //! *la troisième méthode qu'on greffe révèle souvent que les deux premières
 //! avaient la mauvaise signature*.
 //!
-//! Cette carte pose les types, la construction et les lectures. Les commandes
-//! arrivent en 512 (`enregistrer`, `desaccord`) et 513 (`valider_proposition`,
-//! `clore`, `rouvrir`, `marquer_appariee`).
+//! La carte 511 a posé les types, la construction et les lectures ; la 512
+//! ajoute `enregistrer` et `desaccord`. Restent la 513 :
+//! `valider_proposition`, `clore`, `rouvrir`, `marquer_appariee`.
 //!
 //! # Aucun champ n'est `pub`
 //!
-//! Le seul chemin d'écriture d'une `Presence` sera `enregistrer`, qui portera
-//! R19, R13, R21 et R28 ensemble. Un `pub` sur `reponses` les rendrait
+//! Le seul chemin d'écriture d'une `Presence` est `enregistrer`, qui porte R19,
+//! R13, R21 et R28 ensemble. Un `pub` sur `reponses` les rendrait
 //! contournables par un `survey.reponses[0].presence = …` que ni le
 //! compilateur, ni `check-arch`, ni la revue ne signaleraient.
 
 use crate::app::competitions::domain::error::DomainError;
 use crate::app::competitions::domain::match_day::MatchDay;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
-use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, EntityId};
 use crate::app::shared_kernel::identity::sulid::SUlid;
@@ -286,6 +286,99 @@ pub struct Destinataire {
     pub coach_id: CoachId,
 }
 
+// ── Les faits que le use case apporte ────────────────────────────────────────
+
+/// Une rencontre de la journée, **telle qu'elle existe en base**.
+///
+/// R24 — les appariements appartiennent à la journée, pas à la campagne. Ce type
+/// est donc un fait de passage : le use case le lit sur la journée et le donne à
+/// l'agrégat, qui décide. Il n'en garde rien.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RencontreJournee {
+    pub pairing: PairingId,
+    pub home: TeamId,
+    pub away: TeamId,
+}
+
+impl RencontreJournee {
+    fn contient(&self, team: &TeamId) -> bool {
+        &self.home == team || &self.away == team
+    }
+}
+
+/// Ce que le dehors sait de la journée, et que la campagne ne sait pas.
+///
+/// **Des faits, pas des ports.** Le use case interroge `IMatchReportStatusPort`
+/// et le dépôt de journées une fois chacun et passe le résultat ; l'agrégat
+/// tranche. La question « est-ce autorisé ? » reste dans le domaine, les faits
+/// viennent du dehors — même patron que `&MatchDay` pour `ouvrir`.
+///
+/// **Les rencontres entières, pas la seule rencontre touchée.** Un paramètre
+/// `rencontre_de: Option<PairingId>` calculé par le use case aurait sorti du
+/// domaine la question « quelle rencontre est touchée ? », qui est métier.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EtatJournee {
+    /// R13 — un rapport de match est publié sur cette journée.
+    ///
+    /// Primitif nu assumé : `EtatJournee` n'est ni un agrégat, ni une commande,
+    /// ni un événement — c'est un fait de passage, que rien ne persiste.
+    pub figee: bool, // arch:ok — fait fourni par le use case, pas un champ d'agrégat
+    pub rencontres: Vec<RencontreJournee>,
+}
+
+impl EtatJournee {
+    /// R24 — « appariée » n'est plus un champ de la campagne : c'est une
+    /// observation faite sur la journée, à chaque affichage. Vider la journée au
+    /// Calendrier ramène donc la campagne à son état d'avant tirage sans qu'aucune
+    /// réconciliation n'ait à tourner : il n'y a plus rien à réconcilier.
+    fn appariee(&self) -> bool {
+        !self.rencontres.is_empty()
+    }
+
+    fn rencontre_de(&self, team: &TeamId) -> Option<&RencontreJournee> {
+        self.rencontres.iter().find(|r| r.contient(team))
+    }
+}
+
+/// Ce qu'`enregistrer` rend — **elle signale, elle ne répare pas**.
+///
+/// La maquette montre une proposition que l'organisateur valide, jamais un fait
+/// accompli. Un `Result<(), _>` aurait obligé le use case à redécouvrir tout seul
+/// qu'une rencontre est touchée.
+///
+/// **Une arrivée tardive ne rend jamais `EnregistreeRencontreARefaire`** (R16) :
+/// un arrivant n'a aucune rencontre à refaire, il rejoint le vivier des
+/// orphelins. C'est `desaccord` qui le fait voir, et c'est le bénéfice de R24 —
+/// l'état se recalcule à chaque affichage au lieu de se lire. Cet enum dit la
+/// conséquence immédiate pour l'appelant ; `desaccord` dit l'état complet.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EffetReponse {
+    Enregistree,
+    EnregistreeRencontreARefaire { pairing: PairingId },
+}
+
+/// Ce qui ne concorde plus entre les présences et les appariements réels.
+///
+/// **Se recalcule, ne se lit pas** — c'est R24. La forme précédente,
+/// `rencontre_a_refaire()`, lisait un état stocké : elle ne savait qu'un
+/// désaccord existe que parce que la campagne se souvenait des rencontres, ce
+/// que quatre chemins du Calendrier rendaient faux sans rien lui dire. Ici l'état
+/// « défection à traiter » survit à un rechargement de page.
+///
+/// **Les deux listes sont disjointes.** Un présent dont la rencontre est à
+/// refaire n'est pas un orphelin : il *est* apparié, dans une rencontre qu'il
+/// faut casser. Le vivier à réapparier est l'union des deux — les survivants des
+/// rencontres cassées et les orphelins — et c'est le panneau de réparation qui la
+/// fait, sur décision de l'organisateur. Les mêler ici ferait porter à
+/// `orphelins` deux sens que rien ne distinguerait ensuite.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Desaccord {
+    /// R12 — une rencontre dont un des deux camps n'est plus présent.
+    pub rencontres_a_refaire: Vec<PairingId>,
+    /// R16 — un présent que **rien** n'apparie, l'exemptée exceptée.
+    pub orphelins: Vec<TeamId>,
+}
+
 // ── L'agrégat ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -465,20 +558,141 @@ impl PresenceSurvey {
         Ok(())
     }
 
-    /// Pose une réponse **sans passer par `enregistrer`**, qui n'existe pas
-    /// encore (carte 512).
+    // ── Ce que la campagne accepte de changer ────────────────────────────────
+
+    /// **Le seul chemin d'écriture d'une `Presence`.**
     ///
-    /// Provisoire, et `#[cfg(test)]` : elle contourne le seul chemin d'écriture
-    /// d'une `Presence`, ce que rien ne doit pouvoir faire en production. La
-    /// carte 512 la remplacera par la vraie méthode, et les tests qui s'en
-    /// servent passeront alors par les règles qu'elle porte.
-    #[cfg(test)]
-    pub fn poser_pour_test(&mut self, rang: usize, venue: Venue, par: Repondant) {
-        self.reponses[rang].presence = Presence::Declaree {
-            venue,
-            le: ReponduLe::try_new("2026-10-05".to_string()).expect("date de test"),
-            par,
+    /// Quatre gardes, dans cet ordre : on identifie (R19), on autorise (R28),
+    /// puis on regarde l'état (R13, R21). R19 précède R28 parce que R28 se pose
+    /// *sur la réponse trouvée* — c'est son `coach_id` qui sert de référence.
+    ///
+    /// `par` est conservé tel quel dans la présence : c'est R6, l'identifiant de
+    /// l'organisateur survit, et c'est lui qui distingue une réponse posée d'une
+    /// réponse reçue.
+    pub fn enregistrer(
+        &mut self,
+        team: &TeamId,
+        venue: Venue,
+        par: Repondant,
+        journee: &EtatJournee,
+        maintenant: &DateString,
+    ) -> Result<EffetReponse, DomainError> {
+        let rang = self.rang_de(team)?;
+        self.verifier_le_proprietaire(rang, team, par)?;
+        self.verifier_l_etat(journee, par, maintenant)?;
+
+        let le = ReponduLe::try_new(maintenant.to_string())
+            .map_err(|_| DomainError::InvalidReponduLe)?;
+        self.reponses[rang].presence = Presence::Declaree { venue, le, par };
+
+        Ok(effet(team, venue, journee))
+    }
+
+    /// Ce qui ne concorde plus entre les présences et les appariements **réels**
+    /// de la journée — R24.
+    ///
+    /// Rend `None` sur une journée non appariée : il n'y a rien à contredire.
+    pub fn desaccord(&self, journee: &EtatJournee) -> Option<Desaccord> {
+        if !journee.appariee() {
+            return None;
+        }
+        let d = Desaccord {
+            rencontres_a_refaire: self.rencontres_a_refaire(journee),
+            orphelins: self.orphelins(journee),
         };
+        if d.rencontres_a_refaire.is_empty() && d.orphelins.is_empty() {
+            return None;
+        }
+        Some(d)
+    }
+
+    /// R19 — une réponse ne vaut que pour une équipe de la campagne : désengagée
+    /// depuis l'ouverture, ou jamais engagée.
+    fn rang_de(&self, team: &TeamId) -> Result<usize, DomainError> {
+        self.reponses
+            .iter()
+            .position(|r| &r.team_id == team)
+            .ok_or_else(|| DomainError::TeamNotInSurvey {
+                team: team.to_string(),
+            })
+    }
+
+    /// R28 — `Coach(id)` répond pour ses équipes, et pour elles seules.
+    ///
+    /// `Jeton` n'est pas contrôlé, et ce n'est pas un oubli : le jeton *est*
+    /// l'autorisation (R7), et lui opposer un `CoachId` comparerait la réponse à
+    /// elle-même. L'organisateur non plus : `require_admin_access` l'a déjà fait.
+    fn verifier_le_proprietaire(
+        &self,
+        rang: usize,
+        team: &TeamId,
+        par: Repondant,
+    ) -> Result<(), DomainError> {
+        match par {
+            Repondant::Coach(id) if self.reponses[rang].coach_id != id => {
+                Err(DomainError::TeamNotOwnedByCoach {
+                    team: team.to_string(),
+                })
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// R13 puis R21 — l'état de la journée, puis celui de la campagne.
+    ///
+    /// R13 vaut pour tout le monde, l'organisateur compris : une journée dont un
+    /// rapport est publié ne se rejoue pas. R21 ne vaut que pour les chemins du
+    /// coach — l'organisateur passe, c'est lui qui rattrape le coup de fil reçu
+    /// après l'échéance (R6).
+    fn verifier_l_etat(
+        &self,
+        journee: &EtatJournee,
+        par: Repondant,
+        maintenant: &DateString,
+    ) -> Result<(), DomainError> {
+        if journee.figee {
+            return Err(DomainError::RoundFrozenByReport);
+        }
+        let chemin_du_coach = matches!(par, Repondant::Jeton | Repondant::Coach(_));
+        if chemin_du_coach && !self.statut(maintenant).est_ouverte() {
+            return Err(DomainError::SurveyClosedForCoach);
+        }
+        Ok(())
+    }
+
+    /// R12 — une rencontre dont un camp n'est plus présent. Une équipe désengagée
+    /// depuis le tirage n'a plus de réponse du tout : elle n'est pas présente, et
+    /// sa rencontre est donc à refaire, ce qui est le comportement voulu.
+    fn rencontres_a_refaire(&self, journee: &EtatJournee) -> Vec<PairingId> {
+        journee
+            .rencontres
+            .iter()
+            .filter(|r| !self.est_presente(&r.home) || !self.est_presente(&r.away))
+            .map(|r| r.pairing)
+            .collect()
+    }
+
+    /// R16 — un présent que rien n'apparie, **l'exemptée exceptée** : elle n'est
+    /// pas un orphelin à traiter, c'est le tirage qui l'a mise de côté. Sans cette
+    /// exception, chaque journée impaire afficherait un désaccord permanent.
+    ///
+    /// C'est là que se paie l'exemption gardée dans l'agrégat quand les
+    /// rencontres l'ont quitté (R24) : elle n'existe nulle part ailleurs.
+    fn orphelins(&self, journee: &EtatJournee) -> Vec<TeamId> {
+        self.presents()
+            .iter()
+            .map(|r| r.team_id)
+            .filter(|t| journee.rencontre_de(t).is_none() && !self.est_exemptee(t))
+            .collect()
+    }
+
+    fn est_presente(&self, team: &TeamId) -> bool {
+        self.reponse_de(team)
+            .is_some_and(|r| r.presence.compte_pour_le_tirage())
+    }
+
+    fn est_exemptee(&self, team: &TeamId) -> bool {
+        matches!(&self.appariement, Appariement::Fait { exemptee: Some(e) } if e == team)
     }
 
     fn filtrer(&self, predicat: impl Fn(&Presence) -> bool) -> Vec<&Reponse> {
@@ -486,6 +700,20 @@ impl PresenceSurvey {
             .iter()
             .filter(|r| predicat(&r.presence))
             .collect()
+    }
+}
+
+/// R12 / R16 — la conséquence immédiate d'une réponse, jamais sa réparation.
+///
+/// Fonction libre : elle ne lit rien de la campagne, seulement la journée et ce
+/// qui vient d'être écrit. Une méthode aurait suggéré qu'elle consulte un état
+/// interne, ce qui est exactement ce que R24 lui retire.
+fn effet(team: &TeamId, venue: Venue, journee: &EtatJournee) -> EffetReponse {
+    match (venue, journee.rencontre_de(team)) {
+        (Venue::Absente, Some(r)) => {
+            EffetReponse::EnregistreeRencontreARefaire { pairing: r.pairing }
+        }
+        _ => EffetReponse::Enregistree,
     }
 }
 
@@ -566,8 +794,34 @@ mod tests {
         .expect("ouverture")
     }
 
+    fn vierge() -> EtatJournee {
+        EtatJournee {
+            figee: false,
+            rencontres: vec![],
+        }
+    }
+
+    /// Passe par le vrai chemin d'écriture — c'est tout l'objet de la carte 512 :
+    /// les tests posés en 511 traversent désormais les règles.
     fn declarer(survey: &mut PresenceSurvey, rang: usize, venue: Venue) {
-        survey.poser_pour_test(rang, venue, Repondant::Jeton);
+        let team = *survey.reponses[rang].team_id();
+        survey
+            .enregistrer(
+                &team,
+                venue,
+                Repondant::Jeton,
+                &vierge(),
+                &date("2026-10-05"),
+            )
+            .expect("réponse acceptée");
+    }
+
+    fn rencontre(a: &TeamId, b: &TeamId) -> RencontreJournee {
+        RencontreJournee {
+            pairing: PairingId::new(),
+            home: *a,
+            away: *b,
+        }
     }
 
     // ── R1 — la réponse porte sur l'équipe, jamais sur le coach ──────────────
@@ -721,6 +975,296 @@ mod tests {
     }
 
     // ── Ce que la forme garantit ─────────────────────────────────────────────
+
+    // ── R6 — l'identifiant de l'organisateur est conservé ─────────────────────
+
+    #[test]
+    fn une_presence_posee_par_l_organisateur_garde_son_identifiant() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+        let admin = CoachId::new();
+
+        survey
+            .enregistrer(
+                &dests[1].team_id,
+                Venue::Presente,
+                Repondant::Organisateur(admin),
+                &vierge(),
+                &date("2026-10-05"),
+            )
+            .expect("l'organisateur pose");
+
+        let posee = survey.reponse_de(&dests[1].team_id).expect("réponse");
+        assert!(
+            matches!(posee.presence(), Presence::Declaree { par: Repondant::Organisateur(id), le, .. }
+                     if id == &admin && le.as_ref() == "2026-10-05"),
+            "R6 — qui a répondu, et quand, ne se perd pas"
+        );
+    }
+
+    // ── R19 — une réponse ne vaut que pour une équipe de la campagne ──────────
+
+    #[test]
+    fn une_equipe_hors_campagne_est_refusee() {
+        let mut survey = ouvrir(&destinataires(4));
+        let etrangere = TeamId::new();
+
+        let refus = survey.enregistrer(
+            &etrangere,
+            Venue::Presente,
+            Repondant::Organisateur(CoachId::new()),
+            &vierge(),
+            &date("2026-10-05"),
+        );
+
+        assert_eq!(
+            refus.unwrap_err(),
+            DomainError::TeamNotInSurvey {
+                team: etrangere.to_string()
+            }
+        );
+    }
+
+    // ── R28 — trois chemins, trois autorisations ─────────────────────────────
+
+    #[test]
+    fn un_coach_ne_repond_pas_pour_l_equipe_d_un_autre() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+
+        let refus = survey.enregistrer(
+            &dests[0].team_id,
+            Venue::Presente,
+            Repondant::Coach(dests[1].coach_id),
+            &vierge(),
+            &date("2026-10-05"),
+        );
+
+        assert_eq!(
+            refus.unwrap_err(),
+            DomainError::TeamNotOwnedByCoach {
+                team: dests[0].team_id.to_string()
+            },
+            "R28 — R19 vérifie que l'équipe est dans la campagne, pas qu'elle est la sienne"
+        );
+    }
+
+    /// Le jeton *est* l'autorisation (R7) : lui opposer un `CoachId` comparerait
+    /// la réponse à elle-même. Il répond donc pour l'équipe qu'il désigne, sans
+    /// que le domaine ait à savoir qui le détient.
+    #[test]
+    fn un_jeton_n_est_pas_confronte_a_un_proprietaire() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+
+        let effet = survey.enregistrer(
+            &dests[0].team_id,
+            Venue::Presente,
+            Repondant::Jeton,
+            &vierge(),
+            &date("2026-10-05"),
+        );
+
+        assert_eq!(effet.unwrap(), EffetReponse::Enregistree);
+    }
+
+    #[test]
+    fn un_coach_repond_pour_sa_propre_equipe() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+
+        let effet = survey.enregistrer(
+            &dests[2].team_id,
+            Venue::Absente,
+            Repondant::Coach(dests[2].coach_id),
+            &vierge(),
+            &date("2026-10-05"),
+        );
+
+        assert_eq!(effet.unwrap(), EffetReponse::Enregistree);
+        assert_eq!(survey.compte_absents(), 1);
+    }
+
+    // ── R13 — une journée figée par un rapport ne bouge plus ─────────────────
+
+    /// R13 vaut pour tout le monde, l'organisateur compris : une journée dont un
+    /// rapport est publié ne se rejoue pas.
+    #[test]
+    fn une_journee_figee_refuse_meme_l_organisateur() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+        let figee = EtatJournee {
+            figee: true,
+            rencontres: vec![],
+        };
+
+        for par in [
+            Repondant::Jeton,
+            Repondant::Coach(dests[0].coach_id),
+            Repondant::Organisateur(CoachId::new()),
+        ] {
+            let refus = survey.enregistrer(
+                &dests[0].team_id,
+                Venue::Absente,
+                par,
+                &figee,
+                &date("2026-10-05"),
+            );
+            assert_eq!(refus.unwrap_err(), DomainError::RoundFrozenByReport);
+        }
+    }
+
+    // ── R21 — la clôture arrête le coach, jamais l'organisateur ──────────────
+
+    #[test]
+    fn une_campagne_close_refuse_le_coach_et_accepte_l_organisateur() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+        // Échéance au 2026-10-10 : le 11, la campagne est close par R23, sans
+        // que rien ne l'ait écrite.
+        let apres = date("2026-10-11");
+        assert_eq!(survey.statut(&apres), SurveyStatus::Close(Motif::Echeance));
+
+        for par in [Repondant::Jeton, Repondant::Coach(dests[0].coach_id)] {
+            let refus =
+                survey.enregistrer(&dests[0].team_id, Venue::Presente, par, &vierge(), &apres);
+            assert_eq!(refus.unwrap_err(), DomainError::SurveyClosedForCoach);
+        }
+
+        let rattrapage = survey.enregistrer(
+            &dests[0].team_id,
+            Venue::Presente,
+            Repondant::Organisateur(CoachId::new()),
+            &vierge(),
+            &apres,
+        );
+        assert!(
+            rattrapage.is_ok(),
+            "R6 — c'est l'organisateur qui rattrape le coup de fil reçu après l'échéance"
+        );
+    }
+
+    // ── R12 — une défection après le tirage signale la rencontre touchée ─────
+
+    #[test]
+    fn un_present_qui_se_desiste_apres_le_tirage_designe_sa_rencontre() {
+        let dests = destinataires(4);
+        let mut survey = ouvrir(&dests);
+        for rang in 0..4 {
+            declarer(&mut survey, rang, Venue::Presente);
+        }
+        let journee = EtatJournee {
+            figee: false,
+            rencontres: vec![
+                rencontre(&dests[0].team_id, &dests[1].team_id),
+                rencontre(&dests[2].team_id, &dests[3].team_id),
+            ],
+        };
+        let touchee = journee.rencontres[1].pairing;
+
+        let effet = survey
+            .enregistrer(
+                &dests[3].team_id,
+                Venue::Absente,
+                Repondant::Jeton,
+                &journee,
+                &date("2026-10-05"),
+            )
+            .expect("la défection est enregistrée");
+
+        assert_eq!(
+            effet,
+            EffetReponse::EnregistreeRencontreARefaire { pairing: touchee },
+            "R12 — elle signale la rencontre touchée, et ne la répare pas"
+        );
+        assert_eq!(
+            survey.desaccord(&journee),
+            Some(Desaccord {
+                rencontres_a_refaire: vec![touchee],
+                orphelins: vec![],
+            }),
+            "l'adversaire du désistant n'est pas un orphelin : il est dans la \
+             rencontre à casser, et le vivier à réapparier est l'union des deux"
+        );
+    }
+
+    // ── R16 — une arrivée tardive n'a aucune rencontre à refaire ──────────────
+
+    /// Le sens inverse de R12 existe autant, et il ne rend pas
+    /// `EnregistreeRencontreARefaire` : un arrivant n'apparaît dans aucune
+    /// rencontre. C'est `desaccord` qui le fait voir, et c'est exactement le
+    /// bénéfice de R24 — l'état se recalcule au lieu de se lire.
+    #[test]
+    fn une_arrivee_tardive_rejoint_le_vivier_des_orphelins() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+        declarer(&mut survey, 0, Venue::Presente);
+        declarer(&mut survey, 1, Venue::Presente);
+        declarer(&mut survey, 2, Venue::Absente);
+        let journee = EtatJournee {
+            figee: false,
+            rencontres: vec![rencontre(&dests[0].team_id, &dests[1].team_id)],
+        };
+        assert_eq!(survey.desaccord(&journee), None, "le tirage concorde");
+
+        let effet = survey
+            .enregistrer(
+                &dests[2].team_id,
+                Venue::Presente,
+                Repondant::Jeton,
+                &journee,
+                &date("2026-10-05"),
+            )
+            .expect("l'arrivant est enregistré");
+
+        assert_eq!(effet, EffetReponse::Enregistree);
+        assert_eq!(
+            survey.desaccord(&journee),
+            Some(Desaccord {
+                rencontres_a_refaire: vec![],
+                orphelins: vec![dests[2].team_id],
+            })
+        );
+    }
+
+    /// R9 croisée à R16 : l'exemptée est un présent que rien n'apparie, et ce
+    /// n'est pas un désaccord. Sans cette exception, chaque journée impaire
+    /// afficherait une défection permanente à traiter.
+    #[test]
+    fn l_exemptee_n_est_pas_un_orphelin() {
+        let dests = destinataires(3);
+        let mut survey = ouvrir(&dests);
+        for rang in 0..3 {
+            declarer(&mut survey, rang, Venue::Presente);
+        }
+        survey.appariement = Appariement::Fait {
+            exemptee: Some(dests[2].team_id),
+        };
+        let journee = EtatJournee {
+            figee: false,
+            rencontres: vec![rencontre(&dests[0].team_id, &dests[1].team_id)],
+        };
+
+        assert_eq!(survey.desaccord(&journee), None);
+    }
+
+    // ── R24 — vider la journée au Calendrier ne laisse rien à réconcilier ─────
+
+    #[test]
+    fn une_journee_videe_au_calendrier_ne_produit_aucun_desaccord() {
+        let dests = destinataires(4);
+        let mut survey = ouvrir(&dests);
+        for rang in 0..4 {
+            declarer(&mut survey, rang, Venue::Presente);
+        }
+        survey.appariement = Appariement::Fait { exemptee: None };
+
+        assert_eq!(
+            survey.desaccord(&vierge()),
+            None,
+            "R24 — « appariée » se lit sur la journée : plus de rencontres, plus de désaccord"
+        );
+    }
 
     #[test]
     fn une_campagne_neuve_n_est_pas_appariee() {

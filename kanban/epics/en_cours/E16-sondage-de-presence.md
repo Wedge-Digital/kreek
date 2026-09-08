@@ -1,9 +1,11 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 26 cartes, **3 faites** (507 à 509, le
-2026-09-07) : la vague « corriger l'existant » est close, et le Calendrier tire
+**État :** `en_cours` — 26 cartes, **6 faites** (507 à 512, du 2026-09-07 au
+2026-09-08) : la vague « corriger l'existant » est close, et le Calendrier tire
 désormais vraiment au sort, sans laisser d'équipe sur le banc ni de journée à
-moitié appariée. Les
+moitié appariée. La vague du socle est aux trois quarts : l'agrégat sait ouvrir
+une campagne et enregistrer une réponse, et sa table existe. Il reste 513, la
+validation d'un tirage. Les
 trois unités sont conçues : l'onglet de l'organisateur, la réponse du coach par
 e-mail, et l'encart du coach connecté. Spécifiée par le workflow feature du
 2026-09-06 au 2026-09-07.
@@ -25,14 +27,19 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Zéro carte faite.** Les seize cartes sont prêtes, issues des phases 2 à 8 du
-workflow sur l'unité `onglet-presences`.
+**Six cartes faites sur vingt-six.** La vague 1 est close, la vague 2 en est à
+trois cartes sur quatre.
 
-Trois d'entre elles — 507, 508 et 509 — **corrigent l'existant** et ne
-concernent pas le sondage : l'algorithme d'appariement du Calendrier n'est ni
-aléatoire ni optimal, et il laisse des équipes sans match dans 54 à 58 % des
-tirages en milieu de saison. Le sondage s'appuie dessus, donc il le répare
-d'abord — et le Calendrier en profite.
+Les trois premières — 507, 508 et 509 — **corrigeaient l'existant** et ne
+concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était ni
+aléatoire ni optimal, et il laissait des équipes sans match dans 54 à 58 % des
+tirages en milieu de saison. Le sondage s'appuie dessus, donc il l'a réparé
+d'abord — et le Calendrier en a profité.
+
+Les trois suivantes — 511, 510, 512 — posent le socle : l'agrégat
+`PresenceSurvey`, sa table et son dépôt, puis son unique chemin d'écriture d'une
+présence. Ce chemin unique est ce qui fait tenir R19, R13, R21 et R28 : il n'y a
+pas de seconde porte à contourner.
 
 Ce qui existait déjà et sera réemployé sans une ligne de plus : les deux domain
 events d'appariement et leur publisher, les trois ports vers `teams`, `spaces`

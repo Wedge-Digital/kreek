@@ -39,6 +39,27 @@ pub enum DomainError {
     },
     InvalidSurveyToken,
     InvalidOpenedAt,
+    InvalidReponduLe,
+    /// R19 — une réponse ne vaut que pour une équipe de la campagne. Sans cette
+    /// garde, un `team_id` forgé poserait une présence pour l'équipe d'une autre
+    /// compétition du même espace : `require_admin_access` vérifie que la saison
+    /// appartient à la compétition, jamais que l'équipe appartient à la campagne.
+    TeamNotInSurvey {
+        team: String,
+    },
+    /// R28 — le coach connecté répond pour ses équipes, et pour elles seules.
+    /// R19 vérifie que l'équipe est *dans* la campagne, jamais qu'elle est *à
+    /// lui* ; sans cette garde, un `team_id` forgé depuis l'encart poserait une
+    /// présence chez le voisin.
+    TeamNotOwnedByCoach {
+        team: String,
+    },
+    /// R21 — les deux chemins du coach s'arrêtent à la clôture. L'organisateur,
+    /// lui, passe : c'est lui qui rattrape un coup de fil reçu après l'échéance.
+    SurveyClosedForCoach,
+    /// R13 — une journée dont un rapport est publié ne bouge plus. Changer une
+    /// présence y proposerait de refaire une rencontre déjà jouée.
+    RoundFrozenByReport,
 
     ImmutableTierField {
         tier: String,
@@ -88,6 +109,28 @@ impl fmt::Display for DomainError {
             }
             Self::InvalidSurveyToken => write!(f, "Ce lien de réponse est illisible."),
             Self::InvalidOpenedAt => write!(f, "Date d'ouverture invalide."),
+            Self::InvalidReponduLe => write!(f, "Date de réponse invalide."),
+            Self::TeamNotInSurvey { team } => {
+                write!(
+                    f,
+                    "L'équipe « {team} » ne fait pas partie de cette campagne de présence."
+                )
+            }
+            Self::TeamNotOwnedByCoach { team } => {
+                write!(f, "L'équipe « {team} » n'est pas la vôtre.")
+            }
+            Self::SurveyClosedForCoach => {
+                write!(
+                    f,
+                    "Le sondage est clos : contactez l'organisateur pour signaler un changement."
+                )
+            }
+            Self::RoundFrozenByReport => {
+                write!(
+                    f,
+                    "Un rapport de match est déjà publié sur cette journée : les présences n'y changent plus."
+                )
+            }
             Self::ImmutableTierField { tier, field } => {
                 write!(
                     f,

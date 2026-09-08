@@ -9,8 +9,8 @@ use crate::app::competitions::domain::match_day::{
     MatchDay, MatchDayName, MatchDayPosition, MatchDayType,
 };
 use crate::app::competitions::domain::presence_survey::{
-    AutoRemind, Destinataire, Presence, PresenceSurvey, Repondant, ReponduLe, SurveyDeadline,
-    SurveyId, Venue,
+    AutoRemind, Destinataire, EtatJournee, Presence, PresenceSurvey, Repondant, ReponduLe,
+    SurveyDeadline, SurveyId, Venue,
 };
 use crate::app::competitions::domain::presence_survey_repository_port::IPresenceSurveyRepository;
 use crate::app::competitions::io::repository::presence_survey_repository::PresenceSurveyRepository;
@@ -47,6 +47,35 @@ fn journee(id: MatchId) -> MatchDay {
         position: MatchDayPosition::try_new(0).unwrap(),
         pairings: vec![],
     }
+}
+
+/// Une journée sans rapport publié et sans appariement — les faits qu'`enregistrer`
+/// attend quand rien n'est encore tiré.
+fn journee_vierge() -> EtatJournee {
+    EtatJournee {
+        figee: false,
+        rencontres: vec![],
+    }
+}
+
+/// Passe par le seul chemin d'écriture d'une `Presence` (carte 512) : ces tests
+/// éprouvent la persistance, pas les règles, mais ils n'ont pas à les contourner.
+fn declarer(
+    survey: &mut PresenceSurvey,
+    dests: &[Destinataire],
+    rang: usize,
+    venue: Venue,
+    par: Repondant,
+) {
+    survey
+        .enregistrer(
+            &dests[rang].team_id,
+            venue,
+            par,
+            &journee_vierge(),
+            &DateString::try_new("2026-10-05".to_string()).unwrap(),
+        )
+        .expect("réponse acceptée");
 }
 
 fn campagne(round: &MatchDay, destinataires: &[Destinataire]) -> PresenceSurvey {
@@ -129,8 +158,14 @@ async fn les_trois_presences_reviennent_intactes(pool: sqlx::PgPool) {
     let mut survey = campagne(&journee(round_id), &dests);
 
     let admin = CoachId::new();
-    survey.poser_pour_test(0, Venue::Presente, Repondant::Organisateur(admin));
-    survey.poser_pour_test(1, Venue::Absente, Repondant::Jeton);
+    declarer(
+        &mut survey,
+        &dests,
+        0,
+        Venue::Presente,
+        Repondant::Organisateur(admin),
+    );
+    declarer(&mut survey, &dests, 1, Venue::Absente, Repondant::Jeton);
 
     depot.save(&survey).await.expect("écriture");
     let relue = depot
@@ -165,7 +200,7 @@ async fn une_reponse_par_jeton_se_relit_comme_venant_du_coach(pool: sqlx::PgPool
     let dests = destinataires(1);
     let coach = dests[0].coach_id;
     let mut survey = campagne(&journee(round_id), &dests);
-    survey.poser_pour_test(0, Venue::Presente, Repondant::Jeton);
+    declarer(&mut survey, &dests, 0, Venue::Presente, Repondant::Jeton);
 
     depot.save(&survey).await.expect("écriture");
     let relue = depot
@@ -244,8 +279,8 @@ async fn les_journees_sans_campagne_figurent_dans_le_resume(pool: sqlx::PgPool) 
     let depot = PresenceSurveyRepository::new(pool.clone());
     let dests = destinataires(4);
     let mut survey = campagne(&journee(sondee), &dests);
-    survey.poser_pour_test(0, Venue::Presente, Repondant::Jeton);
-    survey.poser_pour_test(1, Venue::Absente, Repondant::Jeton);
+    declarer(&mut survey, &dests, 0, Venue::Presente, Repondant::Jeton);
+    declarer(&mut survey, &dests, 1, Venue::Absente, Repondant::Jeton);
     depot.save(&survey).await.unwrap();
 
     let resume = depot.list_summaries(SAISON).await.expect("résumé");
