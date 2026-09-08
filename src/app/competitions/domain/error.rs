@@ -29,6 +29,17 @@ pub enum DomainError {
     },
     /// `field` est un `&'static str` et non un `String` : il ne peut venir que
     /// du code qui a détecté l'écart, jamais d'une requête.
+    // ── Sondage de présence (épic E16) ───────────────────────────────────────
+    /// R2 — il n'y a rien à apparier une journée de repos, donc rien à sonder.
+    SurveyOnRestDay,
+    /// R15 — le tirage refuse en dessous de deux présents, et le dit : un aperçu
+    /// vide passerait pour une panne.
+    NotEnoughPresent {
+        presents: usize,
+    },
+    InvalidSurveyToken,
+    InvalidOpenedAt,
+
     ImmutableTierField {
         tier: String,
         field: &'static str,
@@ -66,6 +77,17 @@ impl fmt::Display for DomainError {
                     "Le nombre de tiers ne peut pas changer ici : {before} avant, {after} reçus."
                 )
             }
+            Self::SurveyOnRestDay => {
+                write!(f, "On ne sonde pas une journée de repos.")
+            }
+            Self::NotEnoughPresent { presents } => {
+                write!(
+                    f,
+                    "Il faut au moins deux équipes présentes pour tirer au sort ({presents} pour l'instant)."
+                )
+            }
+            Self::InvalidSurveyToken => write!(f, "Ce lien de réponse est illisible."),
+            Self::InvalidOpenedAt => write!(f, "Date d'ouverture invalide."),
             Self::ImmutableTierField { tier, field } => {
                 write!(
                     f,

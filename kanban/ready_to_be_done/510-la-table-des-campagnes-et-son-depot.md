@@ -2,7 +2,9 @@
 
 **Priorité : haute — tout le reste charge et persiste par là**
 **Épic :** E16 — Sondage de présence
-**Dépend de :** rien
+**Dépend de :** 511, qui crée `PresenceSurvey` — le port le rend, il ne compile
+pas sans lui. Les deux cartes s'annonçaient sans dépendance ; c'était faux, et
+corrigé au moment d'attaquer la vague.
 **Fichiers :** `migrations/20260907000001_competition_presence_surveys.sql`,
 `src/app/competitions/domain/presence_survey_repository_port.rs`,
 `src/app/competitions/io/repository/presence_survey_repository.rs`,

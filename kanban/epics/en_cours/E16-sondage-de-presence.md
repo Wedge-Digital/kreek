@@ -1,6 +1,9 @@
 # E16 — Sondage de présence
 
-**État :** `ready_to_be_done` — 26 cartes prêtes (507 à 532), zéro faite. Les
+**État :** `en_cours` — 26 cartes, **3 faites** (507 à 509, le
+2026-09-07) : la vague « corriger l'existant » est close, et le Calendrier tire
+désormais vraiment au sort, sans laisser d'équipe sur le banc ni de journée à
+moitié appariée. Les
 trois unités sont conçues : l'onglet de l'organisateur, la réponse du coach par
 e-mail, et l'encart du coach connecté. Spécifiée par le workflow feature du
 2026-09-06 au 2026-09-07.
@@ -43,8 +46,8 @@ et `match_report`, l'infrastructure d'e-mails avec sa table
 | 507 | Le tirage rejoue plutôt que de laisser une équipe sur le banc | 1 — corriger l'existant |
 | 508 | Le Calendrier passe au nouveau tirage | 1 |
 | 509 | Écrire un tirage est atomique | 1 |
-| 510 | La table des campagnes et son dépôt | 2 — le socle |
-| 511 | `PresenceSurvey` I — ouvrir une campagne | 2 |
+| 511 | `PresenceSurvey` I — ouvrir une campagne | 2 — le socle |
+| 510 | La table des campagnes et son dépôt | 2 |
 | 512 | `PresenceSurvey` II — enregistrer une réponse | 2 |
 | 513 | `PresenceSurvey` III — valider un tirage | 2 |
 | 514 | Les destinataires, et ceux sans adresse | 2 |
@@ -75,6 +78,10 @@ paires déjà jouées — n'est couvert par aucun des six tests actuels.
 
 **507 et 509 avant 517** — le tirage du sondage appelle la fonction corrigée et
 écrit par la méthode transactionnelle.
+
+**511 avant 510**, et non l'inverse comme les deux cartes l'annonçaient. Le port
+du dépôt rend un `PresenceSurvey` : il ne compile pas avant que l'agrégat
+existe. L'erreur a été trouvée en attaquant la vague, pas en la planifiant.
 
 **511 avant 512 et 513** — les deux posent des méthodes sur l'agrégat que la
 première construit.

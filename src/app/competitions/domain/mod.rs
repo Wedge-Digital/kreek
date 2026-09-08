@@ -12,5 +12,6 @@ pub mod match_day;
 pub mod match_day_repository_port;
 pub mod notification_delivery;
 pub mod notification_schedule;
+pub mod presence_survey;
 pub mod season_repository_port;
 pub mod tirage;

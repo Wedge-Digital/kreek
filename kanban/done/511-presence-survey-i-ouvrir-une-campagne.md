@@ -2,7 +2,7 @@
 
 **Priorité : haute — l'agrégat que les deux cartes suivantes complètent**
 **Épic :** E16 — Sondage de présence
-**Dépend de :** rien
+**Dépend de :** rien — **c'est elle qui ouvre la vague du socle**, avant la 510
 **Fichiers :** `src/app/competitions/domain/presence_survey.rs` (nouveau),
 `src/app/competitions/domain/error.rs`
 **Spec :** `docs/specs/sondage-presence/onglet-presences/06-domaine.md`
