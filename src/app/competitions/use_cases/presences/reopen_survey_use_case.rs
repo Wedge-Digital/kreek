@@ -7,25 +7,23 @@
 //! c'est aussi ce qui rend R13 nécessaire : rouvrir une journée dont un rapport
 //! est publié ouvrirait la porte à des réponses sur un fait accompli.
 //!
-//! # C'est le premier appelant d'`IMatchReportStatusPort` de la campagne
+//! # Les faits de la journée viennent d'`etat_journee`
 //!
 //! L'`EtatJournee` que `rouvrir` attend se construit de deux faits : les
 //! appariements viennent de la journée, `figee` de `find_published_pairings` sur
-//! leurs identifiants. Les cartes 516 et 517 reprendront ce patron — d'où
-//! `etat_de_la_journee`, publique dans le module.
+//! leurs identifiants. `record_answer` en a besoin des mêmes, d'où le module
+//! commun — un use case n'a pas à en importer un autre.
 
 use crate::app::competitions::domain::error::DomainError;
-use crate::app::competitions::domain::match_day::MatchDay;
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError,
 };
-use crate::app::competitions::domain::presence_survey::{
-    EtatJournee, RencontreJournee, SurveyDeadline,
-};
+use crate::app::competitions::domain::presence_survey::SurveyDeadline;
 use crate::app::competitions::domain::presence_survey_repository_port::{
     IPresenceSurveyRepository, PresenceSurveyRepositoryError,
 };
 use crate::app::competitions::ports::IMatchReportStatusPort;
+use crate::app::competitions::use_cases::presences::etat_journee::etat_de_la_journee;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::MatchId;
 
@@ -94,37 +92,10 @@ pub async fn execute(
     Ok(())
 }
 
-/// Les faits que l'agrégat attend : les rencontres de la journée, et si l'une
-/// d'elles porte un rapport publié.
-///
-/// **Un seul aller-retour au port**, sur tous les appariements à la fois : un
-/// appel par rencontre ferait quinze allers-retours pour une réponse booléenne.
-// arch:no-instrument — lecture de faits : assemble un `EtatJournee`, sans intention métier
-pub async fn etat_de_la_journee(
-    round: &MatchDay,
-    report_status: &dyn IMatchReportStatusPort,
-) -> Result<EtatJournee, String> {
-    let ids: Vec<String> = round.pairings.iter().map(|p| p.id.to_string()).collect();
-    let publies = report_status.find_published_pairings(&ids).await?;
-
-    Ok(EtatJournee {
-        figee: !publies.is_empty(),
-        rencontres: round
-            .pairings
-            .iter()
-            .map(|p| RencontreJournee {
-                pairing: p.id,
-                home: p.home_team_id,
-                away: p.away_team_id,
-            })
-            .collect(),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::competitions::domain::match_day::{MatchDayType, Pairing};
+    use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType, Pairing};
     use crate::app::competitions::domain::presence_survey::SurveyStatus;
     use crate::app::competitions::use_cases::presences::test_doubles::*;
     use crate::app::shared_kernel::bloodbowl::ids::PairingId;
@@ -251,20 +222,5 @@ mod tests {
                 deadline: "2026-10-04".to_string()
             })
         );
-    }
-
-    /// Un seul aller-retour au port, quels que soient les appariements : un appel
-    /// par rencontre ferait quinze allers-retours pour une réponse booléenne.
-    #[tokio::test]
-    async fn l_etat_de_la_journee_interroge_le_port_une_seule_fois() {
-        let jour = appariee(MatchId::new());
-
-        let etat = etat_de_la_journee(&jour, &FauxRapports(false))
-            .await
-            .expect("état");
-
-        assert!(!etat.figee);
-        assert_eq!(etat.rencontres.len(), 1);
-        assert_eq!(etat.rencontres[0].pairing, jour.pairings[0].id);
     }
 }

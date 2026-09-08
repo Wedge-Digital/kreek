@@ -337,3 +337,12 @@ pub fn campagne_ouverte(round: &MatchDay, destinataires: &[Destinataire]) -> Cam
     )
     .expect("ouverture de test")
 }
+
+/// Une journée sans rapport publié et sans appariement — les faits qu'attendent
+/// les méthodes de l'agrégat quand rien n'est encore tiré.
+pub fn etat_vierge() -> crate::app::competitions::domain::presence_survey::EtatJournee {
+    crate::app::competitions::domain::presence_survey::EtatJournee {
+        figee: false,
+        rencontres: vec![],
+    }
+}
