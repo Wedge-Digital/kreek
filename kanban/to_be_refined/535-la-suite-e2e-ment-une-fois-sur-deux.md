@@ -156,6 +156,42 @@ absent du DOM, et combien sur un élément présent mais masqué. Les deux
 familles n'ont pas le même remède, et les confondre ferait chercher côté serveur
 un défaut qui vit dans la vue.
 
+## Relevé du 2026-09-09 — et ce qu'il contredit
+
+Trois passages consécutifs pendant la carte 517, **sur le même serveur et le
+même binaire** :
+
+| # | Sélection | Durée | Échecs |
+|---|---|---|---|
+| 1 | 65 fichiers | 468 s | 5 |
+| 2 | 65 fichiers, **code identique** | 525 s | 18 |
+| 3 | **68 fichiers** — suite complète | **479 s** | **0** |
+
+Aucun des cinq échecs du premier ne reparaît au second : les tests tombés
+diffèrent entièrement d'un passage à l'autre. Les échecs ne sont donc pas
+déterministes par rapport au code, ce qui était déjà su — mais ici c'est mesuré
+sur deux passages strictement identiques.
+
+**Ce que ce relevé contredit.** Devant la dégradation 468 → 525 s, l'hypothèse
+formée sur le moment était que le serveur se détériore à survivre aux recréations
+successives de sa base : `e2e_db.sh` la détruit et la recrée à chaque
+`make test-impacted`, en tuant ses connexions par `pg_terminate_backend`.
+
+Le troisième passage la ruine : il est **le quatrième sous le même processus**,
+il porte **plus de tests**, il est **plus rapide que le deuxième**, et il est
+vert. La dégradation n'était pas cumulative.
+
+**Deux hypothèses écartées, donc, et la même qui reste.** Ni l'accumulation dans
+la base (déjà éliminée par la carte 536), ni l'usure du serveur : c'est bien la
+**charge de la machine** au moment du passage. La moyenne relevée entre les
+passages 2 et 3 était de 3,85 / 4,84 / 7,29 — quelque chose d'autre tournait, et
+c'est la seule variable qui ait changé.
+
+**Une piste écartée en cours de route, à ne pas refaire** : les neuf processus
+« chromium » que `pgrep` remontait ne sont pas des navigateurs Playwright
+oubliés, mais les serveurs CEF de RustRover et PyCharm, en place depuis plus d'un
+jour. Chercher une fuite de navigateurs est une impasse.
+
 ## Ce qu'il faudra trancher au raffinage
 
 **Relever les délais n'est pas la réponse.** Ça repousse le seuil sans rien
