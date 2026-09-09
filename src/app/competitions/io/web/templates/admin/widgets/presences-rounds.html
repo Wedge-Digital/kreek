@@ -1,0 +1,19 @@
+{# `hx-disinherit="*"` : la page hôte ne doit pas injecter ses `hx-vals` ni ses
+   en-têtes dans les requêtes de ce widget. #}
+<div class="presences-rounds" hx-disinherit="*">
+  {% if rounds.is_empty() %}
+    <p class="presences-rounds-vide">
+      Aucune journée dans cette saison. Créez le calendrier depuis l'onglet Calendrier.
+    </p>
+  {% else %}
+    {% for round in rounds %}
+      <button class="presences-round presences-round--{{ round.etat }}"
+              type="button"
+              hx-on:click="document.body.dataset.activeRoundId = '{{ round.round_id }}';
+                           htmx.trigger(document.body, 'roundSelected', {round_id: '{{ round.round_id }}'})">
+        <span class="presences-round-name">{{ round.name }}</span>
+        <span class="presences-round-resume">{{ round.resume }}</span>
+      </button>
+    {% endfor %}
+  {% endif %}
+</div>

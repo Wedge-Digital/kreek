@@ -7,6 +7,10 @@ use crate::app::competitions::io::web::admin::groups_tab::groups_tab;
 use crate::app::competitions::io::web::admin::groups_widgets::{
     group_cards_widget, unassigned_pool_widget,
 };
+use crate::app::competitions::io::web::admin::presences_tab::presences_tab;
+use crate::app::competitions::io::web::admin::presences_widgets::{
+    presences_panel_widget, presences_rounds_widget,
+};
 use crate::app::competitions::io::web::admin::schedule_actions::{
     delete_match, delete_round, post_add_match, post_add_rest, post_add_round, post_clear_all,
     post_clear_round_pairings, post_generate_all, post_generate_round_pairings, put_update_round,
@@ -182,6 +186,15 @@ pub fn router() -> Router<AppState> {
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_ROUNDS,
             get(schedule_sidebar_widget),
+        )
+        .route(path::COMPETITION_ADMIN_PRESENCES, get(presences_tab))
+        .route(
+            path::COMPETITION_ADMIN_PRESENCES_ROUNDS,
+            get(presences_rounds_widget),
+        )
+        .route(
+            path::COMPETITION_ADMIN_PRESENCES_PANEL,
+            get(presences_panel_widget),
         )
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_ROUND_DETAIL,

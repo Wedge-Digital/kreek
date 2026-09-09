@@ -278,6 +278,15 @@ pub async fn render_admin_page(
             };
             tpl.render().unwrap_or_default()
         }
+        "presences" => {
+            let tpl = super::presences_tab::PresencesTabTemplate {
+                app_routes,
+                space_id: space_id.to_string(),
+                competition_id: competition_id.to_string(),
+                season_id: season_id.to_string(),
+            };
+            tpl.render().unwrap_or_default()
+        }
         // **Le Résumé est le défaut**, et non un onglet nommé parmi d'autres :
         // il rendait le tableau de bord avant la carte 419. Un onglet inconnu —
         // signet périmé, URL forgée — atterrit donc sur l'accueil plutôt que sur

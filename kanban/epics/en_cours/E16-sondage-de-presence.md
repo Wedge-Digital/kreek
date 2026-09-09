@@ -1,6 +1,6 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **13 faites** (507 à 518 et 541, du 2026-09-07
+**État :** `en_cours` — 27 cartes, **14 faites** (507 à 519 et 541, du 2026-09-07
 au 2026-09-09) : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
@@ -35,8 +35,11 @@ comprise), une présence s'écrit par un seul chemin commun aux trois unités, l
 tirage s'aperçoit puis s'écrit au calendrier, et une défection se répare sans
 toucher aux matchs qui tiennent.
 
-**Rien n'est encore visible à l'écran** : aucune route n'existe. C'est l'objet de
-la vague 4 (519 à 522), puis des deux unités du coach.
+**L'onglet existe et s'ouvre** depuis la 519 : la barre latérale liste les
+journées avec l'état de leur campagne, le panneau invite à en choisir une. Trois
+routes sur douze sont posées — chaque carte déclare celles qu'elle sert, et la
+521 porte la liste nominative des neuf actions. Reste à remplir le panneau (520),
+brancher les actions (521) et couvrir le parcours (522).
 
 Le tirage du sondage et celui du Calendrier partagent désormais leur entrée
 (`entree_du_tirage`) et leur annonce (`appariement_ecrit`) : le tirage entré par

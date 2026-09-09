@@ -83,6 +83,11 @@
 # **dure** et non une commodité : le refus n'est observable que sous l'identité
 # du membre simple, que `bypass_auth` connecte. `teams` porte les équipes
 # inscrites, dont l'appartenance à la saison est vérifiée à l'affectation.
+# L'onglet Présences : la coquille et sa barre latérale (carte 519). Traverse
+# `competitions` pour l'onglet et le dépôt de campagnes, `auth` pour la garde,
+# et la fixture construit une compétition entière — donc `teams`, `spaces`,
+# `references`.
+"test_presences_tab" = ["competitions", "auth", "teams", "spaces", "references"]
 "test_competition_admin_acces" = ["competitions", "auth", "teams", "spaces",
                                   "references", "ranking"]
 # Le panneau du barème traverse `competitions` vers `ranking` par un port qui

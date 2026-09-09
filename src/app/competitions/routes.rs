@@ -81,6 +81,18 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/add-match";
     pub const COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/delete-match";
+    // ── Onglet Présences (épic E16) ───────────────────────────────────────────
+    //
+    // Trois routes et non douze : chaque carte déclare celles qu'elle sert. Une
+    // route branchée sur un handler vide est une porte ouverte sans garde, et
+    // neuf handlers factices passeraient `check-arch` sans que rien ne les
+    // appelle. Les neuf actions arrivent avec la carte 521.
+    pub const COMPETITION_ADMIN_PRESENCES: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences";
+    pub const COMPETITION_ADMIN_PRESENCES_ROUNDS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/rounds";
+    pub const COMPETITION_ADMIN_PRESENCES_PANEL: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/panel";
     pub const COMPETITION_ADMIN_SUMMARY: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/summary";
     pub const COMPETITION_ADMIN_SETTINGS: &str =
@@ -342,6 +354,24 @@ impl Routes {
     }
     pub fn admin_schedule_delete_match(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_rounds(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_ROUNDS
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_panel(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_PANEL
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

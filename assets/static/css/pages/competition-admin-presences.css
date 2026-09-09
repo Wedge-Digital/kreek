@@ -1,0 +1,122 @@
+/* Onglet Présences — portée `.competition-admin-presences`.
+ *
+ * Le nom du fichier **est** le sélecteur de portée : toute règle vit sous
+ * `.competition-admin-presences`, et `check-css-collisions.sh` le vérifie.
+ *
+ * Aucun `<link>` dans le gabarit : la feuille entre par le bundle
+ * (`src/web/css_bundle.rs`). La règle a été inversée par la carte 342 — un
+ * `<link>` inséré dans un DOM déjà vivant, ce que fait chaque swap HTMX, ne
+ * bloque pas le rendu, et le markup était peint sans ses styles pendant 50 à
+ * 200 ms.
+ *
+ * Géométrie reprise du Calendrier, délibérément : passer d'un onglet à l'autre
+ * ne doit pas demander de se réorienter. */
+
+.competition-admin-presences .presences-layout {
+    display: flex;
+    gap: var(--p3);
+    align-items: flex-start;
+}
+
+.competition-admin-presences #presences-sidebar {
+    flex: 0 0 260px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--p1);
+}
+
+.competition-admin-presences #presences-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.competition-admin-presences .presences-rounds {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p1);
+}
+
+.competition-admin-presences .presences-rounds-vide {
+    color: var(--dark-3);
+    font-size: var(--text-small);
+    padding: var(--p2);
+}
+
+/* Une pastille de couleur portée par la bordure gauche, et non par un point
+ * séparé : l'état se lit en parcourant la colonne du regard, sans avoir à
+ * associer un point à une ligne. */
+.competition-admin-presences .presences-round {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p0);
+    width: 100%;
+    text-align: left;
+    padding: var(--p2);
+    border: 1px solid var(--dark-6);
+    border-left-width: 3px;
+    border-left-color: var(--dark-4);
+    border-radius: var(--radius-sm);
+    background: var(--dark-7);
+    cursor: pointer;
+}
+
+.competition-admin-presences .presences-round:hover {
+    border-color: var(--main-blue);
+}
+
+.competition-admin-presences .presences-round-name {
+    font-size: var(--text-small);
+    font-weight: 600;
+}
+
+.competition-admin-presences .presences-round-resume {
+    font-size: var(--text-tiny);
+    color: var(--dark-2);
+}
+
+.competition-admin-presences .presences-round--aucun {
+    border-left-color: var(--dark-4);
+}
+
+.competition-admin-presences .presences-round--en_cours {
+    border-left-color: var(--main-blue);
+}
+
+.competition-admin-presences .presences-round--clos {
+    border-left-color: var(--orange);
+}
+
+.competition-admin-presences .presences-round--apparie {
+    border-left-color: var(--green);
+}
+
+/* Une journée de repos n'a rien à sonder (R2) : elle reste listée pour ne pas
+ * faire un trou dans le calendrier, mais s'efface. */
+.competition-admin-presences .presences-round--repos {
+    border-left-color: transparent;
+    opacity: 0.55;
+    cursor: default;
+}
+
+.competition-admin-presences .presences-panel {
+    border: 1px solid var(--dark-6);
+    border-radius: var(--radius-sm);
+    padding: var(--p3);
+}
+
+.competition-admin-presences .presences-panel-invite {
+    color: var(--dark-2);
+    font-size: var(--text-small);
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .competition-admin-presences .presences-layout {
+        flex-direction: column;
+    }
+
+    .competition-admin-presences #presences-sidebar {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}

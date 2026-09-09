@@ -86,10 +86,54 @@ Aucun `style="..."`, les tokens `--p0` à `--p5`, le breakpoint `768px`.
 
 ## Checklist
 
-- [ ] Les douze routes, l'onglet dans `admin-page.html`
-- [ ] `presences_tab.rs` — page entière ou fragment selon `veut_la_page_entiere`
-- [ ] `get_presence_rounds` + son gabarit
-- [ ] `PresenceRoundItemVm::from_domain`, `etat` et `resume` venus du domaine
-- [ ] La feuille CSS, inscrite dans le bundle au bon rang
-- [ ] `require_admin_access` sur les trois handlers
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] **Trois** routes et non douze — chaque carte déclare celles qu'elle sert,
+      responsabilité écrite dans les cartes 520, 521 et 522
+- [x] L'onglet dans `admin-page.html`, et `"presences"` dans le `match active_tab`
+- [x] `presences_tab.rs` — page entière ou fragment selon `veut_la_page_entiere`
+- [x] `presences_rounds_widget` + son gabarit, une requête pour toute la saison
+- [x] `PresenceRoundItemVm`, `etat` venu de `statut_de(...)`
+- [x] La feuille CSS, inscrite dans le bundle entre `groups` et `schedule`
+- [x] `require_admin_access` sur les trois handlers, fragments compris
+- [x] 8 tests unitaires · `test_presences_tab.py` — 7 tests, entrée dans la carte
+      d'impact dans le même commit
+- [x] `make lint`, `make check-arch`, `make test` — 1863/1863 · `make e2e` — 375/375
+
+## Ce que la réalisation a tranché
+
+**`etat` n'a pas de `defection`.** Le désaccord se calcule par `desaccord`, qui
+exige les appariements de la journée — que `SurveySummaryDto` ne porte pas. La
+barre latérale dit « appariée » ; le panneau dira « défection à traiter » (520,
+521). L'afficher ici coûterait une jointure par journée pour une nuance que
+l'écran voisin porte déjà.
+
+**Aucun nombre inventé.** La maquette annonce « 4 matchs créés » pour une journée
+appariée ; le DTO ne compte pas les appariements, et le déduire de `presents / 2`
+serait faux dès qu'une équipe est exemptée. Le résumé dit « Journée appariée ».
+L'afficher demandera que le DTO compte — c'est noté dans le code.
+
+**Une échéance illisible est journalisée, pas escamotée.** Un
+`unwrap_or_default` silencieux ferait disparaître une campagne de la barre
+latérale sans une ligne de journal. Elle est signalée en `error!` avec son
+`round_id`, et la journée reste affichée. Test dédié.
+
+**L'horloge est lue au bord IO.** La convention « `today` est une entrée » vise
+les use cases, qu'elle rend testables ; un rendu doit bien la lire quelque part.
+
+## Deux erreurs corrigées en route
+
+Le `hx-target` de l'onglet visait `#admin-tab-content`, un identifiant inventé,
+là où les quatre onglets voisins ciblent `#admin-content`. Le compilateur ne le
+voit pas ; seul le test htmx l'attrape.
+
+L'appel de fixture e2e passait un nom en troisième position, là où
+`build_full_competition` attend `num_teams: int`. Les sept tests ont échoué en
+erreur de fixture — trouvée en quatre secondes en lançant le fichier seul, contre
+huit minutes de suite complète.
+
+## Un trou trouvé à côté — carte 543
+
+En cherchant le patron de garde d'un fragment : `schedule_sidebar_widget`,
+`schedule_round_detail_widget`, `group_cards_widget` et `unassigned_pool_widget`
+n'appellent pas `require_admin_access`, et aucune couche du routeur ne le fait
+pour eux. La carte 416 avait fermé le même trou sur les treize routes de
+**mutation** ; les fragments de lecture n'y figuraient pas.

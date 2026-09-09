@@ -1,0 +1,37 @@
+{# La géométrie du Calendrier, délibérément : journées à gauche, panneau à
+   droite. L'organisateur passe d'un onglet à l'autre en pensant à la même
+   journée, et se réorienter lui coûterait plus que la nouveauté ne lui
+   apporte. #}
+<div class="admin-panel competition-admin-presences">
+  <div class="actions-bar">
+    <div class="actions-bar-left">
+      <span class="info-note">
+        <span class="info-note-icon">&#128101;</span>
+        Sondez les coachs avant chaque journée, puis appariez les présents.
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="presences-layout competition-admin-presences">
+  <div id="presences-sidebar"
+       hx-get="{{ app_routes.competitions.admin_presences_rounds(space_id, competition_id, season_id) }}"
+       hx-trigger="load, presenceChanged from:body"
+       hx-swap="innerHTML">
+  </div>
+
+  {# `roundSelected` est **réutilisé**, pas dupliqué : la barre latérale du
+     Calendrier l'émet déjà, et les deux onglets ne coexistent jamais. Le
+     bénéfice est la raison du choix — `activeRoundId` survit au changement
+     d'onglet, donc qui regarde la journée 3 au Calendrier retrouve la journée 3
+     ici.
+
+     Sans cette mémoire, `presenceChanged` — qui ne porte pas de journée —
+     rechargerait un panneau vide après chaque mutation. #}
+  <div id="presences-panel"
+       hx-get="{{ app_routes.competitions.admin_presences_panel(space_id, competition_id, season_id) }}"
+       hx-trigger="load, roundSelected from:body, presenceChanged from:body"
+       hx-vals='js:{"round_id": (event && event.detail && event.detail.round_id) || document.body.dataset.activeRoundId || ""}'
+       hx-swap="innerHTML">
+  </div>
+</div>
