@@ -1,0 +1,62 @@
+{# État « aucun sondage ». L'état vide enseigne le mécanisme : trois lignes
+   suffisent à dire ce que le bouton déclenche, et personne n'a besoin d'essayer
+   pour savoir.
+
+   Le bouton de lancement arrive avec la carte 521, qui déclare sa route. #}
+<div class="presences-panel" hx-disinherit="*">
+  {% include "admin/widgets/presences-round-head.html" %}
+
+  <div class="panel-header">
+    <div class="panel-title">Sonder les présences</div>
+  </div>
+
+  <div class="launch-grid">
+    <div class="launch-main">
+      <p class="launch-lead">Aucun sondage n'a été lancé pour cette journée.</p>
+      <div class="launch-steps">
+        <div class="launch-step">
+          <span class="launch-step-num">1</span>
+          <span>Chaque coach reçoit un e-mail par équipe engagée, avec deux
+            boutons : <strong>je viens</strong> ou <strong>je ne viens
+            pas</strong>. Un clic suffit, sans se connecter.</span>
+        </div>
+        <div class="launch-step">
+          <span class="launch-step-num">2</span>
+          <span>Les réponses arrivent ici au fil de l'eau. Vous pouvez relancer
+            ceux qui n'ont pas répondu, ou trancher à leur place.</span>
+        </div>
+        <div class="launch-step">
+          <span class="launch-step-num">3</span>
+          <span>Une fois le sondage clos, le tirage au sort apparie les présents
+            en évitant les équipes qui se sont déjà rencontrées.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="launch-side">
+      <div class="recipients-box">
+        <div class="recipients-line">
+          <span class="recipients-label">Équipes engagées</span>
+          <span class="recipients-value">{{ destinataires.equipes }}</span>
+        </div>
+        <div class="recipients-line">
+          <span class="recipients-label">Coachs destinataires</span>
+          <span class="recipients-value">{{ destinataires.coachs }}</span>
+        </div>
+        {# R3 — un coach sans adresse n'empêche pas le lancement. On l'annonce,
+           on ne le refuse pas. #}
+        <div class="recipients-line">
+          <span class="recipients-label">Sans adresse connue</span>
+          <span class="recipients-value">{{ destinataires.sans_adresse }}</span>
+        </div>
+      </div>
+      {% if destinataires.sans_adresse > 0 %}
+        <p class="launch-note">
+          {{ destinataires.sans_adresse }} équipe(s) n'ont pas d'adresse
+          connue : elles entrent dans la campagne, et vous pourrez répondre à
+          leur place.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</div>

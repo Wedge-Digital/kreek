@@ -1,0 +1,13 @@
+{# L'en-tête de journée, commun aux six états. Un fichier à part et un
+   `{% include %}` : Askama n'accepte qu'un chemin littéral, ce qui est
+   exactement le cas ici — le chemin ne varie pas. #}
+<div class="round-head">
+  <div class="round-head-main">
+    <div class="round-head-title">{{ head.name }}</div>
+    {# Rien n'est inventé : sans date, la ligne n'existe pas. #}
+    {% if !head.dates.is_empty() %}
+      <div class="round-head-dates">{{ head.dates }}</div>
+    {% endif %}
+  </div>
+  <span class="round-badge">{{ head.badge }}</span>
+</div>

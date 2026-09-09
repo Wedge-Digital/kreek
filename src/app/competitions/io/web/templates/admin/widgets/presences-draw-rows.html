@@ -1,0 +1,32 @@
+{# Les rencontres et ce que le tirage a concédé. Partagé par « tirage proposé » et
+   « journée appariée » : la même liste, deux bandeaux. #}
+<div class="draw-rows">
+  {% for r in draw.rencontres %}
+    <div class="draw-row{% if r.est_revanche %} draw-row--revanche{% endif %}">
+      <span class="draw-home">{{ r.home }}</span>
+      <span class="draw-vs">contre</span>
+      <span class="draw-away">{{ r.away }}</span>
+      {# Le tag vient d'`Historique` : le tirage sait pourquoi il a concédé. Il est
+         vide sur une journée déjà appariée — le relire depuis les journées serait
+         faire dériver au VM une valeur que le tirage avait produite. #}
+      {% if !r.tag.is_empty() %}
+        <span class="draw-tag">{{ r.tag }}</span>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+{% if let Some(exemptee) = draw.exemptee %}
+  <p class="draw-exemptee">
+    Exemptée cette journée : {{ exemptee }}
+  </p>
+{% endif %}
+
+{# R18 — la présence dit qu'un coach vient, pas qu'il est toujours inscrit. Les
+   deux faits vieillissent séparément, et l'écran dit ce qu'il a écarté. #}
+{% if !draw.ecartees.is_empty() %}
+  <p class="draw-ecartees">
+    Écartées, plus inscrites à la saison :
+    {% for e in draw.ecartees %}{{ e }}{% if !loop.last %}, {% endif %}{% endfor %}
+  </p>
+{% endif %}

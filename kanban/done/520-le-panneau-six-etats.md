@@ -80,11 +80,63 @@ Aucun Alpine, aucun état dupliqué.
 
 ## Checklist
 
-- [ ] `etat_du_panneau` et les six structs `Template`
-- [ ] Les cinq gabarits, `hx-disinherit="*"` sur la racine
-- [ ] `DestinatairesVm`, `AvancementVm`, `AnswerRowVm`, `DrawVm`, `DrawRowVm`,
-      `RoundHeadVm` — tous avec `from_domain()` co-localisé
-- [ ] Le badge « saisi par vous » (R6), la mention « sans adresse connue » (R3),
-      le motif de R15 sous le bouton inactif, les écartées de R18
-- [ ] Le CSS des six états dans la feuille de la 519
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `etat_du_panneau` — **cinq** variantes, cf. ci-dessous — et les six structs
+      `Template`
+- [x] Six gabarits + trois fragments partagés, `hx-disinherit="*"` sur chaque racine
+- [x] `RoundHeadVm`, `DestinatairesVm`, `AvancementVm`, `AnswerRowVm`, `DrawVm`,
+      `DrawRowVm`, `DefectionVm` — tous avec `from_domain()` co-localisé
+- [x] Le badge « saisi par vous » (R6), « sans adresse connue » (R3), le motif de
+      R15, les écartées de R18, l'optimum non prouvé de R8
+- [x] Le CSS des cinq états dans la feuille de la 519
+- [x] 13 tests unitaires · 1 e2e · `make lint`, `make check-arch`,
+      `make test` — 1876/1876 · `make e2e` — 376/376
+
+## Ce que la réalisation a corrigé
+
+**`Panneau` a cinq variantes, pas six.** `Tirage` n'est pas calculable : l'aperçu
+ne persiste rien — la réponse *est* le fragment, et un rechargement revient au
+sondage clos. Rien dans `(campagne, journée, aujourd'hui)` ne peut dire qu'un
+tirage vient d'être proposé, et le garder dans l'enum créerait une branche
+inatteignable dans le `match` du GET : le genre de code que personne n'ose
+supprimer parce qu'il a l'air prévu.
+
+Le gabarit du tirage et son `DrawVm` sont bien livrés ici — cette carte possède les
+six vues — mais rendus par `rendre_tirage`, publique, que l'action `draw` de la
+carte 521 appellera. Elle n'aura qu'à câbler.
+
+**L'ordre des branches est la règle** : une défection prime sur « appariée », qui
+prime sur le statut. Un désaccord non traité est ce que l'organisateur doit voir
+en premier ; l'annoncer « appariée » lui cacherait le travail qui reste.
+
+## Trois décisions prises en écrivant
+
+**Pas de barre segmentée**, alors que la maquette en montre une. Ses proportions
+demanderaient un `style="width: …%"` par segment, et les styles inline sont
+interdits. Trois segments de largeur égale mentiraient sur les proportions — pire
+qu'aucune barre. Cinq gabarits livrés portent des `style=""` ; ce n'est pas une
+raison d'en ajouter un. Une barre honnête coûterait vingt classes de largeur ou du
+JS, et les quatre comptes disent déjà tout.
+
+**Le panneau « appariée » n'affiche pas d'étiquette de rencontre.** Les
+appariements écrits ne portent pas leur `Historique` : le relire depuis les
+journées serait faire dériver au VM une valeur que le tirage avait produite. Le
+`tag` est vide, et le gabarit ne rend alors pas le `<span>`.
+
+**Les noms viennent du roster, jamais un identifiant brut.** `journee_appariee`
+traduit chaque `TeamId`, avec « Équipe désengagée » en repli — c'est le défaut de
+la carte 506, un identifiant de vingt-six caractères là où on attend un nom.
+
+## Les initiales, reportées de la 514
+
+Deux lettres du nom d'équipe, mots-liens sautés : « Les Crocs du Chaos » → `CC`,
+là où `initials_from` de `teams` donnerait `LC`. **Les accents sont gardés** —
+« Étoiles de Naggaroth » → `ÉN` ; la maquette affiche `EN` mais `GÉ` ailleurs,
+une incohérence d'écriture à la main, et rien ne justifie de retirer un accent
+que le nom porte. Limite assumée : « FC Barcelone » → `FB`.
+
+## Les gabarits sont muets, et c'est la découpe
+
+Aucun bouton : les neuf routes appartiennent à la 521, et un `hx-post` vers une
+route inexistante ne compile pas côté Askama. Le panneau est **complet en lecture,
+muet en écriture** — la 521 lui ajoute ses commandes en même temps que ses
+routes.

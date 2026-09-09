@@ -1,0 +1,19 @@
+{# Une ligne des trois colonnes. Les deux boutons `présent` / `absent` arrivent
+   avec la carte 521 — pas de menu au « ⋯ » : il demanderait un `x-data` par carte
+   et un calque qu'un parent en `overflow` peut rogner, pour ajouter un clic à
+   chaque correction. #}
+<div class="team-card">
+  <div class="team-avatar">{{ row.initiales }}</div>
+  <div class="team-card-body">
+    <div class="team-name">{{ row.team_name }}</div>
+    <div class="team-coach">{{ row.coach_label }}</div>
+  </div>
+  {% if !row.repondu_le.is_empty() %}
+    <span class="team-when">{{ row.repondu_le }}</span>
+  {% endif %}
+  {# R6 — « qui a dit qu'il venait » a deux réponses possibles, et elles
+     n'engagent pas les mêmes personnes. #}
+  {% if row.saisi_par_admin %}
+    <span class="team-badge-admin" title="Réponse saisie par un organisateur">saisi par vous</span>
+  {% endif %}
+</div>

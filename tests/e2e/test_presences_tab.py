@@ -90,6 +90,24 @@ def test_le_panneau_invite_a_choisir_une_journee(page: Page, space_id, competiti
     expect(page.locator(".presences-panel-invite")).to_contain_text("Choisissez une journée")
 
 
+def test_choisir_une_journee_montre_l_etat_aucun_sondage(page: Page, space_id, competition):
+    """Le seul des cinq états atteignable sans les actions de la carte 521.
+
+    Il porte trois choses qu'aucun test unitaire ne voit : le clic de la barre
+    latérale émet bien `roundSelected`, le panneau le reçoit avec son `round_id`,
+    et le compte des destinataires vient du roster — pas d'un nombre en dur.
+    """
+    page.goto(_url_onglet(space_id, competition), wait_until="load")
+    expect(page.locator(".presences-round").first).to_be_visible(timeout=10000)
+
+    cliquer_quand_cable(page, ".presences-round:not(.presences-round--repos)")
+
+    expect(page.locator(".panel-title")).to_contain_text("Sonder les présences", timeout=10000)
+    # La fixture engage quatre équipes : le panneau doit le dire, et non l'inventer.
+    expect(page.locator(".recipients-box")).to_contain_text("4")
+    expect(page.locator(".launch-steps .launch-step")).to_have_count(3)
+
+
 # ── La garde, sur la page comme sur les fragments ─────────────────────────────
 
 

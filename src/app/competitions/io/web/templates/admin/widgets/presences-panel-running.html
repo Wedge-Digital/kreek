@@ -1,0 +1,58 @@
+{# États « en cours » et « clos » : **un seul gabarit**, comme la maquette qui les
+   rend avec le même markup et deux bandeaux. Ce qui les distingue est le bandeau
+   et la présence du bouton de tirage — pas la structure des trois colonnes.
+
+   Les boutons de correction, de relance et de clôture arrivent avec la carte 521,
+   qui déclare leurs routes. #}
+<div class="presences-panel" hx-disinherit="*">
+  {% include "admin/widgets/presences-round-head.html" %}
+
+  <div class="panel-header">
+    <div class="panel-title">
+      {% if clos %}Sondage clos{% else %}Sondage en cours{% endif %}
+    </div>
+    <span class="panel-deadline">
+      {% if clos %}Clos depuis le {{ deadline }}{% else %}Réponses jusqu'au {{ deadline }}{% endif %}
+    </span>
+  </div>
+
+  {# **Pas de barre segmentée**, alors que la maquette en montre une : ses
+     proportions demanderaient un `style="width: …%"` par segment, et les styles
+     inline sont interdits. Trois segments de largeur égale mentiraient sur les
+     proportions — pire qu'aucune barre.
+
+     Une barre honnête coûterait vingt classes de largeur, ou du JS. Les quatre
+     comptes, eux, disent tout ce qu'il y a à savoir, et ils viennent du domaine —
+     aucun n'est dérivé ici. #}
+  <div class="avancement">
+    <div class="avancement-legend">
+      <span class="legend-item legend-item--presents">{{ avancement.presents }} présents</span>
+      <span class="legend-item legend-item--absents">{{ avancement.absents }} absents</span>
+      <span class="legend-item legend-item--muets">{{ avancement.sans_reponse }} sans réponse</span>
+      <span class="legend-item legend-item--total">sur {{ avancement.engagees }} équipes engagées</span>
+    </div>
+  </div>
+
+  {# R15 — le tirage refuse en dessous de deux appariables, **et le dit**. Un
+     bouton inactif sans motif passerait pour une panne. #}
+  {% if clos && !peut_tirer %}
+    <p class="panel-blocage">
+      {{ motif_blocage }}
+    </p>
+  {% endif %}
+
+  <div class="colonnes">
+    <div class="colonne colonne--presents">
+      <div class="colonne-head">Présents · {{ avancement.presents }}</div>
+      {% for row in presents %}{% include "admin/widgets/presences-team-card.html" %}{% endfor %}
+    </div>
+    <div class="colonne colonne--absents">
+      <div class="colonne-head">Absents · {{ avancement.absents }}</div>
+      {% for row in absents %}{% include "admin/widgets/presences-team-card.html" %}{% endfor %}
+    </div>
+    <div class="colonne colonne--muets">
+      <div class="colonne-head">Sans réponse · {{ avancement.sans_reponse }}</div>
+      {% for row in sans_reponse %}{% include "admin/widgets/presences-team-card.html" %}{% endfor %}
+    </div>
+  </div>
+</div>

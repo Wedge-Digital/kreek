@@ -1,0 +1,36 @@
+{# État « défection après tirage » — R12 et R16.
+   Il **propose**, il n'agit pas : la maquette montre une proposition que
+   l'organisateur valide, jamais un fait accompli. Le bouton de réparation arrive
+   avec la carte 521. #}
+<div class="presences-panel presences-panel--defection" hx-disinherit="*">
+  {% include "admin/widgets/presences-round-head.html" %}
+
+  <div class="panel-header">
+    <div class="panel-title">Une rencontre ne tient plus</div>
+  </div>
+
+  <p class="panel-note panel-note--alerte">
+    {% if defection.rencontres_a_refaire > 0 %}
+      {{ defection.rencontres_a_refaire }} rencontre(s) sont à refaire : un camp
+      n'est plus présent.
+    {% endif %}
+    {% if !defection.orphelins.is_empty() %}
+      {{ defection.orphelins.len() }} équipe(s) présentes ne sont appariées avec
+      personne.
+    {% endif %}
+  </p>
+
+  {% if !defection.orphelins.is_empty() %}
+    <div class="defection-orphelins">
+      <div class="colonne-head">À réapparier</div>
+      {% for o in defection.orphelins %}
+        <span class="defection-orphelin">{{ o }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# Les autres matchs ne bougent pas : leurs coachs ont déjà noté leur
+     adversaire, et refaire le tirage entier ferait trois mécontents pour en
+     soulager un. #}
+  {% include "admin/widgets/presences-draw-rows.html" %}
+</div>

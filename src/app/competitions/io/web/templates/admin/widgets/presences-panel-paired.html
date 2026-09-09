@@ -1,0 +1,12 @@
+{# État « journée appariée ». Les rencontres sont écrites au calendrier ; le
+   bouton pour défaire arrive avec la carte 521. #}
+<div class="presences-panel" hx-disinherit="*">
+  {% include "admin/widgets/presences-round-head.html" %}
+
+  <div class="panel-header">
+    <div class="panel-title">Journée appariée</div>
+    <span class="panel-deadline">{{ draw.rencontres.len() }} match(s) au calendrier</span>
+  </div>
+
+  {% include "admin/widgets/presences-draw-rows.html" %}
+</div>

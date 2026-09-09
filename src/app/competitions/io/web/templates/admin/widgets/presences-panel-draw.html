@@ -1,0 +1,26 @@
+{# État « tirage proposé ». **Rendu par l'action `draw` de la carte 521**, jamais
+   par le GET du panneau : l'aperçu ne persiste rien, la réponse *est* le
+   fragment, et un rechargement revient au sondage clos.
+
+   Les boutons de validation et d'abandon arrivent avec la carte 521. #}
+<div class="presences-panel" hx-disinherit="*">
+  {% include "admin/widgets/presences-round-head.html" %}
+
+  <div class="panel-header">
+    <div class="panel-title">Tirage proposé — {{ presents }} présents</div>
+    <span class="panel-deadline">
+      {{ draw.inedites }} inédite(s) · {{ draw.revanches }} revanche(s)
+    </span>
+  </div>
+
+  {# R8 — l'optimum n'est pas toujours prouvé : le budget de nœuds peut couper la
+     recherche. L'écran le signale plutôt que de laisser croire à un optimum. #}
+  {% if !draw.optimum_prouve %}
+    <p class="panel-note">
+      La recherche a été interrompue avant d'avoir tout exploré : cet appariement
+      est valide, mais peut-être pas le meilleur possible.
+    </p>
+  {% endif %}
+
+  {% include "admin/widgets/presences-draw-rows.html" %}
+</div>

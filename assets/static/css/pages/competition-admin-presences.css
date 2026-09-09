@@ -120,3 +120,349 @@
         width: 100%;
     }
 }
+
+/* ── Le panneau, cinq états ───────────────────────────────────────────────── */
+
+.competition-admin-presences .round-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--p2);
+    padding-bottom: var(--p2);
+    border-bottom: 1px solid var(--dark-6);
+    margin-bottom: var(--p3);
+}
+
+.competition-admin-presences .round-head-title {
+    font-size: var(--h5);
+    font-weight: 700;
+}
+
+.competition-admin-presences .round-head-dates {
+    font-size: var(--text-small);
+    color: var(--dark-2);
+}
+
+.competition-admin-presences .round-badge {
+    font-size: var(--text-tiny);
+    color: var(--dark-2);
+    border: 1px solid var(--dark-6);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--p1);
+    white-space: nowrap;
+}
+
+.competition-admin-presences .panel-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--p2);
+    margin-bottom: var(--p2);
+}
+
+.competition-admin-presences .panel-title {
+    font-size: var(--h5);
+    font-weight: 700;
+}
+
+.competition-admin-presences .panel-deadline {
+    font-size: var(--text-small);
+    color: var(--dark-2);
+}
+
+/* R15 et R8 — un motif, jamais un bouton mort sans explication. */
+.competition-admin-presences .panel-blocage,
+.competition-admin-presences .panel-note {
+    font-size: var(--text-small);
+    color: var(--dark-2);
+    background: var(--dark-7);
+    border-left: 3px solid var(--orange);
+    border-radius: var(--radius-sm);
+    padding: var(--p2);
+    margin: 0 0 var(--p3) 0;
+}
+
+.competition-admin-presences .panel-note--alerte {
+    border-left-color: var(--red);
+}
+
+/* ── État « aucun sondage » ───────────────────────────────────────────────── */
+
+.competition-admin-presences .launch-grid {
+    display: flex;
+    gap: var(--p3);
+    align-items: flex-start;
+}
+
+.competition-admin-presences .launch-main {
+    flex: 2 1 0;
+    min-width: 0;
+}
+
+.competition-admin-presences .launch-side {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--p2);
+}
+
+.competition-admin-presences .launch-lead {
+    font-size: var(--text-small);
+    color: var(--dark-2);
+    margin: 0 0 var(--p2) 0;
+}
+
+.competition-admin-presences .launch-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p2);
+}
+
+.competition-admin-presences .launch-step {
+    display: flex;
+    gap: var(--p2);
+    font-size: var(--text-small);
+}
+
+.competition-admin-presences .launch-step-num {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 50%;
+    background: var(--main-blue);
+    color: #fff;
+    font-size: var(--text-tiny);
+    font-weight: 700;
+}
+
+.competition-admin-presences .recipients-box {
+    border: 1px solid var(--dark-6);
+    border-radius: var(--radius-sm);
+    padding: var(--p2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--p1);
+}
+
+.competition-admin-presences .recipients-line {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--p2);
+    font-size: var(--text-small);
+}
+
+.competition-admin-presences .recipients-label {
+    color: var(--dark-2);
+}
+
+.competition-admin-presences .recipients-value {
+    font-weight: 700;
+}
+
+.competition-admin-presences .launch-note {
+    font-size: var(--text-tiny);
+    color: var(--dark-2);
+    margin: 0;
+}
+
+/* ── États « en cours » et « clos » ───────────────────────────────────────── */
+
+.competition-admin-presences .avancement {
+    margin-bottom: var(--p3);
+}
+
+.competition-admin-presences .avancement-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--p2);
+    font-size: var(--text-small);
+}
+
+.competition-admin-presences .legend-item::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.competition-admin-presences .legend-item--presents::before { background: var(--green); }
+.competition-admin-presences .legend-item--absents::before { background: var(--red); }
+.competition-admin-presences .legend-item--muets::before { background: var(--dark-4); }
+
+.competition-admin-presences .legend-item--total {
+    color: var(--dark-3);
+}
+
+.competition-admin-presences .legend-item--total::before {
+    display: none;
+}
+
+.competition-admin-presences .colonnes {
+    display: flex;
+    gap: var(--p2);
+    align-items: flex-start;
+}
+
+.competition-admin-presences .colonne {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--p1);
+}
+
+.competition-admin-presences .colonne-head {
+    font-size: var(--text-tiny);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dark-3);
+    padding-bottom: var(--p0);
+    border-bottom: 1px solid var(--dark-6);
+}
+
+.competition-admin-presences .team-card {
+    display: flex;
+    align-items: center;
+    gap: var(--p1);
+    border: 1px solid var(--dark-6);
+    border-radius: var(--radius-sm);
+    padding: var(--p1);
+}
+
+.competition-admin-presences .team-avatar {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    background: var(--dark-5);
+    font-size: var(--text-tiny);
+    font-weight: 700;
+}
+
+.competition-admin-presences .team-card-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.competition-admin-presences .team-name {
+    font-size: var(--text-small);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.competition-admin-presences .team-coach {
+    font-size: var(--text-tiny);
+    color: var(--dark-3);
+}
+
+.competition-admin-presences .team-when {
+    font-size: var(--text-tiny);
+    color: var(--dark-3);
+    white-space: nowrap;
+}
+
+/* R6 — « qui a dit qu'il venait » a deux réponses possibles. */
+.competition-admin-presences .team-badge-admin {
+    font-size: var(--text-tiny);
+    color: var(--main-blue);
+    border: 1px solid var(--main-blue);
+    border-radius: var(--radius-sm);
+    padding: 0 4px;
+    white-space: nowrap;
+}
+
+/* ── États « tirage », « appariée » et « défection » ──────────────────────── */
+
+.competition-admin-presences .draw-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p1);
+}
+
+.competition-admin-presences .draw-row {
+    display: flex;
+    align-items: center;
+    gap: var(--p2);
+    border: 1px solid var(--dark-6);
+    border-left-width: 3px;
+    border-left-color: var(--green);
+    border-radius: var(--radius-sm);
+    padding: var(--p2);
+    font-size: var(--text-small);
+}
+
+.competition-admin-presences .draw-row--revanche {
+    border-left-color: var(--orange);
+}
+
+.competition-admin-presences .draw-home,
+.competition-admin-presences .draw-away {
+    flex: 1 1 0;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.competition-admin-presences .draw-away {
+    text-align: right;
+}
+
+/* `--dark-2` et non `--dark-3` : le second tombe à 3,5:1 sur ce fond, sous le
+ * seuil de 4,5:1 — le défaut relevé sur la maquette de transfert. */
+.competition-admin-presences .draw-vs {
+    flex: 0 0 auto;
+    font-size: var(--text-tiny);
+    color: var(--dark-2);
+    text-transform: uppercase;
+}
+
+.competition-admin-presences .draw-tag {
+    flex: 0 0 auto;
+    font-size: var(--text-tiny);
+    color: var(--dark-2);
+    white-space: nowrap;
+}
+
+.competition-admin-presences .draw-exemptee,
+.competition-admin-presences .draw-ecartees {
+    font-size: var(--text-small);
+    color: var(--dark-2);
+    margin: var(--p2) 0 0 0;
+}
+
+.competition-admin-presences .defection-orphelins {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--p1);
+    margin-bottom: var(--p3);
+}
+
+.competition-admin-presences .defection-orphelin {
+    font-size: var(--text-small);
+    border: 1px dashed var(--red);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--p1);
+}
+
+@media (max-width: 768px) {
+    .competition-admin-presences .launch-grid,
+    .competition-admin-presences .colonnes {
+        flex-direction: column;
+    }
+
+    .competition-admin-presences .draw-away {
+        text-align: left;
+    }
+}
