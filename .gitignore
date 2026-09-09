@@ -55,3 +55,6 @@ assets/references/
 
 # Fichiers de travail du canevas de design — sources des planches, pas du produit.
 .design/
+
+# Sorties des suites e2e : journaux et échantillons de pool, horodatés.
+.e2e-out/

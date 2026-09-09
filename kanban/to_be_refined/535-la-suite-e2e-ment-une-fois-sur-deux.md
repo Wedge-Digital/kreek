@@ -192,6 +192,86 @@ c'est la seule variable qui ait changé.
 oubliés, mais les serveurs CEF de RustRover et PyCharm, en place depuis plus d'un
 jour. Chercher une fuite de navigateurs est une impasse.
 
+## Outillage posé le 2026-09-09 — et la ligne de base du pool
+
+Deux instruments, parce que trois passages rouges ont été perdus le même jour
+faute de les avoir gardés.
+
+**`make e2e` conserve sa sortie** dans `.e2e-out/suite-<horodatage>.log`. Un
+rouge est désormais analysable sans relancer huit minutes — c'est exactement la
+preuve que ce raffinage attend, et elle avait été jetée trois fois.
+
+Un piège évité au passage : derrière un `tee`, le code de sortie lu est celui de
+`tee` et non celui de pytest. La cible aurait été **verte quel que soit le
+verdict**, comme le `make lint` qui affichait jadis une étape d'audit jamais
+exécutée. D'où `SHELL := /bin/bash` sur cette cible seule, pour `PIPESTATUS`.
+
+**`scripts/e2e_pool_watch.sh` échantillonne le pool** toutes les cinq secondes,
+en parallèle de la suite, dans `.e2e-out/pool-<horodatage>.tsv`.
+
+### Pourquoi le pool, et ce que la mesure vaut
+
+La page qui expire à 30 s dans les passages rouges répond en **3 ms au repos** —
+un facteur dix mille. Le serveur n'est donc pas lent : il est **bloqué**. Le pool
+(20 connexions) était le suspect naturel, une fuite faisant attendre les tests
+tardifs, empirant au fil d'un passage et se réparant après que sqlx a moissonné
+les inactives.
+
+Cette mesure **invalide aussi un levier qu'on allait proposer** : recompiler le
+serveur e2e en `--release`. À 3 ms, il n'y a rien à optimiser.
+
+### La ligne de base, sur un passage vert (368 tests, 424 s)
+
+85 échantillons, pool configuré à 20 :
+
+| Mesure | Valeur |
+|---|---|
+| plage de travail | **9 à 13 connexions** |
+| maximum | **13**, atteint deux minutes après le départ, puis stable |
+| `idle in transaction` | **1** sur 85 échantillons |
+| verrous en attente | **0** |
+| connexions **actives** | **1**, en permanence |
+
+Une seule connexion active à tout instant : c'est la signature d'une suite
+sérielle. Pour atteindre 20 il faudrait donc une **fuite**, pas de la
+concurrence.
+
+### Ce que la mesure ne peut pas dire
+
+`pg_stat_activity` montre l'état **côté Postgres**, pas côté sqlx. Une connexion
+empruntée par un handle fuité apparaît `idle` exactement comme une connexion
+disponible dans le pool : le détail actives/inactives ne les distingue pas.
+
+Ce qui reste décisif est binaire : **si le total atteint 20, le pool est plein ;
+en dessous, il n'y a pas de famine.** Le prochain rouge tranchera d'un coup
+d'œil, et l'hypothèse tombera ou tiendra sans discussion.
+
+## Parallélisation — écartée comme remède, envisageable comme gain de vitesse
+
+Question posée le 2026-09-09 : huit à seize workers amélioreraient-ils la
+stabilité ? **Non**, et trois obstacles structurels l'expliquent.
+
+**Aucune isolation.** `space_id` est une fixture `scope="session"` qui résout un
+**seul** espace, partagé par les 368 tests. Deux workers y créant des
+compétitions se marchent dessus : listes, compteurs, et les assertions
+d'unicité de nom — `test_un_nom_deja_pris_s_affiche_sous_le_champ` existe.
+
+**L'ordre intra-fichier compte.** Constaté en tentant d'isoler un test :
+`test_dismissals_banner_leads_to_the_dismissals_page` dépend du test qui le
+précède pour faire avancer la phase de l'équipe. `--dist loadfile` préserverait
+ça, pas le partage d'état entre fichiers.
+
+**La charge est la cause diagnostiquée.** Seize Chromium et autant de requêtes
+concurrentes sur un serveur unique en build debug, c'est multiplier la variable
+responsable. Côté base la marge existe — une active sur vingt — donc le goulot
+serait le serveur, pas Postgres.
+
+Elle reste jouable **après** correction de la cause, et comme gain de vitesse
+seulement : il faudrait une base, un serveur et un espace **par worker**. La
+carte 536 a rendu le clonage d'une base instantané ; N serveurs coûtent des
+ports, de la RAM et une orchestration. Le faire avant de connaître la cause
+industrialiserait le défaut en huit exemplaires.
+
 ## Ce qu'il faudra trancher au raffinage
 
 **Relever les délais n'est pas la réponse.** Ça repousse le seuil sans rien

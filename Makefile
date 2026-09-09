@@ -106,8 +106,30 @@ dev-e2e:
 test: reset_test_db
 	DATABASE_URL="$(TEST_DB_URL)" cargo test
 
+# La sortie est **conservée**, pas seulement affichée. Trois passages rouges ont
+# été perdus le 2026-09-09 parce qu'ils avaient été tronqués au résumé : c'est
+# précisément la preuve que la carte 535 attend pour être raffinée, et il faut
+# alors relancer huit minutes pour la retrouver. Un fichier horodaté coûte zéro.
+#
+# `pool_watch` échantillonne en parallèle les connexions du serveur — cf. le
+# script pour ce que la mesure prouve ou infirme.
+HORODATAGE := $(shell date +%Y%m%d-%H%M%S)
+
+# `bash` et non `/bin/sh` : le code de sortie de pytest se lit derrière un `tee`,
+# ce que seul `PIPESTATUS` donne. Sans lui, la cible serait verte quel que soit le
+# verdict de la suite — un verrou qui rassure sans jamais regarder.
+e2e: SHELL := /bin/bash
 e2e: e2e_db
-	cd tests/e2e && uv run pytest -v
+	@mkdir -p .e2e-out
+	@./scripts/e2e_pool_watch.sh .e2e-out/pool-$(HORODATAGE).tsv & \
+	  GUETTEUR=$$!; \
+	  trap "kill $$GUETTEUR 2>/dev/null || true" EXIT INT TERM; \
+	  (cd tests/e2e && uv run pytest -v) 2>&1 | tee .e2e-out/suite-$(HORODATAGE).log; \
+	  ISSUE=$${PIPESTATUS[0]}; \
+	  kill $$GUETTEUR 2>/dev/null || true; \
+	  echo "  sortie conservée   : .e2e-out/suite-$(HORODATAGE).log"; \
+	  echo "  pool échantillonné : .e2e-out/pool-$(HORODATAGE).tsv"; \
+	  exit $$ISSUE
 
 # Rend `kreek_e2e` identique à son gabarit — moins d'une seconde, cf. le script.
 e2e_db:
