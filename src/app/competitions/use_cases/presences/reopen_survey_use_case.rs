@@ -133,7 +133,7 @@ mod tests {
             commande(&round, "2026-10-20", "2026-10-05"),
             ReopenDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 report_status: &FauxRapports(false),
             },
         )
@@ -159,7 +159,7 @@ mod tests {
             commande(&round, "2026-10-20", "2026-10-05"),
             ReopenDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 report_status: &FauxRapports(true),
             },
         )
@@ -186,7 +186,7 @@ mod tests {
             commande(&round, "2026-10-20", "2026-10-05"),
             ReopenDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 report_status: &FauxRapports(false),
             },
         )
@@ -210,7 +210,7 @@ mod tests {
             commande(&round, "2026-10-04", "2026-10-05"),
             ReopenDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 report_status: &FauxRapports(false),
             },
         )

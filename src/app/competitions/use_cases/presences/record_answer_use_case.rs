@@ -216,7 +216,7 @@ mod tests {
         let issue = execute(
             cmd,
             &depot,
-            &FauxJournees(Some(c.round)),
+            &FauxJournees::avec(c.round),
             &FauxRapports(figee),
         )
         .await;
@@ -412,7 +412,7 @@ mod tests {
         let issue = execute(
             cmd,
             &FauxSurveyRepo::vide(),
-            &FauxJournees(Some(c.round)),
+            &FauxJournees::avec(c.round),
             &FauxRapports(false),
         )
         .await;

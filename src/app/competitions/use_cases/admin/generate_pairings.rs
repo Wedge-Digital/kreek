@@ -1,24 +1,27 @@
-use crate::app::competitions::domain::domain_event::CompetitionsDomainEvent;
 use crate::app::competitions::domain::group_repository_port::{GroupWithTeams, IGroupRepository};
 use crate::app::competitions::domain::match_day::{MatchDay, Pairing};
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection,
 };
 use crate::app::competitions::domain::tirage::{
-    paire, tirer, DrawInput, NombreDeMatchs, ProposedPairing, RencontresJouees,
+    tirer, DrawInput, NombreDeMatchs, ProposedPairing, RencontresJouees,
 };
 use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
 use crate::app::competitions::use_cases::admin::team_enrollment::{
     build_new_pairing_projection, filter_enrolled_team_ids, load_enrolled_teams, resolve_team_names,
 };
+use crate::app::competitions::use_cases::appariement_ecrit::{
+    emettre_pairing_created, OuEstEcrite,
+};
+use crate::app::competitions::use_cases::entree_du_tirage::{
+    build_historique, build_interdites, build_matchs_joues,
+};
 use crate::app::shared_kernel::bloodbowl::ids::PairingId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::ids::EventId;
-use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum GenerateError {
@@ -143,12 +146,19 @@ async fn ecrire_la_journee(
             autre => GenerateError::Repository(autre.to_string()),
         })?;
 
-    for (pairing, _) in a_ecrire {
-        emit_pairing_created(
-            ctx,
-            &pairing.home_team_id.to_string(),
-            &pairing.away_team_id.to_string(),
+    // Les noms viennent de la projection qu'on vient d'écrire, et non de
+    // `team_display` : deux `expect` de moins, et l'événement ne peut plus
+    // diverger de ce que la base contient (carte 517).
+    for (pairing, projection) in a_ecrire {
+        emettre_pairing_created(
+            ctx.event_bus,
+            OuEstEcrite {
+                competition_id: ctx.competition_id,
+                space_id: ctx.space_id,
+                round_id: &ctx.match_day.id.to_string(),
+            },
             pairing,
+            projection,
         );
     }
     Ok(())
@@ -242,30 +252,6 @@ async fn apparier_le_groupe(
 /// La règle est métier, sa **matière** est inter-BC : la relation équipe → coach
 /// arrive par `ITeamInfoPort`. Le domaine reçoit des paires interdites, il n'a
 /// pas à savoir qu'un coach existe.
-fn build_interdites(
-    equipes: &[TeamId],
-    team_display: &HashMap<String, TeamInfoDto>,
-) -> HashSet<(TeamId, TeamId)> {
-    let mut interdites = HashSet::new();
-    for (rang, a) in equipes.iter().enumerate() {
-        for b in equipes.iter().skip(rang + 1) {
-            if meme_coach(a, b, team_display) {
-                interdites.insert(paire(a, b));
-            }
-        }
-    }
-    interdites
-}
-
-fn meme_coach(a: &TeamId, b: &TeamId, team_display: &HashMap<String, TeamInfoDto>) -> bool {
-    match (
-        team_display.get(&a.to_string()),
-        team_display.get(&b.to_string()),
-    ) {
-        (Some(x), Some(y)) => x.coach_id == y.coach_id,
-        _ => false,
-    }
-}
 
 fn batir_appariement(
     ctx: &Contexte<'_>,
@@ -293,89 +279,6 @@ fn batir_appariement(
     (pairing, projection)
 }
 
-/// L'historique de la saison, **compté** par paire, la journée en cours exclue.
-///
-/// Un `HashSet` ne disait que « déjà jouée » : c'est ce choix de type qui
-/// rendait la minimisation de R8.2 impossible.
-fn build_historique(days: &[MatchDay], exclude_id: &str) -> RencontresJouees {
-    let mut historique = RencontresJouees::new();
-    for day in days.iter().filter(|d| d.id.to_string() != exclude_id) {
-        for p in &day.pairings {
-            historique.enregistrer(
-                &p.home_team_id,
-                &p.away_team_id,
-                day.position,
-                day.name.clone(),
-            );
-        }
-    }
-    historique
-}
-
-/// R9 — le nombre d'appariements **programmés** de chaque équipe sur la saison.
-///
-/// Même boucle que `build_historique`, même exclusion de la journée tirée : les
-/// appariements qu'on s'apprête à écrire ne comptent pas contre les équipes
-/// qu'ils concernent. Une fonction séparée plutôt qu'un tuple — chacune reste
-/// courte et porte son nom.
-///
-/// Les appariements et non les rapports de match : ils vivent dans les tables du
-/// BC, donc le compte se lit sans port.
-fn build_matchs_joues(days: &[MatchDay], exclude_id: &str) -> HashMap<TeamId, NombreDeMatchs> {
-    let mut comptes: HashMap<TeamId, NombreDeMatchs> = HashMap::new();
-    for day in days.iter().filter(|d| d.id.to_string() != exclude_id) {
-        for p in &day.pairings {
-            for camp in [p.home_team_id, p.away_team_id] {
-                comptes.entry(camp).or_default().0 += 1;
-            }
-        }
-    }
-    comptes
-}
-
-fn emit_pairing_created(ctx: &Contexte<'_>, home: &str, away: &str, pairing: &Pairing) {
-    // Invariant garanti par le filtrage fait avant l'appel au tirage :
-    // home/away ne peuvent être ici que des ids déjà présents dans team_display.
-    let home_info = ctx
-        .team_display
-        .get(home)
-        .expect("home team filtré comme enrôlé avant appariement");
-    let away_info = ctx
-        .team_display
-        .get(away)
-        .expect("away team filtré comme enrôlé avant appariement");
-    let (competition_id, season_id, space_id) = (ctx.competition_id, ctx.season_id, ctx.space_id);
-    let match_day = ctx.match_day;
-
-    emettre(
-        ctx.event_bus,
-        CompetitionsDomainEvent::PairingCreated {
-            event_id: EventId::new(),
-            pairing_id: pairing.id.to_string(),
-            competition_id: competition_id.to_string(),
-            season_id: season_id.to_string(),
-            round_id: match_day.id.to_string(),
-            home_team_id: home.to_string(),
-            away_team_id: away.to_string(),
-            space_id: space_id.to_string(),
-            home_team_name: home_info.team_name.clone(),
-            home_roster_name: home_info.roster_name.clone(),
-            home_coach_name: home_info.coach_name.clone(),
-            home_logo_url: home_info.logo_url.clone(),
-            away_team_name: away_info.team_name.clone(),
-            away_roster_name: away_info.roster_name.clone(),
-            away_coach_name: away_info.coach_name.clone(),
-            away_logo_url: away_info.logo_url.clone(),
-            round_name: match_day.name.to_string(),
-            round_position: match_day.position.into_inner(),
-            round_date_start: match_day.date_start.as_ref().map(|d| d.to_string()),
-            round_date_end: match_day.date_end.as_ref().map(|d| d.to_string()),
-            round_day_type: match_day.day_type.as_str().to_string(),
-        }
-        .to_enveloppe(),
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -388,6 +291,7 @@ mod tests {
     };
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
     use async_trait::async_trait;
+    use std::collections::HashSet;
 
     struct FakeMatchDayRepo(MatchDay, std::sync::Mutex<Vec<(String, String)>>, bool);
 
@@ -629,59 +533,6 @@ mod tests {
             position: MatchDayPosition::try_new(0).unwrap(),
             pairings,
         }
-    }
-
-    // ── R9 — le compte qui alimente le critère d'exemption (carte 541) ───────
-
-    fn appariement(home: &TeamId, away: &TeamId) -> Pairing {
-        Pairing {
-            id: PairingId::new(),
-            home_team_id: *home,
-            away_team_id: *away,
-        }
-    }
-
-    #[test]
-    fn build_matchs_joues_compte_les_deux_camps() {
-        let (a, b, c) = (TeamId::new(), TeamId::new(), TeamId::new());
-        let jours = vec![
-            match_day_with_pairings(vec![appariement(&a, &b)]),
-            match_day_with_pairings(vec![appariement(&a, &c)]),
-        ];
-
-        let comptes = build_matchs_joues(&jours, "aucune");
-
-        assert_eq!(comptes.get(&a), Some(&NombreDeMatchs(2)));
-        assert_eq!(comptes.get(&b), Some(&NombreDeMatchs(1)));
-        assert_eq!(comptes.get(&c), Some(&NombreDeMatchs(1)));
-    }
-
-    /// Les appariements qu'on s'apprête à écrire ne comptent pas contre les
-    /// équipes qu'ils concernent — même exclusion que `build_historique`.
-    #[test]
-    fn build_matchs_joues_ignore_la_journee_tiree() {
-        let (a, b) = (TeamId::new(), TeamId::new());
-        let jours = vec![
-            match_day_with_pairings(vec![appariement(&a, &b)]),
-            match_day_with_pairings(vec![appariement(&a, &b)]),
-        ];
-        let tiree = jours[1].id.to_string();
-
-        let comptes = build_matchs_joues(&jours, &tiree);
-
-        assert_eq!(comptes.get(&a), Some(&NombreDeMatchs(1)));
-    }
-
-    /// Le défaut que la 541 corrige : le champ arrivait vide au tirage, donc le
-    /// critère ne départageait rien. Ce test échouerait sur le code d'avant.
-    #[test]
-    fn une_saison_vierge_ne_donne_aucun_compte() {
-        let comptes = build_matchs_joues(&[], "aucune");
-
-        assert!(
-            comptes.is_empty(),
-            "aucune journée, aucun match — et toutes les équipes à égalité"
-        );
     }
 
     #[tokio::test]

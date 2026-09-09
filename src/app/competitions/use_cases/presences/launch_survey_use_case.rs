@@ -220,7 +220,7 @@ mod tests {
             commande(&round, SeasonId::new()),
             LaunchDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(repos)),
+                match_day_repo: &FauxJournees::avec(repos),
                 teams: &FauxTeams(vec![equipe("Les Uns", &coach, "Alpha")]),
                 members: &FauxMembres(vec![membre(&coach, "Alpha", "a@example.test")]),
                 mailer: &mailer,
@@ -249,7 +249,7 @@ mod tests {
             commande(&round, SeasonId::new()),
             LaunchDeps {
                 survey_repo: &FauxSurveyRepo::avec(deja),
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 teams: &FauxTeams(vec![]),
                 members: &FauxMembres(vec![]),
                 mailer: &mailer,
@@ -277,7 +277,7 @@ mod tests {
             commande(&round, SeasonId::new()),
             LaunchDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 teams: &FauxTeams(vec![equipe("Les Uns", &coach, "Alpha")]),
                 members: &FauxMembres(vec![membre(&coach, "Alpha", "a@example.test")]),
                 mailer: &mailer,
@@ -306,7 +306,7 @@ mod tests {
             commande(&round, SeasonId::new()),
             LaunchDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 teams: &FauxTeams(vec![
                     equipe("Les Joignables", &joignable, "Alpha"),
                     equipe("Les Muets", &muet, "Beta"),
@@ -348,7 +348,7 @@ mod tests {
             commande(&round, SeasonId::new()),
             LaunchDeps {
                 survey_repo: &depot,
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 teams: &FauxTeams(vec![equipe("Les Uns", &coach, "Alpha")]),
                 members: &FauxMembres(vec![membre(&coach, "Alpha", "a@example.test")]),
                 mailer: &mailer,

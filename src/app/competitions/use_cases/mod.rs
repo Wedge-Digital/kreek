@@ -1,5 +1,7 @@
 pub mod admin;
+pub mod appariement_ecrit;
 pub mod create_draft_competition;
+pub mod entree_du_tirage;
 pub mod finalize_competition;
 pub mod notification_dispatch;
 pub mod notification_recipients;

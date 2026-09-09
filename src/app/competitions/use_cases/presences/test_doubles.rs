@@ -91,19 +91,67 @@ impl IPresenceSurveyRepository for FauxSurveyRepo {
 
 // ── Le dépôt de journées ─────────────────────────────────────────────────────
 
-/// Seules `find_by_id` et `find_by_season` répondent : les onze autres méthodes
-/// ne sont pas atteintes par ces use cases, et rendre des listes vides est plus
-/// honnête qu'un `unimplemented!()` — un test qui les toucherait constaterait
-/// l'absence de donnée, pas une panne de l'échafaudage.
-pub struct FauxJournees(pub Option<MatchDay>);
+/// Seules `find_by_id`, `find_by_season` et `save_pairings` répondent vraiment :
+/// les dix autres méthodes ne sont pas atteintes par ces use cases, et rendre des
+/// listes vides est plus honnête qu'un `unimplemented!()` — un test qui les
+/// toucherait constaterait l'absence de donnée, pas une panne de l'échafaudage.
+pub struct FauxJournees {
+    jour: Option<MatchDay>,
+    /// Ce que `find_by_season` rend. Vide par défaut : `jour` seul, comme avant.
+    saison: Option<Vec<MatchDay>>,
+    ecriture_en_panne: bool,
+    ecrits: Mutex<Vec<Pairing>>,
+}
+
+impl FauxJournees {
+    pub fn avec(jour: MatchDay) -> Self {
+        Self {
+            jour: Some(jour),
+            saison: None,
+            ecriture_en_panne: false,
+            ecrits: Mutex::new(vec![]),
+        }
+    }
+
+    pub fn aucune() -> Self {
+        Self {
+            jour: None,
+            saison: None,
+            ecriture_en_panne: false,
+            ecrits: Mutex::new(vec![]),
+        }
+    }
+
+    /// Les journées de la saison, pour que `build_historique` ait de quoi
+    /// travailler — c'est ce qui permet d'éprouver que l'étiquette d'une rencontre
+    /// se recalcule au lieu d'être reprise de la commande.
+    pub fn et_la_saison(mut self, jours: Vec<MatchDay>) -> Self {
+        self.saison = Some(jours);
+        self
+    }
+
+    /// Un dépôt qui refuse d'écrire — pour éprouver ce qui se passe **après**
+    /// l'échec, et notamment ce qui n'est pas émis.
+    pub fn dont_l_ecriture_echoue(mut self) -> Self {
+        self.ecriture_en_panne = true;
+        self
+    }
+
+    pub fn ecrits(&self) -> usize {
+        self.ecrits.lock().expect("mutex de test").len()
+    }
+}
 
 #[async_trait]
 impl IMatchDayRepository for FauxJournees {
     async fn find_by_season(&self, _s: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> {
-        Ok(self.0.clone().into_iter().collect())
+        Ok(self
+            .saison
+            .clone()
+            .unwrap_or_else(|| self.jour.clone().into_iter().collect()))
     }
     async fn find_by_id(&self, _id: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> {
-        Ok(self.0.clone())
+        Ok(self.jour.clone())
     }
     async fn save_match_day(&self, _d: &MatchDay) -> Result<(), MatchDayRepositoryError> {
         Ok(())
@@ -114,8 +162,15 @@ impl IMatchDayRepository for FauxJournees {
     async fn save_pairings(
         &self,
         _id: &str,
-        _p: &[(Pairing, NewPairingProjection)],
+        p: &[(Pairing, NewPairingProjection)],
     ) -> Result<(), MatchDayRepositoryError> {
+        if self.ecriture_en_panne {
+            return Err(MatchDayRepositoryError::PairingsAlreadyExist);
+        }
+        self.ecrits
+            .lock()
+            .expect("mutex de test")
+            .extend(p.iter().map(|(pairing, _)| pairing.clone()));
         Ok(())
     }
     async fn save_pairing(

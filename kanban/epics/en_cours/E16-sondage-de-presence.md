@@ -1,7 +1,7 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **11 faites** (507 à 516 et 541, du 2026-09-07
-au 2026-09-08) : le Calendrier tire désormais vraiment au sort, sans laisser
+**État :** `en_cours` — 27 cartes, **12 faites** (507 à 517 et 541, du 2026-09-07
+au 2026-09-09) : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
 complet** — il ouvre une campagne, enregistre une réponse, valide un tirage, et
@@ -28,12 +28,17 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Onze cartes faites sur vingt-sept.** Les vagues 1 et 2 — corriger l'existant,
-puis le socle — sont closes, et la vague 3 est aux trois cinquièmes : le service
-d'hydratation croise les deux ports, le cycle de la campagne est en place
-(expédition provisoire comprise), et une présence s'écrit par un seul chemin,
-commun aux trois unités. Il reste deux use cases (517, 518), l'écran, et les deux
-unités du coach.
+**Douze cartes faites sur vingt-sept.** Les vagues 1 et 2 — corriger l'existant,
+puis le socle — sont closes, et la vague 3 en est à quatre cartes sur cinq : le
+service d'hydratation croise les deux ports, le cycle de la campagne est en place
+(expédition provisoire comprise), une présence s'écrit par un seul chemin commun
+aux trois unités, et le tirage s'aperçoit puis s'écrit au calendrier. Il reste un
+use case (518), l'écran, et les deux unités du coach.
+
+Le tirage du sondage et celui du Calendrier partagent désormais leur entrée
+(`entree_du_tirage`) et leur annonce (`appariement_ecrit`) : le tirage entré par
+la porte du sondage produit en aval exactement les mêmes effets que celui du
+Calendrier, sans qu'aucun événement ait été créé.
 
 Quatre d'entre elles — 507, 508, 509 et 541 — **corrigeaient l'existant** et ne
 concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était ni

@@ -172,7 +172,7 @@ mod tests {
             commande(&round, "2026-10-11"),
             RemindDeps {
                 survey_repo: &FauxSurveyRepo::avec(campagne),
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 teams: &FauxTeams(vec![]),
                 members: &FauxMembres(vec![]),
                 mailer: &mailer,
@@ -249,7 +249,7 @@ mod tests {
             commande(&round, "2026-10-05"),
             RemindDeps {
                 survey_repo: &FauxSurveyRepo::avec(campagne),
-                match_day_repo: &FauxJournees(Some(jour)),
+                match_day_repo: &FauxJournees::avec(jour),
                 teams: &FauxTeams(equipes),
                 members: &FauxMembres(vec![
                     membre(&a, "Alpha", "a@example.test"),
@@ -279,7 +279,7 @@ mod tests {
             commande(&round, "2026-10-05"),
             RemindDeps {
                 survey_repo: &FauxSurveyRepo::vide(),
-                match_day_repo: &FauxJournees(None),
+                match_day_repo: &FauxJournees::aucune(),
                 teams: &FauxTeams(vec![]),
                 members: &FauxMembres(vec![]),
                 mailer: &mailer,
