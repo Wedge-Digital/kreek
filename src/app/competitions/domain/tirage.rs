@@ -322,7 +322,20 @@ fn retards(input: &DrawInput) -> Vec<u32> {
 /// appariements également optimaux, mais pas forcément les mêmes (R17).
 pub fn tirer(input: &DrawInput, rng: &mut impl Rng) -> DrawProposal {
     if input.equipes.len() < 2 {
-        return DrawProposal::default();
+        // **Une équipe seule est exemptée, pas perdue.** Le raccourci doit dire
+        // ce que la recherche aurait dit : elle range dans `exemptees` toute
+        // équipe qu'elle n'apparie pas, y compris la dernière.
+        //
+        // Rendre `None` ici était sans conséquence tant que les deux appelants
+        // garantissaient au moins deux équipes — `filter_enrolled_team_ids` pour
+        // le Calendrier, `peut_tirer` pour le sondage. La réparation d'une
+        // journée où il ne reste qu'un orphelin a fait apparaître le défaut :
+        // elle annonçait « aucune exemptée » alors que quelqu'un restait sur le
+        // banc (carte 518).
+        return DrawProposal {
+            exemptee: input.equipes.first().copied(),
+            ..Default::default()
+        };
     }
     let mut recherche = Recherche::batir(input);
     let mut libres = vec![true; input.equipes.len()];
@@ -749,6 +762,28 @@ mod tests {
                 derniere: MatchDayName::try_new("Journée 7").unwrap(),
             }
         );
+    }
+
+    // ── Les effectifs dégénérés ──────────────────────────────────────────────
+
+    /// Le raccourci de `tirer` doit rendre ce que la recherche rendrait : une
+    /// équipe seule n'a personne à jouer, donc elle est exemptée.
+    #[test]
+    fn une_equipe_seule_est_exemptee() {
+        let input = entree(equipes(1));
+
+        let p = tirer(&input, &mut graine(0));
+
+        assert!(p.rencontres.is_empty());
+        assert_eq!(p.exemptee, Some(input.equipes[0]));
+    }
+
+    #[test]
+    fn un_effectif_vide_n_exempte_personne() {
+        let p = tirer(&entree(vec![]), &mut graine(0));
+
+        assert!(p.rencontres.is_empty());
+        assert_eq!(p.exemptee, None);
     }
 
     // ── R9 — l'exemption va à celle qui a le plus joué ───────────────────────

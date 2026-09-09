@@ -1,6 +1,6 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **12 faites** (507 à 517 et 541, du 2026-09-07
+**État :** `en_cours` — 27 cartes, **13 faites** (507 à 518 et 541, du 2026-09-07
 au 2026-09-09) : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
@@ -28,12 +28,15 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Douze cartes faites sur vingt-sept.** Les vagues 1 et 2 — corriger l'existant,
-puis le socle — sont closes, et la vague 3 en est à quatre cartes sur cinq : le
-service d'hydratation croise les deux ports, le cycle de la campagne est en place
-(expédition provisoire comprise), une présence s'écrit par un seul chemin commun
-aux trois unités, et le tirage s'aperçoit puis s'écrit au calendrier. Il reste un
-use case (518), l'écran, et les deux unités du coach.
+**Treize cartes faites sur vingt-sept.** Les trois premières vagues sont closes :
+corriger l'existant, le socle, et les use cases. Le service d'hydratation croise
+les deux ports, le cycle de la campagne est en place (expédition provisoire
+comprise), une présence s'écrit par un seul chemin commun aux trois unités, le
+tirage s'aperçoit puis s'écrit au calendrier, et une défection se répare sans
+toucher aux matchs qui tiennent.
+
+**Rien n'est encore visible à l'écran** : aucune route n'existe. C'est l'objet de
+la vague 4 (519 à 522), puis des deux unités du coach.
 
 Le tirage du sondage et celui du Calendrier partagent désormais leur entrée
 (`entree_du_tirage`) et leur annonce (`appariement_ecrit`) : le tirage entré par
