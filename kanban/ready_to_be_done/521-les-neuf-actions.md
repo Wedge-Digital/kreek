@@ -3,7 +3,29 @@
 **Priorité : haute — sans elles l'écran est en lecture seule**
 **Épic :** E16 — Sondage de présence
 **Dépend de :** 520, et les use cases 515 à 518
-**Fichiers :** `src/app/competitions/io/web/admin/presences_actions.rs`
+**Fichiers :** `src/app/competitions/io/web/admin/presences_actions.rs`,
+`src/app/competitions/routes.rs`, `src/app/competitions/router.rs`
+
+## Cette carte déclare et branche ses neuf routes
+
+La 519 n'a posé que les trois routes qu'elle sert. **Les neuf de cette carte lui
+appartiennent** — constante de chemin, méthode de génération d'URL, et entrée de
+routeur, dans le même commit que leur handler :
+
+```
+presences/launch   presences/answer   presences/remind
+presences/close    presences/reopen   presences/draw
+presences/confirm-draw   presences/undo-draw   presences/repair
+```
+
+Une route déclarée sans handler ne compile pas ; une route branchée sur un
+handler vide est une porte ouverte sans garde. Les annoncer d'avance aurait
+demandé neuf handlers factices, qui passeraient `check-arch` et l'axe 4 sans que
+rien ne les appelle.
+
+**Chacune porte `require_admin_access` puis `journee_de_la_saison`**, y compris
+sur un POST qui ne rend qu'un fragment : `space_scope` n'a pas de résolveur pour
+`round_id`, qui passerait librement (carte 416).
 
 ## L'objectif
 

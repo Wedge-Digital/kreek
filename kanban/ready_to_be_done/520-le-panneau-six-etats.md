@@ -4,7 +4,21 @@
 **Épic :** E16 — Sondage de présence
 **Dépend de :** 519, et les use cases 515 à 518 pour ce qu'il affiche
 **Fichiers :** `src/app/competitions/io/web/admin/presences_widgets.rs`,
-`.../templates/admin/widgets/presences-panel-*.html`
+`.../templates/admin/widgets/presences-panel-*.html`,
+`src/app/competitions/routes.rs`, `src/app/competitions/router.rs`
+
+## Cette carte déclare et branche sa route
+
+La 519 n'a posé que les trois routes qu'elle sert — `presences`,
+`presences/rounds`, `presences/panel`. **Les neuf autres appartiennent aux cartes
+qui les servent.** Une route déclarée sans handler ne compile pas, et une route
+branchée sur un handler vide est une porte ouverte sans garde : neuf handlers
+factices passeraient `check-arch` et l'axe 4 sans que rien ne les appelle.
+
+`presences/panel` existe déjà — cette carte en remplit le handler. Elle n'a donc
+pas de route à ajouter, mais elle hérite de la garde : `require_admin_access`
+puis `journee_de_la_saison`, **sur le fragment aussi**, `space_scope` n'ayant pas
+de résolveur pour `round_id` (carte 416).
 
 ## L'objectif
 

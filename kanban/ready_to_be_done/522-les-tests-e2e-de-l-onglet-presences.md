@@ -5,6 +5,17 @@
 **Dépend de :** 521
 **Fichiers :** `tests/e2e/test_competition_presences.py`, `tests/impact-map.toml`
 
+## Cette carte ne déclare aucune route — et le vérifie
+
+Les douze routes de l'onglet ont été posées par les cartes qui les servent : trois
+en 519, une remplie en 520, neuf en 521. Cette carte est la première à les
+**traverser toutes** dans un navigateur, donc la première à constater qu'aucune
+ne manque ni ne répond à côté.
+
+Son entrée dans `tests/impact-map.toml` va dans le même commit que le test :
+l'axe 8 de `check-arch` refuse un test e2e sans entrée, et un test sans entrée est
+traité comme `"all"` — donc silencieusement toujours exécuté.
+
 ## L'objectif
 
 Le parcours complet dans un navigateur, contre le serveur dev. Aucun test
