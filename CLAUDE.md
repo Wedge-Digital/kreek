@@ -64,6 +64,30 @@ Directives de travail pour Claude Code sur ce projet.
     Vécu, et c'est bien le piège que cette règle prétend refermer : la boucle a
     imprimé « PID après : » suivi de rien, exit 0.
 
+    **La contrepartie : ne rien éditer sous `src/` pendant qu'une suite tourne.**
+
+    C'est la même erreur vue de l'autre bout. Attendre le redémarrage protège du
+    verdict rendu contre l'ancien binaire ; ne pas éditer protège du binaire qui
+    change **sous** les tests. L'observateur ne demande pas la permission : une
+    seule sauvegarde de fichier suffit à ce qu'il tue le serveur en pleine suite,
+    et tout ce qui suit échoue sur un port muet.
+
+    Vécu le 2026-09-10, en enchaînant sur la carte suivante pendant la
+    vérification de la précédente : **105 échecs sur 387**, dont 96 erreurs de
+    fixture. Le diagnostic tenait en deux mesures — **170 connexions refusées**
+    dans le journal, et un binaire réécrit à 15:02 sur un passage démarré à
+    14:47. Aucun de ces échecs ne disait quoi que ce soit du code testé.
+
+    Ce qui rend le piège coûteux, c'est qu'il **ressemble à une régression
+    massive** : neuf tests rouges et quatre-vingt-seize fixtures en échec, sur du
+    code qui passait dix minutes plus tôt. Sans le journal conservé — cf. la carte
+    535 — il aurait fallu relancer pour comprendre, et la tentation était de
+    chercher dans le code ce qui n'y était pas.
+
+    Corollaire pratique : **une suite e2e occupe l'arbre de travail.** Ce qui est
+    prêt à écrire attend, ou part dans un `git stash` le temps du passage. Huit
+    minutes d'attente coûtent moins qu'un faux diagnostic.
+
     **Attendre que `make test` ou `cargo build` soient finis** avant de réveiller
     l'observateur : ils tiennent le verrou de compilation, et il attend en
     silence — on croit alors qu'il ne se passe rien.

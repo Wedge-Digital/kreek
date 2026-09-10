@@ -32,14 +32,10 @@
             hx-swap="innerHTML">Abandonner</button>
     <button class="btn-primary-sm"
             hx-post="{{ actions.repair }}"
-            hx-vals='js:{"round_id": "{{ round_id }}",
-                         "a_defaire": {{ a_defaire_json|safe }},
-                         "exemptee": "{{ draw.exemptee_id }}",
-                         "rencontres": Array.from(
-                             document.querySelectorAll("#presences-panel .draw-row"))
-                           .map(function (l) {
-                             return {home_team_id: l.dataset.home, away_team_id: l.dataset.away};
-                           })}'
+            hx-vals='{"round_id": "{{ round_id }}",
+                      "a_defaire": {{ a_defaire_json_litteral|safe }},
+                      "exemptee": "{{ draw.exemptee_id }}",
+                      "rencontres": {{ draw.rencontres_json_litteral|safe }}}'
             hx-ext="json-enc"
             hx-swap="none">Valider la réparation</button>
   </div>

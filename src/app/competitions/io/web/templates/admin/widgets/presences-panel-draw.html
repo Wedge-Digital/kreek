@@ -36,13 +36,9 @@
             hx-swap="innerHTML">Abandonner ce tirage</button>
     <button class="btn-primary-sm"
             hx-post="{{ actions.confirm_draw }}"
-            hx-vals='js:{"round_id": "{{ round_id }}",
-                         "exemptee": "{{ draw.exemptee_id }}",
-                         "rencontres": Array.from(
-                             document.querySelectorAll("#presences-panel .draw-row"))
-                           .map(function (l) {
-                             return {home_team_id: l.dataset.home, away_team_id: l.dataset.away};
-                           })}'
+            hx-vals='{"round_id": "{{ round_id }}",
+                      "exemptee": "{{ draw.exemptee_id }}",
+                      "rencontres": {{ draw.rencontres_json_litteral|safe }}}'
             hx-ext="json-enc"
             hx-swap="none">Valider et écrire au calendrier</button>
   </div>

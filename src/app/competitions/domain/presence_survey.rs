@@ -333,7 +333,7 @@ impl EtatJournee {
     /// observation faite sur la journée, à chaque affichage. Vider la journée au
     /// Calendrier ramène donc la campagne à son état d'avant tirage sans qu'aucune
     /// réconciliation n'ait à tourner : il n'y a plus rien à réconcilier.
-    fn appariee(&self) -> bool {
+    pub fn appariee(&self) -> bool {
         !self.rencontres.is_empty()
     }
 

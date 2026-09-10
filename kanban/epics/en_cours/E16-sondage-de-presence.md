@@ -1,7 +1,8 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **16 faites** (507 à 521 et 541, du 2026-09-07
-au 2026-09-10) : le Calendrier tire désormais vraiment au sort, sans laisser
+**État :** `en_cours` — 27 cartes, **17 faites** (507 à 522 et 541, du 2026-09-07
+au 2026-09-10). **La vague 4 est close : l'onglet de l'organisateur est livré et
+couvert.** : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
 complet** — il ouvre une campagne, enregistre une réponse, valide un tirage, et
@@ -46,8 +47,19 @@ succès rend un corps vide et déclenche le rechargement, un refus rend le panne
 porteur de son motif. Aucune `alert()`, aucun JSON d'erreur, aucun
 `onclick="fetch(…)"`.
 
-Reste la couverture e2e du parcours complet (522) — la 521 n'a posé que les deux
-cas qui éprouvent le protocole.
+Le parcours est couvert par la 522 — huit scénarios en 6,5 secondes, du lancement
+à la validation du tirage, jusqu'au vidage de la journée au Calendrier qui éprouve
+R24.
+
+**Elle a trouvé trois défauts**, dont deux dans du code commité la veille : un
+tableau que `json-enc` ne sait pas transporter depuis `hx-vals`, un
+`etat_du_panneau` qui lisait l'appariement sur la campagne au lieu de la journée —
+le défaut que R24 existe pour empêcher — et un test unitaire qui fixait ce défaut
+comme s'il était la règle. Aucun test unitaire ne pouvait voir le second : le
+vidage passe par l'autre onglet, et seul un e2e traverse les deux.
+
+Restent les deux unités du coach : la réponse par jeton (523 à 528) et l'encart du
+coach connecté (529 à 532).
 
 Le tirage du sondage et celui du Calendrier partagent désormais leur entrée
 (`entree_du_tirage`) et leur annonce (`appariement_ecrit`) : le tirage entré par

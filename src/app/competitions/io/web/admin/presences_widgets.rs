@@ -259,7 +259,16 @@ pub fn etat_du_panneau(
     if survey.desaccord(journee).is_some() {
         return Panneau::Defection;
     }
-    if matches!(survey.appariement(), Appariement::Fait { .. }) {
+    // **R24 — l'appariement se lit sur la journée, jamais sur la campagne.**
+    //
+    // Le premier jet testait `survey.appariement()`, la mémoire de la campagne. Or
+    // quatre chemins du Calendrier suppriment des appariements sans rien savoir
+    // d'une campagne : après un vidage, `Appariement::Fait` y restait
+    // indéfiniment, et le panneau annonçait « Journée appariée » sur une journée
+    // vide. C'est exactement le défaut que R24 a été écrite pour empêcher, et
+    // seul un test e2e pouvait le voir — aucun test unitaire ne fait passer un
+    // vidage par l'autre onglet.
+    if journee.appariee() {
         return Panneau::Appariee;
     }
     match survey.statut(aujourd_hui) {
@@ -429,6 +438,27 @@ pub struct DrawVm {
     /// R8 — faux quand le budget de nœuds a coupé la recherche. L'écran le
     /// signale plutôt que de laisser croire à un optimum.
     pub optimum_prouve: bool,
+    /// Les couples, **sérialisés ici** et non reconstruits en JavaScript.
+    ///
+    /// Le premier jet les lisait dans le DOM :
+    /// `Array.from(document.querySelectorAll(".draw-row")).map(…)`. `json-enc`
+    /// échouait dessus par `TypeError: Converting circular structure to JSON` —
+    /// htmx fusionne les `hx-vals` dans son propre objet de paramètres, où un
+    /// tableau d'objets construit à la volée ne passe pas.
+    ///
+    /// Le harnais e2e l'a attrapé par la console, pas par une assertion : sans sa
+    /// surveillance, le test aurait échoué sur « les rencontres ne sont pas
+    /// écrites » et la recherche serait partie côté serveur.
+    pub rencontres_json: String,
+    /// Le même JSON, **en littéral de chaîne JSON** — guillemets compris et
+    /// échappés.
+    ///
+    /// Le gabarit l'insère dans un `hx-vals` où il doit être une *valeur de
+    /// chaîne*, pas une structure : cf. `presences_actions.rs` et la limite de
+    /// `json-enc`. `serde_json::to_string` sur la chaîne produit exactement ce
+    /// littéral ; l'écrire à la main par des `replace` se serait cassé sur le
+    /// premier nom d'équipe contenant une apostrophe.
+    pub rencontres_json_litteral: String,
 }
 
 impl DrawVm {
@@ -445,8 +475,33 @@ impl DrawVm {
             exemptee_id: prop.exemptee.map(|t| t.to_string()).unwrap_or_default(),
             ecartees: prop.ecartees.iter().map(|t| nom_de(t, roster)).collect(),
             optimum_prouve: prop.optimum_prouve,
+            rencontres_json: couples_json(&prop.rencontres),
+            rencontres_json_litteral: en_litteral(&couples_json(&prop.rencontres)),
         }
     }
+}
+
+/// Les couples au format que le POST attend — `[{home_team_id, away_team_id}, …]`.
+///
+/// Sérialisé côté serveur : c'est lui qui connaît les identifiants, et le gabarit
+/// n'a plus qu'à les recopier. Aucun JavaScript ne reconstruit la liste.
+/// Une chaîne rendue en **littéral JSON**, guillemets inclus : `[1,2]` devient
+/// `"[1,2]"` avec ses guillemets internes échappés.
+pub fn en_litteral(json: &str) -> String {
+    serde_json::to_string(json).unwrap_or_else(|_| "\"[]\"".to_string())
+}
+
+fn couples_json(rencontres: &[ProposedPairing]) -> String {
+    let couples: Vec<serde_json::Value> = rencontres
+        .iter()
+        .map(|r| {
+            serde_json::json!({
+                "home_team_id": r.home.to_string(),
+                "away_team_id": r.away.to_string(),
+            })
+        })
+        .collect();
+    serde_json::to_string(&couples).unwrap_or_else(|_| "[]".to_string())
 }
 
 /// Le nom d'une équipe, ou une mention explicite si le roster ne la connaît plus.
@@ -727,6 +782,8 @@ pub struct PanelRepairTemplate {
     /// quels au POST de validation. Sérialisés ici plutôt que reconstruits en JS —
     /// ils ne sont pas dans le DOM, contrairement aux rencontres.
     pub a_defaire_json: String,
+    /// Le même, en littéral de chaîne JSON — cf. `rencontres_json_litteral`.
+    pub a_defaire_json_litteral: String,
     pub vivier_vide: bool,
 }
 
@@ -753,6 +810,9 @@ pub fn rendre_reparation(
         round_id: round.id.to_string(),
         motif: String::new(),
         draw: DrawVm::from_domain(&prop.proposition, roster),
+        a_defaire_json_litteral: en_litteral(
+            &serde_json::to_string(&a_defaire).unwrap_or_else(|_| "[]".to_string()),
+        ),
         a_defaire_json: serde_json::to_string(&a_defaire).unwrap_or_else(|_| "[]".to_string()),
         a_defaire,
         vivier_vide: prop.vivier.is_empty(),
@@ -995,6 +1055,10 @@ fn journee_appariee(
         revanches: 0,
         ecartees: vec![],
         optimum_prouve: true,
+        // Une journée déjà appariée n'a rien à revalider : le champ existe pour
+        // l'aperçu, pas pour elle.
+        rencontres_json: "[]".to_string(),
+        rencontres_json_litteral: en_litteral("[]"),
     }
 }
 
@@ -1144,15 +1208,66 @@ mod tests {
         );
     }
 
+    /// Une journée appariée est une journée **qui porte des rencontres**.
+    ///
+    /// Ce test passait auparavant une journée vide en attendant « appariée » : il
+    /// fixait le défaut comme s'il était la règle, et c'est pour ça qu'il ne l'a
+    /// jamais signalé. Un test qui décrit le comportement observé plutôt que la
+    /// règle voulue protège le défaut au lieu du contrat.
     #[test]
     fn une_journee_appariee_donne_appariee() {
+        let round = journee_test();
+        // Deux équipes seulement, toutes deux présentes et appariées : sans quoi
+        // les silencieuses feraient un désaccord, qui prime — et c'est correct.
+        let d = dests(2);
+        let mut survey = campagne(&round, &d);
+        for dest in &d {
+            survey
+                .enregistrer(
+                    &dest.team_id,
+                    Venue::Presente,
+                    Repondant::Jeton,
+                    &vierge(),
+                    &date("2026-10-04"),
+                )
+                .unwrap();
+        }
+        survey.marquer_appariee(None);
+        let appariee = EtatJournee {
+            figee: false,
+            rencontres: vec![RencontreJournee {
+                pairing: PairingId::new(),
+                home: d[0].team_id,
+                away: d[1].team_id,
+            }],
+        };
+
+        assert_eq!(
+            etat_du_panneau(Some(&survey), &appariee, &date("2026-10-11")),
+            Panneau::Appariee
+        );
+    }
+
+    /// **R24, et le défaut que la carte 522 a trouvé.**
+    ///
+    /// Le premier jet lisait `survey.appariement()` — la mémoire de la campagne.
+    /// Quatre chemins du Calendrier suppriment des appariements sans rien savoir
+    /// d'une campagne : après un vidage, le panneau annonçait « Journée appariée »
+    /// sur une journée vide, indéfiniment.
+    ///
+    /// Aucun test unitaire ne l'attrapait, et celui-ci n'existait pas : le vidage
+    /// passe par l'autre onglet, et seul un e2e traverse les deux.
+    #[test]
+    fn une_journee_videee_au_calendrier_repasse_a_clos() {
         let round = journee_test();
         let mut survey = campagne(&round, &dests(4));
         survey.marquer_appariee(None);
 
+        // La campagne se croit appariée ; la journée, elle, est vide.
         assert_eq!(
             etat_du_panneau(Some(&survey), &vierge(), &date("2026-10-11")),
-            Panneau::Appariee
+            Panneau::Clos,
+            "R24 — l'appariement se lit sur la journée, jamais sur la campagne"
         );
     }
 

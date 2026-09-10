@@ -480,10 +480,32 @@ pub struct PairBody {
 /// que le serveur recalcule de toute façon (carte 517), et le lui faire porter
 /// autoriserait à mentir sur l'historique d'une rencontre — « 1re rencontre » sur
 /// une revanche.
+///
+/// # Les listes voyagent en **chaîne JSON**, et c'est une contrainte de la pile
+///
+/// `hx-vals` ne sait pas transporter un tableau jusqu'à `json-enc`. htmx aplatit
+/// les valeurs dans un `FormData`, où un tableau devient N entrées de même clé ;
+/// l'extension les recompose alors ainsi :
+///
+/// ```js
+/// if (Array.isArray(object[cleanKey])) object[cleanKey].push(typedValue)
+/// ```
+///
+/// `object[cleanKey]` vaut déjà le tableau entier — `getExpressionVars` rend la
+/// valeur typée d'origine — et `typedValue` aussi : **le tableau se pousse dans
+/// lui-même**. Le navigateur lève alors `TypeError: Converting circular structure
+/// to JSON`, et la requête ne part pas.
+///
+/// Le contournement retenu : un champ scalaire portant le JSON, désérialisé ici.
+/// Moins élégant qu'un tableau natif, mais c'est la seule forme que la pile
+/// transporte — et l'échec, lui, était silencieux côté serveur : sans la
+/// surveillance de la console par le harnais e2e, il se serait présenté comme
+/// « les rencontres ne sont pas écrites ».
 #[derive(Deserialize)]
 pub struct ConfirmDrawBody {
     pub round_id: String,
-    pub rencontres: Vec<PairBody>,
+    /// `[{"home_team_id": "…", "away_team_id": "…"}, …]`
+    pub rencontres: String,
     #[serde(default)]
     pub exemptee: Option<String>,
 }
@@ -491,11 +513,17 @@ pub struct ConfirmDrawBody {
 #[derive(Deserialize)]
 pub struct RepairBody {
     pub round_id: String,
-    /// Les rencontres que la défection rend caduques.
-    pub a_defaire: Vec<String>,
-    pub rencontres: Vec<PairBody>,
+    /// Les rencontres que la défection rend caduques — `["id", …]`.
+    pub a_defaire: String,
+    pub rencontres: String,
     #[serde(default)]
     pub exemptee: Option<String>,
+}
+
+/// Une liste reçue en chaîne JSON. Un contenu illisible est un `400` : c'est du
+/// format, pas une règle du jeu.
+fn liste_json<T: serde::de::DeserializeOwned>(brut: &str) -> Option<Vec<T>> {
+    serde_json::from_str(brut).ok()
 }
 
 /// Les couples, convertis par smart constructor. Un identifiant illisible est un
@@ -621,12 +649,15 @@ pub async fn post_confirm_draw(
         Err(resp) => return resp,
     };
 
-    let (Some(rencontres), Ok(exemptee), Ok(saison), Ok(espace)) = (
-        paires_de(&body.rencontres),
+    let (Some(couples), Ok(exemptee), Ok(saison), Ok(espace)) = (
+        liste_json::<PairBody>(&body.rencontres),
         exemptee_de(&body.exemptee),
         SeasonId::try_new(&season_id),
         SpaceId::try_new(&space_id),
     ) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let Some(rencontres) = paires_de(&couples) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
 
@@ -806,18 +837,18 @@ pub async fn post_repair(
         Err(resp) => return resp,
     };
 
-    let a_defaire: Option<Vec<PairingId>> = body
-        .a_defaire
-        .iter()
-        .map(|id| PairingId::try_new(id).ok())
-        .collect();
-    let (Some(a_defaire), Some(rencontres), Ok(exemptee), Ok(saison), Ok(espace)) = (
+    let a_defaire: Option<Vec<PairingId>> = liste_json::<String>(&body.a_defaire)
+        .and_then(|ids| ids.iter().map(|id| PairingId::try_new(id).ok()).collect());
+    let (Some(a_defaire), Some(couples), Ok(exemptee), Ok(saison), Ok(espace)) = (
         a_defaire,
-        paires_de(&body.rencontres),
+        liste_json::<PairBody>(&body.rencontres),
         exemptee_de(&body.exemptee),
         SeasonId::try_new(&season_id),
         SpaceId::try_new(&space_id),
     ) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let Some(rencontres) = paires_de(&couples) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
 

@@ -87,6 +87,11 @@
 # `competitions` pour l'onglet et le dépôt de campagnes, `auth` pour la garde,
 # et la fixture construit une compétition entière — donc `teams`, `spaces`,
 # `references`.
+# Le parcours complet de l'onglet Présences (carte 522) : lancement, saisie
+# manuelle, clôture, tirage, validation, défection, réparation, et le vidage au
+# Calendrier qui éprouve R24. Traverse `competitions` de bout en bout, `auth`
+# pour la garde, et la fixture construit une compétition entière.
+"test_competition_presences" = ["competitions", "auth", "teams", "spaces", "references"]
 "test_presences_tab" = ["competitions", "auth", "teams", "spaces", "references"]
 "test_competition_admin_acces" = ["competitions", "auth", "teams", "spaces",
                                   "references", "ranking"]
