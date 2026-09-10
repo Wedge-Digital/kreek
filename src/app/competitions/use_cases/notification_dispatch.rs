@@ -202,6 +202,18 @@ fn rendre(
         NotificationType::RoundClosing => cloture(round, l, app_url, d),
         NotificationType::RegistrationOpen => ouverture(l, app_url, d),
         NotificationType::RegistrationDeadline => date_limite(l, app_url, d),
+        // Le sondage de présence a son propre chemin d'expédition —
+        // `ISurveyMailer`, appelé par `launch_survey_use_case` — parce que son
+        // e-mail porte **une paire de boutons par équipe** (R1), ce que le patron
+        // « un destinataire, un message » de ce module ne sait pas rendre.
+        //
+        // Ces deux variantes n'atteignent donc jamais ce `match` : aucune
+        // planification ne les nomme. Le sujet vide qui sortirait d'ici se verrait
+        // immédiatement, plutôt qu'un `unreachable!()` qui ferait tomber le cron
+        // entier sur une donnée inattendue.
+        NotificationType::PresenceSurvey | NotificationType::PresenceReminder => {
+            (String::new(), String::new())
+        }
     }
 }
 

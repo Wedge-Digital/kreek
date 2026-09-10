@@ -104,6 +104,18 @@ pub async fn resolve(
             inscrits(&membres, &inscrites)
         }
         NotificationType::RegistrationDeadline => non_inscrits(&membres, season, &inscrites),
+        // **Le sondage de présence ne passe pas par le cron.** Il part à la
+        // demande, quand l'organisateur lance sa campagne
+        // (`launch_survey_use_case`), et ses destinataires sortent de
+        // `survey_roster_service` — qui croise les équipes engagées et les
+        // adresses, ce que cette fonction ne sait pas faire.
+        //
+        // Les deux variantes existent pour le **journal d'envois**, pas pour la
+        // sélection périodique. Rendre une liste vide ici est donc exact : aucune
+        // planification ne les nomme, et `send_due_notifications` ne les atteint
+        // jamais. Le jour où la relance automatique de R? sera déclenchée par le
+        // cron, c'est ici qu'il faudra brancher `sans_reponse()`.
+        NotificationType::PresenceSurvey | NotificationType::PresenceReminder => vec![],
     };
 
     retenus

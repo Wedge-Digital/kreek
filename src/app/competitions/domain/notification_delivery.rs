@@ -24,6 +24,16 @@ pub enum NotificationType {
     RoundEve,
     RoundClosing,
     RegistrationDeadline,
+    /// L'ouverture d'une campagne de présence (épic E16).
+    PresenceSurvey,
+    /// La relance des silencieux.
+    ///
+    /// **Deux variantes et non une**, alors que `DeliveryKey` porte déjà
+    /// `target_date` et qu'une seule aurait mécaniquement suffi. Deux valent
+    /// mieux : le journal dit **ce qui** est parti et pas seulement quand, et une
+    /// relance envoyée le jour de l'ouverture cesse d'être bloquée par une clé
+    /// qu'elle partagerait avec l'envoi initial.
+    PresenceReminder,
 }
 
 impl NotificationType {
@@ -37,6 +47,8 @@ impl NotificationType {
             Self::RoundEve => "round_eve",
             Self::RoundClosing => "round_closing",
             Self::RegistrationDeadline => "registration_deadline",
+            Self::PresenceSurvey => "presence_survey",
+            Self::PresenceReminder => "presence_reminder",
         }
     }
 }
@@ -68,6 +80,11 @@ mod tests {
         );
         assert_eq!(NotificationType::RoundEve.as_str(), "round_eve");
         assert_eq!(NotificationType::RoundClosing.as_str(), "round_closing");
+        assert_eq!(NotificationType::PresenceSurvey.as_str(), "presence_survey");
+        assert_eq!(
+            NotificationType::PresenceReminder.as_str(),
+            "presence_reminder"
+        );
         assert_eq!(
             NotificationType::RegistrationDeadline.as_str(),
             "registration_deadline"

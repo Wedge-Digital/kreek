@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ta réponse manque encore — Blood Bowl Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&family=Roboto+Slab:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    /* Mêmes conventions que les quatre e-mails déjà en place
+       (assets/templates/emails/fr_FR/) : valeurs en dur portant le nom de leur token,
+       aucune feuille externe, logo en URL absolue, width/height en attributs
+       HTML pour Outlook. */
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      font-size: 16px;                            /* --text-small */
+      color: #26263D;                             /* --dark-1 */
+      background: #EFF2F5;                        /* --dark-7 */
+      -webkit-text-size-adjust: 100%;
+    }
+    .wrapper { max-width: 560px; margin: 0 auto; padding: 32px 16px; }
+
+    .header {
+      background: linear-gradient(135deg, #003049 0%, #555770 100%);
+      border-radius: 12px 12px 0 0;
+      padding: 32px 28px;
+      text-align: center;
+    }
+    .header-logo { margin-bottom: 20px; }
+    .header-logo img { display: block; margin: 0 auto; border: 0; width: 200px; height: 81px; }
+    .header-title {
+      font-family: 'Roboto Slab', Georgia, 'Times New Roman', serif;
+      font-size: 24px;                            /* --h4 */
+      font-weight: 700; color: #FFFFFF; line-height: 1.3;
+      letter-spacing: -0.3px;
+    }
+    .header-sub { font-size: 14px; color: rgba(255,255,255,0.65); margin-top: 8px; }
+
+    .body { background: #FFFFFF; padding: 28px; }
+    .greeting { font-size: 16px; color: #26263D; margin-bottom: 16px; }
+    .text { font-size: 16px; color: #555770; line-height: 1.6; margin-bottom: 20px; }
+    .subtitle {
+      font-family: 'Roboto Slab', Georgia, 'Times New Roman', serif;
+      font-size: 18px;                            /* --h5 */
+      font-weight: 500; color: #26263D; margin: 0 0 12px;
+    }
+
+    .info-card { background: #F0F2F4; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .info-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+    .info-label { color: #8F90A6; flex-shrink: 0; }
+    .info-value { color: #26263D; font-weight: 600; text-align: right; }
+    .info-sep { border: none; border-top: 1px solid #E5E6EF; margin: 8px 0; }
+
+    /* ── Les deux réponses ──
+       Deux inline-block séparés d'une espace insécable, et non un flex ni une
+       table : c'est la seule construction qui tienne d'Outlook à Gmail mobile
+       sans repli. Sur un écran étroit ils passent l'un sous l'autre d'eux-mêmes.
+
+       Vert plein pour « je serai là », contour pour « je ne pourrai pas » : la
+       réponse attendue est la présence, et un refus ne doit pas se cliquer par
+       inadvertance. L'orange reste l'accent du site, jamais une surface
+       d'action — comme dans les quatre e-mails déjà en place. */
+    .answers { text-align: center; margin: 28px 0 8px; }
+    .answer-btn {
+      display: inline-block;
+      font-size: 16px; font-weight: 700; text-decoration: none;
+      padding: 14px 30px; border-radius: 8px; letter-spacing: 0.3px;
+      margin: 6px 4px;
+    }
+    .answer-yes { background: #4A7364; color: #FFFFFF; }      /* --green assombri : blanc lisible dessus */
+    .answer-no  {
+      background: #FFFFFF; color: #555770;                    /* --dark-2 */
+      border: 2px solid #C7C9D9;                              /* --dark-4 */
+      padding: 12px 28px;
+    }
+    .answer-hint {
+      text-align: center; font-size: 13px; color: #8F90A6;
+      line-height: 1.5; margin-bottom: 24px;
+    }
+
+    /* Échéance : teinte et filet orange, patron de .team-card-status--pending. */
+    .deadline {
+      background: rgba(255,107,53,0.10);
+      border-left: 3px solid #FF6B35;
+      border-radius: 6px; padding: 14px 18px; margin-bottom: 24px;
+      font-size: 14px; color: #26263D; line-height: 1.5;
+    }
+    .deadline strong { color: #FF6B35; }
+
+    .secondary-link { text-align: center; margin-bottom: 8px; }
+    .secondary-link a { font-size: 14px; color: #003049; text-decoration: none; font-weight: 600; }
+
+    .footer {
+      background: #F0F2F4; border-radius: 0 0 12px 12px;
+      padding: 20px 28px; text-align: center;
+      font-size: 12px; color: #8F90A6; line-height: 1.6;
+    }
+    .footer a { color: #003049; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">
+        <img src="{{ app_url }}/static/img/email-logo.png"
+             width="200" height="81" alt="Blood Bowl Club">
+      </div>
+      <div class="header-title">Il te reste peu de temps pour {{ round_name }}</div>
+      <div class="header-sub">Ta réponse manque encore.</div>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+      <div class="greeting">Salut <strong>{{ coach_name }}</strong>,</div>
+
+      <div class="text">
+        Tu n'as pas encore dit si tu serais là pour la journée
+        <strong>{{ round_name }}</strong> de <strong>{{ competition_name }}</strong>.
+        {# R5 — le silence n'est pas un refus : c'est précisément pour ça que la
+           relance existe, et le ton doit le dire. #}
+        Sans réponse de ta part, ton équipe reste hors du tirage — ce serait
+        dommage si c'est juste un e-mail passé à la trappe.
+      </div>
+
+      {# Deux lignes de date, comme les quatre e-mails existants — et non un
+         libellé « du 12 au 19 » composé en amont. La carte 526 annonçait un
+         `round_dates` unique ; le suivre aurait donné à ce seul e-mail une mise
+         en forme que les quatre autres n'ont pas, et une mise en forme inventée
+         pour un seul écran est une divergence. #}
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">Compétition</span>
+          <span class="info-value">{{ competition_name }}</span>
+        </div>
+        <hr class="info-sep">
+        <div class="info-row">
+          <span class="info-label">Journée</span>
+          <span class="info-value">{{ round_name }}</span>
+        </div>
+        <hr class="info-sep">
+        {# Une journée à date fixe n'a pas de fin à annoncer, et son libellé
+           change avec elle. #}
+        <div class="info-row">
+          <span class="info-label">{% if date_end.is_some() %}Ouverture{% else %}Se tient le{% endif %}</span>
+          <span class="info-value">{{ date_start }}</span>
+        </div>
+        {% if let Some(fin) = date_end %}
+        <div class="info-row">
+          <span class="info-label">Clôture</span>
+          <span class="info-value">{{ fin }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="deadline">
+        Il ne reste que jusqu'au <strong>{{ deadline }}</strong>. Après, les liens
+        ci-dessous ne répondent plus et le tirage se fait sans ton équipe.
+      </div>
+
+      {# R1 — la réponse porte sur l'équipe, jamais sur le coach : un coach qui
+         engage deux équipes reçoit **un** e-mail à deux paires de boutons, et
+         peut venir avec l'une sans l'autre.
+
+         **Un seul chemin de rendu**, y compris pour le coach à une seule équipe.
+         La maquette mettait alors « Ton équipe » dans la carte d'information ;
+         l'intertitre porte la même information, et il n'y a qu'une branche à
+         éprouver. Une branche sur le nombre d'équipes aurait doublé le rendu
+         pour déplacer une étiquette.
+
+         Les URL arrivent construites — le gabarit ne les assemble pas : la forme
+         du lien serait alors dans du HTML d'e-mail, hors de portée de tout test. #}
+      {% for equipe in equipes %}
+      <div class="subtitle">{{ equipe.team_name }}</div>
+      <div class="answers">
+        <a href="{{ equipe.yes_url }}" class="answer-btn answer-yes">Je serai là</a>
+        <a href="{{ equipe.no_url }}" class="answer-btn answer-no">Je ne pourrai pas</a>
+      </div>
+      {% endfor %}
+
+      <div class="answer-hint">
+        Un seul clic suffit — pas besoin de te connecter.
+        {# « tant que le sondage est ouvert » seul serait faux : R13 fige les
+           présences au premier rapport publié, ce qui peut arriver sur une
+           campagne rouverte encore ouverte. #}
+        <br>Tu pourras changer d'avis tant que le sondage est ouvert et que la
+        journée n'a pas commencé.
+      </div>
+
+      <div class="secondary-link">
+        <a href="{{ competition_url }}">Voir la compétition →</a>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Cet email a été envoyé par <a href="{{ app_url }}">Blood Bowl Club</a>
+      {# La maquette nommait l'équipe au singulier. Un coach peut en engager
+         deux, et R1 lui envoie un seul message : le singulier serait faux une
+         fois sur deux. #}
+      <br>parce que tu participes à <strong>{{ competition_name }}</strong>.
+    </div>
+
+  </div>
+</body>
+</html>

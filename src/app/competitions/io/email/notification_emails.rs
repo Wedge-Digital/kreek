@@ -1,4 +1,4 @@
-//! Les quatre gabarits d'e-mail de compétition, et leurs contextes de rendu.
+//! Les six gabarits d'e-mail de compétition, et leurs contextes de rendu.
 //!
 //! # Pourquoi dans `io/`
 //!
@@ -97,6 +97,71 @@ pub struct RegistrationDeadlineEmail {
     pub remaining_slots: String,
 }
 
+/// Une équipe engagée, et sa paire de liens.
+///
+/// R1 — la réponse porte sur l'équipe, jamais sur le coach. Un coach qui engage
+/// deux équipes reçoit **un** e-mail à deux paires de boutons : un e-mail par
+/// équipe multiplierait les messages pour la même soirée, et il ne saurait pas
+/// lequel il a déjà traité.
+///
+/// **Les deux URL arrivent construites.** Les composer ici mettrait la forme du
+/// lien dans du HTML d'e-mail, hors de portée de tout test.
+pub struct EquipeLigneVm {
+    pub team_name: String,
+    pub yes_url: String,
+    pub no_url: String,
+}
+
+/// L'ouverture d'une campagne de présence.
+///
+/// `equipes` est un `Vec` même pour un coach à une seule équipe : un champ
+/// scalaire aurait obligé à un second gabarit dès la première ligue un peu
+/// vivante, et le gabarit rend la même boucle dans les deux cas.
+///
+/// `date_start` + `date_end` et non un libellé composé : c'est la forme des
+/// quatre e-mails plus anciens. La carte 526 annonçait un `round_dates` unique —
+/// le suivre aurait donné à ce seul e-mail une mise en forme que les autres
+/// n'ont pas.
+#[derive(Template)]
+#[template(path = "emails/fr_FR/competition_presence_survey.html")]
+pub struct PresenceSurveyEmail {
+    pub app_url: String,
+    pub coach_name: String,
+    pub competition_name: String,
+    pub competition_url: String,
+    pub round_name: String,
+    pub date_start: String,
+    /// `None` pour une journée à date fixe : la ligne « Clôture » disparaît et
+    /// « Ouverture » devient « Se tient le ».
+    pub date_end: Option<String>,
+    pub deadline: String,
+    pub equipes: Vec<EquipeLigneVm>,
+}
+
+/// La relance des silencieux. Mêmes champs que l'ouverture — seuls le titre,
+/// l'accroche et le ton de l'encart d'échéance changent.
+///
+/// **Deux gabarits et non un paramétré** : c'est la convention des quatre
+/// existants, et une condition sur « est-ce une relance ? » au milieu d'un HTML
+/// d'e-mail se relit mal. Le prix est la duplication du bloc de style, que les
+/// six gabarits paient déjà.
+///
+/// Sa `deadline` est celle de la campagne, éventuellement repoussée par une
+/// réouverture : la relance ne porte pas d'échéance propre (R7).
+#[derive(Template)]
+#[template(path = "emails/fr_FR/competition_presence_reminder.html")]
+pub struct PresenceReminderEmail {
+    pub app_url: String,
+    pub coach_name: String,
+    pub competition_name: String,
+    pub competition_url: String,
+    pub round_name: String,
+    pub date_start: String,
+    pub date_end: Option<String>,
+    pub deadline: String,
+    pub equipes: Vec<EquipeLigneVm>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,6 +172,46 @@ mod tests {
             home_team: equipe.to_string(),
             away_team: adversaire.to_string(),
         }
+    }
+
+    fn ligne(equipe: &str, n: u8) -> EquipeLigneVm {
+        EquipeLigneVm {
+            team_name: equipe.to_string(),
+            yes_url: format!("https://kreek.example/presence/jeton{n}/oui"),
+            no_url: format!("https://kreek.example/presence/jeton{n}/non"),
+        }
+    }
+
+    fn sondage(date_end: Option<&str>, equipes: Vec<EquipeLigneVm>) -> String {
+        PresenceSurveyEmail {
+            app_url: "https://kreek.example".into(),
+            coach_name: "Alice".into(),
+            competition_name: "Ligue de Fer".into(),
+            competition_url: "https://kreek.example/app/s/competitions/c/x".into(),
+            round_name: "Journée 3".into(),
+            date_start: "11/09/2026".into(),
+            date_end: date_end.map(str::to_string),
+            deadline: "09/09/2026".into(),
+            equipes,
+        }
+        .render()
+        .expect("le gabarit doit se rendre")
+    }
+
+    fn relance(equipes: Vec<EquipeLigneVm>) -> String {
+        PresenceReminderEmail {
+            app_url: "https://kreek.example".into(),
+            coach_name: "Alice".into(),
+            competition_name: "Ligue de Fer".into(),
+            competition_url: "https://kreek.example/app/s/competitions/c/x".into(),
+            round_name: "Journée 3".into(),
+            date_start: "11/09/2026".into(),
+            date_end: Some("18/09/2026".into()),
+            deadline: "09/09/2026".into(),
+            equipes,
+        }
+        .render()
+        .expect("le gabarit doit se rendre")
     }
 
     fn veille(date_end: Option<&str>, participation: ParticipationVm) -> String {
@@ -183,6 +288,91 @@ mod tests {
 
         assert!(h.contains("Tes matchs"));
         assert!(h.contains("Les Trois") && h.contains("Les Quatre"));
+    }
+
+    // ── Le sondage de présence et sa relance ─────────────────────────────────
+
+    /// R1 — deux équipes, quatre boutons, quatre URL distinctes. C'est le cas
+    /// que la maquette laissait en commentaire, et le seul où une boucle mal
+    /// écrite se voit : avec une seule équipe, un `for` fautif rend la même
+    /// chose qu'un rendu direct.
+    #[test]
+    fn deux_equipes_donnent_quatre_boutons_aux_quatre_url() {
+        let h = sondage(
+            Some("18/09/2026"),
+            vec![
+                ligne("Les Crocs du Chaos", 1),
+                ligne("Les Choux de Bruxelles", 2),
+            ],
+        );
+
+        for url in [
+            "https://kreek.example/presence/jeton1/oui",
+            "https://kreek.example/presence/jeton1/non",
+            "https://kreek.example/presence/jeton2/oui",
+            "https://kreek.example/presence/jeton2/non",
+        ] {
+            assert!(h.contains(url), "URL absente du rendu : {url}");
+        }
+        assert_eq!(
+            h.matches("class=\"answer-btn").count(),
+            4,
+            "deux équipes doivent produire exactement quatre boutons"
+        );
+        assert!(h.contains("Les Crocs du Chaos") && h.contains("Les Choux de Bruxelles"));
+    }
+
+    /// L'intertitre porte le nom de l'équipe **aussi** pour un coach qui n'en a
+    /// qu'une : c'est ce qui remplace la ligne « Ton équipe » de la maquette, et
+    /// ce qui permet un seul chemin de rendu.
+    #[test]
+    fn une_equipe_donne_une_seule_paire_sous_son_nom() {
+        let h = sondage(Some("18/09/2026"), vec![ligne("Les Crocs du Chaos", 1)]);
+
+        assert_eq!(h.matches("class=\"answer-btn").count(), 2);
+        assert!(h.contains("Les Crocs du Chaos"));
+        assert!(!h.contains("jeton2"));
+    }
+
+    /// L'indication de bas de bloc est **hors de la boucle** : la répéter sous
+    /// chaque paire ferait un e-mail bavard pour un coach à trois équipes, et
+    /// c'est l'erreur qu'une accolade mal placée produit.
+    #[test]
+    fn l_indication_de_clic_ne_se_repete_pas_par_equipe() {
+        let h = sondage(
+            Some("18/09/2026"),
+            vec![ligne("Une", 1), ligne("Deux", 2), ligne("Trois", 3)],
+        );
+
+        assert_eq!(
+            h.matches("Un seul clic suffit").count(),
+            1,
+            "l'indication doit être rendue une fois, après la boucle"
+        );
+    }
+
+    #[test]
+    fn une_journee_a_date_fixe_n_annonce_pas_de_cloture() {
+        let h = sondage(None, vec![ligne("Les Crocs du Chaos", 1)]);
+
+        assert!(!h.contains("Clôture"), "une date fixe n'a pas de fin");
+        assert!(h.contains("Se tient le"));
+    }
+
+    /// Les deux gabarits ont été écrits d'un même moule ; une confusion de
+    /// fichier ne se verrait nulle part ailleurs — les champs sont identiques,
+    /// donc tout se rend sans erreur.
+    #[test]
+    fn la_relance_ne_dit_pas_la_meme_chose_que_l_ouverture() {
+        let ouverture = sondage(Some("18/09/2026"), vec![ligne("Les Crocs du Chaos", 1)]);
+        let rappel = relance(vec![ligne("Les Crocs du Chaos", 1)]);
+
+        assert!(ouverture.contains("Seras-tu là pour Journée 3 ?"));
+        assert!(!ouverture.contains("Il te reste peu de temps"));
+
+        assert!(rappel.contains("Il te reste peu de temps pour Journée 3"));
+        assert!(rappel.contains("Tu n'as pas encore dit si tu serais là"));
+        assert!(!rappel.contains("Seras-tu là pour"));
     }
 
     // ── Contraintes d'e-mail ─────────────────────────────────────────────────
@@ -327,6 +517,82 @@ mod tests {
         ] {
             assert!(veille.contains(attendu), "veille : {attendu} absent");
         }
+
+        // Les deux équipes ne sont pas décoratives : un gabarit qui rendrait la
+        // première seulement passerait un contrôle à une équipe.
+        let presence = PresenceSurveyEmail {
+            app_url: "https://kreek.example".into(),
+            coach_name: "VAL-coach".into(),
+            competition_name: "VAL-competition".into(),
+            competition_url: "https://kreek.example/VAL-url".into(),
+            round_name: "VAL-journee".into(),
+            date_start: "VAL-debut".into(),
+            date_end: Some("VAL-fin".into()),
+            deadline: "VAL-echeance".into(),
+            equipes: vec![
+                EquipeLigneVm {
+                    team_name: "VAL-equipe-une".into(),
+                    yes_url: "https://kreek.example/VAL-oui-une".into(),
+                    no_url: "https://kreek.example/VAL-non-une".into(),
+                },
+                EquipeLigneVm {
+                    team_name: "VAL-equipe-deux".into(),
+                    yes_url: "https://kreek.example/VAL-oui-deux".into(),
+                    no_url: "https://kreek.example/VAL-non-deux".into(),
+                },
+            ],
+        }
+        .render()
+        .unwrap();
+        for attendu in [
+            "VAL-coach",
+            "VAL-competition",
+            "VAL-url",
+            "VAL-journee",
+            "VAL-debut",
+            "VAL-fin",
+            "VAL-echeance",
+            "VAL-equipe-une",
+            "VAL-oui-une",
+            "VAL-non-une",
+            "VAL-equipe-deux",
+            "VAL-oui-deux",
+            "VAL-non-deux",
+        ] {
+            assert!(presence.contains(attendu), "présence : {attendu} absent");
+        }
+
+        let rappel = PresenceReminderEmail {
+            app_url: "https://kreek.example".into(),
+            coach_name: "VAL-coach".into(),
+            competition_name: "VAL-competition".into(),
+            competition_url: "https://kreek.example/VAL-url".into(),
+            round_name: "VAL-journee".into(),
+            date_start: "VAL-debut".into(),
+            date_end: Some("VAL-fin".into()),
+            deadline: "VAL-echeance".into(),
+            equipes: vec![EquipeLigneVm {
+                team_name: "VAL-equipe-une".into(),
+                yes_url: "https://kreek.example/VAL-oui-une".into(),
+                no_url: "https://kreek.example/VAL-non-une".into(),
+            }],
+        }
+        .render()
+        .unwrap();
+        for attendu in [
+            "VAL-coach",
+            "VAL-competition",
+            "VAL-url",
+            "VAL-journee",
+            "VAL-debut",
+            "VAL-fin",
+            "VAL-echeance",
+            "VAL-equipe-une",
+            "VAL-oui-une",
+            "VAL-non-une",
+        ] {
+            assert!(rappel.contains(attendu), "relance : {attendu} absent");
+        }
     }
 
     #[test]
@@ -372,6 +638,12 @@ mod tests {
             }
             .render()
             .unwrap(),
+            sondage(
+                Some("18/09/2026"),
+                vec![ligne("Les Crocs du Chaos", 1), ligne("Les Choux", 2)],
+            ),
+            sondage(None, vec![ligne("Les Crocs du Chaos", 1)]),
+            relance(vec![ligne("Les Crocs du Chaos", 1)]),
         ];
 
         for (i, html) in rendus.iter().enumerate() {

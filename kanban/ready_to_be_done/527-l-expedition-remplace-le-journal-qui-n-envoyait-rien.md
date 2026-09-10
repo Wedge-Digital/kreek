@@ -56,8 +56,35 @@ qui remonterait**. Un serveur de messagerie indisponible ne doit pas empêcher u
 campagne de s'ouvrir : l'organisateur peut saisir à la main (R6), et le coach
 connecté répondre depuis l'encart.
 
+## Ce que la 526 laisse ouvert — relevé en la livrant
+
+**Trois champs manquent au trait, et c'est ici qu'ils s'ajoutent.**
+`PresenceSurveyEmail` demande `competition_name`, `competition_url`,
+`date_start` et `date_end` ; `CampagneAAnnoncer` ne porte que `round_name` et
+`deadline`. Rien à deviner dans l'implémentation : ce sont des données que le use
+case a sous la main au moment où il appelle `expedier`, et les faire charger par
+l'expéditeur lui donnerait un accès aux dépôts qu'il n'a pas à avoir.
+
+**`EnvoiPresence` a perdu le `coach_id`, dont `DeliveryKey` a besoin.**
+`EquipeSollicitee` le porte (`survey_roster_service.rs:36`), `envois_pour` ne le
+recopie pas — la 515 n'en avait pas l'usage. La clé du journal étant
+`(type, saison, journée, date, coach_id)`, sans lui il n'y a pas de `claim`
+possible. À rajouter au DTO, pas à retrouver par l'adresse.
+
+**Le regroupement par coach est un travail explicite, et son oubli ne ressemble
+pas à un doublon.** `expedier` reçoit **un `EnvoiPresence` par équipe** ; R1 veut
+un message par coach. Si l'implémentation boucle naïvement sur les envois, le
+premier `claim` du coach passe et **le second rend zéro ligne** : sa deuxième
+équipe n'a jamais ses boutons, et le compte rendu affiche « déjà envoyé » — un
+message rassurant pour une équipe qu'on vient de perdre. Grouper par adresse
+avant de rendre le gabarit, et rendre **un** `EquipeLigneVm` par équipe du
+groupe.
+
 ## Checklist
 
+- [ ] `CampagneAAnnoncer` gagne le nom de la compétition, son URL et les deux
+      dates de journée ; `EnvoiPresence` gagne le `coach_id`
+- [ ] Le regroupement par adresse **avant** le rendu — un message, N paires
 - [ ] `survey_mailer.rs` : `claim`, envoi, `confirm`, un destinataire à la fois
 - [ ] La construction des URL — `app_url` + chemin public + jeton + verbe
 - [ ] Les deux `target_date`, selon `EnvoiKind`
