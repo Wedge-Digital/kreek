@@ -131,3 +131,89 @@ def test_un_membre_simple_est_refuse_sur_l_onglet_et_ses_fragments(
         f"la route {suffixe or '/presences'} a répondu {reponse.status_code} "
         "à un membre sans droit d'administration"
     )
+
+
+# ── Le protocole des actions (carte 521) ──────────────────────────────────────
+#
+# Deux cas seulement, et c'est délibéré : le parcours complet — lancement, tirage,
+# validation — est le sujet de la carte 522. Ceux-ci éprouvent le **protocole**, qui
+# vaut pour les dix actions, et qu'aucun test unitaire ne voit :
+#
+#   succès  → corps vide + `HX-Trigger: presenceChanged`, les widgets se rechargent
+#   refus   → le panneau porteur du motif, `HX-Retarget` + `HX-Reswap`, sans trigger
+#
+# Les vérifier une fois suffit : le reste des actions passe par les mêmes trois
+# helpers.
+
+
+def _url_action(space_id, competition, action):
+    return (
+        f"{BASE_URL}/app/{space_id}/competitions/"
+        f"{competition['competition_id']}/{competition['season_id']}/admin/presences/{action}"
+    )
+
+
+def _premiere_journee(space_id, competition):
+    """La première journée jouable de la saison, lue en base.
+
+    En base et non à l'écran : le test du protocole n'a pas à dépendre du rendu de
+    la barre latérale, que d'autres tests couvrent déjà.
+    """
+    from db_helpers import query_db
+
+    lignes = query_db(
+        "SELECT id FROM competition_match_days "
+        f"WHERE season_id = '{competition['season_id']}' AND day_type <> 'rest' "
+        "ORDER BY position LIMIT 1"
+    )
+    assert lignes, "la fixture doit avoir programmé des journées"
+    return lignes[0].strip()
+
+
+@pytest.fixture(scope="module")
+def journee(space_id, competition):
+    return _premiere_journee(space_id, competition)
+
+
+def test_un_succes_rend_un_corps_vide_et_declenche_presence_changed(
+    space_id, competition, journee
+):
+    """Le succès ne remplace rien : les deux widgets se rechargent d'eux-mêmes sur
+    l'événement. Rendre le fragment *et* déclencher le rechargement peindrait le
+    panneau deux fois."""
+    reponse = requests.post(
+        _url_action(space_id, competition, "launch"),
+        json={"round_id": journee, "deadline": "2099-12-31", "auto_remind": True},
+        headers={"HX-Request": "true"},
+        timeout=20,
+    )
+
+    assert reponse.status_code == 200, reponse.text[:400]
+    assert reponse.headers.get("HX-Trigger") == "presenceChanged"
+    assert reponse.text == "", "le succès ne rend aucun corps"
+    assert "HX-Retarget" not in reponse.headers, "rien à rediriger sur un succès"
+
+
+def test_un_refus_metier_rend_le_panneau_avec_son_motif(space_id, competition, journee):
+    """R2 — une seconde campagne sur la même journée est refusée, et le motif
+    s'affiche **dans le panneau**, jamais dans une boîte du navigateur.
+
+    Dépend du test précédent, qui a lancé la campagne : le refus n'existe qu'une
+    fois la première ouverte. Les tests d'un fichier s'exécutent dans l'ordre, et
+    c'est déjà ce dont dépend `test_dismissals_banner…` ailleurs dans la suite.
+    """
+    reponse = requests.post(
+        _url_action(space_id, competition, "launch"),
+        json={"round_id": journee, "deadline": "2099-12-31", "auto_remind": False},
+        headers={"HX-Request": "true"},
+        timeout=20,
+    )
+
+    assert reponse.status_code == 200, "un refus métier n'est pas une erreur HTTP"
+    assert reponse.headers.get("HX-Retarget") == "#presences-panel"
+    assert reponse.headers.get("HX-Reswap") == "innerHTML"
+    assert (
+        "HX-Trigger" not in reponse.headers
+    ), "un refus ne déclenche rien : le panneau se rechargerait par-dessus le motif"
+    assert "panel-refus" in reponse.text, "le motif est dans le panneau"
+    assert "existe déjà" in reponse.text

@@ -16,4 +16,19 @@
   {% if row.saisi_par_admin %}
     <span class="team-badge-admin" title="Réponse saisie par un organisateur">saisi par vous</span>
   {% endif %}
+  {# **Deux boutons, pas de menu au « ⋯ »** : le menu demanderait un `x-data` par
+     carte et un calque qu'un parent en `overflow` peut rogner, pour ajouter un
+     clic à chaque correction. R6 — la réponse portera le badge « saisi par vous ». #}
+  <div class="team-acts">
+    <button class="team-act team-act--present" type="button" title="Marquer présente"
+            hx-post="{{ actions.answer }}"
+            hx-vals='{"round_id": "{{ round_id }}", "team_id": "{{ row.team_id }}", "presence": "presente"}'
+            hx-ext="json-enc"
+            hx-swap="none">présent</button>
+    <button class="team-act team-act--absent" type="button" title="Marquer absente"
+            hx-post="{{ actions.answer }}"
+            hx-vals='{"round_id": "{{ round_id }}", "team_id": "{{ row.team_id }}", "presence": "absente"}'
+            hx-ext="json-enc"
+            hx-swap="none">absent</button>
+  </div>
 </div>

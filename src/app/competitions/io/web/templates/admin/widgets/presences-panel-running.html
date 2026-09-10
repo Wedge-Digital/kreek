@@ -6,6 +6,7 @@
    qui déclare leurs routes. #}
 <div class="presences-panel" hx-disinherit="*">
   {% include "admin/widgets/presences-round-head.html" %}
+  {% include "admin/widgets/presences-panel-motif.html" %}
 
   <div class="panel-header">
     <div class="panel-title">
@@ -54,5 +55,41 @@
       <div class="colonne-head">Sans réponse · {{ avancement.sans_reponse }}</div>
       {% for row in sans_reponse %}{% include "admin/widgets/presences-team-card.html" %}{% endfor %}
     </div>
+  </div>
+
+  <div class="panel-footer">
+    {% if clos %}
+      {# R23 — rouvrir exige une nouvelle échéance : la clôture étant calculée,
+         rouvrir sans repousser la date rouvrirait sur une campagne close dans la
+         seconde. #}
+      <label class="form-label" for="presences-nouvelle-echeance">Nouvelle échéance</label>
+      <input class="date-input" id="presences-nouvelle-echeance" type="date">
+      <button class="btn-outline-sm"
+              hx-post="{{ actions.reopen }}"
+              hx-vals='js:{"round_id": "{{ round_id }}",
+                           "deadline": document.getElementById("presences-nouvelle-echeance").value}'
+              hx-ext="json-enc"
+              hx-swap="none">Rouvrir le sondage</button>
+      {# R15 — le bouton est inactif **avec son motif** affiché plus haut. Un
+         bouton mort sans explication passerait pour une panne. #}
+      <button class="btn-primary-sm"
+              hx-post="{{ actions.draw }}"
+              hx-vals='{"round_id": "{{ round_id }}"}'
+              hx-ext="json-enc"
+              hx-swap="none"
+              {% if !peut_tirer %}disabled{% endif %}>Apparier les présents</button>
+    {% else %}
+      <button class="btn-outline-sm"
+              hx-post="{{ actions.remind }}"
+              hx-vals='{"round_id": "{{ round_id }}"}'
+              hx-ext="json-enc"
+              hx-swap="none">Relancer les sans-réponse</button>
+      <button class="btn-primary-sm"
+              hx-post="{{ actions.close }}"
+              hx-vals='{"round_id": "{{ round_id }}"}'
+              hx-ext="json-enc"
+              hx-confirm="Clore le sondage ? Les liens des e-mails ne répondront plus."
+              hx-swap="none">Clore le sondage</button>
+    {% endif %}
   </div>
 </div>

@@ -28,6 +28,7 @@ use crate::app::competitions::domain::tirage::{DrawProposal, Historique, Propose
 use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
 use crate::app::competitions::io::web::admin::admin_scope::journee_de_la_saison;
 use crate::app::competitions::use_cases::presences::etat_journee::etat_de_la_journee;
+use crate::app::competitions::use_cases::presences::propose_repair_use_case::RepairProposal;
 use crate::app::competitions::use_cases::presences::survey_roster_service;
 use crate::app::competitions::use_cases::presences::survey_roster_service::{
     LignePresence, RosterDeCampagne,
@@ -412,7 +413,12 @@ fn initiales_de(nom: &str) -> String {
 /// L'aperçu du tirage, ou la journée appariée.
 pub struct DrawVm {
     pub rencontres: Vec<DrawRowVm>,
+    /// Le **nom** de l'exemptée, pour l'écran.
     pub exemptee: Option<String>,
+    /// Son identifiant, pour que la validation le renvoie. Deux champs et non un :
+    /// afficher un identifiant est le défaut de la carte 506, et renvoyer un nom
+    /// ne désignerait rien.
+    pub exemptee_id: String,
     /// Comptés par le domaine, qui a produit les `Historique`. Les recompter en
     /// parcourant `rencontres` marcherait aujourd'hui et deviendrait faux le jour
     /// où une rencontre porterait un troisième motif.
@@ -426,22 +432,41 @@ pub struct DrawVm {
 }
 
 impl DrawVm {
-    pub fn from_domain(prop: &DrawProposal) -> Self {
-        let rencontres = DrawRowVm::all_from_domain(&prop.rencontres);
+    /// **Le roster nomme les équipes.** Sans lui, l'aperçu afficherait des
+    /// identifiants de vingt-six caractères — le défaut de la carte 506, où « Affecté
+    /// par » imprimait un ULID au lieu du nom du commissaire.
+    pub fn from_domain(prop: &DrawProposal, roster: &RosterDeCampagne) -> Self {
+        let rencontres = DrawRowVm::all_from_domain(&prop.rencontres, roster);
         Self {
             inedites: rencontres.iter().filter(|r| !r.est_revanche).count(),
             revanches: rencontres.iter().filter(|r| r.est_revanche).count(),
             rencontres,
-            exemptee: prop.exemptee.map(|t| t.to_string()),
-            ecartees: prop.ecartees.iter().map(|t| t.to_string()).collect(),
+            exemptee: prop.exemptee.map(|t| nom_de(&t, roster)),
+            exemptee_id: prop.exemptee.map(|t| t.to_string()).unwrap_or_default(),
+            ecartees: prop.ecartees.iter().map(|t| nom_de(t, roster)).collect(),
             optimum_prouve: prop.optimum_prouve,
         }
     }
 }
 
+/// Le nom d'une équipe, ou une mention explicite si le roster ne la connaît plus.
+///
+/// « Équipe désengagée » plutôt que l'identifiant : R18 l'a écartée de la saison,
+/// et le dire est plus utile qu'un ULID que personne ne sait lire.
+pub fn nom_de(team_id: &TeamId, roster: &RosterDeCampagne) -> String {
+    roster
+        .equipe(team_id)
+        .map(|e| e.team_name.clone())
+        .unwrap_or_else(|| "Équipe désengagée".to_string())
+}
+
 pub struct DrawRowVm {
     pub home: String,
     pub away: String,
+    /// Les identifiants, que la validation renvoie au serveur — l'écran, lui,
+    /// n'affiche que les noms.
+    pub home_id: String,
+    pub away_id: String,
     /// « 1re rencontre » ou « 2e rencontre · Journée 1 ». **Vient d'`Historique`**,
     /// jamais d'une relecture des journées par le VM : le tirage sait pourquoi il
     /// a concédé, et c'est lui qui le dit.
@@ -450,11 +475,14 @@ pub struct DrawRowVm {
 }
 
 impl DrawRowVm {
-    fn all_from_domain(rencontres: &[ProposedPairing]) -> Vec<Self> {
-        rencontres.iter().map(Self::from_domain).collect()
+    fn all_from_domain(rencontres: &[ProposedPairing], roster: &RosterDeCampagne) -> Vec<Self> {
+        rencontres
+            .iter()
+            .map(|r| Self::from_domain(r, roster))
+            .collect()
     }
 
-    fn from_domain(r: &ProposedPairing) -> Self {
+    fn from_domain(r: &ProposedPairing, roster: &RosterDeCampagne) -> Self {
         let (tag, est_revanche) = match &r.historique {
             Historique::Inedite => ("1re rencontre".to_string(), false),
             Historique::Revanche { fois, derniere } => {
@@ -462,10 +490,54 @@ impl DrawRowVm {
             }
         };
         Self {
-            home: r.home.to_string(),
-            away: r.away.to_string(),
+            home: nom_de(&r.home, roster),
+            away: nom_de(&r.away, roster),
+            home_id: r.home.to_string(),
+            away_id: r.away.to_string(),
             tag,
             est_revanche,
+        }
+    }
+}
+
+/// Les URL des neuf actions, résolues **une fois** au rendu du panneau.
+///
+/// Un porteur d'URL plutôt qu'`app_routes` et ses trois identifiants répétés dans
+/// chaque `hx-post` : le gabarit écrit `{{ actions.answer }}`, et les fragments
+/// inclus — la carte d'équipe, les rencontres — y ont accès sans recevoir les
+/// identifiants de chemin qu'ils n'utiliseraient que pour ça.
+pub struct ActionsVm {
+    /// Le GET du panneau — c'est lui qui « abandonne » un aperçu : l'aperçu ne
+    /// persistant rien, recharger le panneau suffit à revenir au sondage clos.
+    pub panel: String,
+    pub launch: String,
+    pub answer: String,
+    pub remind: String,
+    pub close: String,
+    pub reopen: String,
+    pub draw: String,
+    pub confirm_draw: String,
+    pub undo_draw: String,
+    pub propose_repair: String,
+    pub repair: String,
+}
+
+impl ActionsVm {
+    pub fn new(space_id: &str, competition_id: &str, season_id: &str) -> Self {
+        let r = AppRoutes::default();
+        let c = &r.competitions;
+        Self {
+            panel: c.admin_presences_panel(space_id, competition_id, season_id),
+            launch: c.admin_presences_launch(space_id, competition_id, season_id),
+            answer: c.admin_presences_answer(space_id, competition_id, season_id),
+            remind: c.admin_presences_remind(space_id, competition_id, season_id),
+            close: c.admin_presences_close(space_id, competition_id, season_id),
+            reopen: c.admin_presences_reopen(space_id, competition_id, season_id),
+            draw: c.admin_presences_draw(space_id, competition_id, season_id),
+            confirm_draw: c.admin_presences_confirm_draw(space_id, competition_id, season_id),
+            undo_draw: c.admin_presences_undo_draw(space_id, competition_id, season_id),
+            propose_repair: c.admin_presences_propose_repair(space_id, competition_id, season_id),
+            repair: c.admin_presences_repair(space_id, competition_id, season_id),
         }
     }
 }
@@ -484,6 +556,15 @@ pub struct PanelInviteTemplate {}
 #[template(path = "admin/widgets/presences-panel-launch.html")]
 pub struct PanelLaunchTemplate {
     pub head: RoundHeadVm,
+    pub actions: ActionsVm,
+    pub round_id: String,
+    /// L'échéance **proposée**, pas imposée : la veille de la journée si elle a
+    /// une date, sinon vide — et le gabarit laisse alors le champ à remplir plutôt
+    /// que d'inventer un délai.
+    pub deadline_defaut: String,
+    /// Le motif d'un refus, vide sur un affichage ordinaire. Il vit dans le
+    /// panneau et non dans une boîte du navigateur — cf. le fragment.
+    pub motif: String,
     pub destinataires: DestinatairesVm,
 }
 
@@ -491,6 +572,11 @@ pub struct PanelLaunchTemplate {
 #[template(path = "admin/widgets/presences-panel-running.html")]
 pub struct PanelRunningTemplate {
     pub head: RoundHeadVm,
+    pub actions: ActionsVm,
+    pub round_id: String,
+    /// Le motif d'un refus, vide sur un affichage ordinaire. Il vit dans le
+    /// panneau et non dans une boîte du navigateur — cf. le fragment.
+    pub motif: String,
     pub clos: bool,
     pub deadline: String,
     pub avancement: AvancementVm,
@@ -507,6 +593,11 @@ pub struct PanelRunningTemplate {
 #[template(path = "admin/widgets/presences-panel-draw.html")]
 pub struct PanelDrawTemplate {
     pub head: RoundHeadVm,
+    pub actions: ActionsVm,
+    pub round_id: String,
+    /// Le motif d'un refus, vide sur un affichage ordinaire. Il vit dans le
+    /// panneau et non dans une boîte du navigateur — cf. le fragment.
+    pub motif: String,
     pub draw: DrawVm,
     pub presents: usize,
 }
@@ -515,6 +606,11 @@ pub struct PanelDrawTemplate {
 #[template(path = "admin/widgets/presences-panel-paired.html")]
 pub struct PanelPairedTemplate {
     pub head: RoundHeadVm,
+    pub actions: ActionsVm,
+    pub round_id: String,
+    /// Le motif d'un refus, vide sur un affichage ordinaire. Il vit dans le
+    /// panneau et non dans une boîte du navigateur — cf. le fragment.
+    pub motif: String,
     pub draw: DrawVm,
 }
 
@@ -522,6 +618,11 @@ pub struct PanelPairedTemplate {
 #[template(path = "admin/widgets/presences-panel-defection.html")]
 pub struct PanelDefectionTemplate {
     pub head: RoundHeadVm,
+    pub actions: ActionsVm,
+    pub round_id: String,
+    /// Le motif d'un refus, vide sur un affichage ordinaire. Il vit dans le
+    /// panneau et non dans une boîte du navigateur — cf. le fragment.
+    pub motif: String,
     pub draw: DrawVm,
     pub defection: DefectionVm,
 }
@@ -546,13 +647,42 @@ impl DefectionVm {
 /// **Rendue ici, appelée par la carte 521.** Le gabarit du tirage appartient à
 /// cette carte — c'est elle qui possède les six vues — mais l'aperçu ne persiste
 /// rien, donc seul le `POST /presences/draw` peut le rendre.
-pub fn rendre_tirage(round: &MatchDay, prop: &DrawProposal, presents: usize) -> Response {
+pub fn rendre_tirage(
+    actions: ActionsVm,
+    round: &MatchDay,
+    prop: &DrawProposal,
+    roster: &RosterDeCampagne,
+    presents: usize,
+) -> Response {
     PanelDrawTemplate {
         head: RoundHeadVm::from_domain(round),
-        draw: DrawVm::from_domain(prop),
+        actions,
+        round_id: round.id.to_string(),
+        motif: String::new(),
+        draw: DrawVm::from_domain(prop, roster),
         presents,
     }
     .into_response()
+}
+
+/// La veille de la journée quand elle porte une date, **rien** sinon.
+///
+/// Rien plutôt qu'un délai inventé : « dans sept jours » se confondrait avec une
+/// date choisie, et l'organisateur validerait sans regarder. Un champ vide se voit.
+fn echeance_proposee(round: &MatchDay) -> String {
+    round
+        .date_start
+        .as_ref()
+        .and_then(|d| {
+            time::Date::parse(d.as_ref(), format_description!("[year]-[month]-[day]")).ok()
+        })
+        .and_then(|jour| jour.previous_day())
+        .and_then(|veille| {
+            veille
+                .format(format_description!("[year]-[month]-[day]"))
+                .ok()
+        })
+        .unwrap_or_default()
 }
 
 fn html_ou_500(rendu: Result<String, askama::Error>, quoi: &str) -> Response {
@@ -583,6 +713,52 @@ panneau_en_reponse!(
     PanelPairedTemplate => "presences panel paired",
     PanelDefectionTemplate => "presences panel defection",
 );
+
+#[derive(Template)]
+#[template(path = "admin/widgets/presences-panel-repair.html")]
+pub struct PanelRepairTemplate {
+    pub head: RoundHeadVm,
+    pub actions: ActionsVm,
+    pub round_id: String,
+    pub motif: String,
+    pub draw: DrawVm,
+    pub a_defaire: Vec<String>,
+    /// Les identifiants à défaire, déjà sérialisés : le gabarit les renvoie tels
+    /// quels au POST de validation. Sérialisés ici plutôt que reconstruits en JS —
+    /// ils ne sont pas dans le DOM, contrairement aux rencontres.
+    pub a_defaire_json: String,
+    pub vivier_vide: bool,
+}
+
+impl IntoResponse for PanelRepairTemplate {
+    fn into_response(self) -> Response {
+        html_ou_500(self.render(), "presences panel repair")
+    }
+}
+
+/// **Rendue ici, appelée par `propose-repair`.** Même raison que `rendre_tirage` :
+/// la proposition ne persiste rien, donc seul un POST peut la produire — le GET du
+/// panneau la recalculerait, et `tirer` départageant au sort, elle changerait à
+/// chaque affichage.
+pub fn rendre_reparation(
+    actions: ActionsVm,
+    round: &MatchDay,
+    prop: &RepairProposal,
+    roster: &RosterDeCampagne,
+) -> Response {
+    let a_defaire: Vec<String> = prop.a_defaire.iter().map(|p| p.to_string()).collect();
+    PanelRepairTemplate {
+        head: RoundHeadVm::from_domain(round),
+        actions,
+        round_id: round.id.to_string(),
+        motif: String::new(),
+        draw: DrawVm::from_domain(&prop.proposition, roster),
+        a_defaire_json: serde_json::to_string(&a_defaire).unwrap_or_else(|_| "[]".to_string()),
+        a_defaire,
+        vivier_vide: prop.vivier.is_empty(),
+    }
+    .into_response()
+}
 
 #[derive(Deserialize)]
 pub struct PanelQuery {
@@ -622,7 +798,16 @@ pub async fn presences_panel_widget(
         Err(resp) => return resp,
     };
 
-    match charger_le_panneau(&space_id, &season_id, &round, &state).await {
+    match charger_le_panneau(
+        &space_id,
+        &competition_id,
+        &season_id,
+        &round,
+        &state,
+        String::new(),
+    )
+    .await
+    {
         Ok(resp) => resp,
         Err(resp) => resp,
     }
@@ -630,11 +815,16 @@ pub async fn presences_panel_widget(
 
 /// Charge les quatre faits dont les cinq états ont besoin, puis délègue le choix
 /// à `etat_du_panneau` — jamais à une suite de `if` écrite ici.
-async fn charger_le_panneau(
+/// `motif` est vide sur un affichage ordinaire, et porte le refus quand une action
+/// en a rendu un : c'est ce qui donne **un seul vocabulaire** à tout ce que l'écran
+/// répond. Le prix est quatre lectures pour dire « non » — payé sur un chemin rare.
+pub async fn charger_le_panneau(
     space_id: &str,
+    competition_id: &str,
     season_id: &str,
     round: &MatchDay,
     state: &AppState,
+    motif: String,
 ) -> Result<Response, Response> {
     let survey = state
         .competitions
@@ -667,11 +857,17 @@ async fn charger_le_panneau(
     })?;
 
     let head = RoundHeadVm::from_domain(round);
+    let actions = ActionsVm::new(space_id, competition_id, season_id);
+    let round_id = round.id.to_string();
     let maintenant = aujourd_hui();
     Ok(
         match etat_du_panneau(survey.as_ref(), &journee, &maintenant) {
             Panneau::Aucun => PanelLaunchTemplate {
                 head,
+                actions,
+                round_id,
+                motif,
+                deadline_defaut: echeance_proposee(round),
                 destinataires: DestinatairesVm::from_domain(&roster),
             }
             .into_response(),
@@ -681,7 +877,7 @@ async fn charger_le_panneau(
                 let Some(s) = survey.as_ref() else {
                     return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
                 };
-                panneau_en_cours(head, s, &roster, &maintenant)
+                panneau_en_cours(head, actions, round_id, motif, s, &roster, &maintenant)
             }
             Panneau::Appariee => {
                 let Some(s) = survey.as_ref() else {
@@ -689,6 +885,9 @@ async fn charger_le_panneau(
                 };
                 PanelPairedTemplate {
                     head,
+                    actions,
+                    round_id,
+                    motif,
                     draw: journee_appariee(s, &journee, &roster),
                 }
                 .into_response()
@@ -702,6 +901,9 @@ async fn charger_le_panneau(
                 };
                 PanelDefectionTemplate {
                     head,
+                    actions,
+                    round_id,
+                    motif,
                     draw: journee_appariee(s, &journee, &roster),
                     defection: DefectionVm::from_domain(&d),
                 }
@@ -713,6 +915,9 @@ async fn charger_le_panneau(
 
 fn panneau_en_cours(
     head: RoundHeadVm,
+    actions: ActionsVm,
+    round_id: String,
+    motif: String,
     survey: &PresenceSurvey,
     roster: &RosterDeCampagne,
     maintenant: &DateString,
@@ -731,6 +936,9 @@ fn panneau_en_cours(
 
     PanelRunningTemplate {
         head,
+        actions,
+        round_id,
+        motif,
         clos,
         deadline: survey.deadline().to_string(),
         avancement: AvancementVm::from_domain(survey),
@@ -759,11 +967,11 @@ fn journee_appariee(
             .map(|e| e.team_name.clone())
             .unwrap_or_else(|| "Équipe désengagée".to_string())
     };
-    let exemptee = match survey.appariement() {
+    let (exemptee, exemptee_id) = match survey.appariement() {
         Appariement::Fait {
             exemptee: Some(e), ..
-        } => Some(nom(e)),
-        _ => None,
+        } => (Some(nom(e)), e.to_string()),
+        _ => (None, String::new()),
     };
     DrawVm {
         rencontres: journee
@@ -772,6 +980,8 @@ fn journee_appariee(
             .map(|r| DrawRowVm {
                 home: nom(&r.home),
                 away: nom(&r.away),
+                home_id: r.home.to_string(),
+                away_id: r.away.to_string(),
                 // L'historique d'une rencontre déjà écrite n'est pas relu ici : ce
                 // serait faire dériver au VM une valeur que le tirage avait
                 // produite. Le panneau appariée ne l'affiche donc pas.
@@ -780,6 +990,7 @@ fn journee_appariee(
             })
             .collect(),
         exemptee,
+        exemptee_id,
         inedites: 0,
         revanches: 0,
         ecartees: vec![],
@@ -1080,7 +1291,7 @@ mod tests {
             ..Default::default()
         };
 
-        let vm = DrawVm::from_domain(&prop);
+        let vm = DrawVm::from_domain(&prop, &RosterDeCampagne::default());
 
         assert_eq!(vm.rencontres[0].tag, "1re rencontre");
         assert!(!vm.rencontres[0].est_revanche);
@@ -1088,6 +1299,43 @@ mod tests {
         assert!(vm.rencontres[1].est_revanche);
         assert_eq!(vm.inedites, 1);
         assert_eq!(vm.revanches, 1);
+    }
+
+    /// **Le défaut que la carte 521 a fait sortir.** `DrawVm::from_domain` mettait
+    /// `r.home.to_string()` dans le champ affiché — l'identifiant de vingt-six
+    /// caractères, pas le nom. C'est le défaut de la carte 506, et rien ne pouvait
+    /// l'attraper en 520 : le panneau d'aperçu n'était pas atteignable, l'action
+    /// `draw` n'existant pas encore.
+    ///
+    /// Deux champs séparés désormais : le nom pour l'écran, l'identifiant pour que
+    /// la validation le renvoie.
+    #[test]
+    fn l_apercu_affiche_les_noms_et_renvoie_les_identifiants() {
+        let (a, b) = (TeamId::new(), TeamId::new());
+        let prop = DrawProposal {
+            rencontres: vec![ProposedPairing {
+                home: a,
+                away: b,
+                historique: Historique::Inedite,
+            }],
+            exemptee: None,
+            ..Default::default()
+        };
+
+        // Roster vide : le repli est une mention explicite, jamais un identifiant.
+        let vm = DrawVm::from_domain(&prop, &RosterDeCampagne::default());
+
+        assert_eq!(vm.rencontres[0].home, "Équipe désengagée");
+        assert_eq!(
+            vm.rencontres[0].home_id,
+            a.to_string(),
+            "l'identifiant voyage, mais dans son propre champ"
+        );
+        assert_ne!(
+            vm.rencontres[0].home,
+            a.to_string(),
+            "un ULID ne s'affiche jamais à l'écran"
+        );
     }
 
     #[test]

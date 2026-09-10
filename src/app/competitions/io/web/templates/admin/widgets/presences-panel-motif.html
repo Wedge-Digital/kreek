@@ -1,0 +1,10 @@
+{# Le motif d'un refus, posé **dans le panneau** et jamais dans une `alert()`.
+
+   « Le tirage a produit une revanche parce que toutes les paires inédites étaient
+   épuisées » n'est pas une alerte : c'est une explication, et elle appartient à
+   l'écran qu'elle commente. Une fois cette explication ici, les refus y vont
+   aussi — sinon il faudrait trancher pour chaque nouveau message de quel côté il
+   tombe, et cette frontière dérive. #}
+{% if !motif.is_empty() %}
+  <p class="panel-refus" role="status">{{ motif }}</p>
+{% endif %}

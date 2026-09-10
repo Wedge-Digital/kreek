@@ -5,6 +5,7 @@
    Les boutons de validation et d'abandon arrivent avec la carte 521. #}
 <div class="presences-panel" hx-disinherit="*">
   {% include "admin/widgets/presences-round-head.html" %}
+  {% include "admin/widgets/presences-panel-motif.html" %}
 
   <div class="panel-header">
     <div class="panel-title">Tirage proposé — {{ presents }} présents</div>
@@ -23,4 +24,26 @@
   {% endif %}
 
   {% include "admin/widgets/presences-draw-rows.html" %}
+
+  {# Les couples partent en JSON, **sans leur étiquette** : le serveur recalcule
+     l'historique, et le laisser entrer autoriserait à mentir dessus. #}
+  <div class="panel-footer">
+    {# Abandonner, c'est simplement recharger le panneau : l'aperçu ne persiste
+       rien, donc il n'y a rien à défaire. #}
+    <button class="btn-outline-sm"
+            hx-get="{{ actions.panel }}?round_id={{ round_id }}"
+            hx-target="#presences-panel"
+            hx-swap="innerHTML">Abandonner ce tirage</button>
+    <button class="btn-primary-sm"
+            hx-post="{{ actions.confirm_draw }}"
+            hx-vals='js:{"round_id": "{{ round_id }}",
+                         "exemptee": "{{ draw.exemptee_id }}",
+                         "rencontres": Array.from(
+                             document.querySelectorAll("#presences-panel .draw-row"))
+                           .map(function (l) {
+                             return {home_team_id: l.dataset.home, away_team_id: l.dataset.away};
+                           })}'
+            hx-ext="json-enc"
+            hx-swap="none">Valider et écrire au calendrier</button>
+  </div>
 </div>

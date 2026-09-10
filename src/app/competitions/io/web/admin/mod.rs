@@ -4,6 +4,7 @@ pub mod enrollments_tab;
 pub mod groups_actions;
 pub mod groups_tab;
 pub mod groups_widgets;
+pub mod presences_actions;
 pub mod presences_tab;
 pub mod presences_widgets;
 pub mod schedule_actions;

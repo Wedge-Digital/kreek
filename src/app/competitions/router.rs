@@ -7,6 +7,10 @@ use crate::app::competitions::io::web::admin::groups_tab::groups_tab;
 use crate::app::competitions::io::web::admin::groups_widgets::{
     group_cards_widget, unassigned_pool_widget,
 };
+use crate::app::competitions::io::web::admin::presences_actions::{
+    post_answer, post_close, post_confirm_draw, post_draw, post_launch, post_propose_repair,
+    post_remind, post_reopen, post_repair, post_undo_draw,
+};
 use crate::app::competitions::io::web::admin::presences_tab::presences_tab;
 use crate::app::competitions::io::web::admin::presences_widgets::{
     presences_panel_widget, presences_rounds_widget,
@@ -196,6 +200,25 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_ADMIN_PRESENCES_PANEL,
             get(presences_panel_widget),
         )
+        .route(path::COMPETITION_ADMIN_PRESENCES_LAUNCH, post(post_launch))
+        .route(path::COMPETITION_ADMIN_PRESENCES_ANSWER, post(post_answer))
+        .route(path::COMPETITION_ADMIN_PRESENCES_REMIND, post(post_remind))
+        .route(path::COMPETITION_ADMIN_PRESENCES_CLOSE, post(post_close))
+        .route(path::COMPETITION_ADMIN_PRESENCES_REOPEN, post(post_reopen))
+        .route(path::COMPETITION_ADMIN_PRESENCES_DRAW, post(post_draw))
+        .route(
+            path::COMPETITION_ADMIN_PRESENCES_CONFIRM_DRAW,
+            post(post_confirm_draw),
+        )
+        .route(
+            path::COMPETITION_ADMIN_PRESENCES_UNDO_DRAW,
+            post(post_undo_draw),
+        )
+        .route(
+            path::COMPETITION_ADMIN_PRESENCES_PROPOSE_REPAIR,
+            post(post_propose_repair),
+        )
+        .route(path::COMPETITION_ADMIN_PRESENCES_REPAIR, post(post_repair))
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_ROUND_DETAIL,
             get(schedule_round_detail_widget),

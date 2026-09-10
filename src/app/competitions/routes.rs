@@ -93,6 +93,28 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/rounds";
     pub const COMPETITION_ADMIN_PRESENCES_PANEL: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/panel";
+    // Les neuf actions (carte 521) : constante, méthode d'URL et entrée de
+    // routeur dans le même commit que leur handler.
+    pub const COMPETITION_ADMIN_PRESENCES_LAUNCH: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/launch";
+    pub const COMPETITION_ADMIN_PRESENCES_ANSWER: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/answer";
+    pub const COMPETITION_ADMIN_PRESENCES_REMIND: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/remind";
+    pub const COMPETITION_ADMIN_PRESENCES_CLOSE: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/close";
+    pub const COMPETITION_ADMIN_PRESENCES_REOPEN: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/reopen";
+    pub const COMPETITION_ADMIN_PRESENCES_DRAW: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/draw";
+    pub const COMPETITION_ADMIN_PRESENCES_CONFIRM_DRAW: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/confirm-draw";
+    pub const COMPETITION_ADMIN_PRESENCES_UNDO_DRAW: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/undo-draw";
+    pub const COMPETITION_ADMIN_PRESENCES_PROPOSE_REPAIR: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/propose-repair";
+    pub const COMPETITION_ADMIN_PRESENCES_REPAIR: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences/repair";
     pub const COMPETITION_ADMIN_SUMMARY: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/summary";
     pub const COMPETITION_ADMIN_SETTINGS: &str =
@@ -372,6 +394,66 @@ impl Routes {
     }
     pub fn admin_presences_panel(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_PRESENCES_PANEL
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_launch(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_LAUNCH
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_answer(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_ANSWER
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_remind(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_REMIND
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_close(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_CLOSE
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_reopen(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_REOPEN
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_draw(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_DRAW
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_confirm_draw(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_CONFIRM_DRAW
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_undo_draw(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_UNDO_DRAW
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_propose_repair(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_PROPOSE_REPAIR
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_presences_repair(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_PRESENCES_REPAIR
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

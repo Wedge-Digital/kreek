@@ -2,7 +2,8 @@
    « journée appariée » : la même liste, deux bandeaux. #}
 <div class="draw-rows">
   {% for r in draw.rencontres %}
-    <div class="draw-row{% if r.est_revanche %} draw-row--revanche{% endif %}">
+    <div class="draw-row{% if r.est_revanche %} draw-row--revanche{% endif %}"
+         data-home="{{ r.home_id }}" data-away="{{ r.away_id }}">
       <span class="draw-home">{{ r.home }}</span>
       <span class="draw-vs">contre</span>
       <span class="draw-away">{{ r.away }}</span>

@@ -1,7 +1,7 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **15 faites** (507 à 520 et 541, du 2026-09-07
-au 2026-09-09) : le Calendrier tire désormais vraiment au sort, sans laisser
+**État :** `en_cours` — 27 cartes, **16 faites** (507 à 521 et 541, du 2026-09-07
+au 2026-09-10) : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
 complet** — il ouvre une campagne, enregistre une réponse, valide un tirage, et
@@ -39,9 +39,15 @@ toucher aux matchs qui tiennent.
 voir** — la 520 a livré les six vues, la sixième (le tirage proposé) étant rendue
 par l'action de la 521, l'aperçu ne persistant rien.
 
-Le panneau est **complet en lecture, muet en écriture** : les neuf routes
-d'action appartiennent à la 521, qui les déclare et les branche avec ses
-handlers. Reste ensuite la couverture e2e du parcours (522).
+**L'écran est vivant** depuis la 521 : dix actions — une de plus que prévu,
+`propose-repair` ayant dû devenir un POST comme `draw`, le tirage sur le vivier
+départageant au sort. Un seul vocabulaire pour tout ce que l'écran répond : un
+succès rend un corps vide et déclenche le rechargement, un refus rend le panneau
+porteur de son motif. Aucune `alert()`, aucun JSON d'erreur, aucun
+`onclick="fetch(…)"`.
+
+Reste la couverture e2e du parcours complet (522) — la 521 n'a posé que les deux
+cas qui éprouvent le protocole.
 
 Le tirage du sondage et celui du Calendrier partagent désormais leur entrée
 (`entree_du_tirage`) et leur annonce (`appariement_ecrit`) : le tirage entré par

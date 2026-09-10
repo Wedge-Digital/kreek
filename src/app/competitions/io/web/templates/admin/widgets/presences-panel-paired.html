@@ -2,6 +2,7 @@
    bouton pour défaire arrive avec la carte 521. #}
 <div class="presences-panel" hx-disinherit="*">
   {% include "admin/widgets/presences-round-head.html" %}
+  {% include "admin/widgets/presences-panel-motif.html" %}
 
   <div class="panel-header">
     <div class="panel-title">Journée appariée</div>
@@ -9,4 +10,14 @@
   </div>
 
   {% include "admin/widgets/presences-draw-rows.html" %}
+
+  <div class="panel-footer">
+    {# R13 — le refus arrive si un rapport est publié, et il s'affiche ici. #}
+    <button class="btn-danger-sm"
+            hx-post="{{ actions.undo_draw }}"
+            hx-vals='{"round_id": "{{ round_id }}"}'
+            hx-ext="json-enc"
+            hx-confirm="Défaire l'appariement de cette journée ?"
+            hx-swap="none">Défaire l'appariement</button>
+  </div>
 </div>

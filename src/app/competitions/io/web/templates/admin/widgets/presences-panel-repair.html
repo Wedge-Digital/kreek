@@ -1,0 +1,46 @@
+{# L'aperçu d'une réparation. **Rendu par `propose-repair`**, jamais par le GET du
+   panneau : le tirage sur le vivier départage au sort, donc le recalculer à
+   chaque affichage montrerait une proposition différente à chaque fois.
+
+   Il propose, il n'agit pas — la maquette montre une proposition que
+   l'organisateur valide, jamais un fait accompli. #}
+<div class="presences-panel presences-panel--defection" hx-disinherit="*">
+  {% include "admin/widgets/presences-round-head.html" %}
+  {% include "admin/widgets/presences-panel-motif.html" %}
+
+  <div class="panel-header">
+    <div class="panel-title">Réparation proposée</div>
+    <span class="panel-deadline">
+      {{ a_defaire.len() }} rencontre(s) à défaire · {{ draw.rencontres.len() }} à écrire
+    </span>
+  </div>
+
+  {% if vivier_vide %}
+    <p class="panel-note panel-note--alerte">
+      Il ne reste personne à réapparier : les rencontres touchées seront
+      simplement défaites.
+    </p>
+  {% endif %}
+
+  {% include "admin/widgets/presences-draw-rows.html" %}
+
+  <div class="panel-footer">
+    {# Abandonner : recharger le panneau, la proposition ne persistant rien. #}
+    <button class="btn-outline-sm"
+            hx-get="{{ actions.panel }}?round_id={{ round_id }}"
+            hx-target="#presences-panel"
+            hx-swap="innerHTML">Abandonner</button>
+    <button class="btn-primary-sm"
+            hx-post="{{ actions.repair }}"
+            hx-vals='js:{"round_id": "{{ round_id }}",
+                         "a_defaire": {{ a_defaire_json|safe }},
+                         "exemptee": "{{ draw.exemptee_id }}",
+                         "rencontres": Array.from(
+                             document.querySelectorAll("#presences-panel .draw-row"))
+                           .map(function (l) {
+                             return {home_team_id: l.dataset.home, away_team_id: l.dataset.away};
+                           })}'
+            hx-ext="json-enc"
+            hx-swap="none">Valider la réparation</button>
+  </div>
+</div>

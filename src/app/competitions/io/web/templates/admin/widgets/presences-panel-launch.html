@@ -5,6 +5,7 @@
    Le bouton de lancement arrive avec la carte 521, qui déclare sa route. #}
 <div class="presences-panel" hx-disinherit="*">
   {% include "admin/widgets/presences-round-head.html" %}
+  {% include "admin/widgets/presences-panel-motif.html" %}
 
   <div class="panel-header">
     <div class="panel-title">Sonder les présences</div>
@@ -50,6 +51,25 @@
           <span class="recipients-value">{{ destinataires.sans_adresse }}</span>
         </div>
       </div>
+      {# Les contrôles sont natifs, et leurs valeurs partent au POST par
+         `hx-include`. Aucun Alpine : rien à tenir en mémoire côté navigateur. #}
+      <div class="form-row">
+        <label class="form-label" for="presences-deadline">Date limite de réponse</label>
+        <input class="date-input" id="presences-deadline" type="date" name="deadline"
+               value="{{ deadline_defaut }}">
+        <span class="form-hint">
+          Passé cette date, les liens des e-mails ne répondent plus et le sondage
+          se clôt tout seul.
+        </span>
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="presences-relance" name="auto_remind" checked>
+        <label for="presences-relance">
+          Relancer automatiquement les sans-réponse la veille de l'échéance
+        </label>
+      </div>
+
       {% if destinataires.sans_adresse > 0 %}
         <p class="launch-note">
           {{ destinataires.sans_adresse }} équipe(s) n'ont pas d'adresse
@@ -58,5 +78,15 @@
         </p>
       {% endif %}
     </div>
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn-primary-sm"
+            hx-post="{{ actions.launch }}"
+            hx-vals='js:{"round_id": document.body.dataset.activeRoundId,
+                         "deadline": document.getElementById("presences-deadline").value,
+                         "auto_remind": document.getElementById("presences-relance").checked}'
+            hx-ext="json-enc"
+            hx-swap="none">Lancer le sondage · {{ destinataires.joignables }} e-mails</button>
   </div>
 </div>

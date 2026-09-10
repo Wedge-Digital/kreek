@@ -4,6 +4,7 @@
    avec la carte 521. #}
 <div class="presences-panel presences-panel--defection" hx-disinherit="*">
   {% include "admin/widgets/presences-round-head.html" %}
+  {% include "admin/widgets/presences-panel-motif.html" %}
 
   <div class="panel-header">
     <div class="panel-title">Une rencontre ne tient plus</div>
@@ -33,4 +34,21 @@
      adversaire, et refaire le tirage entier ferait trois mécontents pour en
      soulager un. #}
   {% include "admin/widgets/presences-draw-rows.html" %}
+
+  {# **Il propose, il n'agit pas.** La réparation part avec ce que le serveur a
+     calculé — les rencontres à défaire et celles à écrire — et l'organisateur ne
+     fait que valider. Les autres matchs ne bougent pas : leurs coachs ont déjà
+     noté leur adversaire. #}
+  <div class="panel-footer">
+    {# **Le panneau ne précalcule pas la réparation.** `propose_repair` lance
+       `tirer`, qui départage au sort (R17) : la proposition changerait à chaque
+       rechargement du panneau, sous les yeux de l'organisateur. Elle se demande
+       donc explicitement, comme l'aperçu du tirage — même vocabulaire, même
+       raison. #}
+    <button class="btn-primary-sm"
+            hx-post="{{ actions.propose_repair }}"
+            hx-vals='{"round_id": "{{ round_id }}"}'
+            hx-ext="json-enc"
+            hx-swap="none">Proposer une réparation</button>
+  </div>
 </div>
