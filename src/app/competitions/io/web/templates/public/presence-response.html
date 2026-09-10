@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  {% include "public/presence-layout-head.html" %}
+  <title>{% if presente %}Présence confirmée{% else %}Absence enregistrée{% endif %} — kreek</title>
+</head>
+<body>
+<main class="presence-response">
+  <div class="presence-card presence-card--{% if presente %}ok{% else %}absent{% endif %}">
+    <div class="presence-verdict">
+      {% if presente %}
+        <span class="presence-icone" aria-hidden="true">&#10003;</span>
+        <h1 class="presence-titre">C'est noté, tu viens</h1>
+      {% else %}
+        <span class="presence-icone" aria-hidden="true">&#10007;</span>
+        <h1 class="presence-titre">C'est noté, tu ne viens pas</h1>
+      {% endif %}
+    </div>
+
+    <dl class="presence-recap">
+      <dt>Ton équipe</dt><dd>{{ team_name }}</dd>
+      <dt>Journée</dt>
+      <dd>{{ round_name }}{% if !round_dates.is_empty() %} · {{ round_dates }}{% endif %}</dd>
+      <dt>Compétition</dt><dd>{{ competition_name }}</dd>
+      <dt>Réponses jusqu'au</dt><dd>{{ deadline }}</dd>
+    </dl>
+
+    {# **R4 — la parade au clic d'une machine.**
+
+       Un `GET` qui enregistre est à la portée d'un antivirus ou d'un service qui
+       inspecte les liens. La parade n'est pas un second clic, qui renierait la
+       promesse « un clic suffit », mais ce bouton : si la réponse n'est pas celle
+       du coach, il la change ici, sans se connecter. #}
+    <a class="presence-oppose" href="{{ url_opposee }}">{{ libelle_oppose }}</a>
+
+    <p class="presence-libre">
+      Tu peux changer d'avis autant que tu veux jusqu'à la date limite : c'est la
+      dernière réponse qui compte.
+    </p>
+
+    <a class="presence-lien" href="{{ competition_url }}">Voir la compétition</a>
+  </div>
+</main>
+</body>
+</html>

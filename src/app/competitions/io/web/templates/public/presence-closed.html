@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  {% include "public/presence-layout-head.html" %}
+  <title>Sondage clos — kreek</title>
+</head>
+<body>
+<main class="presence-response">
+  <div class="presence-card presence-card--clos">
+    <div class="presence-verdict">
+      <span class="presence-icone" aria-hidden="true">&#9201;</span>
+      <h1 class="presence-titre">Ce sondage est clos</h1>
+    </div>
+
+    {# R27 — **trois motifs, et l'écran dit lequel.** Un message unique laisserait
+       le coach se demander s'il a raté la date ou si la journée s'est jouée sans
+       lui, et ces deux situations n'appellent pas le même geste. #}
+    <p class="presence-motif">{{ motif }}</p>
+
+    <dl class="presence-recap">
+      <dt>Ton équipe</dt><dd>{{ team_name }}</dd>
+      <dt>Journée</dt><dd>{{ round_name }}</dd>
+      <dt>Compétition</dt><dd>{{ competition_name }}</dd>
+    </dl>
+
+    <p class="presence-libre">
+      Contacte l'organisateur si tu dois signaler un changement : il peut encore
+      saisir ta réponse.
+    </p>
+  </div>
+</main>
+</body>
+</html>

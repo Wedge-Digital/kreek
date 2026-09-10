@@ -662,6 +662,14 @@ pub fn build_router(state: AppState) -> Router {
     let auth_app = Router::new()
         .route("/", get(|| async { Redirect::to(path::AUTH_LAYOUT) }))
         .merge(app::auth::router::router())
+        // **La route publique de réponse aux présences, hors de `protected`.**
+        //
+        // `protected` porte `route_layer(require_auth)` : une route ajoutée là
+        // redirigerait vers `/auth/login`, et les liens déjà partis dans les
+        // e-mails cesseraient de répondre. Le verrou n'est pas ce commentaire mais
+        // `src/web/tests/test_route_publique_presence.rs`, qui demande la route
+        // sans cookie — l'erreur ne casserait aucun autre test.
+        .merge(app::competitions::router::public_router())
         .merge(protected)
         // **Sous le journal**, donc à l'intérieur du span de requête : la ligne
         // `ERROR` qu'émet la couche porte alors le `rid` et le chemin. Posée

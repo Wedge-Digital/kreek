@@ -80,6 +80,30 @@ impl Harnais {
         harnais
     }
 
+    /// Monte l'application **sans se connecter**.
+    ///
+    /// Existe pour les routes publiques : `connecte_en_tant_que` pose toujours un
+    /// cookie, et un test qui l'emploie ne peut pas distinguer « la route est
+    /// publique » de « la route accepte ma session ».
+    pub async fn sans_session(pool: sqlx::PgPool) -> Self {
+        let state = crate::compose(AppConfig::for_tests(), pool).await;
+        Self {
+            routeur: crate::build_router(state),
+            cookie: String::new(),
+            set_cookie_brut: String::new(),
+        }
+    }
+
+    /// `GET` **sans en-tête `cookie` du tout**.
+    ///
+    /// Et non un cookie vide : `tower-sessions` traite les deux différemment, et
+    /// une chaîne vide prouverait seulement qu'une session illisible est refusée —
+    /// pas qu'un visiteur sans session est admis.
+    pub async fn get_anonyme(&self, uri: &str) -> Reponse {
+        self.envoyer(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+    }
+
     async fn connecter(&mut self, coach_name: &str) {
         let corps = format!(
             "coach_name={coach_name}&password={}",

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  {% include "public/presence-layout-head.html" %}
+  <title>Lien inconnu — kreek</title>
+</head>
+<body>
+<main class="presence-response">
+  {# **R26 — ce gabarit ne reçoit aucun champ**, et c'est le point.
+
+     Ni jeton, ni équipe, ni journée, ni compétition : la page ne doit jamais
+     révéler si le lien a existé. Un gabarit qui ne reçoit rien ne peut rien
+     laisser filtrer — et cette page répond aussi bien à un lien tronqué par un
+     client mail qu'à un jeton inventé.
+
+     Elle ne dit donc pas « ce lien a expiré » : ce serait affirmer qu'il a
+     existé. #}
+  <div class="presence-card presence-card--inconnu">
+    <div class="presence-verdict">
+      <span class="presence-icone" aria-hidden="true">?</span>
+      <h1 class="presence-titre">Ce lien ne mène à rien</h1>
+    </div>
+
+    <p class="presence-libre">
+      Vérifie que tu as bien copié l'adresse entière — certains logiciels de
+      messagerie coupent les liens longs. Sinon, demande à l'organisateur de ta
+      ligue de te renvoyer le sondage.
+    </p>
+  </div>
+</main>
+</body>
+</html>

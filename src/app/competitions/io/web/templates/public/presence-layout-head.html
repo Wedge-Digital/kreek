@@ -1,0 +1,13 @@
+{# La mise en page de la page publique, **portée par `competitions`**.
+
+   Pas d'`{% extends %}` vers `auth-layout` : `auth` est un BC extractible, et
+   `askama.toml` déclarant les onze dossiers de gabarits dans un espace de noms
+   unique, rien ici ne signalerait la dépendance — aucun `grep` ne la verrait.
+   Trente lignes dupliquées contre une adhérence invisible.
+
+   Le `<link>` pointe le bundle applicatif : il n'en existe qu'un, et en créer un
+   second pour une page publique coûterait une liste, une construction et un cas
+   d'axe 14 de plus, pour une requête mise en cache. #}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{{ css }}">

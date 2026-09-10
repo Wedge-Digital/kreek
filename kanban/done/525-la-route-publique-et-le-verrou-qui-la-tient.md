@@ -94,11 +94,66 @@ une construction et un cas d'axe 14 de plus, pour une requête mise en cache.
 
 ## Checklist
 
-- [ ] `public_router()`, mergé dans `main.rs` avec son commentaire
-- [ ] **Le test du routeur, sans cookie** — le verrou de cette carte
-- [ ] `PresenceLinkPath`, la conversion par smart constructors, `404` sur un
-      troisième verbe
-- [ ] Le handler, découpé : convertir, charger, enregistrer, rendre
-- [ ] Les trois gabarits, leur mise en page, la feuille inscrite au bundle
-- [ ] `PresenceUnknownTemplate` ne porte qu'`app_url` (R26)
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `public_router()`, mergé dans `main.rs` avec son commentaire
+- [x] **Le test du routeur, sans cookie** — le verrou de cette carte
+- [x] ~~`PresenceLinkPath`~~ → **deux routes littérales**, le `404` vient du routeur
+- [x] Le handler, découpé : convertir, charger, enregistrer, rendre
+- [x] Quatre gabarits — trois pages plus la mise en page —, la feuille au bundle
+- [x] `PresenceUnknownTemplate` ne porte que le chemin du bundle (R26)
+- [x] `make lint`, `make check-arch`, `make test` — 1894/1894
+
+## Deux routes littérales, et pas de verbe à parser
+
+La carte prévoyait un `PresenceLinkPath` et un `404` « sur un troisième verbe ».
+Deux chemins littéraux font mieux :
+
+```rust
+.route(path::PRESENCE_OUI, get(presence_oui))
+.route(path::PRESENCE_NON, get(presence_non))
+```
+
+`/presence/xxx/peut-etre` rend `404` **par le routeur**, sans une ligne de code :
+pas de verbe à extraire, pas de `match` à écrire, pas de branche à tester. La
+contrainte est portée par la déclaration, il n'y a rien à oublier.
+
+## Le harnais ne savait pas requêter sans session
+
+`Harnais::connecte_en_tant_que` pose toujours un cookie, et un test qui l'emploie
+ne peut pas distinguer « la route est publique » de « la route accepte ma
+session ». D'où `sans_session` et `get_anonyme`, qui n'émet **pas** l'en-tête
+`cookie` — et non un cookie vide : `tower-sessions` traite les deux différemment,
+et une chaîne vide prouverait seulement qu'une session illisible est refusée.
+
+## Le vrai verrou de R26 est structurel
+
+Quatre tests, dont un qui ne passe par aucune requête :
+`PresenceUnknownTemplate` n'a **qu'un champ**, le chemin du bundle CSS. Un gabarit
+qui ne reçoit ni équipe, ni journée, ni compétition ne peut rien en laisser
+filtrer, quelle que soit la prose qu'on y écrira demain — et lui ajouter un champ
+casse la compilation du test.
+
+C'est plus fort qu'une assertion textuelle, et la suite le montre.
+
+## Deux erreurs de rédaction
+
+**« clos » matchait `onclose`** dans le script de rechargement à chaud injecté en
+debug : le test échouait sur une page juste. C'est le même défaut que le
+`not_to_contain_text("01")` de la carte 522, à quelques heures d'écart — une
+sous-chaîne trop courte qui attrape autre chose. Les assertions portent désormais
+sur des **phrases**, et le motif est écrit dans le test.
+
+**La portée CSS** : la racine était `.presence-page` dans un fichier
+`presence-response.css`. L'axe 15 l'a refusé — le nom du fichier *est* le
+sélecteur de portée.
+
+## Le risque résiduel de R4, écrit plutôt que tu
+
+Un `GET` qui enregistre est à la portée d'une machine : SafeLinks et certains
+antivirus visitent les URL. R4 assume ce risque et pose comme parade le bouton
+opposé sur la page, non un second clic — qui renierait la promesse « un clic
+suffit ».
+
+Ce que la parade ne couvre pas, et qui est noté dans le handler : une
+prévisualisation automatique peut enregistrer « oui » sans que le coach ait
+cliqué. Le bouton opposé le rattrape s'il ouvre la page ; il ne le rattrape pas
+s'il ne l'ouvre jamais. Décision produit déjà prise, non rouverte.

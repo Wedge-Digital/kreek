@@ -1,0 +1,132 @@
+/* La page publique de réponse aux présences — portée `.presence-response`.
+ *
+ * Le nom du fichier **est** le sélecteur de portée, et `check-css-collisions.sh`
+ * le vérifie : une feuille `presence-response.css` dont les règles vivraient sous
+ * `.presence-page` ferait échouer l'axe 15.
+ *
+ * Une page **hors session**, ouverte depuis un client mail : elle est vue sur un
+ * téléphone bien plus souvent que le reste de l'application, et souvent une seule
+ * fois. D'où une carte centrée, un verdict lisible au premier regard, et rien à
+ * chercher.
+ *
+ * Elle n'étend pas `app-layout` — cf. le gabarit — donc elle porte son propre
+ * `<link>`, mais vers le **même** bundle. */
+
+.presence-response {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--p3);
+    background: var(--dark-7);
+}
+
+.presence-response .presence-card {
+    width: 100%;
+    max-width: 460px;
+    background: #fff;
+    border: 1px solid var(--dark-6);
+    border-top-width: 4px;
+    border-radius: var(--radius-md);
+    padding: var(--p4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--p3);
+}
+
+/* Le verdict se lit à la couleur avant les mots — c'est ce que regarde quelqu'un
+ * qui ouvre la page trois secondes pour vérifier que son clic a compté. */
+.presence-response .presence-card--ok { border-top-color: var(--green); }
+.presence-response .presence-card--absent { border-top-color: var(--orange); }
+.presence-response .presence-card--clos { border-top-color: var(--dark-3); }
+.presence-response .presence-card--inconnu { border-top-color: var(--dark-4); }
+
+.presence-response .presence-verdict {
+    display: flex;
+    align-items: center;
+    gap: var(--p2);
+}
+
+.presence-response .presence-icone {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    border-radius: 50%;
+    background: var(--dark-7);
+    font-size: var(--h5);
+}
+
+.presence-response .presence-titre {
+    margin: 0;
+    font-size: var(--h5);
+    font-weight: 700;
+}
+
+.presence-response .presence-motif {
+    margin: 0;
+    padding: var(--p2);
+    border-left: 3px solid var(--dark-4);
+    background: var(--dark-7);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-small);
+}
+
+.presence-response .presence-recap {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--p1) var(--p2);
+    font-size: var(--text-small);
+}
+
+.presence-response .presence-recap dt {
+    color: var(--dark-3);
+}
+
+.presence-response .presence-recap dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Le bouton opposé (R4) : visible sans être le geste évident. Il ne doit pas
+ * concurrencer le verdict, mais il doit se trouver sans chercher. */
+.presence-response .presence-oppose {
+    display: block;
+    text-align: center;
+    padding: var(--p2);
+    border: 1px solid var(--dark-5);
+    border-radius: var(--radius-sm);
+    color: var(--dark-1);
+    text-decoration: none;
+    font-size: var(--text-small);
+}
+
+.presence-response .presence-oppose:hover {
+    border-color: var(--main-blue);
+    color: var(--main-blue);
+}
+
+/* `--dark-2` et non `--dark-3` : le second tombe sous 4,5:1 sur ce fond. */
+.presence-response .presence-libre {
+    margin: 0;
+    font-size: var(--text-tiny);
+    color: var(--dark-2);
+}
+
+.presence-response .presence-lien {
+    font-size: var(--text-small);
+    color: var(--main-blue);
+}
+
+@media (max-width: 768px) {
+    .presence-response {
+        align-items: flex-start;
+        padding: var(--p2);
+    }
+
+    .presence-response .presence-card {
+        padding: var(--p3);
+    }
+}

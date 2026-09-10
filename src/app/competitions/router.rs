@@ -63,6 +63,7 @@ use crate::app::competitions::io::web::new_competition_phase_4::{
 use crate::app::competitions::io::web::new_competition_phase_5::{
     get_new_competition_phase_5, post_finalize_competition,
 };
+use crate::app::competitions::io::web::public::presence_response::{presence_non, presence_oui};
 use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
 use crate::app::competitions::io::web::widget_tester_controller::get_competitions_widget_tester;
 use crate::app::competitions::io::web::widgets::latest_results_widget::latest_results_widget;
@@ -74,6 +75,23 @@ use crate::app::competitions::routes::path;
 use crate::state::AppState;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
+
+/// Les routes **publiques** du BC, hors de toute session.
+///
+/// Séparées parce qu'elles ne peuvent pas vivre ailleurs : `protected` porte
+/// `route_layer(require_auth)`, et une route ajoutée là redirige vers
+/// `/auth/login` quel que soit son handler. `main.rs` merge donc ce routeur à côté
+/// d'`auth`, et non dedans.
+///
+/// **Le verrou est un test**, pas ce commentaire :
+/// `src/web/tests/test_route_publique_presence.rs` demande la route sans cookie
+/// contre le routeur de production. L'erreur qu'il empêche — ranger ces deux
+/// routes dans `protected` — ne casserait aucun autre test.
+pub fn public_router() -> Router<AppState> {
+    Router::new()
+        .route(path::PRESENCE_OUI, get(presence_oui))
+        .route(path::PRESENCE_NON, get(presence_non))
+}
 
 pub fn router() -> Router<AppState> {
     Router::new()

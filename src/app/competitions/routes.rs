@@ -87,6 +87,15 @@ pub mod path {
     // route branchée sur un handler vide est une porte ouverte sans garde, et
     // neuf handlers factices passeraient `check-arch` sans que rien ne les
     // appelle. Les neuf actions arrivent avec la carte 521.
+    // ── La route publique de réponse (épic E16, carte 525) ────────────────────
+    //
+    // **Le chemin est court parce qu'il voyage dans un e-mail** : ni `space_id`,
+    // ni `competition_id`, ni `season_id` — le jeton les résout tous.
+    //
+    // Deux chemins littéraux et non un verbe à extraire : un troisième verbe rend
+    // `404` par le routeur, sans une ligne de code.
+    pub const PRESENCE_OUI: &str = "/presence/{token}/oui";
+    pub const PRESENCE_NON: &str = "/presence/{token}/non";
     pub const COMPETITION_ADMIN_PRESENCES: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/presences";
     pub const COMPETITION_ADMIN_PRESENCES_ROUNDS: &str =
@@ -379,6 +388,12 @@ impl Routes {
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
+    }
+    pub fn presence_oui(&self, token: &str) -> String {
+        path::PRESENCE_OUI.replace("{token}", token)
+    }
+    pub fn presence_non(&self, token: &str) -> String {
+        path::PRESENCE_NON.replace("{token}", token)
     }
     pub fn admin_presences(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_PRESENCES

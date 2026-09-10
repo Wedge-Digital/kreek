@@ -1,9 +1,13 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **19 faites** (507 à 524 et 541, du 2026-09-07
+**État :** `en_cours` — 27 cartes, **20 faites** (507 à 525 et 541, du 2026-09-07
 au 2026-09-10). **La vague 4 est close : l'onglet de l'organisateur est livré et
-couvert.** L'unité 2 est entamée : le dépôt retrouve une campagne par son jeton, et le
-service d'hydratation sait ce que la page publique a à dire. : le Calendrier tire désormais vraiment au sort, sans laisser
+couvert.** L'unité 2 est aux trois cinquièmes : **la route publique répond**, hors de toute
+session, et le coach enregistre sa réponse d'un clic depuis sa boîte mail.
+`competitions` est le premier BC hors `auth` à exposer un routeur public, et un
+test monte le routeur de production sans cookie pour l'y maintenir — l'erreur
+inverse ne casserait aucun autre test. Restent l'e-mail, son expédition et les
+e2e (526 à 528). : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
 complet** — il ouvre une campagne, enregistre une réponse, valide un tirage, et
