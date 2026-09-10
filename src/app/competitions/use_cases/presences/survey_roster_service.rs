@@ -34,6 +34,13 @@ pub struct EquipeSollicitee {
     pub team_id: TeamId,
     pub team_name: String,
     pub coach_id: CoachId,
+    /// Le nom nu, pour l'apostrophe d'un e-mail : « Salut Lepandawan, ».
+    ///
+    /// **Distinct de `coach_label`**, qui est un libellé de tableau : « Salut
+    /// Lepandawan · 2 équipes, » n'est pas une salutation. Deux champs et non un
+    /// découpage du second — recomposer un nom en retirant un suffixe est une
+    /// occasion de le perdre.
+    pub coach_name: String,
     /// « Lepandawan · 2 équipes », ou « Ghorak » quand il n'en engage qu'une.
     ///
     /// Construit ici et non dans le gabarit : « 2 équipes » suppose de savoir
@@ -162,6 +169,7 @@ fn solliciter(
         team_id: TeamId::try_new(&t.team_id).ok()?,
         team_name: t.team_name.clone(),
         coach_id: CoachId::try_new(&t.coach_id).ok()?,
+        coach_name: t.coach_name.clone(),
         coach_label: label_du_coach(&t.coach_name, combien),
         email: adresses.get(&t.coach_id).cloned(),
     })

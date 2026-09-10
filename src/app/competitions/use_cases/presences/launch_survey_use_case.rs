@@ -19,6 +19,7 @@
 //! le jour où elle bouge l'un des deux resterait en arrière.
 
 use crate::app::competitions::domain::error::DomainError;
+use crate::app::competitions::domain::match_day::MatchDay;
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError,
 };
@@ -30,7 +31,8 @@ use crate::app::competitions::domain::presence_survey_repository_port::{
 };
 use crate::app::competitions::ports::{ICompetitionSpaceMemberPort, ITeamInfoPort};
 use crate::app::competitions::use_cases::presences::survey_mailer::{
-    CampagneAAnnoncer, EnvoiPresence, ISurveyMailer, RapportEnvoi,
+    CampagneAAnnoncer, EnvoiKind, EnvoiPresence, EquipeAContacter, EtiquettesCampagne,
+    ISurveyMailer, RapportEnvoi,
 };
 use crate::app::competitions::use_cases::presences::survey_roster_service::{
     self, RosterDeCampagne,
@@ -46,6 +48,9 @@ pub struct LaunchSurveyCommand {
     pub round_id: MatchId,
     pub deadline: SurveyDeadline,
     pub auto_remind: AutoRemind,
+    /// Le nom de la compétition et son URL, composés par le handler : les routes
+    /// vivent dans la couche web.
+    pub etiquettes: EtiquettesCampagne,
     /// Une **entrée**, jamais une lecture d'horloge : c'est ce qui rend le use
     /// case testable sans attendre le lendemain. Convention déjà posée par
     /// `send_due_notifications_use_case`.
@@ -59,6 +64,9 @@ pub struct LaunchOutcome {
     /// pas un refus.
     pub sans_adresse: usize,
     pub envoyes: usize,
+    /// Ceux que la base a écartés : leur créneau était déjà réservé. Zéro au
+    /// lancement d'une campagne neuve — non nul si l'organisateur double-clique.
+    pub deja_envoyes: usize,
     pub echecs: usize,
 }
 
@@ -132,11 +140,12 @@ pub async fn execute(
 
     deps.survey_repo.save(&survey).await?;
 
-    let rapport = expedier(&deps, &survey, &roster, round.name.as_ref()).await;
+    let rapport = expedier(&deps, &survey, &roster, &round, &cmd).await;
     Ok(LaunchOutcome {
         destinataires: roster.equipes().len(),
         sans_adresse: roster.sans_adresse(),
         envoyes: rapport.envoyes,
+        deja_envoyes: rapport.deja_envoyes,
         echecs: rapport.echecs,
     })
 }
@@ -160,34 +169,62 @@ pub(super) async fn expedier(
     deps: &LaunchDeps<'_>,
     survey: &PresenceSurvey,
     roster: &RosterDeCampagne,
-    round_name: &str,
+    round: &MatchDay,
+    cmd: &LaunchSurveyCommand,
 ) -> RapportEnvoi {
-    let campagne = CampagneAAnnoncer {
-        round_name: round_name.to_string(),
-        deadline: survey.deadline().clone(),
-    };
+    let campagne = CampagneAAnnoncer::nouvelle(
+        round,
+        survey.deadline().clone(),
+        &cmd.etiquettes,
+        EnvoiKind::Ouverture,
+        &cmd.aujourd_hui,
+    );
     let envois = envois_pour(roster, survey.reponses());
     deps.mailer.expedier(&campagne, &envois).await
 }
 
-/// Les envois possibles : ceux dont le coach a une adresse connue.
+/// Les envois possibles : ceux dont le coach a une adresse connue, **un par
+/// coach** et non un par équipe.
 ///
 /// R3 — les autres ne sont pas une erreur, ils sont **comptés** par
 /// `sans_adresse()`. Leur équipe est dans la campagne, elle attend simplement
 /// que l'organisateur la joigne autrement.
-pub(super) fn envois_pour(roster: &RosterDeCampagne, reponses: &[Reponse]) -> Vec<EnvoiPresence> {
-    reponses
-        .iter()
-        .filter_map(|r| {
-            let equipe = roster.equipe(r.team_id())?;
-            Some(EnvoiPresence {
-                email: equipe.email.clone()?,
-                coach_label: equipe.coach_label.clone(),
-                team_name: equipe.team_name.clone(),
-                token: *r.token(),
-            })
-        })
-        .collect()
+///
+/// R1 — le regroupement est ici parce que c'est ici qu'on sait quel coach possède
+/// quelle équipe. L'ordre est celui des réponses : le coach paraît à la place de
+/// sa première équipe, et ses suivantes le rejoignent.
+///
+/// **Générique sur les réponses, pour n'exister qu'une fois.** Le lancement passe
+/// toutes celles de la campagne, la relance seulement `sans_reponse()` — deux
+/// copies de cette boucle donneraient deux occasions de perdre R1, et la relance
+/// est justement celle qu'on regarde le moins.
+pub(super) fn envois_pour<'a>(
+    roster: &RosterDeCampagne,
+    reponses: impl IntoIterator<Item = &'a Reponse>,
+) -> Vec<EnvoiPresence> {
+    let mut envois: Vec<EnvoiPresence> = Vec::new();
+    for r in reponses {
+        let Some(equipe) = roster.equipe(r.team_id()) else {
+            continue;
+        };
+        let Some(email) = equipe.email.clone() else {
+            continue;
+        };
+        let ligne = EquipeAContacter {
+            team_name: equipe.team_name.clone(),
+            token: *r.token(),
+        };
+        match envois.iter_mut().find(|e| e.coach_id == equipe.coach_id) {
+            Some(deja) => deja.equipes.push(ligne),
+            None => envois.push(EnvoiPresence {
+                coach_id: equipe.coach_id,
+                email,
+                coach_name: equipe.coach_name.clone(),
+                equipes: vec![ligne],
+            }),
+        }
+    }
+    envois
 }
 
 #[cfg(test)]
@@ -205,6 +242,7 @@ mod tests {
             deadline: echeance("2026-10-10"),
             auto_remind: AutoRemind::new(true),
             aujourd_hui: date("2026-10-01"),
+            etiquettes: etiquettes(),
         }
     }
 
@@ -325,7 +363,8 @@ mod tests {
             "un seul e-mail part : l'autre coach n'a pas d'adresse"
         );
         assert_eq!(mailer.envois().len(), 1);
-        assert_eq!(mailer.envois()[0].team_name, "Les Joignables");
+        assert_eq!(mailer.envois()[0].equipes.len(), 1);
+        assert_eq!(mailer.envois()[0].equipes[0].team_name, "Les Joignables");
         assert_eq!(
             depot.derniere_ecrite().expect("persistée").reponses().len(),
             2,
@@ -359,7 +398,7 @@ mod tests {
 
         let persistee = depot.derniere_ecrite().expect("persistée");
         assert_eq!(
-            mailer.envois()[0].token,
+            mailer.envois()[0].equipes[0].token,
             *persistee.reponses()[0].token(),
             "le jeton voyage depuis l'agrégat, il ne se refabrique pas"
         );

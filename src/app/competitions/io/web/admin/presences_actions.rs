@@ -46,14 +46,16 @@ use crate::app::competitions::io::web::admin::admin_scope::journee_de_la_saison;
 use crate::app::competitions::io::web::admin::presences_widgets::{
     charger_le_panneau, rendre_reparation, rendre_tirage, ActionsVm,
 };
+use crate::app::competitions::use_cases::presences::survey_mailer::EtiquettesCampagne;
 use crate::app::competitions::use_cases::presences::survey_roster_service;
 use crate::app::competitions::use_cases::presences::{
     close_survey_use_case, confirm_draw_use_case, draw_pairings_use_case, launch_survey_use_case,
     propose_repair_use_case, record_answer_use_case, remind_use_case, reopen_survey_use_case,
     repair_pairing_use_case, undo_draw_use_case,
 };
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
-use crate::app::shared_kernel::bloodbowl::ids::{PairingId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::state::AppState;
@@ -152,6 +154,42 @@ async fn contexte<'a>(
     })
 }
 
+/// Le nom de la compétition et son URL **absolue**, pour l'e-mail.
+///
+/// Composée ici et non dans le use case : `AppRoutes` vit dans la couche web, et
+/// un use case qui fabriquerait ce lien écrirait un chemin en dur — ce que
+/// `send_due_notifications_use_case` fait encore, et qu'on ne reproduit pas.
+///
+/// Un nom introuvable rend une chaîne vide plutôt qu'une erreur : R20 veut qu'un
+/// e-mail imparfait parte plutôt qu'une campagne échoue à s'ouvrir.
+async fn etiquettes(ctx: &Contexte<'_>) -> EtiquettesCampagne {
+    let nom = match CompetitionId::try_new(ctx.competition_id) {
+        Ok(id) => ctx
+            .state
+            .competitions
+            .competition_repository
+            .find_base_info(&id)
+            .await
+            .ok()
+            .flatten()
+            .map(|i| i.name)
+            .unwrap_or_default(),
+        Err(_) => String::new(),
+    };
+    EtiquettesCampagne {
+        competition_name: nom,
+        competition_url: format!(
+            "{}{}",
+            ctx.state.competitions.app_url,
+            AppRoutes::default().competitions.competition_detail(
+                ctx.space_id,
+                ctx.competition_id,
+                ctx.season_id
+            )
+        ),
+    }
+}
+
 fn aujourd_hui() -> DateString {
     let brut = OffsetDateTime::now_utc()
         .date()
@@ -231,6 +269,7 @@ pub async fn post_launch(
             deadline,
             auto_remind: AutoRemind::new(body.auto_remind),
             aujourd_hui: aujourd_hui(),
+            etiquettes: etiquettes(&ctx).await,
         },
         launch_survey_use_case::LaunchDeps {
             survey_repo: state.competitions.presence_survey_repository.as_ref(),
@@ -351,6 +390,7 @@ pub async fn post_remind(
             season_id: saison,
             space_id: espace,
             aujourd_hui: aujourd_hui(),
+            etiquettes: etiquettes(&ctx).await,
         },
         remind_use_case::RemindDeps {
             survey_repo: state.competitions.presence_survey_repository.as_ref(),

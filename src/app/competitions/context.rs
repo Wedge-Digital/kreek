@@ -10,7 +10,7 @@ use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::match_report_published_listener;
 use crate::app::competitions::io::app_events::match_report_unpublished_listener;
 use crate::app::competitions::io::app_events::user_unsubscribed_listener;
-use crate::app::competitions::io::email::survey_mailer_journal::SurveyMailerJournal;
+use crate::app::competitions::io::email::survey_mailer::SurveyMailer;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::match_day_repository::MatchDayRepository;
@@ -33,9 +33,6 @@ pub struct CompetitionsContext {
     pub group_repository: Arc<dyn IGroupRepository>,
     pub match_day_repository: Arc<dyn IMatchDayRepository>,
     pub presence_survey_repository: Arc<dyn IPresenceSurveyRepository>,
-    /// **Provisoire** : journalise sans envoyer, et sera remplacé par
-    /// l'expédition réelle en unité 2 (`reponse-coach`). Il existe pour que
-    /// l'onglet de l'organisateur soit vérifiable à l'écran dès maintenant.
     pub survey_mailer: Arc<dyn ISurveyMailer>,
     pub team_info_port: Arc<dyn ITeamInfoPort>,
     pub reference_port: Arc<dyn ICompetitionReferencePort>,
@@ -119,7 +116,11 @@ impl CompetitionsContext {
             group_repository: Arc::new(GroupRepository::new(pool.clone())),
             match_day_repository: Arc::new(MatchDayRepository::new(pool.clone())),
             presence_survey_repository: Arc::new(PresenceSurveyRepository::new(pool.clone())),
-            survey_mailer: Arc::new(SurveyMailerJournal),
+            survey_mailer: Arc::new(SurveyMailer::new(
+                pool,
+                email_service.clone(),
+                app_url.clone(),
+            )),
             team_info_port,
             reference_port,
             space_member_port,

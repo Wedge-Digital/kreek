@@ -13,17 +13,15 @@
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError,
 };
-use crate::app::competitions::domain::presence_survey::PresenceSurvey;
 use crate::app::competitions::domain::presence_survey_repository_port::{
     IPresenceSurveyRepository, PresenceSurveyRepositoryError,
 };
 use crate::app::competitions::ports::{ICompetitionSpaceMemberPort, ITeamInfoPort};
+use crate::app::competitions::use_cases::presences::launch_survey_use_case;
 use crate::app::competitions::use_cases::presences::survey_mailer::{
-    CampagneAAnnoncer, EnvoiPresence, ISurveyMailer,
+    CampagneAAnnoncer, EnvoiKind, EtiquettesCampagne, ISurveyMailer,
 };
-use crate::app::competitions::use_cases::presences::survey_roster_service::{
-    self, RosterDeCampagne,
-};
+use crate::app::competitions::use_cases::presences::survey_roster_service::{self};
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
 use crate::app::shared_kernel::identity::ids::SpaceId;
@@ -34,6 +32,8 @@ pub struct RemindCommand {
     pub season_id: SeasonId,
     pub space_id: SpaceId,
     pub aujourd_hui: DateString,
+    /// Le nom de la compétition et son URL, composés par le handler.
+    pub etiquettes: EtiquettesCampagne,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -42,6 +42,10 @@ pub struct RemindOutcome {
     /// parce que ce sont les seuls sur lesquels l'organisateur a prise.
     pub relances: usize,
     pub envoyes: usize,
+    /// Les silencieux déjà relancés **aujourd'hui**. La clé du journal porte le
+    /// jour de l'envoi : on peut relancer mardi puis jeudi, mais pas deux fois
+    /// mardi — c'est le double-clic que ce compteur nomme.
+    pub deja_envoyes: usize,
     pub echecs: usize,
 }
 
@@ -103,37 +107,27 @@ pub async fn execute(
     .await
     .map_err(RemindError::Database)?;
 
-    let envois = envois_des_silencieux(&roster, &survey);
-    let campagne = CampagneAAnnoncer {
-        round_name: round.name.as_ref().to_string(),
-        deadline: survey.deadline().clone(),
-    };
+    // Les silencieux **joignables**, regroupés par coach. Un silencieux sans
+    // adresse n'est pas relancé, et ce n'est pas une erreur : R3 l'a compté au
+    // lancement, l'organisateur sait qu'il doit le joindre autrement.
+    let envois = launch_survey_use_case::envois_pour(&roster, survey.sans_reponse());
+    let campagne = CampagneAAnnoncer::nouvelle(
+        &round,
+        survey.deadline().clone(),
+        &cmd.etiquettes,
+        EnvoiKind::Relance,
+        &cmd.aujourd_hui,
+    );
     let rapport = deps.mailer.expedier(&campagne, &envois).await;
 
     Ok(RemindOutcome {
+        // Des coachs, non des équipes : R1 envoie un message par coach, et
+        // « 3 relancés » doit compter ce qui est parti.
         relances: envois.len(),
         envoyes: rapport.envoyes,
+        deja_envoyes: rapport.deja_envoyes,
         echecs: rapport.echecs,
     })
-}
-
-/// Les silencieux **joignables**. Un silencieux sans adresse n'est pas relancé —
-/// et ce n'est pas une erreur : R3 l'a compté au lancement, l'organisateur sait
-/// qu'il doit le joindre autrement.
-fn envois_des_silencieux(roster: &RosterDeCampagne, survey: &PresenceSurvey) -> Vec<EnvoiPresence> {
-    survey
-        .sans_reponse()
-        .iter()
-        .filter_map(|r| {
-            let equipe = roster.equipe(r.team_id())?;
-            Some(EnvoiPresence {
-                email: equipe.email.clone()?,
-                coach_label: equipe.coach_label.clone(),
-                team_name: equipe.team_name.clone(),
-                token: *r.token(),
-            })
-        })
-        .collect()
 }
 
 #[cfg(test)]
@@ -153,6 +147,7 @@ mod tests {
             season_id: SeasonId::new(),
             space_id: SpaceId::new(),
             aujourd_hui: date(aujourd_hui),
+            etiquettes: etiquettes(),
         }
     }
 
@@ -267,7 +262,10 @@ mod tests {
             "deux silencieux, mais un seul joignable — R3 a compté l'autre au lancement"
         );
         assert_eq!(issue.envoyes, 1);
-        assert_eq!(mailer.envois()[0].team_name, "Silencieux joignable");
+        assert_eq!(
+            mailer.envois()[0].equipes[0].team_name,
+            "Silencieux joignable"
+        );
     }
 
     #[tokio::test]

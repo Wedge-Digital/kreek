@@ -25,7 +25,7 @@ use crate::app::competitions::ports::{
     TeamEnrollmentDto, TeamInfoDto,
 };
 use crate::app::competitions::use_cases::presences::survey_mailer::{
-    CampagneAAnnoncer, EnvoiPresence, ISurveyMailer, RapportEnvoi,
+    CampagneAAnnoncer, EnvoiPresence, EtiquettesCampagne, ISurveyMailer, RapportEnvoi,
 };
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
@@ -347,11 +347,13 @@ impl ISurveyMailer for FauxMailer {
         if self.en_panne {
             RapportEnvoi {
                 envoyes: 0,
+                deja_envoyes: 0,
                 echecs: envois.len(),
             }
         } else {
             RapportEnvoi {
                 envoyes: envois.len(),
+                deja_envoyes: 0,
                 echecs: 0,
             }
         }
@@ -412,6 +414,15 @@ pub fn destinataires(n: usize) -> Vec<Destinataire> {
 
 pub fn date(s: &str) -> DateString {
     DateString::try_new(s.to_string()).expect("date de test")
+}
+
+/// Les étiquettes que le handler compose en vrai. Une URL absolue, comme dans un
+/// e-mail : c'est la forme qu'un test de rendu doit voir.
+pub fn etiquettes() -> EtiquettesCampagne {
+    EtiquettesCampagne {
+        competition_name: "Ligue de Fer".to_string(),
+        competition_url: "https://kreek.example/app/e/competitions/c/s".to_string(),
+    }
 }
 
 pub fn echeance(s: &str) -> SurveyDeadline {
