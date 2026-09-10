@@ -246,6 +246,77 @@ Ce qui reste décisif est binaire : **si le total atteint 20, le pool est plein 
 en dessous, il n'y a pas de famine.** Le prochain rouge tranchera d'un coup
 d'œil, et l'hypothèse tombera ou tiendra sans discussion.
 
+## Le 2026-09-10 — l'hypothèse du pool tombe, mesurée
+
+**Le premier rouge depuis que l'outillage est en place**, et le premier qui ait pu
+être analysé sans relancer huit minutes. C'était l'objet des deux instruments.
+
+### Les trois échecs
+
+```
+FAILED  test_team_matches::test_le_bloc_de_match_reste_correct_sur_la_page_competition
+ERROR   test_ranking_bonus::test_aggressive_bonus_reflected_in_standings
+ERROR   test_saison_non_finalisee::test_la_saison_redevient_joignable_une_fois_prete
+```
+
+Trois dépassements de délai à trente secondes, aucune assertion : deux
+`Page.goto`, et un **`Locator.press_sequentially`**. Ce dernier est le plus
+instructif de tous ceux relevés jusqu'ici — **taper du texte dans un champ** a
+demandé plus de trente secondes. Ce n'est ni une donnée qui tarde à arriver, ni un
+élément peint avant d'être révélé : c'est la machine qui ne rend pas la main.
+Aucun défaut d'application ne produit ça.
+
+### Le critère binaire a répondu, et l'hypothèse tombe
+
+| Passage | Verdict | Pool (max / 20) |
+|---|---|---|
+| 2026-09-09, quatre passages | 368 à 376 passés, 0 échec | **13** |
+| 2026-09-10, le rouge | 373 passés, 3 dépassements | **14** |
+
+Le critère posé la veille disait : *« si le total atteint 20, le pool est plein ;
+en dessous, il n'y a pas de famine »*. Il est monté à **14**, six connexions sous
+la limite, sans une seule `idle in transaction` et sans un verrou en attente.
+
+**Il n'y a pas de famine de connexions**, et une connexion de plus que sur les
+passages verts n'explique rien. L'hypothèse du pool est éliminée — par le
+dispositif posé pour la trancher, non par intuition.
+
+### Le compte des hypothèses éliminées
+
+| Hypothèse | Ce qui l'a tuée |
+|---|---|
+| accumulation dans la base de travail | carte 536 — un échec dès le premier passage sur base neuve |
+| navigateurs Playwright fuités | les processus « chromium » sont les serveurs CEF de RustRover et PyCharm |
+| usure du serveur sous les recréations de base | le 4ᵉ passage sous le même processus fut le plus rapide et vert |
+| serveur lent, à recompiler en `--release` | la page qui expire à 30 s répond en 3 ms au repos |
+| **famine du pool de connexions** | **max 14/20 sur le passage rouge, aucun verrou** |
+
+Cinq hypothèses, cinq mesures, zéro cause trouvée dans l'application. Reste la
+charge de la machine : ce passage a duré **486 s** contre 424 à 453 pour les quatre
+verts, soit 8 à 15 % de plus.
+
+### Ce qu'il faut en conclure pour le raffinage
+
+La cause n'est pas dans kreek. **Le sujet du raffinage n'est donc plus « quel
+défaut corriger » mais « comment un passage sous charge cesse de mentir »** — ce
+qui est une question de conception de tests, pas de code applicatif.
+
+Deux directions, à trancher :
+
+**Attendre des conditions, pas des durées.** C'est le remède de la carte 483 —
+« attendre l'embauche enregistrée plutôt qu'un délai » — mais il ne s'applique pas
+à un `Page.goto` ni à une frappe au clavier, qui n'attendent aucune condition
+applicative. Il couvre une partie des cas, pas celui-ci.
+
+**Relever les plafonds, en l'assumant.** Trente secondes pour taper du texte est
+déjà généreux ; le porter à soixante rendrait la suite plus lente à échouer sans
+la rendre plus vraie. À évaluer contre la troisième direction.
+
+**Ne pas lancer la suite sous charge.** La seule qui attaque la cause mesurée. Un
+garde-fou au démarrage — refuser de partir si la charge moyenne dépasse un seuil,
+avec son motif — coûte cinq lignes et transforme un faux rouge en refus explicite.
+C'est la piste que ce relevé recommande.
+
 ## Parallélisation — écartée comme remède, envisageable comme gain de vitesse
 
 Question posée le 2026-09-09 : huit à seize workers amélioreraient-ils la
