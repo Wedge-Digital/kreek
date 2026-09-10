@@ -21,10 +21,16 @@
   position: relative;
 }
 
+/* La moitié de la largeur du panneau, centrée par le flex de `.auth-right`.
+   `height: auto` tient le ratio ; `max-height` empêche le débordement sur une
+   fenêtre basse, et `object-fit: contain` garantit que cette borne, si elle
+   mord, rétrécit l'image au lieu de l'écraser. Le positionnement absolu qui
+   précédait imposait les deux dimensions du panneau, ce qui interdisait toute
+   taille intermédiaire. */
 .right-auth-img {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  width: 50%;
+  height: auto;
+  max-height: 100%;
   object-fit: contain;
 }
 
