@@ -53,11 +53,33 @@ C'est cette distinction qui produit la page « lien inconnu » (R26) plutôt qu'
 
 ## Checklist
 
-- [ ] `find_by_token` au port et au dépôt
-- [ ] `find_landing_labels`, son DTO de lecture
-- [ ] Les deux fichiers SQL sous `sql/presences/`
-- [ ] Tests d'intégration (vraie `PgPool`) :
-      jeton connu rend la campagne **avec toutes ses réponses** ·
-      jeton inconnu rend `None` et non une erreur ·
-      les libellés d'une journée sans campagne restent lisibles
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `find_by_token` au port et au dépôt
+- [x] `find_landing_labels`, son DTO de lecture
+- [x] Les deux fichiers SQL sous `sql/presences/`
+- [x] Cinq tests d'intégration sur une vraie `PgPool`
+- [x] `make lint`, `make check-arch`, `make test` — 1883/1883
+
+## Ce que la réalisation a tranché
+
+**Les dates du DTO sont brutes, pas un libellé.** La carte écrivait
+`round_dates: String` ; composer « Du 12 au 19 octobre » en SQL l'aurait mis à
+deux endroits, la couche web ayant déjà `dates_de`. Un DTO de lecture porte des
+données, pas des libellés — donc `round_date_start` et `round_date_end` en
+`Option<String>`, que la carte 525 mettra en forme.
+
+**Le corollaire de R26, posé dès le dépôt.** Un jeton inconnu rend `Ok(None)` ;
+un jeton **mal formé** aussi. R26 veut que la page publique ne révèle jamais si un
+jeton a existé, et deux issues distinctes ici donneraient deux réponses distinctes
+là-bas. Le test les éprouve ensemble : jeton valide inconnu, chaîne quelconque,
+chaîne vide.
+
+**Le même chemin d'hydratation que `find_by_round`.** Les deux réutilisent
+`lire_les_reponses` et `rehydrater` : deux constructions séparées auraient pu
+diverger, et l'agrégat rendu par l'une n'aurait plus été celui de l'autre.
+
+## Le coût de l'ajout au trait
+
+`FauxSurveyRepo`, le double partagé posé par la carte 515, a dû implémenter les
+deux nouvelles méthodes. C'est le prix annoncé d'un trait qui s'élargit — et
+précisément l'argument qui avait fait poser ce double dans un module commun plutôt
+que recopié dans quatre fichiers de test.

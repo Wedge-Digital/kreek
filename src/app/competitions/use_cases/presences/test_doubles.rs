@@ -18,7 +18,7 @@ use crate::app::competitions::domain::match_day_repository_port::{
 };
 use crate::app::competitions::domain::presence_survey::PresenceSurvey;
 use crate::app::competitions::domain::presence_survey_repository_port::{
-    IPresenceSurveyRepository, PresenceSurveyRepositoryError, SurveySummaryDto,
+    IPresenceSurveyRepository, LandingLabelsDto, PresenceSurveyRepositoryError, SurveySummaryDto,
 };
 use crate::app::competitions::ports::{
     ICompetitionSpaceMemberPort, IMatchReportStatusPort, ITeamInfoPort, SpaceMemberDto,
@@ -79,6 +79,27 @@ impl IPresenceSurveyRepository for FauxSurveyRepo {
             .expect("mutex de test")
             .push(survey.clone());
         Ok(())
+    }
+
+    /// Le jeton retrouve la même campagne que la journée — c'est ce que fait le
+    /// vrai dépôt, qui partage son chemin d'hydratation entre les deux.
+    async fn find_by_token(
+        &self,
+        token: &str,
+    ) -> Result<Option<PresenceSurvey>, PresenceSurveyRepositoryError> {
+        Ok(self
+            .existante
+            .clone()
+            .filter(|s| s.reponses().iter().any(|r| r.token().to_string() == token)))
+    }
+
+    /// Les use cases de présence ne titrent aucune page : seule la route publique
+    /// de l'unité 2 lira ces libellés, et son propre double les fournira.
+    async fn find_landing_labels(
+        &self,
+        _token: &str,
+    ) -> Result<Option<LandingLabelsDto>, PresenceSurveyRepositoryError> {
+        Ok(None)
     }
 
     async fn list_summaries(

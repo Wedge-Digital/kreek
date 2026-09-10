@@ -17,7 +17,7 @@ use crate::app::competitions::domain::presence_survey::{
     ReponduLe, Reponse, SurveyDeadline, SurveyId, SurveyToken, Venue,
 };
 use crate::app::competitions::domain::presence_survey_repository_port::{
-    IPresenceSurveyRepository, PresenceSurveyRepositoryError, SurveySummaryDto,
+    IPresenceSurveyRepository, LandingLabelsDto, PresenceSurveyRepositoryError, SurveySummaryDto,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
@@ -67,6 +67,39 @@ impl IPresenceSurveyRepository for PresenceSurveyRepository {
         let id: String = row.try_get("id").map_err(db_err)?;
         let reponses = self.lire_les_reponses(&id).await?;
         Ok(Some(rehydrater(&row, reponses)?))
+    }
+
+    /// **Le même chemin d'hydratation que `find_by_round`.** Les deux réutilisent
+    /// `lire_les_reponses` et `rehydrater` : deux constructions séparées auraient
+    /// pu diverger, et l'agrégat rendu par l'une n'aurait plus été celui de
+    /// l'autre.
+    async fn find_by_token(
+        &self,
+        token: &str,
+    ) -> Result<Option<PresenceSurvey>, PresenceSurveyRepositoryError> {
+        let Some(row) = sqlx::query(include_str!("sql/presences/find_survey_by_token.sql"))
+            .bind(token)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?
+        else {
+            return Ok(None);
+        };
+
+        let id: String = row.try_get("id").map_err(db_err)?;
+        let reponses = self.lire_les_reponses(&id).await?;
+        Ok(Some(rehydrater(&row, reponses)?))
+    }
+
+    async fn find_landing_labels(
+        &self,
+        token: &str,
+    ) -> Result<Option<LandingLabelsDto>, PresenceSurveyRepositoryError> {
+        sqlx::query_as::<_, LandingLabelsDto>(include_str!("sql/presences/find_landing_labels.sql"))
+            .bind(token)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)
     }
 
     async fn save(&self, survey: &PresenceSurvey) -> Result<(), PresenceSurveyRepositoryError> {

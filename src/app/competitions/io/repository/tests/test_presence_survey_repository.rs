@@ -10,7 +10,7 @@ use crate::app::competitions::domain::match_day::{
 };
 use crate::app::competitions::domain::presence_survey::{
     AutoRemind, Destinataire, EtatJournee, Presence, PresenceSurvey, Repondant, ReponduLe,
-    SurveyDeadline, SurveyId, Venue,
+    SurveyDeadline, SurveyId, SurveyToken, Venue,
 };
 use crate::app::competitions::domain::presence_survey_repository_port::IPresenceSurveyRepository;
 use crate::app::competitions::io::repository::presence_survey_repository::PresenceSurveyRepository;
@@ -20,6 +20,36 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 
 const SAISON: &str = "01KZVCKDG19DXZHJA295WSJGMV";
+
+/// La compétition et la saison auxquelles la journée appartient.
+///
+/// `poser_la_journee` suffisait tant qu'on ne lisait que la campagne ; les
+/// libellés de la page publique joignent trois tables de `competitions`, et elles
+/// doivent exister.
+async fn poser_la_competition(pool: &sqlx::PgPool) {
+    let competition_id = "01KZVCKDG19DXZHJA295WSJGMW";
+    sqlx::query(
+        "INSERT INTO competitions (id, space_id, name, logo)
+         VALUES ($1, $2, 'Compétition de test', '')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(competition_id)
+    .bind("01KZVCKDG19DXZHJA295WSJGMX")
+    .execute(pool)
+    .await
+    .expect("compétition de test");
+
+    sqlx::query(
+        "INSERT INTO competition_seasons (id, competition_id, name, status)
+         VALUES ($1, $2, 'Saison de test', 'draft')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(SAISON)
+    .bind(competition_id)
+    .execute(pool)
+    .await
+    .expect("saison de test");
+}
 
 async fn poser_la_journee(pool: &sqlx::PgPool, id: &str, position: i32, day_type: &str) {
     sqlx::query(
@@ -342,4 +372,129 @@ async fn une_journee_sans_campagne_ne_rend_rien(pool: sqlx::PgPool) {
 #[allow(dead_code)]
 fn _horodatage() -> ReponduLe {
     ReponduLe::try_new("2026-10-05".to_string()).unwrap()
+}
+
+// ── Le jeton, chemin de la route publique (carte 523) ────────────────────────
+
+/// La campagne d'un jeton vient avec **toutes** ses réponses, pas seulement celle
+/// que le jeton désigne : l'agrégat n'existe pas à moitié, et `enregistrer`
+/// vérifie R19 sur l'ensemble des destinataires.
+#[sqlx::test]
+async fn un_jeton_rend_la_campagne_avec_toutes_ses_reponses(pool: sqlx::PgPool) {
+    let round_id = MatchId::new();
+    poser_la_journee(&pool, &round_id.to_string(), 0, "fixed_date").await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let dests = destinataires(3);
+    let survey = campagne(&journee(round_id), &dests);
+    let jeton = survey.reponses()[1].token().to_string();
+    depot.save(&survey).await.expect("écriture");
+
+    let relue = depot
+        .find_by_token(&jeton)
+        .await
+        .expect("lecture")
+        .expect("campagne");
+
+    assert_eq!(relue.id(), survey.id());
+    assert_eq!(
+        relue.reponses().len(),
+        3,
+        "les trois réponses, pas seulement celle du jeton"
+    );
+    assert_eq!(
+        relue.reponse_par_jeton(survey.reponses()[1].token()),
+        relue.reponse_de(&dests[1].team_id),
+        "le jeton désigne bien la réponse de son équipe"
+    );
+}
+
+/// **Un jeton inconnu rend `Ok(None)`, jamais une erreur.**
+///
+/// C'est cette distinction qui produit la page « lien inconnu » (R26) plutôt qu'un
+/// `500` — et un jeton tronqué par un client mail est un cas courant, pas une
+/// panne.
+///
+/// Le jeton mal formé est éprouvé avec : R26 veut que la page publique ne révèle
+/// **jamais** si un jeton a existé, et deux issues distinctes ici donneraient deux
+/// réponses distinctes là-bas.
+#[sqlx::test]
+async fn un_jeton_inconnu_ou_mal_forme_rend_none_et_non_une_erreur(pool: sqlx::PgPool) {
+    let round_id = MatchId::new();
+    poser_la_journee(&pool, &round_id.to_string(), 0, "fixed_date").await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    depot
+        .save(&campagne(&journee(round_id), &destinataires(2)))
+        .await
+        .expect("écriture");
+
+    for jeton in [
+        SurveyToken::new().to_string(),
+        "pas-un-jeton".to_string(),
+        String::new(),
+    ] {
+        let issue = depot.find_by_token(&jeton).await;
+        assert!(
+            matches!(issue, Ok(None)),
+            "« {jeton} » doit rendre Ok(None), et non une erreur"
+        );
+    }
+}
+
+/// Les libellés de la page publique, et **rien du BC `teams`** : le nom de
+/// l'équipe vient d'`ITeamInfoPort`, une jointure vers ses tables étant l'exacte
+/// violation que la souveraineté des données nomme.
+#[sqlx::test]
+async fn les_libelles_de_la_page_publique_viennent_des_tables_de_competitions(pool: sqlx::PgPool) {
+    let round_id = MatchId::new();
+    poser_la_competition(&pool).await;
+    poser_la_journee(&pool, &round_id.to_string(), 2, "fixed_date").await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let survey = campagne(&journee(round_id), &destinataires(1));
+    let jeton = survey.reponses()[0].token().to_string();
+    depot.save(&survey).await.expect("écriture");
+
+    let libelles = depot
+        .find_landing_labels(&jeton)
+        .await
+        .expect("lecture")
+        .expect("libellés");
+
+    assert_eq!(libelles.round_name, "Journée 3");
+    assert_eq!(libelles.competition_name, "Compétition de test");
+    assert_eq!(libelles.season_id, SAISON);
+    assert!(!libelles.space_id.is_empty());
+}
+
+/// **Rien n'est inventé** : une journée sans date rend `None` sur les deux bornes,
+/// et la vue n'affichera pas la ligne. Un repli — « date à définir » — se
+/// confondrait avec une date saisie.
+#[sqlx::test]
+async fn une_journee_sans_date_rend_deux_bornes_vides(pool: sqlx::PgPool) {
+    let round_id = MatchId::new();
+    poser_la_competition(&pool).await;
+    poser_la_journee(&pool, &round_id.to_string(), 2, "time_frame").await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let survey = campagne(&journee(round_id), &destinataires(1));
+    let jeton = survey.reponses()[0].token().to_string();
+    depot.save(&survey).await.expect("écriture");
+
+    let libelles = depot
+        .find_landing_labels(&jeton)
+        .await
+        .expect("lecture")
+        .expect("libellés");
+
+    assert_eq!(libelles.round_date_start, None);
+    assert_eq!(libelles.round_date_end, None);
+}
+
+#[sqlx::test]
+async fn un_jeton_inconnu_n_a_pas_de_libelles(pool: sqlx::PgPool) {
+    let depot = PresenceSurveyRepository::new(pool.clone());
+
+    let issue = depot
+        .find_landing_labels(&SurveyToken::new().to_string())
+        .await;
+
+    assert!(matches!(issue, Ok(None)));
 }

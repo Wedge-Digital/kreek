@@ -1,8 +1,9 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **17 faites** (507 à 522 et 541, du 2026-09-07
+**État :** `en_cours` — 27 cartes, **18 faites** (507 à 523 et 541, du 2026-09-07
 au 2026-09-10). **La vague 4 est close : l'onglet de l'organisateur est livré et
-couvert.** : le Calendrier tire désormais vraiment au sort, sans laisser
+couvert.** L'unité 2 est entamée — le dépôt sait retrouver une campagne par son
+jeton. : le Calendrier tire désormais vraiment au sort, sans laisser
 d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
 a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
 complet** — il ouvre une campagne, enregistre une réponse, valide un tirage, et
