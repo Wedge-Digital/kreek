@@ -261,8 +261,17 @@ impl ITeamInfoPort for FauxTeams {
     async fn find_enrolled_teams(&self, _s: &str) -> Result<Vec<TeamInfoDto>, String> {
         Ok(self.0.clone())
     }
-    async fn find_team_names(&self, _ids: &[String]) -> Result<Vec<TeamInfoDto>, String> {
-        Ok(vec![])
+    /// **Omet les identifiants introuvables**, comme le vrai port l'annonce. Le
+    /// double rendait une liste vide en toutes circonstances, ce qui suffisait aux
+    /// use cases qui ne s'en servent pas — la carte 524 est la première à
+    /// l'appeler, et un double qui ne répond jamais ne prouve rien.
+    async fn find_team_names(&self, ids: &[String]) -> Result<Vec<TeamInfoDto>, String> {
+        Ok(self
+            .0
+            .iter()
+            .filter(|t| ids.contains(&t.team_id))
+            .cloned()
+            .collect())
     }
     async fn find_team_enrollment(&self, _t: &str) -> Result<Option<TeamEnrollmentDto>, String> {
         Ok(None)
@@ -389,6 +398,16 @@ pub fn membre(coach: &CoachId, nom: &str, email: &str) -> SpaceMemberDto {
         coach_name: nom.to_string(),
         email: email.to_string(),
     }
+}
+
+/// `n` destinataires, chacun son équipe et son coach.
+pub fn destinataires(n: usize) -> Vec<Destinataire> {
+    (0..n)
+        .map(|_| Destinataire {
+            team_id: TeamId::new(),
+            coach_id: CoachId::new(),
+        })
+        .collect()
 }
 
 pub fn date(s: &str) -> DateString {
