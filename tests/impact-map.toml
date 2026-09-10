@@ -85,6 +85,12 @@
 # inscrites, dont l'appartenance à la saison est vérifiée à l'affectation.
 "test_competition_admin_acces" = ["competitions", "auth", "teams", "spaces",
                                   "references", "ranking"]
+# Le bouton d'administration se décide sur deux lectures : les administrateurs
+# de la compétition, et le profil du coach dans l'espace — d'où `spaces`, qui
+# n'est pas ici un simple décor de parcours. `teams` et `references` sont les
+# dépendances de `build_full_competition`, qui fabrique la compétition.
+"test_competition_bouton_administration" = ["competitions", "spaces", "auth",
+                                            "teams", "references"]
 # Le panneau du barème traverse `competitions` vers `ranking` par un port qui
 # **ordonne** : le rejeu du classement a lieu dans le même POST. `match_report`
 # est une dépendance dure — c'est le seul chemin vers des lignes de classement à

@@ -46,7 +46,7 @@ pub async fn get_resultats_tab(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let Some(user) = auth_session.user else {
+    let Some(user) = auth_session.user.clone() else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
@@ -88,6 +88,7 @@ pub async fn get_resultats_tab(
         season_id,
         journees,
         next_cursor,
+        &auth_session,
         &state,
     )
     .await
@@ -99,6 +100,7 @@ async fn render_full_page(
     season_id: String,
     journees: Vec<JourneeResultatsVm>,
     next_cursor: Option<i32>,
+    auth_session: &AuthSession,
     state: &AppState,
 ) -> Response {
     let cid = match CompetitionId::try_new(&competition_id) {
@@ -120,12 +122,14 @@ async fn render_full_page(
         competition_id,
         season_id,
         "resultats",
-        false,
+        auth_session,
+        state,
         vec![],
         vec![],
         vec![],
         vec![],
     )
+    .await
 }
 
 #[cfg(test)]

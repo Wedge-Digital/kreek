@@ -1,6 +1,10 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::use_cases::competition_admin_access_service::{
+    peut_administrer, AdminsDeLaCompetition,
+};
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -421,18 +425,52 @@ pub(crate) async fn load_page_base(
     })
 }
 
-pub(crate) fn full_page(
+/// Traduit l'`AuthSession` et la `PageBase` en les termes du service d'accès.
+///
+/// Un visiteur anonyme, ou un `space_id` que le chemin a mal formé, n'ouvre
+/// rien : dans les deux cas la question ne se pose pas, et la réponse est non.
+async fn peut_administrer_cette_competition(
+    auth_session: &AuthSession,
+    space_id: &str,
+    pb: &PageBase,
+    state: &AppState,
+) -> bool {
+    let Some(user) = auth_session.user.as_ref() else {
+        return false;
+    };
+    let Ok(space) = SpaceId::try_new(space_id) else {
+        return false;
+    };
+    let admins = AdminsDeLaCompetition {
+        ids: &pb.admin_ids,
+        names: &pb.admin_names,
+    };
+    let nom = user.coach_name.clone().into_inner();
+    let membres = state.competitions.space_member_port.as_ref();
+    peut_administrer(&user.id, &nom, &space, admins, membres).await
+}
+
+/// Le droit d'administrer est **calculé ici**, jamais reçu en paramètre.
+///
+/// Il l'était, et six des sept appelants passaient `false` en dur — le bouton
+/// d'administration disparaissait dès qu'on entrait par un onglet, y compris
+/// pour qui l'administrait (carte 544). Le rendre inexprimable par la
+/// signature confie le verrou au compilateur : un huitième onglet ajouté
+/// demain naîtra gardé.
+pub(crate) async fn full_page(
     pb: PageBase,
     space_id: String,
     competition_id: String,
     season_id: String,
     active_tab: &'static str,
-    is_admin: bool,
+    auth_session: &AuthSession,
+    state: &AppState,
     top_tds: Vec<StatRow>,
     top_casualties: Vec<StatRow>,
     flop_tds: Vec<StatRow>,
     flop_casualties: Vec<StatRow>,
 ) -> Response {
+    let is_admin = peut_administrer_cette_competition(auth_session, &space_id, &pb, state).await;
     CompetitionDetailTemplate {
         app_routes: AppRoutes::default(),
         space_id,
@@ -475,35 +513,25 @@ pub async fn get_competition_detail(
         Err(r) => return r,
     };
 
-    let is_admin = auth_session.user.as_ref().map_or(false, |user| {
-        let user_id_str = user.id.to_string();
-        let coach_name_str = user.coach_name.clone().into_inner();
-        pb.admin_names.contains(&coach_name_str) || pb.admin_ids.contains(&user_id_str)
-    });
-
-    CompetitionDetailTemplate {
-        app_routes: AppRoutes::default(),
+    full_page(
+        pb,
         space_id,
         competition_id,
         season_id,
-        competition_name: pb.competition_name,
-        competition_logo: pb.competition_logo,
-        competition_initials: pb.competition_initials,
-        season_name: pb.season_name,
-        admin_names: pb.admin_names,
-        hors_calendrier_interdit: pb.hors_calendrier_interdit,
-        is_admin,
-        active_tab: "standings",
-        top_tds: vec![],
-        top_casualties: vec![],
-        flop_tds: vec![],
-        flop_casualties: vec![],
-    }
-    .into_response()
+        "standings",
+        &auth_session,
+        &state,
+         vec![],
+        vec![],
+        vec![],
+        vec![],
+    )
+    .await
 }
 
 pub async fn get_tab_standings(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
@@ -534,16 +562,19 @@ pub async fn get_tab_standings(
         competition_id,
         season_id,
         "standings",
-        false,
+        &auth_session,
+        &state,
         vec![],
         vec![],
         vec![],
         vec![],
     )
+    .await
 }
 
 pub async fn get_tab_detailed_standings(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
@@ -574,16 +605,19 @@ pub async fn get_tab_detailed_standings(
         competition_id,
         season_id,
         "detailed-standings",
-        false,
+        &auth_session,
+        &state,
         vec![],
         vec![],
         vec![],
         vec![],
     )
+    .await
 }
 
 pub async fn get_tab_teams(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
@@ -613,16 +647,19 @@ pub async fn get_tab_teams(
         competition_id,
         season_id,
         "teams",
-        false,
+        &auth_session,
+        &state,
         vec![],
         vec![],
         vec![],
         vec![],
     )
+    .await
 }
 
 pub async fn get_tab_stats(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
@@ -653,10 +690,12 @@ pub async fn get_tab_stats(
         competition_id,
         season_id,
         "stats",
-        false,
+        &auth_session,
+        &state,
         mock_top_tds(),
         mock_top_casualties(),
         mock_flop_tds(),
         mock_flop_casualties(),
     )
+    .await
 }

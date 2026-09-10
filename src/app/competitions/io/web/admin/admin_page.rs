@@ -1,9 +1,9 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_repository_port::CompetitionBaseInfo;
 use crate::app::competitions::io::web::admin::summary_tab::build_summary_fragment;
+use crate::app::competitions::use_cases::competition_admin_access_service::peut_administrer;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
-use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
@@ -94,41 +94,44 @@ pub async fn require_admin_access(
         Err(_) => return Err(StatusCode::BAD_REQUEST.into_response()),
     };
 
-    let is_space_admin = matches!(
-        state
-            .competitions
-            .space_member_port
-            .find_member_profile(&user.id, &space_entity_id)
-            .await,
-        Some(SpaceProfile::SpaceAdmin)
-    );
+    let comp_info = charger_competition(&comp_id, state).await?;
 
-    let comp_info = match state
-        .competitions
-        .competition_repository
-        .find_base_info(&comp_id)
-        .await
+    let membres = state.competitions.space_member_port.as_ref();
+    let nom = user.coach_name.clone().into_inner();
+    if !peut_administrer(
+        &user.id,
+        &nom,
+        &space_entity_id,
+        (&comp_info).into(),
+        membres,
+    )
+    .await
     {
-        Ok(Some(info)) => info,
-        Ok(None) => return Err(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!("require_admin_access competition find: {e}");
-            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
-        }
-    };
-
-    let user_id_str = user.id.to_string();
-    let coach_name_str = user.coach_name.clone().into_inner();
-    let is_comp_admin = comp_info.admin_ids.contains(&user_id_str)
-        || comp_info.admin_names.contains(&coach_name_str);
-
-    if !is_space_admin && !is_comp_admin {
         return Err(StatusCode::FORBIDDEN.into_response());
     }
 
     verifier_saison_de_la_competition(season_id, competition_id, state).await?;
 
     Ok(comp_info)
+}
+
+async fn charger_competition(
+    comp_id: &CompetitionId,
+    state: &AppState,
+) -> Result<CompetitionBaseInfo, Response> {
+    match state
+        .competitions
+        .competition_repository
+        .find_base_info(comp_id)
+        .await
+    {
+        Ok(Some(info)) => Ok(info),
+        Ok(None) => Err(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!("require_admin_access competition find: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
+    }
 }
 
 /// `404` et non `403` : une saison qui n'appartient pas à cette compétition est
