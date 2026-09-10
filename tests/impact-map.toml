@@ -93,6 +93,11 @@
 # pour la garde, et la fixture construit une compétition entière.
 "test_competition_presences" = ["competitions", "auth", "teams", "spaces", "references"]
 "test_presences_tab" = ["competitions", "auth", "teams", "spaces", "references"]
+# Le parcours du coach depuis son lien. `match_report` est une dépendance **dure**
+# et non un ajout prudent : `etat_de_la_journee` lit les rapports publiés par le
+# port, et le scénario de la journée figée est le seul chemin vers R27.
+"test_presence_reponse_publique" = ["competitions", "auth", "teams", "spaces",
+                                   "references", "match_report"]
 "test_competition_admin_acces" = ["competitions", "auth", "teams", "spaces",
                                   "references", "ranking"]
 # Le panneau du barème traverse `competitions` vers `ranking` par un port qui
