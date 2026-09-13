@@ -24,6 +24,7 @@
 //! d'essayer des identifiants ; un `404` ne dit rien de plus que « pas ici ».
 
 use crate::app::competitions::domain::match_day::MatchDay;
+use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::state::AppState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -132,5 +133,41 @@ pub async fn equipe_de_la_saison(
     match inscrites.iter().any(|t| t.team_id == team_id) {
         true => Ok(()),
         false => Err(StatusCode::NOT_FOUND.into_response()),
+    }
+}
+
+/// La saison visée appartient-elle bien à cette compétition ?
+///
+/// **Venue d'`admin_page.rs`, où elle était privée** (carte 530). Elle y était le
+/// second rôle de `require_admin_access`, qui vérifiait à la fois le droit
+/// d'administration *et* cette appartenance. L'encart du coach connecté a besoin
+/// de la seconde sans la première : n'importe quel coach le voit, et un
+/// `season_id` d'une autre compétition doit rendre `404`.
+///
+/// `404` et non `403` : une saison qui n'appartient pas à cette compétition est
+/// hors du périmètre du chemin. Répondre `403` confirmerait son existence à qui
+/// se contente d'essayer des identifiants.
+pub async fn saison_de_la_competition(
+    season_id: &str,
+    competition_id: &str,
+    state: &AppState,
+) -> Result<(), Response> {
+    // Un identifiant mal formé est une requête fautive, pas un refus de droit :
+    // il n'a pas pu désigner quoi que ce soit.
+    let Ok(season_entity_id) = SeasonId::try_new(season_id) else {
+        return Err(StatusCode::BAD_REQUEST.into_response());
+    };
+    match state
+        .competitions
+        .season_repository
+        .find_full(&season_entity_id)
+        .await
+    {
+        Ok(Some(saison)) if saison.competition_id == competition_id => Ok(()),
+        Ok(_) => Err(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!("saison_de_la_competition {season_id}: {e:?}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
     }
 }

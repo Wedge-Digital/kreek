@@ -1,5 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_repository_port::CompetitionBaseInfo;
+use crate::app::competitions::io::web::admin::admin_scope::saison_de_la_competition;
 use crate::app::competitions::io::web::admin::summary_tab::build_summary_fragment;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
@@ -126,37 +127,9 @@ pub async fn require_admin_access(
         return Err(StatusCode::FORBIDDEN.into_response());
     }
 
-    verifier_saison_de_la_competition(season_id, competition_id, state).await?;
+    saison_de_la_competition(season_id, competition_id, state).await?;
 
     Ok(comp_info)
-}
-
-/// `404` et non `403` : une saison qui n'appartient pas à cette compétition est
-/// hors du périmètre du chemin. Répondre `403` confirmerait son existence à qui
-/// se contente d'essayer des identifiants.
-async fn verifier_saison_de_la_competition(
-    season_id: &str,
-    competition_id: &str,
-    state: &AppState,
-) -> Result<(), Response> {
-    // Un identifiant mal formé est une requête fautive, pas un refus de droit :
-    // il n'a pas pu désigner quoi que ce soit.
-    let Ok(season_entity_id) = SeasonId::try_new(season_id) else {
-        return Err(StatusCode::BAD_REQUEST.into_response());
-    };
-    match state
-        .competitions
-        .season_repository
-        .find_full(&season_entity_id)
-        .await
-    {
-        Ok(Some(saison)) if saison.competition_id == competition_id => Ok(()),
-        Ok(_) => Err(StatusCode::NOT_FOUND.into_response()),
-        Err(e) => {
-            tracing::error!("require_admin_access saison {season_id}: {e:?}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
-    }
 }
 
 pub async fn render_admin_page(
