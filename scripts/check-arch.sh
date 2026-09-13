@@ -683,12 +683,18 @@ echo ""
 # s'essaime au fil des ajouts, chacun justifié sur le moment. Ajouter un point
 # d'entrée demande une ligne dans ce fichier, qui se relit en revue.
 #
+# **Le périmètre s'étend par déclaration.** Un fichier de présence nouveau fait
+# échouer cet axe tant qu'il n'y figure pas — c'est arrivé dès la carte 531, avec
+# l'encart du coach. Ce n'est pas un faux positif : il force à dire de quel côté
+# de la feuille le fichier tombe, au lieu de laisser la réponse se décider toute
+# seule par l'endroit où on a rangé le fichier.
+#
 # `test_route_publique_presence.rs` y figure parce qu'il **est** un garde-fou :
 # il demande la route publique sans cookie contre le routeur de production. Le
 # lui interdire supprimerait une garde pour en satisfaire une autre.
 echo -e "${BOLD}Axe 18 · Campagne de présence — une feuille, et rien qui l'appelle${RESET}"
 axe18=$(
-  perimetre='^src/app/competitions/(use_cases/presences/|domain/presence_survey|io/repository/presence_survey_repository|io/repository/tests/test_presence_survey_repository|io/email/survey_mailer|io/web/admin/presences_|io/web/public/presence_response)'
+  perimetre='^src/app/competitions/(use_cases/presences/|domain/presence_survey|io/repository/presence_survey_repository|io/repository/tests/test_presence_survey_repository|io/email/survey_mailer|io/web/admin/presences_|io/web/public/presence_response|io/web/widgets/presence_call_widget)'
   cablage='^src/app/competitions/(context|router)\.rs:|^src/app/competitions/io/web/admin/admin_page\.rs:|/mod\.rs:|^src/web/tests/test_route_publique_presence\.rs:'
   grep -rnE '(competitions::use_cases::presences|competitions::domain::presence_survey|competitions::io::repository::presence_survey_repository|competitions::io::email::survey_mailer|competitions::io::web::admin::presences_|competitions::io::web::public::presence_response|super::presences_)' src/ --include='*.rs' \
   | grep -vE "$perimetre" \

@@ -40,6 +40,12 @@ use std::sync::Mutex;
 #[derive(Default)]
 pub struct FauxSurveyRepo {
     existante: Option<PresenceSurvey>,
+    /// Ce que `list_open_surveys_for_season` a le droit de rendre, **avant** que
+    /// `statut()` ne tranche. Distinct d'`existante` parce que deux journées
+    /// peuvent être sondées en même temps (R2 porte sur la journée, pas sur la
+    /// compétition) : la lecture par journée en désigne une, la liste les voit
+    /// toutes.
+    ouvertes: Vec<PresenceSurvey>,
     ecrites: Mutex<Vec<PresenceSurvey>>,
 }
 
@@ -50,9 +56,17 @@ impl FauxSurveyRepo {
 
     pub fn avec(survey: PresenceSurvey) -> Self {
         Self {
-            existante: Some(survey),
+            existante: Some(survey.clone()),
+            ouvertes: vec![survey],
             ecrites: Mutex::new(vec![]),
         }
+    }
+
+    /// Une seconde campagne, visible de la liste mais pas de la lecture par
+    /// journée — sur le modèle de `FauxJournees::et_la_saison`.
+    pub fn et_aussi(mut self, survey: PresenceSurvey) -> Self {
+        self.ouvertes.push(survey);
+        self
     }
 
     pub fn derniere_ecrite(&self) -> Option<PresenceSurvey> {
@@ -126,10 +140,10 @@ impl IPresenceSurveyRepository for FauxSurveyRepo {
             return Ok(vec![]);
         };
         Ok(self
-            .existante
-            .clone()
+            .ouvertes
+            .iter()
             .filter(|s| s.statut(&aujourd_hui).est_ouverte())
-            .into_iter()
+            .cloned()
             .collect())
     }
 }

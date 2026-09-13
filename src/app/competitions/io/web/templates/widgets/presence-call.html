@@ -1,0 +1,15 @@
+{# L'encart du coach connecté, sur la page de détail d'une compétition.
+
+   **`campagnes` vide ne rend rien du tout** — pas un encart vide, pas un
+   message, pas une bordure. Combiné au `hx-swap="outerHTML"` du conteneur, le
+   `<div>` d'appel disparaît avec sa réponse : l'espacement de la page est
+   identique selon qu'un sondage est ouvert ou non. Un `<div>` de zéro hauteur
+   aurait laissé sa marge.
+
+   `hx-disinherit="*"` sur la racine : sans lui, un `hx-vals` ou un `hx-headers`
+   de la page hôte s'injecterait en silence dans les requêtes de l'encart. #}
+{% if !campagnes.is_empty() %}
+<div class="presence-call" hx-disinherit="*">
+  {% include "widgets/presence-call-cards.html" %}
+</div>
+{% endif %}

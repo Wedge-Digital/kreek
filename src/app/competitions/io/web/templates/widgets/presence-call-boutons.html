@@ -1,0 +1,15 @@
+{# La paire « oui / non », identique dans les deux mises en forme.
+   Un seul endroit pour l'URL, les en-têtes htmx et la cible du swap : les
+   dupliquer laisserait l'une des deux formes dériver sans qu'on le voie. #}
+<button class="pc-btn pc-btn--yes"
+        hx-post="{{ app_routes.competitions.presence_call_answer(space_id, competition_id, season_id) }}"
+        hx-ext="json-enc"
+        hx-vals='{"round_id": "{{ campagne.round_id }}", "team_id": "{{ equipe.team_id }}", "presence": "presente"}'
+        hx-target="closest .presence-call"
+        hx-swap="outerHTML">Je serai là</button>
+<button class="pc-btn pc-btn--no"
+        hx-post="{{ app_routes.competitions.presence_call_answer(space_id, competition_id, season_id) }}"
+        hx-ext="json-enc"
+        hx-vals='{"round_id": "{{ campagne.round_id }}", "team_id": "{{ equipe.team_id }}", "presence": "absente"}'
+        hx-target="closest .presence-call"
+        hx-swap="outerHTML">Je ne pourrai pas</button>

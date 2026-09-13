@@ -1,0 +1,21 @@
+{# La réponse est arrivée trop tard.
+
+   **Ce n'est pas une politesse.** Sans cette carte, le fragment réaffiché serait
+   celui d'un encart devenu vide : il disparaîtrait sous le curseur au moment du
+   clic, et le coach lirait ce vide comme un succès.
+
+   Le motif vient du domaine — échéance passée, clôture décidée, journée déjà
+   jouée — et `DomainError` sait s'afficher. Le recomposer ici l'aurait mis à
+   deux endroits. #}
+<div class="presence-call" hx-disinherit="*">
+  <div class="pc-card pc-card--clos">
+    <div class="pc-mark pc-mark--no" aria-hidden="true">&#9201;</div>
+    <div class="pc-main">
+      <div class="pc-title">Ta réponse n'a pas pu être enregistrée</div>
+      <div class="pc-sub">
+        {{ motif }} Contacte l'organisateur si tu dois signaler un changement :
+        il peut encore saisir ta réponse.
+      </div>
+    </div>
+  </div>
+</div>

@@ -41,6 +41,13 @@ pub mod path {
     /// compétition s'y résout côté serveur, et l'y mettre laisserait un admin
     /// d'une autre compétition la forcer (cf. `team_matches_widget.rs`).
     pub const TEAM_MATCHES_WIDGET: &str = "/app/{space_id}/competitions/teams/{team_id}/matches";
+    /// L'encart du coach sur la page de détail. **Pas sous `/admin`** : n'importe
+    /// quel coach le voit, et sa garde est l'appartenance de la saison à la
+    /// compétition, pas le droit d'administration.
+    pub const COMPETITION_PRESENCE_CALL: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/presence-call";
+    pub const COMPETITION_PRESENCE_CALL_ANSWER: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/presence-call/answer";
     pub const COMPETITION_ADMIN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
     pub const COMPETITION_ADMIN_ENROLLMENTS: &str =
@@ -247,6 +254,18 @@ impl Routes {
 
     pub fn latest_results_widget(&self, sid: &str) -> String {
         path::COMPETITION_LATEST_RESULTS_WIDGET.replace("{space_id}", sid)
+    }
+    pub fn presence_call(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_PRESENCE_CALL
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn presence_call_answer(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_PRESENCE_CALL_ANSWER
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
     }
     pub fn competition_widget_json_competitions(&self, sid: &str) -> String {
         path::COMPETITION_WIDGET_JSON_COMPETITIONS.replace("{space_id}", sid)

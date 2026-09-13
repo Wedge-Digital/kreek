@@ -98,14 +98,84 @@ ouvert ou non.
 `CompetitionDetailTemplate` **ne gagne aucun champ** : la fonction reste
 retirable en supprimant ce seul conteneur.
 
+## Le défaut que seul le rendu réel a montré
+
+Le premier jet composait le titre ainsi :
+
+```rust
+titre: format!("Seras-tu là pour la {} ?", c.round_name.to_lowercase()),
+```
+
+Le `to_lowercase()` était là pour que « Journée 3 » se lise après l'article. Sur
+la base de démonstration, dont la journée s'appelle **« J1 »**, ça donnait
+**« Seras-tu là pour la j1 ? »**.
+
+C'est exactement la famille « le gabarit n'invente aucune valeur », vue d'un cran
+plus haut : ce n'est pas une valeur inventée, c'est une valeur du domaine
+**abîmée par la vue**. Le nom de la journée appartient à l'organisateur qui l'a
+saisi, et aucune couche d'affichage n'a à le retoucher.
+
+Les cinq tests unitaires ne le voyaient pas — ils portent sur le service, pas sur
+le VM — et rien dans la compilation ne le signalait. **Il a fallu lancer une
+campagne d'essai et lire le HTML rendu.**
+
+Corrigé en retirant l'article des trois phrases, seule formulation qui reste juste
+quel que soit le nom saisi :
+
+| État | Avant | Après |
+|---|---|---|
+| attendue | « Seras-tu là pour la j1 ? » | « Seras-tu là pour J1 ? » |
+| présente | « Tu es attendu à la J1 » | « Tu es attendu pour J1 » |
+| absente | « Tu ne joues pas la J1 » | « Tu ne joues pas J1 » |
+
+## La vérification au serveur, et ce qu'elle a couvert
+
+Une campagne lancée sur la base e2e, l'encart lu au `curl`, une réponse postée, le
+fragment relu — puis la campagne supprimée et l'absence de réponse orpheline
+vérifiée.
+
+Ce que ça a montré et que rien d'autre ne montrait : le conteneur est bien dans la
+page de détail · la route rend `200` · **une saison sans campagne ouverte rend un
+corps vide**, donc le `outerHTML` efface le conteneur · le POST enregistre et
+réaffiche l'état « présente » avec sa pastille, le nom de l'équipe et sa date ·
+les `hx-vals` portent les bons identifiants.
+
+## Deux écarts à la carte
+
+**Le service prend `match_day_repo`**, que la signature de la carte omettait.
+`CampagneOuverte` porte le nom et les dates de la journée, et `PresenceSurvey` ne
+connaît que son `round_id` — il fallait bien les lire quelque part.
+`find_by_season` suffit : une requête pour toutes les journées, pas une par
+campagne.
+
+**La racine du widget porte `.presence-call`, les cartes portent `.pc-card`.** La
+maquette nommait la carte `.presence-call` et n'en prévoyait qu'une. R2
+garantissant une campagne par **journée**, il peut y en avoir plusieurs ; et l'axe
+15 veut que le nom du fichier soit le sélecteur de portée. La racine devient donc
+le conteneur, ce qui donne au passage une cible stable au `hx-swap="outerHTML"`
+des boutons.
+
+## Ce que l'axe 18 a fait dès sa première carte
+
+Il a refusé `presence_call_widget.rs`, absent de son périmètre. Ce n'est pas un
+faux positif : il a forcé à **déclarer** de quel côté de la feuille le nouveau
+fichier tombe, au lieu de laisser la réponse se décider toute seule par l'endroit
+où on l'avait rangé. Le périmètre a été étendu, et le motif écrit dans le script.
+
 ## Checklist
 
-- [ ] Deux routes dans `routes.rs`
-- [ ] Le service d'hydratation, `arch:no-instrument` avec son motif
-- [ ] Les deux handlers, `saison_de_la_competition` sur les deux
-- [ ] Les VM : `CampagneVm`, `EquipeLigneVm`, `EtatEquipeVm` (un enum, pas trois booléens)
-- [ ] Le gabarit, ses deux mises en forme, la carte de refus, `hx-disinherit="*"`
-- [ ] Le conteneur dans `competition-detail.html`, en `outerHTML`
-- [ ] La feuille, inscrite dans `FEUILLES_APP`, portée `.presence-call`
-- [ ] Le vert des boutons assombri comme la maquette — **le token n'est pas touché**
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] Deux routes dans `routes.rs`, hors `/admin`
+- [x] Le service d'hydratation, `arch:no-instrument` avec son motif
+- [x] Les deux handlers, `saison_de_la_competition` sur les deux
+- [x] Les VM : `CampagneVm`, `EquipeLigneVm`, `EtatEquipeVm` (un enum, pas trois
+      booléens)
+- [x] Les gabarits : les deux mises en forme, la carte de refus, celle de R30,
+      `hx-disinherit="*"` sur les trois racines
+- [x] Les boutons factorisés en un seul partiel — l'URL, les en-têtes htmx et la
+      cible du swap à un seul endroit
+- [x] Le conteneur dans `competition-detail.html`, en `outerHTML`
+- [x] La feuille, inscrite dans `FEUILLES_APP`, portée `.presence-call`
+- [x] Le vert des boutons assombri en `#4A7364` — **le token n'est pas touché**
+- [x] Cinq tests de service, dont celui qui tient `confirmes`
+- [x] Rendu vérifié au serveur, aller et retour, données d'essai nettoyées
+- [x] `make lint`, `make check-arch`, `make test`

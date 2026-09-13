@@ -1,0 +1,119 @@
+/* L'encart d'appel à présence, sur la page de détail d'une compétition.
+ *
+ * Portée `.presence-call` — le nom du fichier **est** le sélecteur (axe 15).
+ * La racine du widget porte cette classe ; les cartes, une par campagne
+ * ouverte, portent `.pc-card`. La maquette nommait la carte `.presence-call` et
+ * n'en prévoyait qu'une ; R2 garantissant une campagne par **journée** et non
+ * par compétition, il peut y en avoir plusieurs, et la racine devait devenir un
+ * conteneur.
+ *
+ * Valeurs reprises de assets/rawpages/html/app-competition-detail-presence.html.
+ * Le vert des boutons y est assombri en #4A7364 : `--green` porte 3,3:1 sous du
+ * blanc, sous le seuil pour du 16 px même en gras. **Le token n'est pas touché**
+ * — le corriger à la source dépasse ce chantier et toucherait tout le site.
+ */
+
+.presence-call { margin-bottom: var(--p2); display: flex; flex-direction: column; gap: var(--p1); }
+
+.presence-call .pc-card {
+  display: flex;
+  align-items: center;
+  gap: var(--p2);
+  background: var(--dark-7);
+  border: 1px solid var(--dark-5);
+  border-radius: var(--radius-md);
+  padding: var(--p2);
+}
+.presence-call .pc-card--answered { background: rgba(98, 149, 132, 0.12); }
+.presence-call .pc-card--declined { background: var(--dark-6); }
+.presence-call .pc-card--clos { background: var(--dark-6); }
+
+.presence-call .pc-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.presence-call .pc-mark--yes { background: #4A7364; }
+.presence-call .pc-mark--no { background: var(--dark-3); }
+
+.presence-call .pc-main { flex: 1; min-width: 0; }
+.presence-call .pc-title {
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--dark-1);
+}
+.presence-call .pc-sub {
+  font-size: var(--text-tiny);
+  color: var(--dark-2);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.presence-call .pc-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+
+.presence-call .pc-btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.presence-call .pc-btn--yes { background: #4A7364; color: var(--white); }
+.presence-call .pc-btn--yes:hover { opacity: 0.9; }
+.presence-call .pc-btn--no {
+  background: var(--white);
+  color: var(--dark-2);
+  border: 1px solid var(--dark-4);
+}
+.presence-call .pc-btn--no:hover { border-color: var(--dark-2); }
+.presence-call .pc-btn--switch {
+  background: transparent;
+  color: var(--dark-2);
+  border: 1px solid var(--dark-4);
+}
+.presence-call .pc-btn--switch:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+/* Plusieurs équipes : une ligne chacune, empilées sous la question. */
+.presence-call .pc-stack { display: flex; flex-direction: column; gap: var(--p1); width: 100%; }
+.presence-call .pc-teams { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.presence-call .pc-team-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p1);
+  flex-wrap: wrap;
+}
+.presence-call .pc-team-name {
+  flex: 1;
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  color: var(--dark-1);
+}
+.presence-call .pc-team-state { font-size: var(--text-tiny); font-weight: 700; }
+.presence-call .pc-team-state--yes { color: #3F6B5C; }
+.presence-call .pc-team-state--no { color: var(--dark-3); }
+
+/* R30 — la rencontre déjà tirée que la réponse vient de défaire. Teinte et filet
+ * orange, le patron de .team-card-status--pending. */
+.presence-call .pc-avis {
+  background: rgba(255, 107, 53, 0.10);
+  border-left: 3px solid var(--orange);
+  border-radius: var(--radius-sm);
+  padding: var(--p1) var(--p2);
+  font-size: var(--text-tiny);
+  color: var(--dark-1);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .presence-call .pc-card { flex-direction: column; align-items: flex-start; }
+  .presence-call .pc-actions { width: 100%; }
+  .presence-call .pc-btn { flex: 1; }
+}

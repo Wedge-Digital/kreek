@@ -1,0 +1,107 @@
+{# Le corps de l'encart, partagé par le rendu normal et par celui de R30.
+   `{% include %}` partage le contexte du parent : les deux structs portent les
+   mêmes champs, et factoriser ici évite que la carte de R30 dérive de l'autre au
+   premier changement de mise en forme. #}
+{% for campagne in campagnes %}
+{% if campagne.equipes.len() == 1 %}
+{# ── Une seule équipe : la question s'adresse au coach directement ──────────
+   Le choix de mise en forme est une **question de vue** — si elle s'avérait
+   mauvaise, on corrigerait le gabarit, pas le domaine. Compter les éléments
+   qu'on affiche n'est pas dériver une réponse métier. #}
+{% let equipe = campagne.equipes[0] %}
+{% match equipe.etat %}
+{% when EtatEquipeVm::Attendue %}
+<div class="pc-card">
+  <div class="pc-main">
+    <div class="pc-title">{{ campagne.titre }}</div>
+    <div class="pc-sub">{{ campagne.sous_titre }}</div>
+  </div>
+  <div class="pc-actions">
+    {% include "widgets/presence-call-boutons.html" %}
+  </div>
+</div>
+{% when EtatEquipeVm::Presente with { repondu_le } %}
+<div class="pc-card pc-card--answered">
+  <div class="pc-mark pc-mark--yes" aria-hidden="true">&check;</div>
+  <div class="pc-main">
+    <div class="pc-title">Tu es attendu pour {{ campagne.round_name }}</div>
+    <div class="pc-sub">
+      {{ equipe.team_name }} · réponse enregistrée le {{ repondu_le }}.
+      Ton adversaire te sera communiqué après le tirage.
+    </div>
+  </div>
+  <div class="pc-actions">
+    <button class="pc-btn pc-btn--switch"
+            hx-post="{{ app_routes.competitions.presence_call_answer(space_id, competition_id, season_id) }}"
+            hx-ext="json-enc"
+            hx-vals='{"round_id": "{{ campagne.round_id }}", "team_id": "{{ equipe.team_id }}", "presence": "absente"}'
+            hx-target="closest .presence-call"
+            hx-swap="outerHTML">Finalement, je ne pourrai pas</button>
+  </div>
+</div>
+{% when EtatEquipeVm::Absente with { repondu_le } %}
+<div class="pc-card pc-card--declined">
+  <div class="pc-mark pc-mark--no" aria-hidden="true">&ndash;</div>
+  <div class="pc-main">
+    <div class="pc-title">Tu ne joues pas {{ campagne.round_name }}</div>
+    <div class="pc-sub">
+      {{ equipe.team_name }} · absence enregistrée le {{ repondu_le }}.
+      Tu peux revenir sur ta réponse jusqu'au {{ campagne.deadline }}.
+    </div>
+  </div>
+  <div class="pc-actions">
+    <button class="pc-btn pc-btn--switch"
+            hx-post="{{ app_routes.competitions.presence_call_answer(space_id, competition_id, season_id) }}"
+            hx-ext="json-enc"
+            hx-vals='{"round_id": "{{ campagne.round_id }}", "team_id": "{{ equipe.team_id }}", "presence": "presente"}'
+            hx-target="closest .presence-call"
+            hx-swap="outerHTML">Finalement, je serai là</button>
+  </div>
+</div>
+{% endmatch %}
+{% else %}
+{# ── Plusieurs équipes : une ligne chacune ──────────────────────────────────
+   R1 porte sur l'équipe, jamais sur le coach : il peut venir avec l'une et pas
+   l'autre, et chaque ligne porte donc sa propre paire de boutons. #}
+<div class="pc-card">
+  <div class="pc-stack">
+    <div class="pc-main">
+      <div class="pc-title">{{ campagne.titre }}</div>
+      <div class="pc-sub">
+        Tu engages {{ campagne.equipes.len() }} équipes dans cette compétition —
+        réponds pour chacune. {{ campagne.sous_titre }}
+      </div>
+    </div>
+    <div class="pc-teams">
+      {% for equipe in campagne.equipes %}
+      <div class="pc-team-row">
+        <span class="pc-team-name">{{ equipe.team_name }}</span>
+        {% match equipe.etat %}
+        {% when EtatEquipeVm::Attendue %}
+        <div class="pc-actions">
+          {% include "widgets/presence-call-boutons.html" %}
+        </div>
+        {% when EtatEquipeVm::Presente with { repondu_le } %}
+        <span class="pc-team-state pc-team-state--yes">Présent</span>
+        <button class="pc-btn pc-btn--switch"
+                hx-post="{{ app_routes.competitions.presence_call_answer(space_id, competition_id, season_id) }}"
+                hx-ext="json-enc"
+                hx-vals='{"round_id": "{{ campagne.round_id }}", "team_id": "{{ equipe.team_id }}", "presence": "absente"}'
+                hx-target="closest .presence-call"
+                hx-swap="outerHTML">Changer</button>
+        {% when EtatEquipeVm::Absente with { repondu_le } %}
+        <span class="pc-team-state pc-team-state--no">Absent</span>
+        <button class="pc-btn pc-btn--switch"
+                hx-post="{{ app_routes.competitions.presence_call_answer(space_id, competition_id, season_id) }}"
+                hx-ext="json-enc"
+                hx-vals='{"round_id": "{{ campagne.round_id }}", "team_id": "{{ equipe.team_id }}", "presence": "presente"}'
+                hx-target="closest .presence-call"
+                hx-swap="outerHTML">Changer</button>
+        {% endmatch %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}

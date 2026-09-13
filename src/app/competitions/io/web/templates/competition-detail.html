@@ -49,6 +49,19 @@
 
         <!-- Right panel -->
         <div class="detail-right">
+            {# L'encart d'appel à présence, chargé à part.
+
+               **`outerHTML` et non `innerHTML`** : le conteneur disparaît avec sa
+               réponse. Un coach qu'aucun sondage ne sollicite retrouve donc la
+               page exactement telle qu'elle était — pas de `<div>` de zéro
+               hauteur, pas de marge orpheline, et un espacement identique selon
+               qu'une campagne est ouverte ou non.
+
+               `CompetitionDetailTemplate` ne gagne aucun champ : la fonction
+               entière se retire en supprimant ces trois lignes. #}
+            <div hx-get="{{ app_routes.competitions.presence_call(space_id, competition_id, season_id) }}"
+                 hx-trigger="load"
+                 hx-swap="outerHTML"></div>
             <div class="tabs">
                 <div class="tab {% if active_tab == "standings" %}active{% endif %}" data-tab="standings"
                      hx-get="{{ app_routes.competitions.competition_tab_standings(space_id, competition_id, season_id) }}"

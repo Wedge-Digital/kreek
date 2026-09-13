@@ -70,6 +70,9 @@ use crate::app::competitions::io::web::widgets::latest_results_widget::latest_re
 use crate::app::competitions::io::web::widgets::notification_settings_widget::{
     get_notification_settings_widget, post_notification_settings,
 };
+use crate::app::competitions::io::web::widgets::presence_call_widget::{
+    get_presence_call, post_presence_call_answer,
+};
 use crate::app::competitions::io::web::widgets::team_matches_widget::get_team_matches_widget;
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
@@ -136,6 +139,11 @@ pub fn router() -> Router<AppState> {
             get(latest_results_widget),
         )
         .route(path::TEAM_MATCHES_WIDGET, get(get_team_matches_widget))
+        .route(path::COMPETITION_PRESENCE_CALL, get(get_presence_call))
+        .route(
+            path::COMPETITION_PRESENCE_CALL_ANSWER,
+            post(post_presence_call_answer),
+        )
         .route(
             path::COMPETITION_WIDGET_JSON_COMPETITIONS,
             get(get_json_competitions),

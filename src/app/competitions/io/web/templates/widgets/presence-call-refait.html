@@ -1,0 +1,16 @@
+{# R30 — la réponse est prise, et elle défait une rencontre déjà tirée.
+
+   **Aucun nouvel adversaire n'est annoncé** : la réparation est une proposition
+   que l'organisateur valide, et en annoncer un produirait deux coachs qui se
+   croient appariés sur un match qui n'existe pas.
+
+   **Et pas de silence non plus** : le coach vient de défaire un match que son
+   adversaire avait noté. Le lui taire lui laisserait croire que sa défection
+   n'a aucune conséquence. #}
+<div class="presence-call" hx-disinherit="*">
+  <div class="pc-avis">
+    Ta réponse est enregistrée. <strong>Ta rencontre était déjà tirée</strong> :
+    l'organisateur en sera informé et refera l'appariement concerné.
+  </div>
+  {% include "widgets/presence-call-cards.html" %}
+</div>
