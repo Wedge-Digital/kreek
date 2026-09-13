@@ -1,13 +1,18 @@
-# Extraire la campagne de présence en BC, et laisser le tirage à `competitions`
+# La campagne de présence reste dans `competitions`
+
+*Titrée d'après la décision et non d'après l'hypothèse : le fichier vit dans*
+*`done/`, et un titre qui annonce une extraction qui n'aura pas lieu tromperait*
+*qui parcourt le dossier. L'hypothèse examinée est en tête de la section*
+*suivante.*
 
 **Priorité : à trancher — décision d'architecture, pas de code**
 **Épic :** aucune — décision transverse, listée dans `kanban/epics/README.md`
-**À trancher :** **après la vague 4 de E16** (cartes 519 à 522), pour la raison
-donnée en fin de carte
+**Tranchée le 2026-09-11 : statu quo (option C).** La décision et son motif sont
+en fin de carte ; ce qu'elle garde est vérifié par l'axe 18 de `check-arch`.
 **Mesures :** relevées le 2026-09-09, une fois la vague des use cases close
 (E16 à 13/27)
 
-## L'hypothèse retenue
+## L'hypothèse qui était sur la table
 
 **Un BC `presences` porte la campagne. Le tirage reste dans `competitions`.**
 
@@ -140,6 +145,120 @@ la porte déjà. Si un seul, elle ajoute une frontière que rien ne traverse.
 
 Décider avant, c'est décider sans la moitié des faits.
 
+## LA DÉCISION — 2026-09-11 : **C, statu quo**
+
+Prise une fois l'écran livré (cartes 519 à 522) et l'unité 2 close (523 à 528),
+c'est-à-dire au moment que cette carte s'était fixé. Le tirage reste dans
+`competitions`, et la campagne aussi.
+
+### Le critère que la carte s'était donné a répondu : **un seul BC**
+
+`etat_du_panneau` (`presences_widgets.rs:251`) choisit entre cinq états en lisant
+**les deux côtés à la fois** : `survey.desaccord(journee)`, puis
+`journee.appariee()`, puis `survey.statut(aujourd_hui)`. L'aperçu du tirage et la
+proposition de réparation ne sont pas des widgets voisins — ce sont des **états du
+même panneau**.
+
+Et la lecture croisée n'est pas un raccourci : c'est R24, écrite après un défaut
+réel. La campagne se souvient d'avoir été appariée, quatre chemins du Calendrier
+suppriment des appariements sans rien savoir d'une campagne, et le panneau
+annonçait « Journée appariée » sur une journée vide. La correction a été de lire
+la journée, jamais la mémoire de la campagne.
+
+**Une frontière passerait donc au milieu de cette fonction.** Sous l'option A,
+chaque rendu du panneau demanderait un appel de port pour savoir si la journée est
+appariée, et les quatre chemins du Calendrier devraient franchir la frontière en
+sens inverse pour remettre la campagne d'accord. Le mur est le même vu de l'autre
+côté, comme cette carte l'annonçait — l'écran a seulement montré où il passe.
+
+### Trois coupures nouvelles, nées après la mesure
+
+Les cartes 526 et 527 ont branché les présences sur la plomberie de notification :
+
+| Partagé | Avec |
+|---|---|
+| `notification_emails.rs` | six gabarits dans un fichier, dont les deux du sondage |
+| `NotificationType` | deux variantes dans l'enum des quatre du cron, et le test de figeage tient les six |
+| `competition_notification_deliveries` | `survey_mailer.rs` y écrit via `NotificationDeliveryRepository` |
+
+La troisième tranche seule. Extraire, c'est **écrire du SQL dans une table de
+`competitions`** — l'exacte violation que la souveraineté des données nomme — ou
+donner aux présences leur propre journal, **avec sa copie de `claim`/`confirm`**.
+Or cette carte disqualifiait d'avance toute extraction qui dupliquerait un
+mécanisme partagé, et pour le motif que la 541 a établi : la divergence ne se voit
+pas.
+
+### Le compte des références a monté, pas baissé
+
+| | 2026-09-09 | 2026-09-11 |
+|---|---|---|
+| `match_day` | 20 | **27** |
+| `ports` | 13 | **15** |
+| `error` | 9 | **10** |
+| `tirage` | 7 | **9** |
+| `use_cases::admin` · `entree_du_tirage` · `appariement_ecrit` | — | **6 · 4 · 2** |
+| `io::web` · `notification_delivery` · `io::email` | — | **6 · 1 · 1** |
+
+Cinq cartes de travail ont **épaissi** la couture. C'est une mesure de direction :
+les deux poussent ensemble.
+
+### L'argument contraire, qui reste vrai
+
+`competitions` fait **39 414 lignes de Rust**, presque le double de `teams` qui
+suit ; le périmètre des présences en fait **11 636**, soit 30 %.
+
+| Part | Lignes |
+|---|---|
+| la campagne — agrégat, dépôt, expédition, use cases, page publique | 5 940 |
+| les cinq use cases de tirage | 2 184 |
+| l'onglet — coquille, widgets, dix actions | 2 541 |
+| doubles et tests de dépôt | 954 |
+
+C'est un argument de **navigabilité**, pas de couplage, et l'extraction ne
+réduirait pas le total : elle le déplacerait en ajoutant une frontière et un port
+impératif. Ce que la taille réclame vraiment — s'orienter dans 39 000 lignes —
+`use_cases/presences/` le donne déjà.
+
+**Ce n'est pas un argument écarté, c'est un argument perdant.** S'il redevenait
+majoritaire, ce serait un fait nouveau, et cette carte se rouvrirait.
+
+### Le statut « BC extractible » n'est toujours pas en jeu
+
+Inchangé depuis la rédaction : les value objects reposent sur
+`shared_kernel::bloodbowl`, ce qui est légitime — une campagne de présence n'a de
+sens que dans une ligue. La question était un découpage **interne**, jamais une
+préparation à l'export.
+
+## Ce que la décision garde : l'axe 18
+
+Le périmètre **est** une feuille : hors `context.rs`, `router.rs`,
+`admin_page.rs` et les `mod.rs`, rien dans le projet n'appelle le code des
+présences. Cette propriété était vraie **par accident**, et rien ne la vérifiait.
+
+`scripts/check-arch.sh` axe 18, bloquant, la rend tenue. Il ne remplace pas une
+frontière — il n'y en a pas. Il empêche qu'on en perde la possibilité sans s'en
+apercevoir.
+
+Le câblage y est **nommé, pas marqué** : pas de `// arch:ok`, qui s'essaimerait au
+fil des ajouts, chacun justifié sur le moment. Ajouter un point d'entrée demande
+une ligne dans le script, qui se relit en revue.
+`src/web/tests/test_route_publique_presence.rs` y figure parce qu'il **est** un
+garde-fou — il demande la route publique sans cookie contre le routeur de
+production — et le lui interdire supprimerait une garde pour en satisfaire une
+autre.
+
+L'axe a été éprouvé dans les deux sens : vert sur le code actuel, rouge sur un
+import posé exprès depuis `teams`.
+
+## On rouvrirait si
+
+- le tirage cessait d'être partagé entre le Calendrier et le sondage ;
+- le journal d'envois devenait un service transverse, hors de `competitions` ;
+- le panneau se scindait en deux fragments dont chacun ne lit qu'un côté.
+
+Aucune de ces trois n'est à l'ordre du jour. Les deux premières seraient des
+chantiers en soi ; la troisième contredirait R24.
+
 ## Terminé quand
 
 La décision est écrite — extraction selon A, ou statu quo selon C — **avec son
@@ -148,3 +267,8 @@ existent avec le port impératif nommé et son coût assumé.
 
 Ce n'est pas « le code est déplacé » : cette carte est une décision, et une
 décision se close en étant prise.
+
+**C'est fait.** C a été retenue, avec son motif ci-dessus. Aucune carte de
+réalisation n'est donc à écrire — l'option A n'a pas été retenue — et le seul
+livrable de code est l'axe 18, qui tient la propriété sur laquelle la décision
+s'appuie.

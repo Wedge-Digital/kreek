@@ -661,6 +661,43 @@ echo -e "${BOLD}Axe 17 · CSS sans markup — aucune règle hors de sa racine${R
 if axe17=$(python3 scripts/arch/css_sans_markup.py 2>&1); then print_pass; else print_fail "$axe17"; fi
 echo ""
 
+# ── Axe 18 : la campagne de présence reste une feuille ──────────────────────
+#
+# La carte 542 a tranché : la campagne de présence **ne sera pas** extraite en
+# BC. Trois raisons, mesurées une fois l'écran livré — une frontière passerait au
+# milieu d'`etat_du_panneau`, que R24 oblige à lire la campagne *et* la journée ;
+# le journal d'envois imposerait soit une écriture dans une table de
+# `competitions`, soit une copie de `claim`/`confirm` ; et le couplage s'est
+# épaissi de cinq cartes à l'autre.
+#
+# Ce que la décision garde, c'est la propriété qui la rendait possible : **rien,
+# hors le câblage, n'appelle le code des présences.** Elle était vraie par
+# accident, et rien ne la vérifiait. Cet axe la rend tenue.
+#
+# Il ne remplace pas une frontière — il n'y en a pas. Il empêche seulement qu'on
+# en perde la possibilité sans s'en apercevoir : le jour où le journal d'envois
+# deviendra transverse, ou où le panneau se scindera, l'extraction redeviendra
+# une question ouverte, et elle le restera parce que la feuille aura tenu.
+#
+# **Le câblage est nommé, pas marqué.** Pas de `// arch:ok` ici : un marqueur
+# s'essaime au fil des ajouts, chacun justifié sur le moment. Ajouter un point
+# d'entrée demande une ligne dans ce fichier, qui se relit en revue.
+#
+# `test_route_publique_presence.rs` y figure parce qu'il **est** un garde-fou :
+# il demande la route publique sans cookie contre le routeur de production. Le
+# lui interdire supprimerait une garde pour en satisfaire une autre.
+echo -e "${BOLD}Axe 18 · Campagne de présence — une feuille, et rien qui l'appelle${RESET}"
+axe18=$(
+  perimetre='^src/app/competitions/(use_cases/presences/|domain/presence_survey|io/repository/presence_survey_repository|io/repository/tests/test_presence_survey_repository|io/email/survey_mailer|io/web/admin/presences_|io/web/public/presence_response)'
+  cablage='^src/app/competitions/(context|router)\.rs:|^src/app/competitions/io/web/admin/admin_page\.rs:|/mod\.rs:|^src/web/tests/test_route_publique_presence\.rs:'
+  grep -rnE '(competitions::use_cases::presences|competitions::domain::presence_survey|competitions::io::repository::presence_survey_repository|competitions::io::email::survey_mailer|competitions::io::web::admin::presences_|competitions::io::web::public::presence_response|super::presences_)' src/ --include='*.rs' \
+  | grep -vE "$perimetre" \
+  | grep -vE "$cablage" \
+  | sed 's/$/  ← appel au périmètre des présences hors câblage (cf. carte 542)/'
+)
+axe18="$(printf '%s' "$axe18" | sed '/^$/d')"
+if [ -n "$axe18" ]; then print_fail "$axe18"; else print_pass; fi
+echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"
