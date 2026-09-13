@@ -7,6 +7,7 @@ pub mod my_teams_widget;
 pub mod pending_enrollment_widget;
 pub mod recruitment_cart_widget;
 pub mod recruitment_catalog_widget;
+pub mod team_logo_widget;
 pub mod team_match_context_widget;
 pub mod team_selection_tester;
 pub mod team_selection_widget;

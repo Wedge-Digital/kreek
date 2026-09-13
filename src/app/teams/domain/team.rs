@@ -5,7 +5,7 @@ use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
 use crate::app::teams::domain::basket::RosterLineId;
 use crate::app::teams::domain::costly_mistakes::{incident_for, loss_for, SEUIL_ERREURS_COUTEUSES};
 use crate::app::teams::domain::error::DomainError;
@@ -243,7 +243,7 @@ pub enum TeamDomainEvent {
         initials: String,
     },
     LogoChanged {
-        logo_url: String,
+        logo_url: Option<String>,
     },
 }
 
@@ -738,7 +738,7 @@ impl Team {
                 self.initials = initials.clone();
             }
             TeamDomainEvent::LogoChanged { logo_url } => {
-                self.logo_url = Some(logo_url.clone());
+                self.logo_url = logo_url.clone();
             }
             // Événements sans impact sur l'état de l'agrégat
             TeamDomainEvent::PlayerRetiredTemporarily { .. }
@@ -803,6 +803,16 @@ impl Team {
                 to: ParticipationStatus::Dismissed,
             }),
         }
+    }
+
+    /// `None` retire le logo : la fiche retombe sur les initiales.
+    pub fn change_logo(
+        &self,
+        logo_url: Option<CloudinaryImage>,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        Ok(TeamDomainEvent::LogoChanged {
+            logo_url: logo_url.map(|url| url.into_inner()),
+        })
     }
 
     pub fn start_match_reporting(
@@ -1350,6 +1360,60 @@ mod tests {
         ];
         let team = Team::hydrate(&events).unwrap();
         assert!(matches!(team.dismiss(), Err(DomainError::AlreadyDismissed)));
+    }
+
+    fn logo() -> CloudinaryImage {
+        CloudinaryImage::try_new(
+            "https://res.cloudinary.com/kreek/image/upload/v1/teams/logo.png".to_string(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn change_logo_produces_logo_changed_with_value() {
+        let events = vec![created_event()];
+        let team = Team::hydrate(&events).unwrap();
+        let event = team.change_logo(Some(logo())).unwrap();
+        match event {
+            TeamDomainEvent::LogoChanged { logo_url } => {
+                assert_eq!(logo_url, Some(logo().into_inner()));
+            }
+            _ => panic!("expected LogoChanged"),
+        }
+    }
+
+    #[test]
+    fn change_logo_none_produces_logo_changed_without_value() {
+        let events = vec![created_event()];
+        let team = Team::hydrate(&events).unwrap();
+        let event = team.change_logo(None).unwrap();
+        assert!(matches!(
+            event,
+            TeamDomainEvent::LogoChanged { logo_url: None }
+        ));
+    }
+
+    #[test]
+    fn applying_logo_changed_sets_logo_url() {
+        let events = vec![created_event()];
+        let team = Team::hydrate(&events).unwrap();
+        let event = team.change_logo(Some(logo())).unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.logo_url, Some(logo().into_inner()));
+    }
+
+    #[test]
+    fn applying_logo_changed_with_none_clears_logo_url() {
+        let events = vec![
+            created_event(),
+            TeamDomainEvent::LogoChanged {
+                logo_url: Some(logo().into_inner()),
+            },
+        ];
+        let team = Team::hydrate(&events).unwrap();
+        let event = team.change_logo(None).unwrap();
+        let team = team.apply(&event);
+        assert_eq!(team.logo_url, None);
     }
 
     /// Recruter débite la trésorerie et **ne touche plus à la TV** : celle-ci

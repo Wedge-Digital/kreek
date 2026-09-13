@@ -56,6 +56,14 @@
                     preview.style.display = 'block';
                     document.getElementById('placeholder-{{ field_id }}').style.display = 'none';
                 }
+                // Émis à la fermeture de la fenêtre Cloudinary, qu'un upload ait
+                // réussi ou non — c'est le seul moment où l'utilisateur a
+                // effectivement quitté le picker. Les widgets qui n'écoutent pas
+                // cet événement (settings-general, draft-team, new-article)
+                // l'ignorent simplement : rien ne change pour eux.
+                if (result && result.event === 'close') {
+                    htmx.trigger(document.body, 'cloudinaryUploadClosed', { fieldId: '{{ field_id }}' });
+                }
             });
             document.getElementById('zone-{{ field_id }}').addEventListener('click', function () {
                 widget.open();

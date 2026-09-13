@@ -1,6 +1,6 @@
 use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, SpaceId, UserId};
 
 #[derive(Debug)]
 pub struct DismissTeamCommand {
@@ -12,6 +12,12 @@ pub struct DismissTeamCommand {
 #[derive(Debug)]
 pub struct RejectEnrollmentCommand {
     pub team_id: TeamId,
+}
+
+#[derive(Debug)]
+pub struct ChangeTeamLogoCommand {
+    pub team_id: TeamId,
+    pub logo_url: Option<CloudinaryImage>,
 }
 
 #[derive(Debug)]
