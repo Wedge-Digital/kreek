@@ -1,7 +1,7 @@
 use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
-use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
+use crate::app::shared_kernel::identity::ids::{CloudinaryImage, SpaceId, UserId};
 use crate::app::teams::domain::team::OverridablePhase;
 use crate::app::teams::domain::treasury::MovementDirection;
 use crate::app::teams::domain::value_objects::{AdjustmentAmount, AdjustmentNote, OverrideReason};
@@ -50,6 +50,12 @@ pub struct DismissTeamCommand {
 #[derive(Debug)]
 pub struct RejectEnrollmentCommand {
     pub team_id: TeamId,
+}
+
+#[derive(Debug)]
+pub struct ChangeTeamLogoCommand {
+    pub team_id: TeamId,
+    pub logo_url: Option<CloudinaryImage>,
 }
 
 #[derive(Debug)]

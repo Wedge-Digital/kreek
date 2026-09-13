@@ -1,0 +1,118 @@
+.team-logo-widget .upload-widget {
+  position: relative;
+}
+
+.team-logo-actions-wrapper {
+  position: absolute;
+  inset: 0;
+  /* Laisse les clics traverser jusqu'à la zone Cloudinary, sauf sur les
+     boutons eux-mêmes. */
+  pointer-events: none;
+}
+
+.team-logo-remove {
+  position: absolute;
+  bottom: var(--p1);
+  right: calc(var(--p1) + 44px);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: var(--red);
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+.team-logo-remove:hover {
+  background: #fdecea;
+}
+
+.team-logo-close {
+  position: absolute;
+  bottom: var(--p1);
+  right: var(--p1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: var(--dark-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+.team-logo-close:hover {
+  background: var(--dark-6);
+}
+
+/* `.team-header-logo` (team-page.css) porte `overflow: hidden`, incompatible
+   avec un bouton positionné en absolu à l'intérieur. */
+.team-logo-display-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.team-logo-edit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: var(--dark-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.team-logo-edit:hover {
+  background: var(--dark-6);
+}
+
+.team-logo-confirm {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.team-logo-confirm-box {
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: var(--p3);
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--p2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.team-logo-confirm-text {
+  color: var(--dark-1);
+}
+
+.team-logo-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--p1);
+}
+.team-logo-confirm-actions .btn {
+  width: auto;
+}

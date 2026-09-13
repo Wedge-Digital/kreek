@@ -16,12 +16,16 @@
   <!-- En-tête -->
   <div class="team-header">
 
-    {% if let Some(url) = vm.logo_url %}
-    <div class="team-header-logo">
-      <img class="team-header-logo-img" src="{{ url }}" alt="" width="120" height="120">
-    </div>
+    {% if vm.peut_editer_logo %}
+    <div hx-get="{{ vm.logo_widget_url }}" hx-trigger="load" hx-target="this" hx-swap="outerHTML"></div>
     {% else %}
-    <div class="team-header-logo">{{ vm.initials }}</div>
+      {% if let Some(url) = vm.logo_url %}
+      <div class="team-header-logo">
+        <img class="team-header-logo-img" src="{{ url }}" alt="" width="120" height="120">
+      </div>
+      {% else %}
+      <div class="team-header-logo">{{ vm.initials }}</div>
+      {% endif %}
     {% endif %}
 
     <div class="team-header-info">
