@@ -108,6 +108,30 @@ impl IPresenceSurveyRepository for FauxSurveyRepo {
     ) -> Result<Vec<SurveySummaryDto>, PresenceSurveyRepositoryError> {
         Ok(vec![])
     }
+
+    /// **Le filtre du vrai dépôt, refait par le domaine.** Rendre `vec![]` aurait
+    /// fait passer n'importe quel use case de l'encart sans qu'il voie jamais une
+    /// campagne — le défaut de `FauxTeams::find_team_names`, qui rendait une liste
+    /// vide quoi qu'on lui demande.
+    ///
+    /// Le vrai dépôt élague en SQL puis laisse `statut()` décider ; ici il n'y a
+    /// pas de SQL, donc `statut()` décide seul. C'est le même résultat, obtenu par
+    /// la seule référence qui compte.
+    async fn list_open_surveys_for_season(
+        &self,
+        _season_id: &str,
+        maintenant: &str,
+    ) -> Result<Vec<PresenceSurvey>, PresenceSurveyRepositoryError> {
+        let Ok(aujourd_hui) = DateString::try_new(maintenant.to_string()) else {
+            return Ok(vec![]);
+        };
+        Ok(self
+            .existante
+            .clone()
+            .filter(|s| s.statut(&aujourd_hui).est_ouverte())
+            .into_iter()
+            .collect())
+    }
 }
 
 // ── Le dépôt de journées ─────────────────────────────────────────────────────

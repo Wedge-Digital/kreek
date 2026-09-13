@@ -121,6 +121,34 @@ fn campagne(round: &MatchDay, destinataires: &[Destinataire]) -> PresenceSurvey 
     .expect("ouverture")
 }
 
+/// La même campagne, échéance choisie. `campagne` fige la sienne au 10 octobre,
+/// ce qui suffit aux lectures unitaires ; la liste des campagnes ouvertes, elle,
+/// se juge précisément sur cette date.
+fn campagne_echeant(
+    round: &MatchDay,
+    destinataires: &[Destinataire],
+    deadline: &str,
+) -> PresenceSurvey {
+    PresenceSurvey::ouvrir(
+        SurveyId::new(),
+        SeasonId::try_new(SAISON).unwrap(),
+        round,
+        destinataires,
+        SurveyDeadline::try_new(deadline.to_string()).unwrap(),
+        AutoRemind::new(true),
+        &DateString::try_new("2026-10-01".to_string()).unwrap(),
+    )
+    .expect("ouverture")
+}
+
+/// Pose une journée en base et rend l'agrégat correspondant — les deux vont
+/// toujours ensemble, et les séparer a déjà produit des campagnes orphelines.
+async fn journee_posee(pool: &sqlx::PgPool, position: i32) -> MatchDay {
+    let id = MatchId::new();
+    poser_la_journee(pool, &id.to_string(), position, "time_frame").await;
+    journee(id)
+}
+
 fn destinataires(n: usize) -> Vec<Destinataire> {
     (0..n)
         .map(|_| Destinataire {
@@ -497,4 +525,195 @@ async fn un_jeton_inconnu_n_a_pas_de_libelles(pool: sqlx::PgPool) {
         .await;
 
     assert!(matches!(issue, Ok(None)));
+}
+
+// ── Les campagnes ouvertes d'une saison — carte 529 ──────────────────────────
+
+/// L'élagage SQL et `statut()` disent la même chose : une campagne échue hier ne
+/// remonte pas.
+#[sqlx::test]
+async fn une_campagne_echue_de_la_veille_n_est_pas_rendue(pool: sqlx::PgPool) {
+    poser_la_competition(&pool).await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let jour = journee_posee(&pool, 1).await;
+    depot
+        .save(&campagne_echeant(&jour, &destinataires(2), "2026-10-10"))
+        .await
+        .expect("écriture");
+
+    let ouvertes = depot
+        .list_open_surveys_for_season(SAISON, "2026-10-11")
+        .await
+        .expect("lecture");
+
+    assert!(ouvertes.is_empty());
+}
+
+/// **Le test du `>=`, et le seul qui le voit.**
+///
+/// `statut_de` ferme sur `aujourd_hui > deadline` : une campagne échéant le 10
+/// répond encore le 10. Un `>` dans le SQL l'écarterait — et ce serait le seul
+/// sens dangereux de ce compromis, celui où le domaine n'a plus rien à rattraper
+/// parce que la ligne n'est jamais arrivée.
+#[sqlx::test]
+async fn une_campagne_echeant_aujourd_hui_repond_encore(pool: sqlx::PgPool) {
+    poser_la_competition(&pool).await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let jour = journee_posee(&pool, 1).await;
+    depot
+        .save(&campagne_echeant(&jour, &destinataires(2), "2026-10-10"))
+        .await
+        .expect("écriture");
+
+    let ouvertes = depot
+        .list_open_surveys_for_season(SAISON, "2026-10-10")
+        .await
+        .expect("lecture");
+
+    assert_eq!(
+        ouvertes.len(),
+        1,
+        "le jour de l'échéance, la campagne répond"
+    );
+    assert!(ouvertes[0]
+        .statut(&DateString::try_new("2026-10-10".to_string()).unwrap())
+        .est_ouverte());
+}
+
+/// R23 — la décision ferme, quelle que soit l'échéance. L'échéance est ici **à
+/// venir** : une requête qui ne filtrerait que sur la date la laisserait passer.
+#[sqlx::test]
+async fn une_campagne_close_par_decision_n_est_pas_rendue(pool: sqlx::PgPool) {
+    poser_la_competition(&pool).await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let jour = journee_posee(&pool, 1).await;
+    let mut survey = campagne_echeant(&jour, &destinataires(2), "2026-12-31");
+    survey
+        .clore(&DateString::try_new("2026-10-05".to_string()).unwrap())
+        .expect("clôture");
+    depot.save(&survey).await.expect("écriture");
+
+    let ouvertes = depot
+        .list_open_surveys_for_season(SAISON, "2026-10-06")
+        .await
+        .expect("lecture");
+
+    assert!(ouvertes.is_empty(), "close par décision, échéance à venir");
+}
+
+/// Elle rend des **agrégats** : l'encart a besoin de la réponse de chaque équipe
+/// et de son horodatage, pas d'un compte.
+#[sqlx::test]
+async fn une_campagne_ouverte_revient_avec_toutes_ses_reponses(pool: sqlx::PgPool) {
+    poser_la_competition(&pool).await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let jour = journee_posee(&pool, 1).await;
+    let dests = destinataires(3);
+    let mut survey = campagne_echeant(&jour, &dests, "2026-12-31");
+    declarer(&mut survey, &dests, 0, Venue::Presente, Repondant::Jeton);
+    depot.save(&survey).await.expect("écriture");
+
+    let ouvertes = depot
+        .list_open_surveys_for_season(SAISON, "2026-10-06")
+        .await
+        .expect("lecture");
+
+    assert_eq!(ouvertes.len(), 1);
+    assert_eq!(
+        ouvertes[0].reponses().len(),
+        3,
+        "les trois, pas la seule posée"
+    );
+    assert_eq!(ouvertes[0].presents().len(), 1);
+    // L'horodatage traverse, et c'est lui que l'encart affiche : « répondu le … ».
+    assert!(matches!(
+        ouvertes[0].presents()[0].presence(),
+        Presence::Declaree { .. }
+    ));
+}
+
+#[sqlx::test]
+async fn deux_campagnes_ouvertes_reviennent_toutes_les_deux(pool: sqlx::PgPool) {
+    poser_la_competition(&pool).await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    for (rang, jour) in [journee_posee(&pool, 1).await, journee_posee(&pool, 2).await]
+        .iter()
+        .enumerate()
+    {
+        depot
+            .save(&campagne_echeant(
+                jour,
+                &destinataires(rang + 1),
+                "2026-12-31",
+            ))
+            .await
+            .expect("écriture");
+    }
+
+    let ouvertes = depot
+        .list_open_surveys_for_season(SAISON, "2026-10-06")
+        .await
+        .expect("lecture");
+
+    assert_eq!(ouvertes.len(), 2);
+}
+
+/// **Le test que le regroupement rend nécessaire.**
+///
+/// Les réponses des deux campagnes arrivent dans une seule requête, et c'est leur
+/// `survey_id` qui les répartit. Un regroupement fautif donnerait à l'une les
+/// réponses de l'autre — ou les deux à chacune — et aucun test sur une campagne
+/// unique ne le verrait.
+#[sqlx::test]
+async fn les_reponses_ne_se_melangent_pas_entre_campagnes(pool: sqlx::PgPool) {
+    poser_la_competition(&pool).await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+    let (une, deux) = (journee_posee(&pool, 1).await, journee_posee(&pool, 2).await);
+    let dests_une = destinataires(1);
+    let dests_deux = destinataires(3);
+    depot
+        .save(&campagne_echeant(&une, &dests_une, "2026-12-31"))
+        .await
+        .expect("écriture");
+    depot
+        .save(&campagne_echeant(&deux, &dests_deux, "2026-12-31"))
+        .await
+        .expect("écriture");
+
+    let ouvertes = depot
+        .list_open_surveys_for_season(SAISON, "2026-10-06")
+        .await
+        .expect("lecture");
+
+    // Chaque campagne retrouve **ses** équipes, et non le total des deux.
+    for campagne in &ouvertes {
+        let attendues: &[Destinataire] = if campagne.round_id() == &une.id {
+            &dests_une
+        } else {
+            &dests_deux
+        };
+        assert_eq!(campagne.reponses().len(), attendues.len());
+        for reponse in campagne.reponses() {
+            assert!(
+                attendues.iter().any(|d| &d.team_id == reponse.team_id()),
+                "une réponse d'une autre campagne s'est glissée ici"
+            );
+        }
+    }
+}
+
+/// Une saison sans campagne ouverte ne fait **pas** d'aller-retour pour ses
+/// réponses : c'est le cas courant sur la page de détail, et le court-circuit sur
+/// la liste vide est là pour lui.
+#[sqlx::test]
+async fn une_saison_sans_campagne_ouverte_rend_une_liste_vide(pool: sqlx::PgPool) {
+    poser_la_competition(&pool).await;
+    let depot = PresenceSurveyRepository::new(pool.clone());
+
+    let ouvertes = depot
+        .list_open_surveys_for_season(SAISON, "2026-10-06")
+        .await
+        .expect("lecture");
+
+    assert!(ouvertes.is_empty());
 }

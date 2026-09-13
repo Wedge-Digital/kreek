@@ -165,6 +165,17 @@ mod tests {
         > {
             Ok(vec![])
         }
+
+        /// Ce service ne liste rien : il hydrate **une** campagne, désignée par son
+        /// jeton. Une liste vide dit ici l'absence de besoin, pas un échafaudage
+        /// tronqué — aucun test de ce fichier ne l'atteint.
+        async fn list_open_surveys_for_season(
+            &self,
+            _season_id: &str,
+            _maintenant: &str,
+        ) -> Result<Vec<PresenceSurvey>, PresenceSurveyRepositoryError> {
+            Ok(vec![])
+        }
     }
 
     fn libelles() -> LandingLabelsDto {

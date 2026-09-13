@@ -24,6 +24,7 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct PresenceSurveyRepository {
@@ -138,6 +139,38 @@ impl IPresenceSurveyRepository for PresenceSurveyRepository {
         .await
         .map_err(db_err)
     }
+
+    /// **Le même chemin d'hydratation que les deux lectures unitaires** —
+    /// `rehydrater`, sur des réponses lues à part. Construire l'agrégat autrement
+    /// ici aurait donné un troisième assemblage, libre de diverger des deux
+    /// premiers sans que rien ne le dise.
+    async fn list_open_surveys_for_season(
+        &self,
+        season_id: &str,
+        maintenant: &str,
+    ) -> Result<Vec<PresenceSurvey>, PresenceSurveyRepositoryError> {
+        let rows = sqlx::query(include_str!(
+            "sql/presences/list_open_surveys_for_season.sql"
+        ))
+        .bind(season_id)
+        .bind(maintenant)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        let mut par_campagne = self
+            .lire_les_reponses_groupees(&identifiants(&rows)?)
+            .await?;
+        rows.iter()
+            .map(|row| {
+                let id: String = row.try_get("id").map_err(db_err)?;
+                // Une campagne sans réponse est possible — une saison sans équipe
+                // engagée en produit une. Elle se relit telle qu'elle a été
+                // écrite : vide, et non absente.
+                rehydrater(row, par_campagne.remove(&id).unwrap_or_default())
+            })
+            .collect()
+    }
 }
 
 impl PresenceSurveyRepository {
@@ -153,6 +186,49 @@ impl PresenceSurveyRepository {
 
         rows.iter().map(reponse_depuis).collect()
     }
+
+    /// Les réponses de plusieurs campagnes, indexées par campagne.
+    ///
+    /// **Une requête, pas une par campagne.** C'est tout l'intérêt de la méthode
+    /// qui l'appelle : réutiliser `lire_les_reponses` dans une boucle aurait fait
+    /// `1 + N` allers-retours, déplaçant d'un cran le coût que la requête de liste
+    /// venait de supprimer.
+    ///
+    /// Le court-circuit sur la liste vide n'est pas une optimisation : `= ANY` sur
+    /// un tableau vide rendrait zéro ligne, mais l'aller-retour aurait lieu — et
+    /// « aucune campagne ouverte » est le cas **courant** sur cette saison.
+    async fn lire_les_reponses_groupees(
+        &self,
+        survey_ids: &[String],
+    ) -> Result<HashMap<String, Vec<Reponse>>, PresenceSurveyRepositoryError> {
+        if survey_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let rows = sqlx::query(include_str!("sql/presences/find_answers_by_surveys.sql"))
+            .bind(survey_ids)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+        let mut par_campagne: HashMap<String, Vec<Reponse>> = HashMap::new();
+        for row in &rows {
+            let survey_id: String = row.try_get("survey_id").map_err(db_err)?;
+            par_campagne
+                .entry(survey_id)
+                .or_default()
+                .push(reponse_depuis(row)?);
+        }
+        Ok(par_campagne)
+    }
+}
+
+/// Les identifiants des campagnes rendues, dans l'ordre de la requête.
+fn identifiants(
+    rows: &[sqlx::postgres::PgRow],
+) -> Result<Vec<String>, PresenceSurveyRepositoryError> {
+    rows.iter()
+        .map(|r| r.try_get("id").map_err(db_err))
+        .collect()
 }
 
 // ── Lecture ──────────────────────────────────────────────────────────────────

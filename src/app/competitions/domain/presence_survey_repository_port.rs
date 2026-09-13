@@ -1,9 +1,10 @@
 //! Ce que la campagne de présence demande à sa persistance.
 //!
-//! Trois méthodes en carte 510, cinq depuis la 523. `find_by_token` et
-//! `find_landing_labels` ont été ajoutées par l'unité `reponse-coach`, qui seule
-//! savait ce que sa route publique charge — le trait s'est donc rouvert **par un
-//! ajout**, pas par une reprise, comme la 510 l'avait annoncé.
+//! Trois méthodes en carte 510, cinq depuis la 523, six depuis la 529.
+//! `find_by_token` et `find_landing_labels` ont été ajoutées par l'unité
+//! `reponse-coach`, `list_open_surveys_for_season` par l'encart du coach — chaque
+//! unité sachant seule ce que son écran charge. Le trait se rouvre donc **par des
+//! ajouts**, pas par des reprises, comme la 510 l'avait annoncé.
 
 use crate::app::competitions::domain::presence_survey::PresenceSurvey;
 use async_trait::async_trait;
@@ -127,4 +128,35 @@ pub trait IPresenceSurveyRepository: Send + Sync {
         &self,
         season_id: &str,
     ) -> Result<Vec<SurveySummaryDto>, PresenceSurveyRepositoryError>;
+
+    /// Les campagnes ouvertes de la saison, **avec toutes leurs réponses**.
+    ///
+    /// Elle rend des agrégats et non un DTO de lecture : l'encart a besoin de
+    /// `statut()`, de la réponse de chaque équipe et de son horodatage — trois
+    /// questions du domaine qu'un DTO aurait aplaties, et que la vue aurait dû
+    /// reconstituer. C'est exactement ce que « un view model transpose, il ne
+    /// dérive pas » interdit.
+    ///
+    /// **`maintenant` sert à élaguer, pas à décider.** R23 fait de la clôture un
+    /// calcul : le SQL écarte ce qui est manifestement clos, `statut(maintenant)`
+    /// tranche ensuite. Le filtre vit donc à deux endroits, et c'est assumé —
+    /// l'alternative serait de charger les vingt campagnes d'une saison à chaque
+    /// affichage d'une page que la plupart des visiteurs ouvrent sans être
+    /// concernés.
+    ///
+    /// Ce qui rend le compromis sûr est une **asymétrie** : un élagage trop large
+    /// ne coûte qu'une campagne chargée pour rien, que le domaine écarte ; un
+    /// élagage trop étroit fait disparaître une campagne ouverte, et le domaine
+    /// n'a plus rien à rattraper. C'est pour ce seul motif que le SQL compare avec
+    /// `>=` là où `statut_de` compare avec `>`.
+    ///
+    /// **Deux requêtes, quel que soit le nombre de campagnes.** Les campagnes,
+    /// puis toutes leurs réponses d'un coup. Réutiliser la lecture au singulier
+    /// aurait fait `1 + N` allers-retours — ce que la requête de liste cherchait
+    /// justement à éviter.
+    async fn list_open_surveys_for_season(
+        &self,
+        season_id: &str,
+        maintenant: &str,
+    ) -> Result<Vec<PresenceSurvey>, PresenceSurveyRepositoryError>;
 }
