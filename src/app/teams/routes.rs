@@ -22,6 +22,7 @@ pub mod path {
     /// L'identité d'une équipe — logo, nom, statut, roster · coach — que
     /// n'importe quelle page compose par un `hx-get` (carte 566).
     pub const TEAM_IDENTITY_WIDGET: &str = "/app/{space_id}/teams/{team_id}/widgets/identity";
+    pub const TEAM_LOGO_WIDGET: &str = "/app/{space_id}/teams/{team_id}/widgets/logo";
     pub const PENDING_ENROLLMENT_WIDGET: &str = "/app/{space_id}/team/widgets/pending";
     pub const ENROLLED_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/enrolled";
     pub const MY_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/my-teams";
@@ -120,6 +121,9 @@ impl Routes {
         path::DISMISS_TEAM
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
+    }
+    pub fn team_logo_widget(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::TEAM_LOGO_WIDGET, space_id, team_id)
     }
     pub fn pending_enrollment_widget(&self, space_id: &str) -> String {
         path::PENDING_ENROLLMENT_WIDGET.replace("{space_id}", space_id)
@@ -301,6 +305,7 @@ mod tests {
             ("team_treasury", r.team_treasury(SPACE, TEAM)),
             ("team_treasury_adjust", r.team_treasury_adjust(SPACE, TEAM)),
             ("team_identity_widget", r.team_identity_widget(SPACE, TEAM)),
+            ("team_logo_widget", r.team_logo_widget(SPACE, TEAM)),
         ]
     }
 

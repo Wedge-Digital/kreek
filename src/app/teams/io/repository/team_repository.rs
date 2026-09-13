@@ -256,6 +256,16 @@ impl TeamRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            TeamDomainEvent::LogoChanged { logo_url } => {
+                sqlx::query(
+                    "UPDATE team_proj SET logo_url = $2, updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .bind(logo_url)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             TeamDomainEvent::OffSeasonStarted { .. }
             | TeamDomainEvent::RetirementPhaseValidated => {
                 set_game_phase(tx, team_id, Some("OffSeason")).await?;
@@ -298,10 +308,7 @@ impl TeamRepository {
             | TeamDomainEvent::InitialsChanged { .. }
             // Jamais émis (carte 46, annulée) : il reste pour relire
             // l'historique.
-            | TeamDomainEvent::GamePhaseOverridden { .. }
-            // Le bras qui écrira `logo_url` est l'objet de la PR #11 : ne pas
-            // l'écrire ici une seconde fois.
-            | TeamDomainEvent::LogoChanged { .. } => {}
+            | TeamDomainEvent::GamePhaseOverridden { .. } => {}
         }
         Ok(())
     }

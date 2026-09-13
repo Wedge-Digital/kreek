@@ -1,0 +1,115 @@
+{% import "components/upload_widget.html" as cmp %}
+{# `hx-disinherit="*"` bloque l'héritage htmx de la page hôte,
+   `hx-swap="outerHTML"` échange le widget par lui-même (cf.
+   admin/widgets/settings-general.html). #}
+<div class="team-logo-widget" id="team-logo-widget" hx-disinherit="*"
+     x-data="{ editing: {{ vm.start_in_edit_mode }}, confirming: false }">
+
+  {# Le crayon n'est pas un enfant de `.team-header-logo` : cette classe
+     porte `overflow: hidden` (team-page.css), qui le rognerait. #}
+  <div class="team-logo-display-wrapper" x-show="!editing" x-cloak>
+    <div class="team-header-logo">
+      {% if !vm.logo_url.is_empty() %}
+      <img class="team-header-logo-img" src="{{ vm.logo_url }}" alt="" width="120" height="120">
+      {% else %}
+      {{ vm.initials }}
+      {% endif %}
+    </div>
+    <button type="button" class="team-logo-edit" title="Modifier le logo" @click="editing = true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div x-show="editing" x-cloak>
+    <form id="team-logo-form"
+          hx-post="{{ post_url }}"
+          hx-target="#team-logo-widget"
+          hx-swap="outerHTML">
+
+      {% call cmp::cloudinary_upload("logo_url", vm.logo_url, "teams/logos", "Logo de l'équipe", vm.error) %}
+
+      {# Pas de `@click` Alpine : ce bouton est déplacé par le script plus
+         bas, et `appendChild` sur un nœud existant lui fait perdre ses
+         directives (le `MutationObserver` d'Alpine y voit une destruction).
+         Le geste est posé en JS natif après le déplacement. #}
+      <button type="button" class="team-logo-close" title="Fermer sans changer" id="team-logo-close-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      {% if !vm.logo_url.is_empty() %}
+      <button type="button" class="team-logo-remove" title="Retirer le logo" id="team-logo-remove-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+      <div class="team-logo-confirm" x-show="confirming" x-cloak @click.self="confirming = false">
+        <div class="team-logo-confirm-box">
+          <div class="team-logo-confirm-text">Retirer le logo et revenir aux initiales ({{ vm.initials }}) ?</div>
+          <div class="team-logo-confirm-actions">
+            <button type="button" class="btn btn-outline" @click="confirming = false">Annuler</button>
+            <button type="button" class="btn btn-primary"
+                    onclick="document.getElementById('logo_url').value=''; document.getElementById('team-logo-form').requestSubmit();">
+              Retirer
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+<script>
+(function () {
+    const widget = document.currentScript.previousElementSibling;
+
+    // `#zone-logo_url` porte le clic qui ouvre le picker Cloudinary (posé
+    // par la macro) : poubelle et croix vivent donc dans un wrapper séparé,
+    // en dehors de cette zone, pour ne jamais déclencher ce clic.
+    const zone = widget.querySelector('#zone-logo_url');
+    const poubelle = widget.querySelector('#team-logo-remove-btn');
+    const croix = widget.querySelector('#team-logo-close-btn');
+    if (zone && (poubelle || croix)) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'team-logo-actions-wrapper';
+        zone.insertAdjacentElement('afterend', wrapper);
+        if (poubelle) wrapper.appendChild(poubelle);
+        if (croix) wrapper.appendChild(croix);
+    }
+    if (poubelle) {
+        poubelle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            Alpine.$data(widget).confirming = true;
+        });
+    }
+    if (croix) {
+        croix.addEventListener('click', function (e) {
+            e.stopPropagation();
+            Alpine.$data(widget).editing = false;
+        });
+    }
+
+    // `cloudinaryUploadClosed` (cf. upload_widget.html) est émis à la
+    // fermeture du picker, succès ou annulation confondus — on ne soumet
+    // que si la valeur a changé.
+    const input = widget.querySelector('#logo_url');
+    if (!input) return;
+    const valeur_initiale = input.value;
+    document.body.addEventListener('cloudinaryUploadClosed', function handler(e) {
+        if (e.detail.fieldId !== 'logo_url') return;
+        document.body.removeEventListener('cloudinaryUploadClosed', handler);
+        if (input.value !== valeur_initiale) {
+            document.getElementById('team-logo-form').requestSubmit();
+        }
+    });
+})();
+</script>
