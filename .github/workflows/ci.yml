@@ -191,17 +191,52 @@ jobs:
           REFERENCES__DIR=assets/references.example
           EOF
 
-      # `make init_db` reposait sur scripts/extracted_*.json, non versionnés :
-      # inutilisable en CI. Le seed synthétique couvre tout ce dont la suite a
-      # besoin. Les migrations sont appliquées par le binaire au démarrage.
-      - name: Initialiser la base (reset + seed e2e synthétique)
+      # La suite e2e a **sa propre base** depuis la carte 536 : `scripts/e2e_db.sh`
+      # lit `.env.e2e`, que ce job ne générait pas — `make e2e` échouait alors sur
+      # un `Error 2` nu, et le job était rouge depuis six jours sans qu'on sache
+      # pourquoi (carte 546).
+      #
+      # **Les deux fichiers portent la même base.** `db_helpers.py` interroge celle
+      # de `.env.e2e` ; le serveur, lancé en `EXEC_PROFILE=e2e`, écrit dans la
+      # même. Les faire diverger donnerait une suite qui assertit contre une base
+      # que le serveur n'écrit pas — verte sans rien mesurer, ou rouge sans motif
+      # lisible.
+      - name: Générer .env.e2e (base dédiée à la suite)
         run: |
-          make reset_db
-          make seed_e2e
+          cat > .env.e2e <<'EOF'
+          ENV=e2e
+          DATABASE__URL=postgresql://dev:devpassword@localhost:5432/kreek_e2e
+          DATABASE__HOST=localhost
+          DATABASE__PORT=5432
+          DATABASE__USER=dev
+          DATABASE__PWD=devpassword
+          DATABASE__NAME=kreek_e2e
+          DATABASE__MAX_CONNECTIONS=20
+          SERVER__HOST=0.0.0.0
+          SERVER__PORT=3210
+          SQLX_OFFLINE=true
+          EMAIL__PROVIDER=console
+          EMAIL__FROM=mailer@example.test
+          EMAIL__FROM_NAME=KreekCI
+          HOST_DOMAIN=localhost:3210
+          BYPASS_AUTH=true
+          REFERENCES__DIR=assets/references.example
+          EOF
 
+      # **Avant** le serveur, et non après : `kreek_e2e` doit exister au démarrage.
+      # Le script construit le gabarit — migrations puis `seed-e2e` — puis clone.
+      # `make e2e` reclonera en moins d'une seconde juste avant la suite.
+      #
+      # `make reset_db && make seed_e2e` ont disparu d'ici : ils préparaient
+      # `kreek_db`, que plus personne ne lit dans ce job.
+      - name: Préparer la base e2e (gabarit + clone)
+        run: ./scripts/e2e_db.sh
+
+      # `EXEC_PROFILE=e2e` choisit `.env.e2e` — le même mécanisme que la cible
+      # `make dev-e2e` en local, pour que la CI exerce le montage qu'on utilise.
       - name: Lancer le serveur en arrière-plan
         run: |
-          nohup cargo run > server.log 2>&1 &
+          EXEC_PROFILE=e2e nohup cargo run > server.log 2>&1 &
           echo $! > server.pid
 
       - name: Attendre que le serveur réponde

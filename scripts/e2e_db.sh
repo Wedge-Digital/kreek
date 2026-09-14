@@ -25,9 +25,24 @@ PROFIL="${PROFIL:-e2e}"
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RACINE"
 
+# `|| true` en queue de tuyau, et ce n'est pas de la prudence décorative.
+#
+# Sous `set -euo pipefail`, `grep` sur un fichier **absent** sort en 2, `pipefail`
+# propage ce 2 à la substitution de commande, et `set -e` tue le script à la
+# première lecture — **avant** le message d'erreur écrit vingt lignes plus bas
+# pour exactement ce cas. La CI n'affichait donc qu'un `Error 2` nu, et il a fallu
+# rejouer le script à la main pour savoir ce qui manquait.
 lire_env() {
-  grep -E "^$1=" ".env.$PROFIL" 2>/dev/null | cut -d= -f2- | tr -d "\"'" | head -1
+  grep -E "^$1=" ".env.$PROFIL" 2>/dev/null | cut -d= -f2- | tr -d "\"'" | head -1 || true
 }
+
+# Dire ce qui manque, plutôt que de laisser deviner à partir d'une variable vide.
+if [ ! -f ".env.$PROFIL" ]; then
+  echo "e2e_db: .env.$PROFIL est absent." >&2
+  echo "  En local : le fichier est ignoré par git, copie-le depuis un profil voisin." >&2
+  echo "  En CI    : c'est au job de le générer, comme il génère déjà .env.dev." >&2
+  exit 1
+fi
 
 URL="$(lire_env DATABASE__URL)"
 BASE="$(lire_env DATABASE__NAME)"
