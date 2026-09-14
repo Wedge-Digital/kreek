@@ -107,3 +107,62 @@ minute perdue à chaque fois qu'on l'oublie.
 - [x] `tests/impact-map.toml`, **même commit**
 - [x] `make e2e` passe (serveur dev lancé par l'utilisateur)
 - [x] `make lint`, `make check-arch`, `make test`
+
+---
+
+## Suite — deux échecs en CI, et ce qu'ils ont appris (2026-09-14)
+
+La suite locale était verte ; la CI a rendu **deux échecs** au premier passage
+qui l'a exécutée. Les deux venaient de ce fichier, et un seul était réel.
+
+### Le vrai : un test dont le verdict dépendait du tirage
+
+`test_j4` cliquait sur `.presence-call .pc-btn--switch` — **la première ligne
+venue**. Or DevCoach engage deux équipes dans cette saison, ce qui en fait cinq
+présentes, donc deux rencontres et **une exemptée** (R9). Se décommander depuis
+l'exemptée ne défait aucune rencontre : pas d'avis R30, et le test tombe.
+
+Il ne tombait pas toujours. Mesuré en rejouant l'ancien sélecteur six fois sur le
+fichier complet : **un échec sur six**. Il passait en local par chance de tirage,
+quatre fois de suite.
+
+Le test lit désormais les appariements de la journée et clique sur le bouton de
+**l'équipe qui y figure**, ciblé par son `hx-vals`. La dépendance au tirage
+disparaît par construction, pas par répétition.
+
+### Le faux : l'ombre du premier
+
+`test_j5` attendait deux cartes et en a compté trois. Motif : J4 avait échoué
+**avant** sa dernière ligne, celle qui refermait sa campagne — et l'encart agrège
+toutes les campagnes ouvertes de la saison.
+
+Le fichier documentait pourtant ce couplage en tête, et la clôture était bien
+écrite dans chaque scénario. Elle l'était **en dernière ligne du corps du test**,
+c'est-à-dire à l'endroit qui ne s'exécute pas quand le test échoue — donc
+exactement quand elle compte.
+
+> Un `try` sans `finally` documente une intention ; il ne l'exécute pas.
+
+Les scénarios passent par un contexte `campagne(...)` dont le `finally` referme
+la campagne quoi qu'il arrive. Et `test_j5` porte en plus une **précondition** qui
+nomme la cause : « campagnes laissées ouvertes par un scénario précédent : […] »,
+plutôt qu'un « 3 au lieu de 2 » qui accuse l'encart.
+
+### Ce que les mesures donnent
+
+| Configuration | Échecs sur 6 passages |
+|---|---|
+| ancien sélecteur, ancienne clôture (la CI) | 2 par passage rouge — le vrai et son ombre |
+| ancien sélecteur, clôture en `finally` | **1** sur 6 — le vrai, seul |
+| sélecteur corrigé, clôture en `finally` | **0** sur 6 |
+
+La ligne du milieu est celle qui vaut : elle montre que la correction de clôture
+suffit à faire disparaître l'échec en cascade, et donc qu'un test rouge cesse de
+salir le suivant.
+
+### Ce que ça coûte de ne pas l'avoir vu en local
+
+Rien de grave ici — mais la leçon est que **quatre passages verts d'affilée ne
+disent rien d'un test dont le verdict dépend d'un tirage**. Le sabotage volontaire
+avait éprouvé les deux instruments du fichier ; il n'éprouvait pas leur stabilité.
+Rejouer un fichier e2e quelques fois avant de le déclarer bon coûte une minute.

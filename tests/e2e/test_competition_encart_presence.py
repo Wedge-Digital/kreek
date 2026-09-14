@@ -44,6 +44,8 @@ que la suite échoue.
 Prérequis : serveur lancé en `make dev-e2e`, base au gabarit (`make e2e_db`).
 """
 
+from contextlib import contextmanager
+
 import pytest
 import requests
 from playwright.sync_api import Page, expect
@@ -142,6 +144,57 @@ def _rouvrir(space_id, comp, round_id, deadline=LOINTAIN):
     )
     assert reponse.status_code == 200, reponse.text[:400]
     assert _campagne_ouverte(round_id), "la campagne est restée close"
+
+
+@contextmanager
+def campagne(space_id, comp, round_id, deadline=LOINTAIN):
+    """Ouvre une campagne, et la referme **quoi qu'il arrive**.
+
+    La clôture était écrite en dernière ligne du corps du test. Elle ne
+    s'exécutait donc pas quand le test échouait — c'est-à-dire exactement quand
+    elle compte : en CI, l'échec de J4 a laissé sa campagne ouverte, et J5 a
+    compté trois cartes au lieu de deux. Le second échec n'était que l'ombre du
+    premier, et il a fallu les deux messages pour le voir.
+
+    Le `finally` referme ce trou. Un `try` sans `finally` documente une
+    intention ; celui-ci l'exécute.
+    """
+    _lancer(space_id, comp, round_id, deadline)
+    try:
+        yield round_id
+    finally:
+        if _campagne_ouverte(round_id):
+            _clore(space_id, comp, round_id)
+
+
+def _campagnes_ouvertes(comp):
+    return query_db(
+        "SELECT round_id FROM competition_presence_surveys s "
+        "JOIN competition_match_days d ON d.id = s.round_id "
+        f"WHERE d.season_id = '{comp['season_id']}' AND s.close_le IS NULL"
+    )
+
+
+def _mon_equipe_appariee(comp, round_id):
+    """L'équipe de DevCoach qui **figure dans une rencontre** de cette journée.
+
+    Sans cette lecture, le test cliquait sur la première ligne venue. Or R9 exempte
+    une équipe quand le compte est impair — cinq ici, DevCoach en ayant deux — et
+    se décommander depuis l'exemptée ne défait aucune rencontre : pas d'avis, et un
+    test rouge une fois sur cinq. Il passait en local par chance de tirage.
+    """
+    miennes = query_db(
+        "SELECT t.team_id FROM team_proj t JOIN auth__users u ON u.id = t.coach_id "
+        f"WHERE t.season_id = '{comp['season_id']}' AND u.coach_name = 'DevCoach'"
+    )
+    appariees = query_db(
+        "SELECT home_team_id, away_team_id FROM competition_match_day_pairings "
+        f"WHERE match_day_id = '{round_id}'"
+    )
+    engagees = {c for ligne in appariees for c in ligne.split("|")}
+    candidates = [e for e in miennes if e in engagees]
+    assert candidates, "aucune équipe de DevCoach n'est appariée sur cette journée"
+    return candidates[0]
 
 
 def _ouvrir_le_detail(page: Page, space_id, comp):
@@ -277,21 +330,20 @@ def test_j2_deux_equipes_donnent_deux_lignes_repondables_separement(
     paire de boutons, et répondre pour l'une laisse l'autre en attente.
     """
     round_id = competition["round_ids"][1]
-    _lancer(space_id, competition, round_id)
+    with campagne(space_id, competition, round_id):
+        _ouvrir_le_detail(page, space_id, competition)
+        expect(page.locator(".presence-call .pc-team-row")).to_have_count(
+            2, timeout=15000
+        )
 
-    _ouvrir_le_detail(page, space_id, competition)
-    expect(page.locator(".presence-call .pc-team-row")).to_have_count(2, timeout=15000)
+        # Répondre pour la première ligne seulement.
+        cliquer_quand_cable(page, ".presence-call .pc-team-row .pc-btn--yes")
 
-    # Répondre pour la première ligne seulement.
-    cliquer_quand_cable(page, ".presence-call .pc-team-row .pc-btn--yes")
-
-    expect(page.locator(".presence-call .pc-team-state--yes")).to_have_count(
-        1, timeout=15000
-    )
-    # L'autre équipe attend toujours sa réponse : elle garde sa paire de boutons.
-    expect(page.locator(".presence-call .pc-btn--yes")).to_have_count(1)
-
-    _clore(space_id, competition, round_id)
+        expect(page.locator(".presence-call .pc-team-state--yes")).to_have_count(
+            1, timeout=15000
+        )
+        # L'autre équipe attend toujours sa réponse : elle garde ses deux boutons.
+        expect(page.locator(".presence-call .pc-btn--yes")).to_have_count(1)
 
 
 # ══ J3 — la campagne close entre l'affichage et le clic ═══════════════════════
@@ -307,23 +359,24 @@ def test_j3_une_campagne_close_apres_l_affichage_rend_une_carte_et_non_le_vide(
     curseur, et le coach lirait ce vide comme une réponse enregistrée.
     """
     round_id = competition["round_ids"][2]
-    _lancer(space_id, competition, round_id)
-    _ouvrir_le_detail(page, space_id, competition)
-    expect(page.locator(".presence-call .pc-btn--yes").first).to_be_visible(
-        timeout=15000
-    )
+    with campagne(space_id, competition, round_id):
+        _ouvrir_le_detail(page, space_id, competition)
+        expect(page.locator(".presence-call .pc-btn--yes").first).to_be_visible(
+            timeout=15000
+        )
+        # L'organisateur clôt pendant que le coach lit sa page.
+        _clore(space_id, competition, round_id)
 
-    # L'organisateur clôt pendant que le coach lit sa page.
-    _clore(space_id, competition, round_id)
+        cliquer_quand_cable(page, ".presence-call .pc-btn--yes")
 
-    cliquer_quand_cable(page, ".presence-call .pc-btn--yes")
-
-    expect(page.locator(".presence-call .pc-card--clos")).to_be_visible(timeout=15000)
-    expect(page.locator(".presence-call")).to_contain_text(
-        "Ta réponse n'a pas pu être enregistrée"
-    )
-    # Ce que le vide aurait donné, et qu'il ne faut surtout pas voir.
-    expect(page.locator(".presence-call")).to_be_visible()
+        expect(page.locator(".presence-call .pc-card--clos")).to_be_visible(
+            timeout=15000
+        )
+        expect(page.locator(".presence-call")).to_contain_text(
+            "Ta réponse n'a pas pu être enregistrée"
+        )
+        # Ce que le vide aurait donné, et qu'il ne faut surtout pas voir.
+        expect(page.locator(".presence-call")).to_be_visible()
 
 
 # ══ J4 — le désistement après tirage ══════════════════════════════════════════
@@ -343,7 +396,11 @@ def test_j4_se_decommander_apres_le_tirage_le_dit_sans_nommer_d_adversaire(
     faut la campagne **ouverte** pour que le coach puisse se décommander.
     """
     round_id = competition["round_ids"][3]
-    _lancer(space_id, competition, round_id)
+    with campagne(space_id, competition, round_id):
+        _jouer_le_desistement(page, space_id, competition, round_id)
+
+
+def _jouer_le_desistement(page: Page, space_id, competition, round_id):
     for equipe in query_db(
         f"SELECT team_id FROM team_proj WHERE season_id = '{competition['season_id']}' "
         "AND status = 'Enrolled'"
@@ -379,11 +436,18 @@ def test_j4_se_decommander_apres_le_tirage_le_dit_sans_nommer_d_adversaire(
 
     _rouvrir(space_id, competition, round_id)
 
+    # **L'équipe qui figure dans une rencontre**, et non la première ligne venue.
+    # Cinq équipes présentes donnent deux rencontres et une exemptée ; se
+    # décommander depuis l'exemptée ne défait rien, et c'est ce que la CI a tiré.
+    mienne = _mon_equipe_appariee(competition, round_id)
+
     _ouvrir_le_detail(page, space_id, competition)
     expect(page.locator(".presence-call .pc-team-state--yes").first).to_be_visible(
         timeout=15000
     )
-    cliquer_quand_cable(page, ".presence-call .pc-btn--switch")
+    cliquer_quand_cable(
+        page, f'.presence-call .pc-btn--switch[hx-vals*="{mienne}"]'
+    )
 
     expect(page.locator(".presence-call .pc-avis")).to_be_visible(timeout=15000)
     expect(page.locator(".presence-call .pc-avis")).to_contain_text(
@@ -396,8 +460,6 @@ def test_j4_se_decommander_apres_le_tirage_le_dit_sans_nommer_d_adversaire(
         "AND status = 'Enrolled'"
     ):
         assert nom not in avis, f"l'avis nomme une équipe : {nom}"
-
-    _clore(space_id, competition, round_id)
 
 
 # ══ J5 et J6 — deux campagnes ouvertes en même temps ══════════════════════════
@@ -413,17 +475,21 @@ def test_j5_deux_campagnes_ouvertes_donnent_deux_cartes_la_plus_pressee_d_abord(
     premier : c'est celle qui presse.
     """
     tardive, pressee = competition["round_ids"][4], competition["round_ids"][5]
-    _lancer(space_id, competition, tardive, deadline=LOINTAIN)
-    _lancer(space_id, competition, pressee, deadline=PROCHE)
+    # **La précondition qui nomme la cause.** Ce test compte les cartes ; une
+    # campagne laissée ouverte par un scénario précédent en ajoute une, et le
+    # « 3 au lieu de 2 » accuserait alors l'encart. Vu en CI, où l'échec de J4 a
+    # produit exactement ça et masqué son propre motif.
+    restantes = _campagnes_ouvertes(competition)
+    assert not restantes, f"campagnes laissées ouvertes par un scénario précédent : {restantes}"
 
-    _ouvrir_le_detail(page, space_id, competition)
+    with campagne(space_id, competition, tardive, deadline=LOINTAIN), campagne(
+        space_id, competition, pressee, deadline=PROCHE
+    ):
+        _ouvrir_le_detail(page, space_id, competition)
 
-    expect(page.locator(".presence-call .pc-card")).to_have_count(2, timeout=15000)
-    premier = page.locator(".presence-call .pc-card").first
-    expect(premier).to_contain_text(PROCHE)
-
-    _clore(space_id, competition, tardive)
-    _clore(space_id, competition, pressee)
+        expect(page.locator(".presence-call .pc-card")).to_have_count(2, timeout=15000)
+        premier = page.locator(".presence-call .pc-card").first
+        expect(premier).to_contain_text(PROCHE)
 
 
 # ══ Le coach qui n'est pas concerné ═══════════════════════════════════════════
