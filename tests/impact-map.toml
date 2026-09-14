@@ -98,6 +98,11 @@
 # port, et le scénario de la journée figée est le seul chemin vers R27.
 "test_presence_reponse_publique" = ["competitions", "auth", "teams", "spaces",
                                    "references", "match_report"]
+# L'encart du coach. `teams` est traversé deux fois — la fixture construit les
+# équipes, et le scénario R30 en engage une seconde pour le même coach. Le tirage
+# puis la publication d'un rapport y ajoutent `match_report`.
+"test_competition_encart_presence" = ["competitions", "auth", "teams", "spaces",
+                                     "references", "match_report"]
 "test_competition_admin_acces" = ["competitions", "auth", "teams", "spaces",
                                   "references", "ranking"]
 # Le panneau du barème traverse `competitions` vers `ranking` par un port qui
