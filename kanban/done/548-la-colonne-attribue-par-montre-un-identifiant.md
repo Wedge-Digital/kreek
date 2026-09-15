@@ -2,6 +2,12 @@
 
 **Priorité : moyenne — visible en production, sans perte de donnée**
 **Épic :** aucune — finition de la carte 452
+
+> **Doublon de la carte 506**, qui décrivait le même défaut et attendait en
+> `ready_to_be_done`. Écrite sans l'avoir cherchée : seul le prochain numéro
+> libre avait été relevé, pas l'existence d'une carte sur le sujet. La 506
+> porte la conception, celle-ci le récit de la livraison ; le code est commun,
+> commit `2ab5e292`.
 **Fichiers :** `src/app/ranking/ports.rs`,
 `src/app/ranking/context.rs`,
 `src/infrastructure/ranking/mod.rs`,
@@ -58,9 +64,11 @@ N'étant dans aucun `mod.rs`, `cargo build` ne le voit pas : l'arbre reste vert
 avec un fichier qui référence un trait inexistant. C'est ce qui a permis à ce
 chantier de dormir onze jours sans que rien ne le signale.
 
-Son en-tête annonce « carte 500 » — **c'est faux**. La 500 est le bandeau
-d'actions de la fiche d'équipe. Les points manuels, ce sont les cartes 450 et
-452. Corriger la référence en reprenant le fichier.
+Son en-tête annonce « carte 500 ». Ce n'était pas une faute : **la carte 506 a
+porté le numéro 500** avant d'être renumérotée, 500 étant déjà pris par le
+bandeau de la fiche d'équipe. La référence était périmée, pas fausse — et je
+l'ai d'abord prise pour une erreur, faute d'avoir ouvert la 506. Elle cite
+désormais les deux cartes.
 
 ## Ce qu'il faut faire
 
@@ -89,8 +97,14 @@ Un compte supprimé ne se résout plus. Trois issues possibles :
 | | |
 |---|---|
 | garder l'ULID | c'est le défaut qu'on corrige |
-| inventer « Commissaire inconnu » | le gabarit n'invente aucune valeur |
-| **un tiret** | dit « on ne sait pas » sans mentir |
+| un tiret | se lit comme un défaut d'affichage |
+| **« Commissaire inconnu »** | dit qu'on a cherché et pas trouvé |
+
+Livré d'abord avec un tiret, au motif qu'un gabarit n'invente aucune valeur.
+La règle vise une valeur **plausible** qu'on ne saurait plus distinguer d'une
+vraie — un chiffre, un nom. « Commissaire inconnu » n'en est pas une : c'est un
+libellé d'absence, et il dit ce que le tiret laissait deviner. La 506 avait
+tranché ainsi avant moi.
 
 ## Terminé quand
 

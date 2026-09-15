@@ -1,4 +1,4 @@
-//! Le nom d'un commissaire, pour la liste des points manuels (carte 548).
+//! Le nom d'un commissaire, pour la liste des points manuels (cartes 506 et 548).
 //!
 //! **Copié de `infrastructure/match_report/coach_data_adapter.rs`**, seul
 //! l'import du port changeant : la règle 5 du CLAUDE.md interdit de réécrire un

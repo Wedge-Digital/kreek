@@ -953,6 +953,10 @@ mod tests {
             "équipe puis date"
         );
         assert_eq!(lignes[0].reason.as_deref(), Some("première ligne"));
+        // « DevCoach » est ici une valeur arbitraire, insérée par le test
+        // lui-même : ce banc éprouve l'aller-retour SQL, pas la sémantique du
+        // champ. En production `awarded_by` porte un `UserId`, que l'affichage
+        // résout en nom (carte 506).
         assert_eq!(lignes[0].awarded_by, "DevCoach");
     }
 

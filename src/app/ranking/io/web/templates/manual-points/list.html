@@ -65,7 +65,15 @@
             {% endif %}
           </td>
           <td>{{ line.awarded_at }}</td>
-          <td>{% if let Some(nom) = line.awarded_by %}{{ nom }}{% else %}—{% endif %}</td>
+          <td>
+            {% if let Some(nom) = line.awarded_by %}
+            {{ nom }}
+            {% else %}
+            {# Un libellé, pas un tiret : la cellule vide se lirait comme un
+               défaut d'affichage, l'identifiant nu n'apprendrait rien. #}
+            <span class="mp-absent">Commissaire inconnu</span>
+            {% endif %}
+          </td>
           {% if vm.can_manage %}
           <td class="n">
             {# Le ✕ est le geste de retrait du reste du site : six occurrences

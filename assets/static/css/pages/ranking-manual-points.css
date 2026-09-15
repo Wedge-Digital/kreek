@@ -223,6 +223,7 @@
 /* Un motif absent se lit comme une absence, pas comme un texte gris parmi
    d'autres. */
 .ranking-manual-points .mp-reason--absent { color: var(--dark-4); }
+.ranking-manual-points .mp-absent { color: var(--dark-4); font-style: italic; }
 
 @media (max-width: 768px) {
   .ranking-manual-points .mp-head { flex-direction: column; align-items: stretch; }

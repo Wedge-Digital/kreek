@@ -22,8 +22,9 @@ pub struct ManualPointVm {
     /// Le texte libre du commissaire, ou `None` : le motif est facultatif.
     pub reason: Option<String>,
     /// Le pseudonyme du commissaire, ou `None` quand il ne se résout plus —
-    /// un compte supprimé. Le gabarit rend alors un tiret : inventer
-    /// « Commissaire inconnu » ferait passer une absence pour une donnée.
+    /// un compte supprimé, une donnée héritée. Le gabarit rend alors
+    /// « Commissaire inconnu » : une cellule vide se lirait comme un défaut
+    /// d'affichage, et l'identifiant nu est précisément ce qu'on corrige.
     pub awarded_by: Option<String>,
     pub awarded_at: String,
 }

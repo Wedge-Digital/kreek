@@ -4,6 +4,13 @@
 **Dépend de :** rien · **Sans épic**
 **Signalée par :** l'utilisateur
 
+> **Faite par la carte 548**, commit `2ab5e292` — écrite en double le
+> 2026-09-15 faute d'avoir cherché si une carte décrivait déjà le défaut. Les
+> deux restent en `done/` plutôt qu'une en `cancelled/` : le numéro 548 est
+> dans l'historique git, et un doublon se documente mieux qu'il ne s'efface.
+> C'est **cette carte-ci** qui porte la conception ; la 548 porte le récit de
+> la livraison.
+
 ## Le constat
 
 La liste des points de classement manuels affiche, sous « Affecté par », une
@@ -91,9 +98,15 @@ champ. Son intention mérite un commentaire, pas une réécriture.
 
 ## Checklist
 
-- [ ] `ICoachDataPort` dans `ranking/ports.rs`
-- [ ] Son adapter dans `infrastructure/ranking/`, copié de `match_report`
-- [ ] Injecté dans le contexte du BC par `main.rs`
-- [ ] Le builder de la liste traduit, avec repli
-- [ ] Les trois tests, chacun falsifié
-- [ ] `make lint && make test && make check-arch && make e2e`
+- [x] `ICoachDataPort` dans `ranking/ports.rs`
+- [x] Son adapter dans `infrastructure/ranking/`, copié de `match_report`
+- [x] Injecté dans le contexte du BC par `main.rs`
+- [x] Le builder de la liste traduit, avec repli
+- [x] Les trois tests, chacun falsifié
+- [x] `make lint && make test && make check-arch && make e2e`
+
+Un quatrième test s'est ajouté à la livraison, que cette carte n'avait pas
+prévu : `resolve_coach_names` n'interroge le port qu'**une fois par identifiant
+distinct**. Une journée de forfaits, ce sont vingt lignes du même commissaire,
+et le dédoublonnage ne se voit nulle part dans le résultat — seul un port qui
+compte ses appels peut le prouver.

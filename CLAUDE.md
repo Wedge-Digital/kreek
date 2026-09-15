@@ -220,6 +220,65 @@ Directives de travail pour Claude Code sur ce projet.
     Les deux commandes ci-dessus répondent en une seconde et disent si la règle
     tient — la première pour maintenant, la seconde pour tout l'historique.
 
+17. **Un test qui demande une intervention humaine est hors du périmètre de
+    l'assistant**, et rien ne se déclare terminé sur sa foi.
+
+    Relire un e-mail dans un vrai client, juger d'un rendu à l'œil, éprouver un
+    parcours sur un téléphone : ces vérifications existent et comptent, mais
+    elles appartiennent à l'utilisateur. L'assistant ne les simule pas, ne les
+    coche pas, et ne les présente pas comme faites.
+
+    **Ce qu'il doit faire à la place : les nommer en reste.** Une case non
+    cochée au bas d'une carte qu'on a déplacée en `done/` ne se relit jamais —
+    c'est arrivé à la carte 526, dont la relecture des trois e-mails attend
+    encore. Un reste se porte là où on le cherchera : dans l'épic, à la ligne
+    « ce qui reste ».
+
+    Corollaire : **l'assistant ne clôt pas une épic.** Son `Terminé quand` est
+    un critère observable, et l'observer est le geste de l'utilisateur. Ce que
+    l'assistant peut faire, c'est rendre ce critère vérifiable — écrire le test
+    qui le traduit quand il s'automatise, et dire franchement ce qu'il ne
+    prouve pas.
+
+    La frontière est celle de l'automatisable, pas celle du difficile. Le
+    parcours du sondage de présence passe par une boîte mail, et semblait donc
+    hors d'atteinte : le jeton se lit en base, et visiter son URL **est** le
+    geste du coach. Seul le rendu de l'e-mail demandait un humain. Chercher où
+    la frontière passe vraiment avant de renoncer.
+
+18. **Avant de créer une carte, chercher si une carte ouverte décrit déjà le
+    défaut.** Relever le prochain numéro libre ne suffit pas : il dit qu'un
+    numéro est disponible, pas que le sujet l'est.
+
+    ```bash
+    grep -rli "<le symptôme>" kanban/to_be_refined/ kanban/ready_to_be_done/
+    grep -n "<le symptôme>" kanban/epics/README.md      # les cartes sans épic
+    ```
+
+    Vécu le 2026-09-15 : la carte 548 a été écrite, conçue et livrée pour un
+    défaut que la carte 506 décrivait déjà, en attente dans
+    `ready_to_be_done/`, signalée par l'utilisateur, raffinée, et indexée dans
+    `kanban/epics/README.md`. Seul le numéro libre avait été cherché.
+
+    Le coût n'est pas le doublon lui-même — deux cartes se rapprochent — c'est
+    **la conception refaite en ignorant celle qui existait**. La 506 avait
+    tranché le libellé de repli ; la 548 a tranché l'inverse sans le savoir, et
+    le code est parti avec le mauvais. Une carte raffinée est une décision
+    déjà prise : la retrouver coûte dix secondes, la refaire coûte un commit.
+
+    **Quand le doublon est constaté après coup**, les deux cartes restent en
+    `done/` et se renvoient l'une à l'autre — l'une porte la conception,
+    l'autre le récit de la livraison. Pas de `cancelled/` : le numéro de la
+    seconde est déjà dans l'historique git, et un doublon se documente mieux
+    qu'il ne s'efface. Les numéros 364 à 367, portés deux fois chacun depuis
+    des mois, sont traités de même.
+
+    Corollaire, pour qui range une carte : **une carte qui change de numéro
+    laisse des références périmées derrière elle.** La 506 a porté le numéro
+    500 avant d'être renumérotée, et un en-tête de fichier citait encore la 500
+    — ce qui l'a fait passer pour une faute auprès de qui ne connaissait pas
+    l'histoire. Renuméroter, c'est aussi `grep -rn "<ancien numéro>" src/`.
+
 
 ---
 
