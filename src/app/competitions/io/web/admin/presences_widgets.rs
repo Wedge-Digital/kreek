@@ -19,19 +19,21 @@
 
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType};
+use crate::app::competitions::domain::notification_delivery::NotificationType;
 use crate::app::competitions::domain::presence_survey::Desaccord;
 use crate::app::competitions::domain::presence_survey::{
     statut_de, Appariement, EtatJournee, Fermeture, PresenceSurvey, SurveyDeadline, SurveyStatus,
 };
 use crate::app::competitions::domain::presence_survey_repository_port::SurveySummaryDto;
 use crate::app::competitions::domain::tirage::{DrawProposal, Historique, ProposedPairing};
+use crate::app::competitions::io::repository::notification_delivery_repository::DeliveryCountDto;
 use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
 use crate::app::competitions::io::web::admin::admin_scope::journee_de_la_saison;
 use crate::app::competitions::use_cases::presences::etat_journee::etat_de_la_journee;
 use crate::app::competitions::use_cases::presences::propose_repair_use_case::RepairProposal;
 use crate::app::competitions::use_cases::presences::survey_roster_service;
 use crate::app::competitions::use_cases::presences::survey_roster_service::{
-    LignePresence, RosterDeCampagne,
+    EquipeSollicitee, LignePresence, RosterDeCampagne,
 };
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
@@ -362,6 +364,78 @@ impl AvancementVm {
     }
 }
 
+/// Un envoi, vu du panneau.
+///
+/// `joints` et `attendus` comptent des **coachs**, jamais des équipes : R1 envoie
+/// un message par coach, et le journal est clé par coach. `DestinatairesVm`, lui,
+/// compte des équipes. Les mêler donnerait « 12 sur 14 » là où treize coachs
+/// seulement étaient joignables — faux dès qu'un coach engage deux équipes, et
+/// invisible tant qu'aucun ne le fait. C'est le piège de la carte 495, déplacé
+/// d'un cran.
+pub struct EnvoiVm {
+    pub libelle: String,
+    pub joints: usize,
+    pub attendus: usize,
+    pub echecs: usize,
+}
+
+/// Ce que l'expédition a produit, relu depuis le journal.
+///
+/// **Rien n'est persisté pour ça.** `competition_notification_deliveries` sait
+/// déjà qui a été réservé et qui a été attesté ; un compteur écrit sur la
+/// campagne serait une seconde vérité à tenir d'accord avec la première. Le
+/// panneau relit, et la réponse survit donc au rechargement — ce qui compte,
+/// puisque « est-ce parti ? » se repose le lendemain et pas seulement après le
+/// clic (carte 544).
+pub struct ExpeditionVm {
+    /// Vide quand rien n'est parti : le gabarit ne rend alors aucune ligne.
+    pub envois: Vec<EnvoiVm>,
+    /// Des **équipes**, du roster — le seul compte qui n'est pas dans le journal,
+    /// puisqu'un coach sans adresse n'y reçoit aucune ligne (R3).
+    pub sans_adresse: usize,
+}
+
+impl ExpeditionVm {
+    pub fn from_domain(comptes: &[DeliveryCountDto], roster: &RosterDeCampagne) -> Self {
+        let mut envois = Vec::new();
+        if let Some(c) = dernier(comptes, NotificationType::PresenceSurvey.as_str()) {
+            envois.push(EnvoiVm::depuis(c, "Envoi initial".to_string()));
+        }
+        if let Some(c) = dernier(comptes, NotificationType::PresenceReminder.as_str()) {
+            envois.push(EnvoiVm::depuis(
+                c,
+                format!("Dernière relance du {}", c.target_date),
+            ));
+        }
+        Self {
+            envois,
+            sans_adresse: roster.sans_adresse(),
+        }
+    }
+}
+
+impl EnvoiVm {
+    fn depuis(c: &DeliveryCountDto, libelle: String) -> Self {
+        Self {
+            libelle,
+            joints: c.attestes.max(0) as usize,
+            attendus: c.reserves.max(0) as usize,
+            echecs: (c.reserves - c.attestes).max(0) as usize,
+        }
+    }
+}
+
+/// Le dernier envoi d'un type — la requête rend ses lignes par date croissante.
+///
+/// Pour l'ouverture il n'y en a qu'une ; pour la relance il y en a une par jour,
+/// et c'est la plus récente qui répond à « est-ce que ma relance est partie ? ».
+fn dernier<'a>(comptes: &'a [DeliveryCountDto], type_: &str) -> Option<&'a DeliveryCountDto> {
+    comptes
+        .iter()
+        .filter(|c| c.notification_type == type_)
+        .last()
+}
+
 /// Une ligne des trois colonnes.
 pub struct AnswerRowVm {
     pub team_id: String,
@@ -642,6 +716,11 @@ pub struct PanelRunningTemplate {
     /// explication passerait pour une panne.
     pub peut_tirer: bool,
     pub motif_blocage: String,
+    /// **Seul ce panneau la porte.** C'est celui où l'organisateur regarde les
+    /// réponses arriver, donc celui où il se demande si ses e-mails sont partis.
+    /// Après le tirage, la question ne se pose plus — les panneaux « appariée »
+    /// et « défection » ne l'affichent pas, et c'est délibéré.
+    pub expedition: ExpeditionVm,
 }
 
 #[derive(Template)]
@@ -916,6 +995,22 @@ pub async fn charger_le_panneau(
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
     })?;
 
+    // Le journal des envois, relu à chaque affichage. Une lecture de plus sur un
+    // panneau qu'on ouvre à la main, contre un compteur persisté à tenir d'accord
+    // avec lui : le choix est vite fait (carte 544).
+    //
+    // Une lecture en échec ne prive pas l'organisateur de son panneau : la ligne
+    // d'expédition disparaît, le reste s'affiche, et le journal garde la trace.
+    let comptes = state
+        .competitions
+        .notification_delivery_repository
+        .count_by_round(season_id, &round.id.to_string())
+        .await
+        .unwrap_or_else(|e| {
+            tracing::error!("count_by_round: {e}");
+            vec![]
+        });
+
     let head = RoundHeadVm::from_domain(round);
     let actions = ActionsVm::new(space_id, competition_id, season_id);
     let round_id = round.id.to_string();
@@ -937,7 +1032,16 @@ pub async fn charger_le_panneau(
                 let Some(s) = survey.as_ref() else {
                     return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
                 };
-                panneau_en_cours(head, actions, round_id, motif, s, &roster, &maintenant)
+                panneau_en_cours(
+                    head,
+                    actions,
+                    round_id,
+                    motif,
+                    s,
+                    &roster,
+                    &maintenant,
+                    &comptes,
+                )
             }
             Panneau::Appariee => {
                 let Some(s) = survey.as_ref() else {
@@ -973,6 +1077,7 @@ pub async fn charger_le_panneau(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn panneau_en_cours(
     head: RoundHeadVm,
     actions: ActionsVm,
@@ -981,6 +1086,7 @@ fn panneau_en_cours(
     survey: &PresenceSurvey,
     roster: &RosterDeCampagne,
     maintenant: &DateString,
+    comptes: &[DeliveryCountDto],
 ) -> Response {
     let cols = survey_roster_service::colonnes(roster, survey);
     let clos = !survey.statut(maintenant).est_ouverte();
@@ -1007,6 +1113,7 @@ fn panneau_en_cours(
         sans_reponse: AnswerRowVm::all_from_domain(&cols.sans_reponse),
         peut_tirer,
         motif_blocage,
+        expedition: ExpeditionVm::from_domain(comptes, roster),
     }
     .into_response()
 }
@@ -1540,5 +1647,124 @@ mod tests {
         assert_eq!(vms.len(), 2);
         assert_eq!(vms[0].name, "Journée 1");
         assert_eq!(vms[1].name, "Journée 2");
+    }
+
+    // ── La ligne d'expédition — carte 544 ────────────────────────────────────
+
+    /// Un roster de `(coach, a une adresse)`. Le nom d'équipe n'entre dans aucune
+    /// des assertions : ce qui se joue ici est le compte, pas le libellé.
+    fn roster_de(equipes: &[(&CoachId, bool)]) -> RosterDeCampagne {
+        RosterDeCampagne::de_test(
+            equipes
+                .iter()
+                .map(|(coach, joignable)| EquipeSollicitee {
+                    team_id: TeamId::new(),
+                    team_name: "Une équipe".to_string(),
+                    coach_id: **coach,
+                    coach_name: "Alice".to_string(),
+                    coach_label: "Alice".to_string(),
+                    email: joignable.then(|| "alice@example.test".to_string()),
+                })
+                .collect(),
+        )
+    }
+
+    fn compte(
+        type_: NotificationType,
+        jour: &str,
+        reserves: i64,
+        attestes: i64,
+    ) -> DeliveryCountDto {
+        DeliveryCountDto {
+            notification_type: type_.as_str().to_string(),
+            target_date: jour.to_string(),
+            reserves,
+            attestes,
+        }
+    }
+
+    /// **Le test qui tient la distinction.** Le journal compte des **coachs**, le
+    /// roster des **équipes** : un coach à deux équipes reçoit un seul message, et
+    /// la ligne doit dire « 1 coach joint », pas « 2 ».
+    ///
+    /// Les deux nombres coïncident tant qu'aucun coach n'engage deux équipes — le
+    /// piège de la carte 495, déplacé d'un cran, et invisible sur la plupart des
+    /// ligues.
+    #[test]
+    fn la_ligne_compte_des_coachs_et_non_des_equipes() {
+        let coach = CoachId::new();
+        // Deux équipes, un seul coach, donc un seul envoi au journal.
+        let roster = roster_de(&[(&coach, true), (&coach, true)]);
+        let comptes = vec![compte(NotificationType::PresenceSurvey, "2026-10-10", 1, 1)];
+
+        let vm = ExpeditionVm::from_domain(&comptes, &roster);
+
+        assert_eq!(vm.envois.len(), 1);
+        assert_eq!(vm.envois[0].joints, 1, "un coach joint, pas deux équipes");
+        assert_eq!(vm.envois[0].attendus, 1);
+        assert_eq!(vm.sans_adresse, 0);
+    }
+
+    /// La différence entre créneaux réservés et envois attestés **est** le nombre
+    /// d'échecs. C'est ce que R20 veut voir à l'écran, et qui se perdait.
+    #[test]
+    fn un_envoi_non_atteste_se_lit_comme_un_echec() {
+        let comptes = vec![compte(
+            NotificationType::PresenceSurvey,
+            "2026-10-10",
+            13,
+            12,
+        )];
+
+        let vm = ExpeditionVm::from_domain(&comptes, &roster_de(&[]));
+
+        assert_eq!(vm.envois[0].joints, 12);
+        assert_eq!(vm.envois[0].attendus, 13);
+        assert_eq!(vm.envois[0].echecs, 1);
+    }
+
+    /// Deux relances, **la plus récente seule** : c'est elle qui répond à « est-ce
+    /// que ma relance est partie ? ». Les additionner donnerait un nombre que
+    /// personne ne sait lire.
+    #[test]
+    fn seule_la_derniere_relance_est_affichee() {
+        let comptes = vec![
+            compte(NotificationType::PresenceSurvey, "2026-10-10", 13, 13),
+            compte(NotificationType::PresenceReminder, "2026-10-06", 5, 5),
+            compte(NotificationType::PresenceReminder, "2026-10-08", 3, 3),
+        ];
+
+        let vm = ExpeditionVm::from_domain(&comptes, &roster_de(&[]));
+
+        assert_eq!(vm.envois.len(), 2, "l'ouverture et une seule relance");
+        assert_eq!(vm.envois[0].libelle, "Envoi initial");
+        assert_eq!(vm.envois[1].libelle, "Dernière relance du 2026-10-08");
+        assert_eq!(vm.envois[1].joints, 3);
+    }
+
+    /// R3 — le compte des équipes sans adresse ne vient **pas** du journal : un
+    /// coach sans adresse n'y a aucune ligne. Il vient du roster, et reste séparé.
+    #[test]
+    fn les_equipes_sans_adresse_viennent_du_roster_et_restent_a_part() {
+        let (joignable, muet) = (CoachId::new(), CoachId::new());
+        let roster = roster_de(&[(&joignable, true), (&muet, false)]);
+        let comptes = vec![compte(NotificationType::PresenceSurvey, "2026-10-10", 1, 1)];
+
+        let vm = ExpeditionVm::from_domain(&comptes, &roster);
+
+        assert_eq!(
+            vm.envois[0].attendus, 1,
+            "le journal ne connaît que le joignable"
+        );
+        assert_eq!(vm.sans_adresse, 1);
+    }
+
+    /// Rien n'est parti : la ligne ne s'affiche pas du tout. Un « 0 envoyé » sur
+    /// une campagne qu'on vient d'ouvrir alarmerait pour rien.
+    #[test]
+    fn sans_envoi_la_ligne_n_existe_pas() {
+        let vm = ExpeditionVm::from_domain(&[], &roster_de(&[]));
+
+        assert!(vm.envois.is_empty());
     }
 }

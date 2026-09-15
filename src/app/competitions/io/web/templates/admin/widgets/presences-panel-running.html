@@ -34,6 +34,44 @@
     </div>
   </div>
 
+  {# **Ce que l'expédition a produit**, relu du journal des envois (carte 544).
+
+     Les compteurs du use case étaient calculés, journalisés, puis perdus :
+     l'organisateur dont le serveur de messagerie tombait voyait son panneau se
+     recharger normalement et croyait ses quatorze e-mails partis.
+
+     `joints` et `attendus` comptent des **coachs**, `sans_adresse` compte des
+     **équipes** — c'est pourquoi la seconde ligne est séparée plutôt que fondue
+     dans un « 12 sur 14 » qui serait faux dès qu'un coach engage deux équipes.
+
+     Rien ne s'affiche tant que rien n'est parti : `envois` est alors vide. #}
+  {% if !expedition.envois.is_empty() %}
+  <div class="expedition">
+    {% for envoi in expedition.envois %}
+    <div class="expedition-ligne">
+      <span class="expedition-libelle">{{ envoi.libelle }}</span>
+      {# L'accord se fait ici, sur les nombres que le VM rend bruts. « coach(s) »
+         est la forme qu'on écrit quand on renonce à accorder, et le reste du
+         projet accorde — « 1 équipe a déjà confirmé » contre « 9 équipes ont
+         déjà confirmé ». #}
+      <span class="expedition-compte">
+        {{ envoi.joints }} coach{% if envoi.joints > 1 %}s{% endif %}
+        joint{% if envoi.joints > 1 %}s{% endif %} sur {{ envoi.attendus }}
+      </span>
+      {% if envoi.echecs > 0 %}
+      <span class="expedition-echec">{{ envoi.echecs }} en échec</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% if expedition.sans_adresse > 0 %}
+    <div class="expedition-ligne expedition-ligne--note">
+      {{ expedition.sans_adresse }} équipe{% if expedition.sans_adresse > 1 %}s{% endif %}
+      sans adresse connue — à joindre autrement.
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# R15 — le tirage refuse en dessous de deux appariables, **et le dit**. Un
      bouton inactif sans motif passerait pour une panne. #}
   {% if clos && !peut_tirer %}

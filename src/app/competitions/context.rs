@@ -14,6 +14,7 @@ use crate::app::competitions::io::email::survey_mailer::SurveyMailer;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::match_day_repository::MatchDayRepository;
+use crate::app::competitions::io::repository::notification_delivery_repository::NotificationDeliveryRepository;
 use crate::app::competitions::io::repository::presence_survey_repository::PresenceSurveyRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
 use crate::app::competitions::ports::{
@@ -33,6 +34,11 @@ pub struct CompetitionsContext {
     pub group_repository: Arc<dyn IGroupRepository>,
     pub match_day_repository: Arc<dyn IMatchDayRepository>,
     pub presence_survey_repository: Arc<dyn IPresenceSurveyRepository>,
+    /// Le journal des envois, **en lecture** pour l'onglet Présences : il dit
+    /// combien d'e-mails sont partis, là où les compteurs du use case étaient
+    /// calculés puis perdus (carte 544). L'expédition, elle, construit le sien
+    /// au même endroit — deux poignées sur le même pool, pas deux vérités.
+    pub notification_delivery_repository: NotificationDeliveryRepository,
     pub survey_mailer: Arc<dyn ISurveyMailer>,
     pub team_info_port: Arc<dyn ITeamInfoPort>,
     pub reference_port: Arc<dyn ICompetitionReferencePort>,
@@ -116,6 +122,7 @@ impl CompetitionsContext {
             group_repository: Arc::new(GroupRepository::new(pool.clone())),
             match_day_repository: Arc::new(MatchDayRepository::new(pool.clone())),
             presence_survey_repository: Arc::new(PresenceSurveyRepository::new(pool.clone())),
+            notification_delivery_repository: NotificationDeliveryRepository::new(pool.clone()),
             survey_mailer: Arc::new(SurveyMailer::new(
                 pool,
                 email_service.clone(),

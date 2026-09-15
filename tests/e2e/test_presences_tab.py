@@ -194,6 +194,44 @@ def test_un_succes_rend_un_corps_vide_et_declenche_presence_changed(
     assert "HX-Retarget" not in reponse.headers, "rien à rediriger sur un succès"
 
 
+def test_le_panneau_annonce_ce_que_l_expedition_a_produit(
+    space_id, competition, journee
+):
+    """Carte 544 — les compteurs d'expédition atteignent enfin un écran.
+
+    Ils étaient calculés par le use case, journalisés, puis perdus : un
+    organisateur dont le serveur de messagerie tombait voyait son panneau se
+    recharger normalement et croyait ses e-mails partis.
+
+    Le panneau les **relit du journal**, ce qui les rend durables — cette requête
+    est un `GET` neuf, sans rapport avec le POST qui a lancé la campagne, et la
+    ligne est pourtant là.
+
+    En e2e le fournisseur d'e-mail est `console` : les envois réussissent, le
+    journal les atteste, et le compte est donc non nul. Un « 0 coach joint » ici
+    signifierait que l'expédition n'a pas eu lieu du tout.
+
+    Dépend du test qui lance la campagne, plus haut dans ce fichier.
+    """
+    reponse = requests.get(
+        f"{BASE_URL}/app/{space_id}/competitions/"
+        f"{competition['competition_id']}/{competition['season_id']}"
+        f"/admin/presences/panel?round_id={journee}",
+        headers={"HX-Request": "true"},
+        timeout=20,
+    )
+
+    assert reponse.status_code == 200, reponse.text[:400]
+    assert "Envoi initial" in reponse.text, "la ligne d'expédition doit être rendue"
+    # Le compte est celui du journal, et il porte sur des **coachs**.
+    assert "joint" in reponse.text and "sur" in reponse.text
+    # Le libellé accorde : « 4 coachs joints », « 1 coach joint ». Un zéro ici
+    # signifierait que l'expédition n'a pas eu lieu du tout.
+    assert "0 coach" not in reponse.text, (
+        "aucun envoi attesté : l'expédition n'a pas eu lieu"
+    )
+
+
 def test_un_refus_metier_rend_le_panneau_avec_son_motif(space_id, competition, journee):
     """R2 — une seconde campagne sur la même journée est refusée, et le motif
     s'affiche **dans le panneau**, jamais dans une boîte du navigateur.

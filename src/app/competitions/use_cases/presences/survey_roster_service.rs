@@ -68,6 +68,17 @@ pub struct RosterDeCampagne {
 }
 
 impl RosterDeCampagne {
+    /// Un roster fabriqué de toutes pièces, **pour les tests seuls**.
+    ///
+    /// `charger` reste le seul chemin de production : il croise les deux ports, et
+    /// c'est ce croisement qui décide qui a une adresse. Un constructeur public
+    /// ouvrirait une seconde porte vers un roster dont personne n'aurait vérifié
+    /// la provenance.
+    #[cfg(test)]
+    pub fn de_test(equipes: Vec<EquipeSollicitee>) -> Self {
+        Self { equipes }
+    }
+
     pub fn equipes(&self) -> &[EquipeSollicitee] {
         &self.equipes
     }

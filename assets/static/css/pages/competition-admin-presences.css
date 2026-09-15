@@ -171,6 +171,37 @@
 }
 
 /* R15 et R8 — un motif, jamais un bouton mort sans explication. */
+/* Ce que l'expédition a produit, relu du journal (carte 544).
+ *
+ * Discret par conception : c'est un accusé de réception, pas une alerte. Seul
+ * l'échec se colore — et il n'apparaît que s'il y en a un, ce qui rend sa
+ * couleur lisible plutôt que décorative. */
+.competition-admin-presences .expedition {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0 0 var(--p3) 0;
+}
+.competition-admin-presences .expedition-ligne {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--p1);
+    font-size: var(--text-tiny);
+    color: var(--dark-2);
+}
+.competition-admin-presences .expedition-libelle {
+    font-weight: 700;
+    color: var(--dark-1);
+}
+.competition-admin-presences .expedition-echec {
+    font-weight: 700;
+    color: var(--orange);
+}
+.competition-admin-presences .expedition-ligne--note {
+    color: var(--dark-3);
+}
+
 .competition-admin-presences .panel-blocage,
 .competition-admin-presences .panel-note {
     font-size: var(--text-small);
