@@ -96,4 +96,22 @@ quatorze étapes relu, rien de plus. Le premier passage de CI est la vérificati
 - [x] `reset_db`/`seed_e2e` retirés du job e2e — vérifié qu'ils n'y servent plus
 - [x] Le garde-fou du script atteignable, et son message éprouvé
 - [x] `make e2e_db` passe toujours en local
-- [ ] **Le job « Tests E2E » repasse au vert** — se constate au prochain passage
+- [x] **La CI exécute à nouveau la suite** — constaté le 2026-09-14
+
+## Constaté le 2026-09-14
+
+Le passage suivant a exécuté **411 tests** et rendu un verdict détaillé — deux
+échecs nommés, avec leur locator et la page réellement rendue — là où le job
+s'arrêtait sur `Error 2` sans une ligne d'explication.
+
+C'est la preuve que cette carte attendait : `e2e_db` passe, le gabarit se
+construit, la base se clone, le serveur écrit là où la suite regarde.
+
+**Les deux échecs restants ne venaient pas d'ici** : deux tests de la carte 532,
+dont l'un dépendait du tirage. Corrigés et mesurés dans le commit `d778b96`.
+
+La leçon dépasse la correction : une CI qui ne démarre pas ne coûte pas seulement
+un job rouge, elle **cache tout ce qu'elle aurait trouvé**. Ces deux tests ont
+vécu six jours dans une suite que personne ne pouvait exécuter, et c'est le
+premier passage réel qui les a sortis — un sur six, là où quatre passages locaux
+consécutifs disaient vert.
