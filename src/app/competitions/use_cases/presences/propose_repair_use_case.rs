@@ -28,7 +28,6 @@
 //! entier pour une défection ferait trois mécontents pour en soulager un : leurs
 //! coachs ont déjà noté leur adversaire.
 
-use crate::app::competitions::domain::match_day::MatchDay;
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError,
 };
@@ -39,7 +38,7 @@ use crate::app::competitions::domain::presence_survey_repository_port::{
     IPresenceSurveyRepository, PresenceSurveyRepositoryError,
 };
 use crate::app::competitions::domain::tirage::{tirer, DrawInput, DrawProposal};
-use crate::app::competitions::ports::{IMatchReportStatusPort, ITeamInfoPort, TeamInfoDto};
+use crate::app::competitions::ports::{IMatchReportStatusPort, ITeamInfoPort};
 use crate::app::competitions::use_cases::admin::team_enrollment::load_enrolled_teams;
 use crate::app::competitions::use_cases::entree_du_tirage::{
     build_historique, build_interdites, build_matchs_joues,
@@ -193,8 +192,9 @@ fn rescapes(survey: &PresenceSurvey, journee: &EtatJournee, desaccord: &Desaccor
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::competitions::domain::match_day::{MatchDayType, Pairing};
+    use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType, Pairing};
     use crate::app::competitions::domain::presence_survey::{Destinataire, Repondant, Venue};
+    use crate::app::competitions::ports::TeamInfoDto;
     use crate::app::competitions::use_cases::presences::test_doubles::*;
     use crate::app::shared_kernel::identity::ids::CoachId;
 

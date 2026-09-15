@@ -1,21 +1,13 @@
 # E16 — Sondage de présence
 
-**État :** `en_cours` — 27 cartes, **20 faites** (507 à 525 et 541, du 2026-09-07
-au 2026-09-10). **La vague 4 est close : l'onglet de l'organisateur est livré et
-couvert.** L'unité 2 est aux trois cinquièmes : **la route publique répond**, hors de toute
-session, et le coach enregistre sa réponse d'un clic depuis sa boîte mail.
-`competitions` est le premier BC hors `auth` à exposer un routeur public, et un
-test monte le routeur de production sans cookie pour l'y maintenir — l'erreur
-inverse ne casserait aucun autre test. Restent l'e-mail, son expédition et les
-e2e (526 à 528). : le Calendrier tire désormais vraiment au sort, sans laisser
-d'équipe sur le banc ni de journée à moitié appariée, et il exempte l'équipe qui
-a le plus joué au lieu d'une au hasard. **L'agrégat `PresenceSurvey` est
-complet** — il ouvre une campagne, enregistre une réponse, valide un tirage, et
-sa table existe. Les deux premières vagues sont closes ; la suite est celle des
-use cases. Les
-trois unités sont conçues : l'onglet de l'organisateur, la réponse du coach par
-e-mail, et l'encart du coach connecté. Spécifiée par le workflow feature du
-2026-09-06 au 2026-09-07.
+**État :** `en_cours` — **27 cartes, toutes livrées** (507 à 532 et 541, du
+2026-09-07 au 2026-09-15). La carte 549 ajoute le test qui traverse la chaîne
+entière, du lien du coach jusqu'aux rencontres au Calendrier.
+
+**L'épic reste ouverte, et ce n'est pas un oubli.** Son `Terminé quand` est un
+critère observable ; l'observer appartient à l'utilisateur, qui validera la
+fonction entière. Voir « Ce qu'il reste » plus bas.
+
 **Conception :** `docs/specs/sondage-presence/`
 
 ## La fonction
@@ -34,60 +26,53 @@ peut saisir à la place de qui l'a appelé, et tire au sort les présents.
 
 ## État
 
-**Treize cartes faites sur vingt-sept.** Les trois premières vagues sont closes :
-corriger l'existant, le socle, et les use cases. Le service d'hydratation croise
-les deux ports, le cycle de la campagne est en place (expédition provisoire
-comprise), une présence s'écrit par un seul chemin commun aux trois unités, le
-tirage s'aperçoit puis s'écrit au calendrier, et une défection se répare sans
-toucher aux matchs qui tiennent.
-
-**L'onglet existe, s'ouvre, et son panneau rend les cinq états qu'un GET peut
-voir** — la 520 a livré les six vues, la sixième (le tirage proposé) étant rendue
-par l'action de la 521, l'aperçu ne persistant rien.
-
-**L'écran est vivant** depuis la 521 : dix actions — une de plus que prévu,
-`propose-repair` ayant dû devenir un POST comme `draw`, le tirage sur le vivier
-départageant au sort. Un seul vocabulaire pour tout ce que l'écran répond : un
-succès rend un corps vide et déclenche le rechargement, un refus rend le panneau
-porteur de son motif. Aucune `alert()`, aucun JSON d'erreur, aucun
-`onclick="fetch(…)"`.
-
-Le parcours est couvert par la 522 — huit scénarios en 6,5 secondes, du lancement
-à la validation du tirage, jusqu'au vidage de la journée au Calendrier qui éprouve
-R24.
-
-**Elle a trouvé trois défauts**, dont deux dans du code commité la veille : un
-tableau que `json-enc` ne sait pas transporter depuis `hx-vals`, un
-`etat_du_panneau` qui lisait l'appariement sur la campagne au lieu de la journée —
-le défaut que R24 existe pour empêcher — et un test unitaire qui fixait ce défaut
-comme s'il était la règle. Aucun test unitaire ne pouvait voir le second : le
-vidage passe par l'autre onglet, et seul un e2e traverse les deux.
-
-Restent les deux unités du coach : la réponse par jeton (523 à 528) et l'encart du
-coach connecté (529 à 532).
-
-Le tirage du sondage et celui du Calendrier partagent désormais leur entrée
-(`entree_du_tirage`) et leur annonce (`appariement_ecrit`) : le tirage entré par
-la porte du sondage produit en aval exactement les mêmes effets que celui du
-Calendrier, sans qu'aucun événement ait été créé.
+**Les vingt-sept cartes sont en `done/`.** Les sept vagues sont closes :
+corriger l'existant, le socle, les use cases, l'écran de l'organisateur, le
+chemin public par jeton, l'expédition des e-mails, et l'encart du coach
+connecté.
 
 Quatre d'entre elles — 507, 508, 509 et 541 — **corrigeaient l'existant** et ne
-concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était ni
-aléatoire ni optimal, et il laissait des équipes sans match dans 54 à 58 % des
-tirages en milieu de saison ; son critère d'exemption, lui, n'était pas
-alimenté. Le sondage s'appuie dessus, donc il l'a réparé d'abord — et le
-Calendrier en a profité.
+concernaient pas le sondage : l'algorithme d'appariement du Calendrier n'était
+ni aléatoire ni optimal, et laissait des équipes sans match dans 54 à 58 % des
+tirages en milieu de saison ; son critère d'exemption n'était pas alimenté. Le
+sondage s'appuie dessus, donc il l'a réparé d'abord — et le Calendrier en a
+profité.
 
-Les quatre suivantes — 511, 510, 512, 513 — posent le socle : l'agrégat
-`PresenceSurvey`, sa table et son dépôt, son unique chemin d'écriture d'une
-présence, puis les commandes qui valident un tirage et mènent le cycle de la
-campagne. Ce chemin unique est ce qui fait tenir R19, R13, R21 et R28 : il n'y a
-pas de seconde porte à contourner.
+Le tirage du sondage et celui du Calendrier partagent leur entrée
+(`entree_du_tirage`) et leur annonce (`appariement_ecrit`) : le tirage entré par
+la porte du sondage produit en aval exactement les mêmes effets, sans qu'aucun
+événement ait été créé.
 
-Ce qui existait déjà et sera réemployé sans une ligne de plus : les deux domain
+Ce qui existait déjà et a été réemployé sans une ligne de plus : les deux domain
 events d'appariement et leur publisher, les trois ports vers `teams`, `spaces`
 et `match_report`, l'infrastructure d'e-mails avec sa table
 `notification_deliveries`, et le patron de jeton opaque de `reset_password`.
+
+### La couverture, et le trou qu'elle avait
+
+Trente-sept tests e2e sur quatre fichiers — et aucun ne traversait la chaîne.
+Ils la couvraient en **deux moitiés qui ne se touchent pas** : celle qui part du
+lien du coach s'arrêtait avant le tirage, celle qui va jusqu'au Calendrier
+saisissait ses présences par l'endpoint `answer` de l'administration.
+
+C'est précisément ce que le `Terminé quand` exclut, et ce que cette épic dit ne
+rien résoudre. La carte 549 a ajouté le trente-huitième test, qui traverse.
+
+Son garde-fou a demandé deux falsifications pour être taillé juste. R28 veut que
+le canal d'écriture ne vive que le temps de l'écriture : une saisie
+d'organisateur **suivie** d'une réponse par jeton voit son `saisi_par_admin`
+remis à `NULL`, et le garde-fou ne la voit pas. Il attrape la régression réelle
+— le chemin du jeton **remplacé** par un appel qui « fait la même chose ».
+
+## Ce qu'il reste
+
+**La relecture des trois e-mails dans un client mail réel.** Case non cochée au
+bas de la carte 526, restée là depuis sa clôture. Elle demande un œil humain :
+ni test ni assistant ne peuvent la produire, et c'est pour l'empêcher de se
+perdre une seconde fois qu'elle est remontée ici (règle 17 du `CLAUDE.md`).
+
+**La validation de la fonction entière**, par l'utilisateur, sur le critère
+ci-dessous. C'est elle qui déplacera cette épic en `done/`.
 
 ## Les cartes
 
@@ -120,6 +105,7 @@ et `match_report`, l'infrastructure d'e-mails avec sa table
 | 530 | La garde de saison quitte l'administration | 7 |
 | 531 | L'encart du coach connecté | 7 |
 | 532 | Les tests e2e de l'encart | 7 |
+| 549 | Le test qui traverse toute la chaîne | 8 — la preuve du critère |
 
 ## Ce qui commande l'ordre
 

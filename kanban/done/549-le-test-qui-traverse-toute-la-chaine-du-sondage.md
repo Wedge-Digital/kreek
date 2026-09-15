@@ -78,9 +78,22 @@ Sans cette assertion, un futur remaniement du fixture pourrait réintroduire une
 saisie d'organisateur sans que le test bronche, et il recommencerait à prouver
 la moitié qu'on prouve déjà.
 
-## Les quatre imports morts
+**Il a fallu deux falsifications pour le tailler juste.** R28 veut que le canal
+d'écriture ne vive que le temps de l'écriture : une réponse saisie par
+l'organisateur **puis** re-posée par le coach voit son `saisi_par_admin` remis à
+`NULL`.
 
-Ils sortent à chaque `cargo check` depuis la vague 3 :
+| Ce qu'on injecte | Le garde-fou |
+|---|---|
+| une saisie **en plus** des visites de jetons | ne voit rien — la visite l'a effacée |
+| le chemin du jeton **remplacé** par la saisie | tombe, en nommant les quatre équipes |
+
+La première falsification a donc passé, et c'est ce qui a révélé la portée réelle
+du garde-fou. C'est la seconde forme qui est la régression à craindre : on ne
+rajoute pas une saisie par mégarde, on remplace une boucle jugée compliquée par
+un appel qui « fait la même chose ».
+
+## Les quatre imports que `cargo check` dit morts — et qui ne le sont pas
 
 ```
 presences_widgets.rs:36         EquipeSollicitee
@@ -89,8 +102,19 @@ propose_repair_use_case.rs:31   MatchDay
 propose_repair_use_case.rs:42   TeamInfoDto
 ```
 
-Rangés ici parce qu'ils sont dans le code des présences et qu'un avertissement
-qu'on croise sans le lire est un avertissement qui finit par en cacher un vrai.
+La carte les annonçait morts. **Ils ne le sont pas** : les quatre servent dans
+des modules `#[cfg(test)]`. `cargo check` sans `--all-targets` ne compile pas
+les tests, les voit inutilisés par le binaire, et le dit — les supprimer casse
+la compilation des tests, ce qui a été constaté en les supprimant.
+
+Ils sont donc **déplacés dans le `mod tests` qui les utilise**, et non retirés.
+L'avertissement disparaît parce que l'import cesse d'exister pour le binaire,
+pas parce que le code a changé.
+
+La leçon vaut au-delà de ces quatre-là : **un « unused import » signalé par
+`cargo check` seul ne prouve rien** tant qu'on n'a pas relancé avec
+`--all-targets`. Le premier réflexe — supprimer — casse silencieusement la
+compilation des tests, qui ne tourne pas dans la même commande.
 
 ## La remise à jour de l'épic
 
@@ -111,9 +135,10 @@ aucun appel à l'endpoint `answer` de l'administration — vérifiable par
 
 ## Tests
 
-- **E2E** — le scénario ci-dessus, en un seul test. Falsifié en le faisant
-  partir de `_tous_presents()` : il doit alors échouer sur l'assertion
-  `saisi_par_admin`.
+- **E2E** — le scénario ci-dessus, en un seul test. Falsifié en **remplaçant**
+  les visites de jetons par la saisie d'organisateur : il doit alors échouer sur
+  l'assertion `saisi_par_admin`. L'ajouter sans retirer les visites ne le fait
+  pas tomber, et cette limite est écrite dans l'en-tête du fichier.
 - **Pas de test unitaire.** Tout ce que cette carte ajoute est un parcours ; les
   couches qu'il traverse sont déjà couvertes par les vingt-sept cartes livrées.
 
@@ -122,6 +147,6 @@ aucun appel à l'endpoint `answer` de l'administration — vérifiable par
 - [ ] `test_presence_chaine_complete.py`, un scénario, aucun appel à `answer`
 - [ ] L'assertion `saisi_par_admin IS NULL` sur toutes les réponses
 - [ ] Le commentaire qui dit ce que le test ne prouve pas
-- [ ] Les quatre imports morts retirés
+- [ ] Les quatre imports déplacés dans leur `mod tests` (ils ne sont pas morts)
 - [ ] Le texte d'E16 remis à jour, l'épic laissée dans `en_cours/`
 - [ ] `make lint`, `make check-arch`, `make test`, les 4 fichiers e2e des présences

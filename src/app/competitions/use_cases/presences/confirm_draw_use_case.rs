@@ -38,7 +38,6 @@ use crate::app::competitions::domain::match_day::{MatchDay, Pairing};
 use crate::app::competitions::domain::match_day_repository_port::{
     IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection,
 };
-use crate::app::competitions::domain::presence_survey::PresenceSurvey;
 use crate::app::competitions::domain::presence_survey_repository_port::{
     IPresenceSurveyRepository, PresenceSurveyRepositoryError,
 };
@@ -233,6 +232,7 @@ fn annoncer(
 mod tests {
     use super::*;
     use crate::app::competitions::domain::match_day::MatchDayType;
+    use crate::app::competitions::domain::presence_survey::PresenceSurvey;
     use crate::app::competitions::domain::presence_survey::{
         Appariement, Destinataire, Repondant, Venue,
     };

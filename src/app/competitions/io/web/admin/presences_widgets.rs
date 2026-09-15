@@ -33,7 +33,7 @@ use crate::app::competitions::use_cases::presences::etat_journee::etat_de_la_jou
 use crate::app::competitions::use_cases::presences::propose_repair_use_case::RepairProposal;
 use crate::app::competitions::use_cases::presences::survey_roster_service;
 use crate::app::competitions::use_cases::presences::survey_roster_service::{
-    EquipeSollicitee, LignePresence, RosterDeCampagne,
+    LignePresence, RosterDeCampagne,
 };
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
@@ -1177,6 +1177,7 @@ mod tests {
         AutoRemind, Destinataire, RencontreJournee, Repondant, SurveyId, Venue,
     };
     use crate::app::competitions::domain::tirage::NombreDeRencontres;
+    use crate::app::competitions::use_cases::presences::survey_roster_service::EquipeSollicitee;
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use crate::app::shared_kernel::identity::ids::CoachId;
