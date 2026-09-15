@@ -65,7 +65,7 @@
             {% endif %}
           </td>
           <td>{{ line.awarded_at }}</td>
-          <td>{{ line.awarded_by }}</td>
+          <td>{% if let Some(nom) = line.awarded_by %}{{ nom }}{% else %}—{% endif %}</td>
           {% if vm.can_manage %}
           <td class="n">
             {# Le ✕ est le geste de retrait du reste du site : six occurrences

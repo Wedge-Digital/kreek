@@ -134,11 +134,27 @@ impl crate::app::ranking::ports::IRankingAdminPort for FakeAdmin {
     }
 }
 
+/// Ce banc ne rend aucun nom : il n'affiche rien. `None` est le repli que la
+/// page traite déjà (carte 548).
+struct FakeCoachData;
+
+#[async_trait::async_trait]
+impl crate::app::ranking::ports::ICoachDataPort for FakeCoachData {
+    async fn find_coach_name(&self, _: &str) -> Option<String> {
+        None
+    }
+}
+
 #[sqlx::test]
 async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
-    let ranking = RankingContext::new(&pool, competition_port.clone(), Arc::new(FakeAdmin));
+    let ranking = RankingContext::new(
+        &pool,
+        competition_port.clone(),
+        Arc::new(FakeAdmin),
+        Arc::new(FakeCoachData),
+    );
     match_report_published_listener::init(
         &app_event_bus,
         ranking.repository.clone(),
@@ -191,7 +207,12 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
 async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
-    let ranking = RankingContext::new(&pool, competition_port.clone(), Arc::new(FakeAdmin));
+    let ranking = RankingContext::new(
+        &pool,
+        competition_port.clone(),
+        Arc::new(FakeAdmin),
+        Arc::new(FakeCoachData),
+    );
     match_report_published_listener::init(
         &app_event_bus,
         ranking.repository.clone(),

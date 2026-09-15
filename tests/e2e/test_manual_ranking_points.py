@@ -13,11 +13,13 @@ conception de la série qui serait fausse.
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), `make seed_e2e`.
 """
 
+import re
+
 import pytest
 import requests
 from playwright.sync_api import Page, expect
 
-from competition_lifecycle import BASE_URL, build_full_competition
+from competition_lifecycle import BASE_URL, BYPASS_AUTH_COACH_NAME, build_full_competition
 from db_helpers import query_db
 from htmx_helpers import cliquer_quand_cable
 from match_report_helpers import play_match, wait_ranking_lines
@@ -200,6 +202,36 @@ def test_la_liste_se_recharge_apres_attribution(page: Page, saison_jouee, consol
     # Aucun rechargement de page : c'est l'événement qui doit avoir rempli la liste.
     expect(page.locator(".mp-row--team")).to_have_count(1, timeout=10000)
     assert "1 ligne" in page.locator(".mp-row--team").first.inner_text()
+
+
+def test_la_colonne_attribue_par_porte_un_nom_pas_un_identifiant(
+    page: Page, saison_jouee, console_errors
+):
+    """Carte 548 — `awarded_by` stocke un `UserId` ; l'écran doit rendre le nom.
+
+    Aucun test ne regardait cette colonne, et c'est ce qui a laissé passer un
+    ULID brut à l'écran pendant toute la vie de la page.
+    """
+    _attribuer(page, saison_jouee, 0, 3, "plus", "forfait adverse")
+
+    # La base garde bien l'identifiant : c'est la bonne clé, on ne dénormalise pas.
+    stocke = query_db(
+        "SELECT awarded_by FROM ranking__manual_points "
+        f"WHERE season_id = '{saison_jouee['season_id']}'"
+    )
+    assert re.fullmatch(r"[0-9A-Z]{26}", stocke[0]), stocke
+
+    # L'accordéon est replié : la ligne n'existe à l'écran qu'une fois ouvert.
+    page.locator(".mp-row--team").first.click()
+    # `.mp-line` porte aussi la ligne d'en-tête de colonnes, qui n'a que des
+    # `th` : on écarte `.mp-row--cols` pour ne garder que les lignes de données.
+    cellule = page.locator(".mp-line:not(.mp-row--cols) td").nth(3)
+    expect(cellule).to_have_text(BYPASS_AUTH_COACH_NAME, timeout=10000)
+
+    affiche = cellule.inner_text().strip()
+    assert not re.fullmatch(r"[0-9A-Z]{26}", affiche), (
+        f"la colonne « Attribué par » montre un identifiant : {affiche!r}"
+    )
 
 
 def test_le_classement_affiche_les_points_manuels(page: Page, saison_jouee, console_errors):

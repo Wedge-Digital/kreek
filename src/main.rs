@@ -543,6 +543,9 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
                 Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
             )),
+            Arc::new(crate::infrastructure::ranking::coach_data_adapter::CoachDataAdapter::new(
+                Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
+            )),
         ),
         // Un résolveur par ressource identifiable dans un chemin. Les six
         // autres BCs arrivent avec les cartes 318 à 322 ; un paramètre sans

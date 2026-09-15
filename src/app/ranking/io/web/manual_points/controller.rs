@@ -12,7 +12,9 @@
 
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::ranking::domain::manual_points::{ManualPoints, ManualPointsReason};
-use crate::app::ranking::io::web::manual_points::builders::{build_teams, libelle_releve, Chemin};
+use crate::app::ranking::io::web::manual_points::builders::{
+    build_teams, libelle_releve, resolve_coach_names, Chemin,
+};
 use crate::app::ranking::io::web::manual_points::view_models::{
     ManualPointsFormVm, ManualPointsListVm,
 };
@@ -443,7 +445,8 @@ async fn rendre_liste(
         season_id,
     };
     let nb_lignes = lignes.len();
-    let teams = build_teams(lignes, &equipes, &chemin);
+    let noms = resolve_coach_names(state.ranking.coach_data.as_ref(), &lignes).await;
+    let teams = build_teams(lignes, &equipes, &chemin, &noms);
     ManualPointsListTemplate {
         vm: ManualPointsListVm {
             teams_label: libelle_releve(nb_lignes, teams.len()),
@@ -551,7 +554,7 @@ mod tests {
                         points: "+3".into(),
                         points_class: "plus",
                         reason: Some("forfait".into()),
-                        awarded_by: "DevCoach".into(),
+                        awarded_by: Some("DevCoach".into()),
                         awarded_at: "19 août".into(),
                     }],
                 }],

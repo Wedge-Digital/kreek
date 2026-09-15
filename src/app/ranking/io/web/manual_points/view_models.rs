@@ -21,7 +21,10 @@ pub struct ManualPointVm {
     pub points_class: &'static str,
     /// Le texte libre du commissaire, ou `None` : le motif est facultatif.
     pub reason: Option<String>,
-    pub awarded_by: String,
+    /// Le pseudonyme du commissaire, ou `None` quand il ne se résout plus —
+    /// un compte supprimé. Le gabarit rend alors un tiret : inventer
+    /// « Commissaire inconnu » ferait passer une absence pour une donnée.
+    pub awarded_by: Option<String>,
     pub awarded_at: String,
 }
 

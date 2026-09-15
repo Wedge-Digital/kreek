@@ -298,3 +298,18 @@ pub trait IRankingAdminPort: Send + Sync {
     async fn is_competition_admin(&self, user_id: &str, competition_id: &str) -> bool;
     async fn is_space_admin(&self, user_id: &str, space_id: &str) -> bool;
 }
+
+// ── ACL d'identité (carte 548) ────────────────────────────────────────────────
+
+/// Le nom affichable d'un commissaire, à partir de son identifiant.
+///
+/// `awarded_by` stocke un `UserId`, et c'est la bonne clé : stable, insensible
+/// à un changement de pseudonyme. La résoudre est donc un travail d'affichage,
+/// pas de persistance — on ne dénormalise pas le nom dans la table.
+///
+/// `None` plutôt qu'une erreur : un compte supprimé n'est pas une panne, et la
+/// page doit s'afficher sans lui. Le gabarit rend un tiret.
+#[async_trait]
+pub trait ICoachDataPort: Send + Sync {
+    async fn find_coach_name(&self, coach_id: &str) -> Option<String>;
+}
