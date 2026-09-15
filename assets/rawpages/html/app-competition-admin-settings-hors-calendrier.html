@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Réglages généraux — Matchs hors calendrier</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ═══ Repris tel quel de assets/static/css/pages/competition-admin-settings.css
+       (préfixe de page retiré). Ne pas le retoucher ici : cette maquette montre
+       le rendu réel, pas une intention de rendu. ═══ */
+    .settings-panel-head { padding: var(--p2); border-bottom: 2px solid var(--dark-5); display: flex; align-items: center; justify-content: space-between; }
+    .settings-panel-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-1); display: flex; align-items: center; gap: 8px; }
+    .settings-panel-title-icon { font-size: 18px; }
+    .settings-panel-body { padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); }
+    .panel-consequence.shown { color: var(--dark-1); border-top-color: var(--main-blue); }
+    .panel-consequence-count { font-family: var(--font-title); font-weight: 800; color: var(--main-blue); font-variant-numeric: tabular-nums; }
+    .panel-consequence em { font-style: normal; color: var(--dark-3); }
+    .panel-consequence.shown .consequence-idle { display: none; }
+    .panel-consequence.shown .consequence-active { display: block; }
+    .visibility-section-title { font-size: var(--text-small); font-weight: 600; color: var(--dark-2); margin-bottom: var(--p1); }
+    .visibility-choices { display: flex; gap: 8px; flex-wrap: wrap; }
+    .visibility-choice { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 2px; padding: 10px 20px; border: 2px solid var(--dark-5); border-radius: 8px; font-size: var(--text-small); color: var(--dark-2); cursor: pointer; background: var(--white); transition: border-color 0.15s, color 0.15s, background 0.15s; }
+    .visibility-choice:hover { border-color: var(--dark-4); color: var(--dark-1); }
+    .visibility-choice.selected, .visibility-choice:has(input:checked) { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0, 48, 73, 0.05); }
+    .visibility-choice:focus-within { outline: 2px solid var(--main-blue); outline-offset: 2px; }
+    .visibility-choice-label { font-weight: 600; }
+    .visibility-choice-help { font-size: var(--text-tiny); color: var(--dark-3); }
+    .settings-panel-foot { display: flex; justify-content: flex-end; padding: 0 var(--p2) var(--p2); }
+    .settings-panel-foot .btn-primary { width: auto; padding: 10px 22px; border-radius: 8px; background: var(--main-blue); font-weight: 700; }
+    .settings-panel-foot .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+
+    /* ═══ Ce que la carte 550 ajoute ═══
+       `.visibility-choice` est un `<label>` qui enveloppe un radio. Pour une
+       case unique il n'existe pas encore de motif : celui-ci reprend la même
+       bordure, le même rayon et la même aide, avec la case alignée en tête. */
+    .option-toggle {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 20px;
+      border: 2px solid var(--dark-5); border-radius: 8px;
+      background: var(--white); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .option-toggle:hover { border-color: var(--dark-4); }
+    .option-toggle:focus-within { outline: 2px solid var(--main-blue); outline-offset: 2px; }
+    .option-toggle:has(input:checked) { border-color: var(--main-blue); }
+    .option-toggle input { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; }
+    .option-toggle-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .option-toggle-label { font-weight: 600; font-size: var(--text-small); color: var(--dark-1); }
+    .option-toggle-help { font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.5; }
+
+    /* ═══ Cadre de lecture de la maquette, pas du produit ═══ */
+    .maquette { max-width: 1060px; margin: 0 auto; padding: var(--p3) var(--p2) var(--p5); }
+    .maquette-note {
+      margin: 0 0 var(--p2);
+      padding: 12px 16px; border-left: 3px solid var(--dark-4);
+      background: var(--dark-7); border-radius: 0 8px 8px 0;
+      font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.6;
+    }
+    .maquette-note b { color: var(--dark-1); }
+    .maquette-saut {
+      margin: var(--p2) 0; padding: 10px 16px;
+      border: 2px dashed var(--dark-5); border-radius: 8px;
+      font-size: var(--text-tiny); color: var(--dark-3); text-align: center;
+    }
+    .competition-admin-settings { display: flex; flex-direction: column; gap: var(--p2); }
+  </style>
+</head>
+<body>
+
+<div class="maquette">
+
+  <p class="maquette-note">
+    <b>Maquette de la carte 550</b> — le panneau « Réglages généraux » dans son
+    contexte réel. Les panneaux <b>Informations générales</b> et <b>Visibilité</b>
+    reproduisent le markup et le CSS de production ; le panneau du milieu est ce
+    que la carte ajoute. Ordre réel de l'onglet : général, <b>nouveau</b>,
+    classement, poules, tiers, visibilité.
+  </p>
+
+  <div class="competition-admin-settings">
+
+    <!-- ══ 1 · Informations générales — EXISTANT ══════════════════════════ -->
+    <div class="settings-panel">
+      <div class="settings-panel-head">
+        <div class="settings-panel-title">
+          <span class="settings-panel-title-icon">📝</span>Informations générales
+        </div>
+      </div>
+      <form class="settings-panel-body">
+        <div class="form-row">
+          <div class="form-row-label">Nom de la compétition</div>
+          <div class="form-row-content">
+            <input class="form-input" type="text" value="GBLR Championnat">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-row-label">Nom de la saison</div>
+          <div class="form-row-content">
+            <input class="form-input" type="text" value="Saison 5">
+            <div class="form-row-hint">Le nom de la saison en cours, pas de la compétition.</div>
+          </div>
+        </div>
+      </form>
+      <div class="settings-panel-foot">
+        <button type="button" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </div>
+
+    <!-- ══ 2 · Réglages généraux — CE QUE LA CARTE 550 AJOUTE ═════════════ -->
+    <div class="settings-panel" id="settings-general-options-panel">
+      <div class="settings-panel-head">
+        <div class="settings-panel-title">
+          <span class="settings-panel-title-icon">🎛️</span>Réglages généraux
+        </div>
+      </div>
+
+      <form class="settings-panel-body" id="general-options-form">
+        <div class="visibility-section">
+          <div class="visibility-section-title">Saisie des matchs</div>
+
+          <label class="option-toggle" for="opt-hors-calendrier">
+            <input type="checkbox" id="opt-hors-calendrier"
+                   name="autorise_hors_calendrier" checked>
+            <span class="option-toggle-body">
+              <span class="option-toggle-label">Autoriser les matchs hors calendrier</span>
+              <span class="option-toggle-help">
+                Un coach peut saisir un match en choisissant lui-même les deux
+                équipes et la journée, sans passer par une rencontre du
+                calendrier. Décoché, seuls les commissaires créent des
+                rencontres, par la génération d'appariements.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div class="panel-consequence">
+          <span class="consequence-idle">
+            Décocher n'efface aucun match déjà saisi : les rencontres hors
+            calendrier existantes restent visibles et modifiables.
+            <em>Seule la création de nouvelles est refusée.</em>
+          </span>
+        </div>
+      </form>
+
+      <div class="settings-panel-foot">
+        <button type="submit" form="general-options-form" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </div>
+
+    <div class="maquette-saut">
+      Classement · Poules · Tiers — panneaux existants, inchangés
+    </div>
+
+    <!-- ══ 6 · Visibilité — EXISTANT, pour situer le nouveau ══════════════ -->
+    <div class="settings-panel">
+      <div class="settings-panel-head">
+        <div class="settings-panel-title">
+          <span class="settings-panel-title-icon">🔒</span>Visibilité
+        </div>
+      </div>
+      <form class="settings-panel-body">
+        <div class="visibility-section">
+          <div class="visibility-section-title">Mode d'accès</div>
+          <div class="visibility-choices">
+            <label class="visibility-choice selected">
+              <input type="radio" name="access_mode" checked>
+              <span class="visibility-choice-label">Sur invitation</span>
+              <span class="visibility-choice-help">Seuls les coachs invités peuvent s'inscrire.</span>
+            </label>
+            <label class="visibility-choice">
+              <input type="radio" name="access_mode">
+              <span class="visibility-choice-label">Inscription libre</span>
+              <span class="visibility-choice-help">Tous les membres de l'espace peuvent s'inscrire.</span>
+            </label>
+          </div>
+        </div>
+      </form>
+      <div class="settings-panel-foot">
+        <button type="button" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
