@@ -92,9 +92,61 @@ d'administration attraperait tout d'un coup, et c'est séduisant — mais
 la compétition. Le porter en couche demanderait de rejouer cette résolution hors
 du handler, donc de la dupliquer. À évaluer un jour, pas dans cette carte.
 
+## La commande d'audit avait cessé de dire vrai
+
+Écrite en carte 519, elle rendait **quatre** lignes. Rejouée aujourd'hui, elle en
+rend **vingt-deux dont quatre vraies** — et le bruit vient de deux sources que la
+carte n'anticipait qu'à moitié :
+
+| Bruit | Pourquoi |
+|---|---|
+| `admin_scope::*` (cinq), `build_summary_fragment`, `charger_le_panneau` | **non routées** — atteignables seulement depuis un handler déjà gardé |
+| `admin_page`, et les **dix** actions de présence | gardées **par une aide** — `render_admin_page` et `contexte()`, que la commande ne suit pas |
+
+La carte prévenait pour les deux premières ; les dix actions de présence sont
+arrivées depuis, avec l'onglet, et `charger_le_panneau` avec elles.
+
+**Une vérification qui rend dix-huit faux positifs n'est plus lue.** C'est
+exactement ce que le `CLAUDE.md` dit d'une étape sautée : elle rassure au lieu
+d'échouer. L'étape 3 de cette carte, prise au pied de la lettre, aurait consisté à
+relire dix-huit lignes de bruit après la correction et à conclure que tout va bien.
+
+## L'axe 19 remplace la commande
+
+`scripts/arch/gardes_administration.py`, bloquant. Il croise les fonctions
+d'administration avec **le routeur** — ce qui élimine le premier bruit — et connaît
+les **aides gardiennes**, déclarées dans une liste courte : `render_admin_page` et
+`contexte`.
+
+Et il se garde lui-même : une aide déclarée qui cesserait d'appeler
+`require_admin_access` fait échouer l'axe, au lieu d'ouvrir en silence le trou
+qu'il surveille. Sans ce contrôle, la liste des aides serait une porte dérobée —
+il suffirait d'y inscrire une fonction qui ne garde rien.
+
+Éprouvé dans les deux sens :
+
+| Sabotage | Ce que l'axe dit |
+|---|---|
+| une garde retirée d'un handler | `groups_widgets.rs::unassigned_pool_widget ← handler d'administration routé sans contrôle d'accès` |
+| `contexte` qui n'appelle plus la garde | `contexte — déclarée gardienne, n'appelle plus require_admin_access` |
+
+## Le test e2e a son jumeau, et il a été éprouvé
+
+L'axe voit que la garde est **écrite** ; le test e2e voit qu'elle **répond**. Les
+deux sont nécessaires, et le second a été vérifié en retirant une garde : la suite
+a rendu `!! GET schedule/rounds → 200`, précisément le défaut de cette carte.
+
+Un second test montre que les mêmes adresses rendent `200` à un administrateur —
+sans lui, une route cassée ou un identifiant faux donnerait aussi « pas 200 » au
+membre simple, et le premier test passerait pour de mauvaises raisons.
+
 ## Checklist
 
-- [ ] `AuthSession` + `require_admin_access` sur les quatre handlers
-- [ ] Quatre cas dans `test_competition_admin_acces.py`, famille « le droit »
-- [ ] La commande d'audit rejouée : plus aucun handler routé sans garde
-- [ ] `make lint`, `make check-arch`, `make test`, `make e2e`
+- [x] `AuthSession` + `require_admin_access` sur les quatre handlers
+- [x] Deux tests dans `test_competition_admin_acces.py` : le refus du membre
+      simple sur les quatre fragments, et son jumeau qui montre que
+      l'administrateur les obtient
+- [x] La commande d'audit **remplacée** par l'axe 19 — elle rendait dix-huit faux
+      positifs et ne vérifiait plus rien
+- [x] L'axe éprouvé dans ses deux modes d'échec, le test e2e dans le sien
+- [x] `make lint`, `make check-arch`, `make test`, `make e2e`

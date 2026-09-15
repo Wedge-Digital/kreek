@@ -704,6 +704,30 @@ axe18=$(
 axe18="$(printf '%s' "$axe18" | sed '/^$/d')"
 if [ -n "$axe18" ]; then print_fail "$axe18"; else print_pass; fi
 echo ""
+# ── Axe 19 : les handlers d'administration contrôlent le droit d'accès ──────
+#
+# La carte 416 a fermé ce trou sur treize routes de **mutation**. Deux mois plus
+# tard, la carte 543 en a trouvé quatre autres sur des routes de **lecture** —
+# barre latérale du calendrier, détail d'une journée, cartes de poules, vivier des
+# non affectées — que rien n'avait regardées depuis, parce que le périmètre de la
+# 416 était les écritures.
+#
+# La 416 écrivait déjà : *« ces tests sont le seul filet. Rien dans le compilateur
+# ne signale un handler qui ne contrôle rien. »* Cet axe est ce filet.
+#
+# **Il remplace une commande d'audit qui avait cessé de dire vrai.** La carte 543
+# en portait une, qui cherchait la garde dans le corps de chaque fonction : elle
+# rendait quatre lignes à l'écriture, vingt-deux à la relecture, dont dix-huit de
+# bruit — des fonctions non routées, et des handlers gardés par une aide. Une
+# vérification qui rend dix-huit faux positifs n'est plus lue.
+#
+# Le script croise donc avec le routeur et connaît les aides gardiennes, qu'il
+# vérifie à son tour : une aide déclarée qui cesserait de garder fait échouer
+# l'axe au lieu d'ouvrir le trou en silence. Le détail est en tête de
+# `scripts/arch/gardes_administration.py`.
+echo -e "${BOLD}Axe 19 · Administration — tout handler routé contrôle le droit${RESET}"
+if axe19=$(python3 scripts/arch/gardes_administration.py 2>&1); then print_pass; else print_fail "$axe19"; fi
+echo ""
 
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"

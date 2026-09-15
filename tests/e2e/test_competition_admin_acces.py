@@ -113,6 +113,28 @@ def _routes(ctx: dict, round_id: str, pairing_id: str, group_id: str, team_id: s
     ]
 
 
+# ── Les quatre fragments de lecture ───────────────────────────────────────────
+#
+# La carte 416 avait fermé le trou sur les treize **mutations** ci-dessus ; ces
+# quatre-là rendent des vues d'administration en `GET` et n'étaient gardés par
+# rien (carte 543). Ce n'est ni un accès anonyme, ni inter-espaces, ni une
+# écriture : c'est un membre simple du même espace qui lit le calendrier et les
+# poules. Le défaut n'est pas la valeur de la fuite, c'est que **les pages
+# gardaient et pas leurs fragments**.
+#
+# Séparés des treize parce que leur forme d'appel diffère — un `GET` sans corps,
+# et deux d'entre eux portent leur cible en paramètre de requête.
+
+
+def _fragments(round_id: str):
+    return [
+        ("groups/unassigned", ""),
+        ("groups/cards", ""),
+        ("schedule/rounds", ""),
+        ("schedule/round", f"?round_id={round_id}"),
+    ]
+
+
 def _appeler(methode: str, url: str, corps, entetes: dict) -> requests.Response:
     return requests.request(
         methode.upper(), url, json=corps, headers={**JSON, **entetes}, timeout=10
@@ -132,6 +154,53 @@ def cibles(deux_competitions):
 
 
 # ── 1 · Le droit ──────────────────────────────────────────────────────────────
+
+
+def test_les_quatre_fragments_de_lecture_refusent_un_membre_simple(
+    deux_competitions, cibles
+):
+    """Carte 543 — les fragments d'administration gardent comme leurs pages.
+
+    Quatre vues rendues en `GET` que rien ne protégeait : la barre latérale du
+    calendrier, le détail d'une journée, les cartes de poules et le vivier des
+    équipes non affectées. Un membre simple de l'espace les lisait.
+
+    Le contrôle statique vit dans `check-arch` (axe 19) et couvre tous les
+    handlers routés ; celui-ci vérifie ce que l'axe ne peut pas voir — que la
+    garde **répond** bien un refus, et non qu'elle est seulement écrite.
+    """
+    space_id, a = deux_competitions["space_id"], deux_competitions["a"]
+    fragments = _fragments(cibles["round_id"])
+    assert len(fragments) == 4, f"la carte en dénombre quatre, pas {len(fragments)}"
+
+    refuses = []
+    for suffixe, requete in fragments:
+        reponse = _appeler(
+            "get", _url(space_id, a, suffixe) + requete, None, ENTETE_MEMBRE_SIMPLE
+        )
+        if reponse.status_code == 403:
+            refuses.append(suffixe)
+        else:
+            refuses.append(f"!! GET {suffixe} → {reponse.status_code}")
+
+    fautifs = [r for r in refuses if r.startswith("!!")]
+    assert not fautifs, f"fragments non gardés : {fautifs}"
+
+
+def test_les_quatre_fragments_repondent_a_un_administrateur(deux_competitions, cibles):
+    """Le pendant du précédent, sans lequel il ne prouverait rien.
+
+    Une route cassée, un identifiant faux ou un `404` rendraient aussi un code
+    différent de 200 pour le membre simple. Ce test montre que sur les **mêmes**
+    adresses, l'administrateur obtient bien son fragment.
+    """
+    space_id, a = deux_competitions["space_id"], deux_competitions["a"]
+
+    for suffixe, requete in _fragments(cibles["round_id"]):
+        reponse = _appeler("get", _url(space_id, a, suffixe) + requete, None, {})
+        assert reponse.status_code == 200, (
+            f"GET {suffixe} → {reponse.status_code} pour un administrateur"
+        )
 
 
 def test_les_treize_routes_refusent_un_membre_simple(deux_competitions, cibles):
