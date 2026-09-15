@@ -1,6 +1,9 @@
+use crate::app::competitions::domain::competition_options::CompetitionOptions;
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
-use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
+use crate::app::competitions::domain::season_repository_port::{
+    ISeasonRepository, SeasonRepositoryError,
+};
 use crate::app::match_report::ports::{
     ICompetitionDataPort, InducementSpecDto, RoundContextDto, TierRulesDto,
 };
@@ -33,8 +36,37 @@ impl CompetitionDataAdapter {
     }
 }
 
+/// Ce que vaut une lecture d'options pour la garde de création (carte 550).
+///
+/// **Trois façons de ne pas savoir, une seule réponse : autoriser.** Saison
+/// introuvable, colonne jamais réglée, panne de lecture — dans les trois cas
+/// c'est le comportement de toujours qui s'applique. Refuser sur une erreur
+/// d'infrastructure priverait un coach de son rapport sans qu'il puisse rien y
+/// faire, et sans que l'écran sache le lui dire.
+///
+/// La garde ne protège donc que ce qui a été **explicitement interdit**, ce qui
+/// est exactement son objet.
+fn autorise_depuis(lues: Result<Option<CompetitionOptions>, SeasonRepositoryError>) -> bool {
+    match lues {
+        Ok(Some(options)) => options.autorise_hors_calendrier.0,
+        Ok(None) => CompetitionOptions::default().autorise_hors_calendrier.0,
+        Err(_) => true,
+    }
+}
+
 #[async_trait]
 impl ICompetitionDataPort for CompetitionDataAdapter {
+    async fn autorise_hors_calendrier(&self, season_id: &str) -> bool {
+        let Ok(sid) = SeasonId::try_new(season_id) else {
+            return true;
+        };
+        let lues = self.season_repo.find_options(&sid).await;
+        if let Err(e) = &lues {
+            tracing::error!("competition_data_adapter: options {season_id}: {e}");
+        }
+        autorise_depuis(lues)
+    }
+
     async fn is_competition_admin(
         &self,
         competition_id: &str,
@@ -126,7 +158,44 @@ fn build_star_player_spec(uid: &str, repo: &dyn IReferenceRepository) -> Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::competitions::domain::competition_options::AutoriseHorsCalendrier;
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
+
+    // ── La garde de création (carte 550) ─────────────────────────────────────
+
+    /// **Le seul cas qui refuse.** Tout le reste autorise, et c'est délibéré.
+    #[test]
+    fn une_interdiction_explicite_est_la_seule_a_refuser() {
+        let interdit = CompetitionOptions {
+            autorise_hors_calendrier: AutoriseHorsCalendrier(false),
+        };
+        assert!(!autorise_depuis(Ok(Some(interdit))));
+    }
+
+    /// Les vingt saisons existantes portent `NULL` : si ce cas refusait, la
+    /// saisie manuelle disparaîtrait partout au déploiement.
+    #[test]
+    fn une_saison_jamais_reglee_autorise() {
+        assert!(autorise_depuis(Ok(None)));
+    }
+
+    /// Une panne de base ne prive pas un coach de son rapport. C'est le choix
+    /// inverse de celui qu'on ferait pour une garde d'autorisation — ici on ne
+    /// protège pas un droit, on applique un réglage d'organisation.
+    #[test]
+    fn une_panne_de_lecture_autorise() {
+        assert!(autorise_depuis(Err(SeasonRepositoryError::Database(
+            "connexion perdue".into()
+        ))));
+    }
+
+    #[test]
+    fn une_autorisation_explicite_autorise() {
+        let autorise = CompetitionOptions {
+            autorise_hors_calendrier: AutoriseHorsCalendrier(true),
+        };
+        assert!(autorise_depuis(Ok(Some(autorise))));
+    }
 
     /// **Le prix débité**, celui qui part de la trésorerie — pas celui que le
     /// sélecteur affiche. Un test qui lirait l'écran passerait alors même que

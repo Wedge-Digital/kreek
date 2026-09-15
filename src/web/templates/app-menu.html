@@ -29,12 +29,19 @@
                hx-select="#app-content"
                hx-swap="outerHTML"
                hx-push-url="true">Les Compétitions</div>
+          {# Carte 550 — l'entrée disparaît dès qu'une compétition de l'espace
+             interdit les matchs hors calendrier. Le markup mobile plus bas porte
+             la **même** condition : les deux coexistent ici, et c'est le CSS qui
+             bascule l'affichage. En modifier un seul laisse l'entrée en place
+             sur l'autre taille d'écran. #}
+          {% if !hors_calendrier_interdit %}
           <div class="sub-menu-btn"
                hx-get="{{ app_routes.match_report.new_match_report(sid) }}"
                hx-target="#app-content"
                hx-select="#app-content"
                hx-swap="outerHTML"
                hx-push-url="true">Saisir un Match</div>
+          {% endif %}
           <div class="sub-menu-btn{% if self.create_team_active() %} active{% endif %}"
                hx-get="{{ app_routes.team_creation.draft_team(sid) }}"
                hx-target="#app-content"
@@ -105,6 +112,8 @@
     <span class="mobile-tab-icon">🏆</span>
     <span class="mobile-tab-label">Compétitions</span>
   </div>
+  {# Même condition que le sous-menu desktop plus haut (carte 550). #}
+  {% if !hors_calendrier_interdit %}
   <div class="mobile-tab{% if self.match_report_active() %} active{% endif %}"
        hx-get="{{ app_routes.match_report.new_match_report(sid) }}"
        hx-target="#app-content"
@@ -114,6 +123,7 @@
     <span class="mobile-tab-icon">📋</span>
     <span class="mobile-tab-label">Match</span>
   </div>
+  {% endif %}
   <div class="mobile-tab{% if self.create_team_active() %} active{% endif %}"
        hx-get="{{ app_routes.team_creation.draft_team(sid) }}"
        hx-target="#app-content"

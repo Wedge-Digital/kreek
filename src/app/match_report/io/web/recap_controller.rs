@@ -548,6 +548,9 @@ mod authorization_tests {
     struct FakeCompetitionData(Result<bool, String>);
     #[async_trait::async_trait]
     impl ICompetitionDataPort for FakeCompetitionData {
+        async fn autorise_hors_calendrier(&self, _: &str) -> bool {
+            true
+        }
         async fn is_competition_admin(&self, _: &str, _: &str) -> Result<bool, String> {
             self.0.clone()
         }

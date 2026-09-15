@@ -81,9 +81,20 @@ explique déjà à propos du statut de saison.
 
 ### La migration
 
-Une colonne `options JSONB`. Elle doit être datée **après le 2026-09-08**, sinon
-`sqlx` la refuse comme hors séquence sur une base qui porte déjà les migrations
-du sondage de présence.
+Une colonne `options JSONB`, datée après la dernière du dossier.
+
+**Le vrai piège n'est pas la date.** Sur une base importée de production, `sqlx`
+refuse tout `migrate run` depuis `main` :
+
+```
+error: migration 20260908000001 was previously applied but is missing
+       in the resolved migrations
+```
+
+`20260908000001` est le sondage de présence, appliqué en production, livré sur
+`demo`, et absent du dossier de `main`. Rien à corriger : `cargo sqlx migrate
+run --ignore-missing` passe, et le drapeau disparaîtra de lui-même à la
+resynchro de `demo` sur `main`.
 
 ## 2 · Le panneau « Réglages généraux »
 
@@ -315,16 +326,16 @@ Et un administrateur de la même compétition garde les deux widgets de la phase
 
 ## Checklist
 
-- [ ] La colonne, sa migration datée après le 2026-09-08, `find_options` / `save_options`
-- [ ] `CompetitionOptions` avec son `#[serde(default)]` à `true`, et son test
-- [ ] Le panneau « Réglages généraux », deuxième position, sur le modèle de `visibility_panel.rs`
-- [ ] Son use case, qui ne touche que sa colonne
-- [ ] `IHorsCalendrierPort` dans `src/web/ports.rs`, son adapter dans `src/infrastructure/web/`
-- [ ] Injecté dans `AppState` par `main.rs`
-- [ ] Les trois entrées conditionnelles — **desktop et mobile séparément**
-- [ ] Le commentaire de `peut_administrer` corrigé : il n'est plus le seul
-- [ ] La garde sur `create_match_report`
-- [ ] La vue texte de la phase 1, et les deux équipes ignorées au POST
-- [ ] Le bouton de `admin/schedule.html` retiré, **`from_pairing` intact**
-- [ ] L'entrée dans `tests/impact-map.toml`
-- [ ] `make lint`, `make check-arch`, `make test`, le nouvel e2e
+- [x] La colonne, sa migration datée après le 2026-09-08, `find_options` / `save_options`
+- [x] `CompetitionOptions` avec son `#[serde(default)]` à `true`, et son test
+- [x] Le panneau « Réglages généraux », deuxième position, sur le modèle de `visibility_panel.rs`
+- [x] Son use case, qui ne touche que sa colonne
+- [x] `IHorsCalendrierPort` dans `src/web/ports.rs`, son adapter dans `src/infrastructure/web/`
+- [x] Injecté dans `AppState` par `main.rs`
+- [x] Les trois entrées conditionnelles — **desktop et mobile séparément**
+- [x] Le commentaire de `peut_administrer` corrigé : il n'est plus le seul
+- [x] La garde sur `create_match_report`
+- [x] La vue texte de la phase 1, et les deux équipes ignorées au POST
+- [x] Le bouton de `admin/schedule.html` retiré, **`from_pairing` intact**
+- [x] L'entrée dans `tests/impact-map.toml`
+- [x] `make lint`, `make check-arch`, `make test`, le nouvel e2e

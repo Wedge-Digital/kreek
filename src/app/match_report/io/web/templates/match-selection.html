@@ -49,6 +49,51 @@
 
   <form method="post" action="{{ form_action }}">
 
+    {% if let Some(figee) = lecture_seule %}
+    {# Carte 550 — la compétition interdit les matchs hors calendrier et
+       l'utilisateur n'en est pas administrateur. Les deux widgets cèdent la
+       place aux quatre noms : il n'y a plus rien à choisir, et un widget
+       désactivé aurait obligé `competitions` et `teams` à porter un mode dont
+       ils n'ont besoin nulle part ailleurs.
+
+       Le bouton d'enchaînement reste : le POST est le seul chemin de `Draft`
+       vers `PreMatch`, et le coach doit pouvoir commencer son rapport. #}
+    <div class="mr-card">
+      <div class="mr-figee">
+        <div class="mr-figee-ligne">
+          <span class="mr-figee-label">Compétition</span>
+          <span class="mr-figee-valeur">{{ figee.competition_name }}</span>
+        </div>
+        <div class="mr-figee-ligne">
+          <span class="mr-figee-label">Saison</span>
+          <span class="mr-figee-valeur">{{ figee.season_name }}</span>
+        </div>
+        <div class="mr-figee-ligne">
+          <span class="mr-figee-label">Journée</span>
+          <span class="mr-figee-valeur">{{ figee.round_name }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mr-card">
+      <div class="mr-figee">
+        <div class="mr-figee-ligne">
+          <span class="mr-figee-label">Domicile</span>
+          <span class="mr-figee-valeur">{{ figee.home_team_name }}</span>
+        </div>
+        <div class="mr-figee-ligne">
+          <span class="mr-figee-label">Extérieur</span>
+          <span class="mr-figee-valeur">{{ figee.away_team_name }}</span>
+        </div>
+      </div>
+      <div class="mr-figee-motif">
+        Cette compétition n'autorise pas les matchs hors calendrier : la
+        rencontre est celle du calendrier, et seuls les commissaires peuvent la
+        changer.
+      </div>
+    </div>
+    {% else %}
+
     <!-- Competition / Season / Round (widget du BC competitions) -->
     <div class="mr-card">
       <div hx-get="{{ widget_url }}"
@@ -74,6 +119,7 @@
         {% endif %}
       </div>
     </div>
+    {% endif %}
 
     <!-- Actions -->
     <div class="mr-actions">

@@ -33,6 +33,17 @@ pub trait ICompetitionDataPort: Send + Sync {
     ) -> Option<TierRulesDto>;
 
     async fn find_round_context(&self, season_id: &str, round_id: &str) -> Option<RoundContextDto>;
+
+    /// La saison autorise-t-elle les matchs hors calendrier (carte 550) ?
+    ///
+    /// **`true` quand la réponse est inconnue** — saison introuvable, colonne
+    /// jamais réglée, panne de lecture. C'est le comportement de toujours, et
+    /// refuser une saisie sur une erreur d'infrastructure priverait un coach de
+    /// son rapport sans qu'il puisse rien y faire.
+    ///
+    /// La garde qui s'appuie dessus ne protège donc que ce qui a été
+    /// explicitement interdit — ce qui est exactement son objet.
+    async fn autorise_hors_calendrier(&self, season_id: &str) -> bool;
 }
 
 #[derive(Debug, Clone)]

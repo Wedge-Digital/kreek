@@ -1,0 +1,24 @@
+-- Réglages généraux d'une saison (carte 550).
+--
+-- Une cinquième colonne JSONB à côté de `rules`, `structure`, `invitations` et
+-- `notifications`, et non un champ glissé dans `structure`. Deux raisons.
+--
+-- L'écriture concurrente d'abord, le même argument que pour `notifications` :
+-- chaque blob se lit-modifie-réécrit en entier, donc poser l'option dans
+-- `structure` ferait écraser une modification du calendrier faite au même
+-- moment dans un autre onglet.
+--
+-- La cohérence ensuite : `structure` porte `ranking_group` et `schedule` —
+-- comment la compétition est découpée et quand elle se joue. Savoir si un match
+-- peut naître hors du calendrier n'est ni l'un ni l'autre.
+--
+-- Les lignes existantes ne sont **pas** remplies, et c'est voulu : `NULL` se lit
+-- « absent », donc rendu par le défaut serde, qui vaut **true**. Toutes les
+-- saisons d'avant cette migration continuent donc d'autoriser les matchs hors
+-- calendrier, exactement comme aujourd'hui. Interdire reste un geste délibéré,
+-- jamais un effet de mise à jour.
+--
+-- Contrairement à `notifications`, il n'y aura pas de migration de rattrapage à
+-- trancher plus tard : le défaut retenu ici **est** le comportement actuel, pas
+-- une approximation de ce qu'on aurait voulu.
+ALTER TABLE competition_seasons ADD COLUMN IF NOT EXISTS options JSONB;

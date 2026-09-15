@@ -100,6 +100,7 @@ mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
     use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
+    use crate::app::competitions::domain::competition_options::CompetitionOptions;
     use crate::app::competitions::domain::competition_rules::{
         Activated, AggressiveBonus, DefensiveBonus, MaxTdConceded, MinCasualties, MinTd,
         OffensiveBonus, RankingPoints, TiebreakCode, TiebreakConfig,
@@ -224,6 +225,25 @@ mod tests {
             &self,
             _: &SeasonId,
             _: &CompetitionInvitations,
+        ) -> Result<(), SeasonRepositoryError> {
+            Ok(())
+        }
+        async fn espace_interdit_hors_calendrier(
+            &self,
+            _: &str,
+        ) -> Result<bool, SeasonRepositoryError> {
+            Ok(false)
+        }
+        async fn find_options(
+            &self,
+            _: &SeasonId,
+        ) -> Result<Option<CompetitionOptions>, SeasonRepositoryError> {
+            Ok(None)
+        }
+        async fn save_options(
+            &self,
+            _: &SeasonId,
+            _: &CompetitionOptions,
         ) -> Result<(), SeasonRepositoryError> {
             Ok(())
         }

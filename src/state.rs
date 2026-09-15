@@ -10,6 +10,7 @@ use crate::app::team_creation::context::TeamCreationContext;
 use crate::app::teams::context::TeamsContext;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::web::middleware::space_scope::ISpaceOwnership;
+use crate::web::ports::IHorsCalendrierPort;
 use axum::extract::FromRef;
 use std::sync::Arc;
 
@@ -29,6 +30,10 @@ pub struct AppState {
     /// chemin (carte 324). Le middleware `space_scope` les interroge ; chacun
     /// répond sur les ressources de son BC, via son propre repository.
     pub space_ownership: Arc<Vec<Arc<dyn ISpaceOwnership>>>,
+    /// Le layout demande à `competitions` si un espace interdit les matchs hors
+    /// calendrier, pour cacher l'entrée de menu (carte 550). Un port et non un
+    /// contexte de BC : `src/web/` ne connaît pas `competitions`.
+    pub hors_calendrier: Arc<dyn IHorsCalendrierPort>,
     pub bypass_auth: bool,
     pub event_bus: EventBus,
     pub app_event_bus: EventBus,

@@ -35,6 +35,7 @@ pub struct SettingsTabTemplate {
     /// page d'assemblage ne porte aucune logique, pas même une construction
     /// d'URL. Les quatre autres suivront.
     pub general_url: String,
+    pub general_options_url: String,
     pub ranking_url: String,
     pub pools_url: String,
     pub tiers_url: String,
@@ -96,6 +97,9 @@ pub async fn settings_tab(
             &competition_id,
             &season_id,
         );
+        let general_options_url = AppRoutes::default()
+            .competitions
+            .admin_settings_general_options(&space_id, &competition_id, &season_id);
         let visibility_url = AppRoutes::default().competitions.admin_settings_visibility(
             &space_id,
             &competition_id,
@@ -106,6 +110,7 @@ pub async fn settings_tab(
             competition_id,
             season_id,
             general_url,
+            general_options_url,
             ranking_url,
             pools_url,
             tiers_url,

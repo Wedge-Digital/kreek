@@ -1,0 +1,65 @@
+{# Panneau « Réglages généraux » (carte 550).
+
+   ── Aucun JS ─────────────────────────────────────────────────────────────
+   Une case à cocher dans un `<form hx-post>`, sur la ligne du panneau
+   Visibilité : le navigateur porte l'état, rien à collecter.
+
+   ── `.option-toggle` et non `.visibility-choice` ──────────────────────────
+   `.visibility-choice` est un `<label>` qui enveloppe un **radio** et occupe
+   une colonne parmi d'autres. Pour une case unique il n'existait pas de motif ;
+   celui-ci reprend la même bordure, le même rayon et la même aide, avec la
+   case alignée en tête plutôt qu'au-dessus.
+
+   ── L'encart de conséquence est permanent ─────────────────────────────────
+   Il ne s'allume pas à l'enregistrement comme celui du panneau Visibilité : il
+   répond à la question que la case pose **avant** qu'on la décoche — « et mes
+   matchs déjà saisis ? ». Après coup, il arriverait trop tard. #}
+<div class="settings-panel" id="settings-general-options-panel" hx-disinherit="*">
+  <div class="settings-panel-head">
+    <div class="settings-panel-title">
+      <span class="settings-panel-title-icon">&#127899;&#65039;</span>Réglages généraux
+    </div>
+  </div>
+
+  <form id="general-options-form"
+        class="settings-panel-body"
+        hx-post="{{ post_url }}"
+        hx-target="#settings-general-options-panel"
+        hx-swap="outerHTML">
+
+    <div class="visibility-section">
+      <div class="visibility-section-title">Saisie des matchs</div>
+
+      <label class="option-toggle" for="opt-hors-calendrier">
+        <input type="checkbox" id="opt-hors-calendrier"
+               name="autorise_hors_calendrier"
+               {% if vm.autorise_hors_calendrier %}checked{% endif %}>
+        <span class="option-toggle-body">
+          <span class="option-toggle-label">Autoriser les matchs hors calendrier</span>
+          <span class="option-toggle-help">
+            Un coach peut saisir un match en choisissant lui-même les deux
+            équipes et la journée, sans passer par une rencontre du calendrier.
+            Décoché, seuls les commissaires créent des rencontres, par la
+            génération d'appariements.
+          </span>
+        </span>
+      </label>
+    </div>
+
+    <div class="panel-consequence">
+      <span class="consequence-idle">
+        {% if vm.saved %}
+        Réglages enregistrés.
+        {% else %}
+        Décocher n'efface aucun match déjà saisi : les rencontres hors
+        calendrier existantes restent visibles et modifiables.
+        <em>Seule la création de nouvelles est refusée.</em>
+        {% endif %}
+      </span>
+    </div>
+  </form>
+
+  <div class="settings-panel-foot">
+    <button type="submit" form="general-options-form" class="btn btn-primary">Enregistrer</button>
+  </div>
+</div>

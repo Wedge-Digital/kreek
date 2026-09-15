@@ -30,6 +30,10 @@
                         <option selected>{{ season_name }}</option>
                     </select>
                 </div>
+                {# Carte 550 — la règle est celle de l'espace et non de cette
+                   compétition : le bouton mène à `new_match_report(space_id)`,
+                   un formulaire où le coach choisit lui-même la compétition. #}
+                {% if !hors_calendrier_interdit %}
                 <a class="btn btn-primary-blue btn-sm left-panel-new-match"
                    hx-get="{{ app_routes.match_report.new_match_report(space_id) }}"
                    hx-target="#app-content"
@@ -38,6 +42,7 @@
                    hx-push-url="true">
                     + Saisir un match
                 </a>
+                {% endif %}
                 {% if is_admin %}
                 <a class="btn btn-outline btn-sm"
                    href="{{ app_routes.competitions.admin(space_id, competition_id, season_id) }}">

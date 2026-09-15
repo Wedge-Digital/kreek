@@ -32,6 +32,14 @@ from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import execute_db, query_db
 
 HX = {"HX-Request": "true"}
+#: `requests` omet le `Content-Type` quand le corps est **vide**, là où un
+#: navigateur le pose toujours sur un POST de formulaire. Sans lui, le serveur
+#: rend 415 — et le corps vide est la forme réelle d'une case décochée
+#: (carte 550). Le poser, c'est reproduire le navigateur, pas contourner.
+#:
+#: **Seulement pour les corps de formulaire** : `ranking` et `tiers` postent du
+#: JSON, et le leur imposer les fait rendre 415 à leur tour.
+FORM = {**HX, "Content-Type": "application/x-www-form-urlencoded"}
 MEMBRE_SIMPLE = {**HX, "X-Bypass-Auth-Profile": "simple"}
 
 #: Le coach que `bypass_auth` connecte sur `X-Bypass-Auth-Profile: simple`.
@@ -40,7 +48,7 @@ MEMBRE_SIMPLE = {**HX, "X-Bypass-Auth-Profile": "simple"}
 COACH_SIMPLE = "E2E Coach 01"
 COACH_DEV = "DevCoach"
 
-PANNEAUX = ("general", "ranking", "pools", "tiers", "visibility")
+PANNEAUX = ("general", "general-options", "ranking", "pools", "tiers", "visibility")
 
 
 def _base(space_id: str, ctx: dict) -> str:
@@ -82,6 +90,10 @@ def _corps_analysable(season_id: str) -> dict:
         "ranking": ("json", regles),
         "pools": ("data", {"use_pools": "false"}),
         "tiers": ("json", {"tiers": []}),
+        # Le contrat de cette fonction est de passer les extracteurs d'axum, pas
+        # le domaine — un corps vide suffit, et c'est la forme réelle d'une case
+        # décochée.
+        "general-options": ("data", {}),
         "visibility": ("data", {"access_mode": "open", "requires_validation": "manual"}),
     }
 
@@ -109,9 +121,10 @@ def test_un_membre_simple_est_refuse_en_ecriture(onglet, panneau):
     """Les cinq `POST`. La lecture gardée ne dit rien de l'écriture."""
     genre, corps = _corps_analysable(onglet["ctx"]["season_id"])[panneau]
 
+    entetes = MEMBRE_SIMPLE if genre == "json" else {**MEMBRE_SIMPLE, **FORM}
     refus = requests.post(
         f"{onglet['base']}/{panneau}",
-        headers=MEMBRE_SIMPLE,
+        headers=entetes,
         timeout=30,
         **{genre: corps},
     )
@@ -122,7 +135,7 @@ def test_un_membre_simple_est_refuse_en_ecriture(onglet, panneau):
     )
 
 
-def test_les_onze_routes_sont_bien_onze(onglet):
+def test_les_treize_routes_sont_bien_treize(onglet):
     """Le compte, écrit noir sur blanc.
 
     Les deux tests ci-dessus se paramètrent sur des listes ; si quelqu'un ajoute
@@ -137,13 +150,13 @@ def test_les_onze_routes_sont_bien_onze(onglet):
     ]
 
     assert len(servies) == len(PANNEAUX), f"panneaux servis : {servies}"
-    assert 1 + 2 * len(PANNEAUX) == 11
+    assert 1 + 2 * len(PANNEAUX) == 13
 
 
 # ── 2. Les deux chemins d'autorisation, séparés ───────────────────────────────
 
 
-def _ouvre_les_cinq_panneaux(base: str, entetes: dict, qui: str) -> None:
+def _ouvre_les_six_panneaux(base: str, entetes: dict, qui: str) -> None:
     for panneau in PANNEAUX:
         r = requests.get(f"{base}/{panneau}", headers=entetes, timeout=15)
         assert r.status_code == 200, f"{qui} sur {panneau} : {r.status_code}"
@@ -170,7 +183,7 @@ def test_un_admin_de_competition_qui_n_est_pas_admin_d_espace_ouvre_les_panneaux
         )
         assert profil == ["SpaceUser"], f"le montage suppose un membre simple : {profil}"
 
-        _ouvre_les_cinq_panneaux(onglet["base"], MEMBRE_SIMPLE, "admin de compétition seul")
+        _ouvre_les_six_panneaux(onglet["base"], MEMBRE_SIMPLE, "admin de compétition seul")
     finally:
         execute_db(
             "DELETE FROM competitions_members "
@@ -196,7 +209,7 @@ def test_un_admin_d_espace_qui_n_est_pas_membre_de_la_competition_ouvre_les_pann
         )
         assert restants == ["0"], f"le montage suppose une compétition sans membre : {restants}"
 
-        _ouvre_les_cinq_panneaux(onglet["base"], HX, "admin d'espace seul")
+        _ouvre_les_six_panneaux(onglet["base"], HX, "admin d'espace seul")
     finally:
         execute_db(
             "INSERT INTO competitions_members (competition_id, coach_id, competition_profile, created_at) "
@@ -207,8 +220,8 @@ def test_un_admin_d_espace_qui_n_est_pas_membre_de_la_competition_ouvre_les_pann
 # ── 3. L'assemblage qui se remplit ────────────────────────────────────────────
 
 
-def test_l_onglet_remplit_ses_cinq_panneaux(page: Page, onglet):
-    """Les cinq `hx-get` câblés **ensemble**.
+def test_l_onglet_remplit_ses_six_panneaux(page: Page, onglet):
+    """Les six `hx-get` câblés **ensemble**.
 
     Le test de la carte 420 vérifie que les cinq conteneurs existent ; il a été
     écrit quand ils étaient vides, et resterait vert si aucun ne se remplissait.
@@ -221,8 +234,8 @@ def test_l_onglet_remplit_ses_cinq_panneaux(page: Page, onglet):
         expect(page.locator(f"#settings-{panneau}-panel")).to_be_visible(timeout=15000)
 
     # Un panneau qui aurait remplacé son conteneur au lieu de le remplir ferait
-    # disparaître les autres : on vérifie que les cinq coexistent.
-    expect(page.locator(".competition-admin-settings .settings-panel")).to_have_count(5)
+    # disparaître les autres : on vérifie que les six coexistent.
+    expect(page.locator(".competition-admin-settings .settings-panel")).to_have_count(6)
 
 
 # ── 4. Aucun panneau ne fait régresser la saison ─────────────────────────────
@@ -285,6 +298,15 @@ def _cas_ecrivant(season_id: str, competition_id: str) -> dict:
     ouverte = lire("invitations->>'access_mode'") == "open"
     acces = "invitation" if ouverte else "open"
 
+    # Carte 550 — bascule, pour la raison de la docstring. La colonne est `NULL`
+    # sur une saison jamais réglée, et `NULL` n'est ni « true » ni « false » :
+    # `!= "false"` couvre donc les deux états de départ, et le premier passage
+    # écrit toujours `false`.
+    interdit_deja = lire("COALESCE(options->>'autorise_hors_calendrier', 'NULL')") == "false"
+    autorise_apres = "true" if interdit_deja else "false"
+    # Case cochée = champ présent ; décochée = champ **absent**, pas « false ».
+    corps_options = {"autorise_hors_calendrier": "on"} if interdit_deja else {}
+
     return {
         "general": (
             dict(data={"name": nom_compet, "season_name": saison, "logo_url": logo}),
@@ -305,6 +327,12 @@ def _cas_ecrivant(season_id: str, competition_id: str) -> dict:
             dict(json={"tiers": tiers}),
             f"SELECT COALESCE(rules->'tiers'->0->>'inducements', 'absent') FROM competition_seasons WHERE id = '{season_id}'",
             "[]",
+        ),
+        "general-options": (
+            dict(data=corps_options),
+            "SELECT COALESCE(options->>'autorise_hors_calendrier', 'NULL') "
+            f"FROM competition_seasons WHERE id = '{season_id}'",
+            autorise_apres,
         ),
         "visibility": (
             dict(data={"access_mode": acces, "requires_validation": "manual"}),
@@ -344,7 +372,10 @@ def test_aucun_panneau_ne_fait_regresser_la_saison(onglet, panneau):
     # dont deux innocents — et le rapport devenait illisible. Mesuré.
     execute_db(f"UPDATE competition_seasons SET status = 'ready' WHERE id = '{season_id}'")
 
-    reponse = requests.post(f"{onglet['base']}/{panneau}", headers=HX, timeout=30, **kwargs)
+    entetes = HX if "json" in kwargs else FORM
+    reponse = requests.post(
+        f"{onglet['base']}/{panneau}", headers=entetes, timeout=30, **kwargs
+    )
 
     assert reponse.status_code == 200, f"{panneau} : {reponse.status_code}"
     assert _un(sql_temoin) == attendu, (

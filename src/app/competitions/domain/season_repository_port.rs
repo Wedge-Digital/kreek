@@ -1,5 +1,6 @@
 use crate::app::competitions::domain::competition_invitations::CompetitionInvitations;
 use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
+use crate::app::competitions::domain::competition_options::CompetitionOptions;
 use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::competition_season::CompetitionSeason;
 use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -185,6 +186,31 @@ pub trait ISeasonRepository: Send + Sync {
         &self,
         season_id: &SeasonId,
     ) -> Result<Option<CompetitionNotifications>, SeasonRepositoryError>;
+    /// Une compétition de l'espace interdit-elle les matchs hors calendrier ?
+    ///
+    /// Seule la **dernière** saison de chaque compétition est consultée, au même
+    /// critère que `find_latest_season_id` : une saison archivée qui interdisait
+    /// ne doit pas peser sur le présent. Une saison jamais réglée n'interdit
+    /// rien, ce qui est le défaut du domaine.
+    async fn espace_interdit_hors_calendrier(
+        &self,
+        space_id: &str,
+    ) -> Result<bool, SeasonRepositoryError>;
+    /// `None` quand la colonne est `NULL` — une saison antérieure à la carte
+    /// 550. L'appelant y applique le défaut du domaine, qui **autorise** le
+    /// hors-calendrier : c'est le comportement de toujours.
+    async fn find_options(
+        &self,
+        season_id: &SeasonId,
+    ) -> Result<Option<CompetitionOptions>, SeasonRepositoryError>;
+    /// N'écrit **que** la colonne `options`. Les quatre autres blobs de réglages
+    /// se lisent-modifient-réécrivent en entier ; les toucher ici écraserait une
+    /// modification faite au même moment dans un autre onglet.
+    async fn save_options(
+        &self,
+        season_id: &SeasonId,
+        options: &CompetitionOptions,
+    ) -> Result<(), SeasonRepositoryError>;
     async fn save_notifications(
         &self,
         season_id: &SeasonId,

@@ -352,6 +352,37 @@
   font-size: var(--text-tiny);
   color: var(--dark-3);
 }
+
+/* ── Case à cocher d'option (carte 550) ──────────────────────────────────────
+   `.visibility-choice` enveloppe un **radio** et occupe une colonne parmi
+   d'autres. Pour une case unique, ce motif reprend la même bordure, le même
+   rayon et la même aide, avec la case alignée en tête plutôt qu'au-dessus.
+
+   `display: block` sur le libellé et l'aide : sans lui, les deux `<span>`
+   restent en ligne et se suivent sur la même ligne, `margin-top` sans effet. */
+.competition-admin-settings .option-toggle {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 20px;
+  border: 2px solid var(--dark-5); border-radius: 8px;
+  background: var(--white); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.competition-admin-settings .option-toggle:hover { border-color: var(--dark-4); }
+.competition-admin-settings .option-toggle:focus-within {
+  outline: 2px solid var(--main-blue); outline-offset: 2px;
+}
+.competition-admin-settings .option-toggle:has(input:checked) { border-color: var(--main-blue); }
+.competition-admin-settings .option-toggle input {
+  margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0;
+}
+.competition-admin-settings .option-toggle-body { min-width: 0; }
+.competition-admin-settings .option-toggle-label {
+  display: block; font-weight: 600; font-size: var(--text-small); color: var(--dark-1);
+}
+.competition-admin-settings .option-toggle-help {
+  display: block; font-size: var(--text-tiny); color: var(--dark-3);
+  margin-top: 2px; line-height: 1.5;
+}
 .competition-admin-settings .visibility-preserved {
   margin-top: var(--p1);
   font-size: var(--text-tiny);

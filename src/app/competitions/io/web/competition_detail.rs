@@ -265,6 +265,7 @@ pub struct CompetitionDetailTemplate {
     pub season_name: String,
     pub admin_names: Vec<String>,
     pub is_admin: bool,
+    pub hors_calendrier_interdit: bool,
     pub active_tab: &'static str,
     // tab content (only one is populated per request)
     pub top_tds: Vec<StatRow>,
@@ -361,6 +362,14 @@ pub(crate) struct PageBase {
     pub(crate) season_name: String,
     pub(crate) admin_names: Vec<String>,
     pub(crate) admin_ids: Vec<String>,
+    /// Vrai dès qu'**une** compétition de l'espace interdit les matchs hors
+    /// calendrier (carte 550). Porté par `PageBase` et non passé à `full_page` :
+    /// sept appelants s'en servent, et la lecture est déjà faite ici, en async.
+    ///
+    /// La règle est celle de l'espace et non celle de cette compétition, parce
+    /// que le bouton mène à `new_match_report(space_id)` — un formulaire où le
+    /// coach choisit lui-même la compétition.
+    pub(crate) hors_calendrier_interdit: bool,
 }
 
 pub(crate) async fn load_page_base(
@@ -368,6 +377,7 @@ pub(crate) async fn load_page_base(
     sid: &SeasonId,
     state: &AppState,
     competition_id: &str,
+    space_id: &str,
 ) -> Result<PageBase, Response> {
     let comp_repo = state.competitions.competition_repository.as_ref();
     let season_repo = state.competitions.season_repository.as_ref();
@@ -407,6 +417,7 @@ pub(crate) async fn load_page_base(
         season_name,
         admin_names: base.admin_names,
         admin_ids: base.admin_ids,
+        hors_calendrier_interdit: state.hors_calendrier.un_espace_interdit(space_id).await,
     })
 }
 
@@ -432,6 +443,7 @@ pub(crate) fn full_page(
         competition_initials: pb.competition_initials,
         season_name: pb.season_name,
         admin_names: pb.admin_names,
+        hors_calendrier_interdit: pb.hors_calendrier_interdit,
         is_admin,
         active_tab,
         top_tds,
@@ -458,7 +470,7 @@ pub async fn get_competition_detail(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let pb = match load_page_base(&cid, &sid, &state, &competition_id).await {
+    let pb = match load_page_base(&cid, &sid, &state, &competition_id, &space_id).await {
         Ok(v) => v,
         Err(r) => return r,
     };
@@ -479,6 +491,7 @@ pub async fn get_competition_detail(
         competition_initials: pb.competition_initials,
         season_name: pb.season_name,
         admin_names: pb.admin_names,
+        hors_calendrier_interdit: pb.hors_calendrier_interdit,
         is_admin,
         active_tab: "standings",
         top_tds: vec![],
@@ -511,7 +524,7 @@ pub async fn get_tab_standings(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let pb = match load_page_base(&cid, &sid, &state, &competition_id).await {
+    let pb = match load_page_base(&cid, &sid, &state, &competition_id, &space_id).await {
         Ok(v) => v,
         Err(r) => return r,
     };
@@ -551,7 +564,7 @@ pub async fn get_tab_detailed_standings(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let pb = match load_page_base(&cid, &sid, &state, &competition_id).await {
+    let pb = match load_page_base(&cid, &sid, &state, &competition_id, &space_id).await {
         Ok(v) => v,
         Err(r) => return r,
     };
@@ -590,7 +603,7 @@ pub async fn get_tab_teams(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let pb = match load_page_base(&cid, &sid, &state, &competition_id).await {
+    let pb = match load_page_base(&cid, &sid, &state, &competition_id, &space_id).await {
         Ok(v) => v,
         Err(r) => return r,
     };
@@ -630,7 +643,7 @@ pub async fn get_tab_stats(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let pb = match load_page_base(&cid, &sid, &state, &competition_id).await {
+    let pb = match load_page_base(&cid, &sid, &state, &competition_id, &space_id).await {
         Ok(v) => v,
         Err(r) => return r,
     };

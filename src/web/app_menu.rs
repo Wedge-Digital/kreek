@@ -24,8 +24,11 @@ pub struct AppMenu {
     pub space_id: Option<String>,
     pub space_logo: Option<String>,
     pub active_section: Option<ActiveSection>,
-    /// Gouverne la seule entrée de menu qui n'est pas offerte à tous.
+    /// Gouverne l'entrée « Administration ».
     pub peut_administrer: bool,
+    /// Cache « Saisir un Match » — sous-menu desktop **et** tabbar mobile, qui
+    /// sont deux markups distincts (carte 550).
+    pub hors_calendrier_interdit: bool,
 }
 
 /// Le compte qui administre tous les espaces, quel que soit son profil.
@@ -101,58 +104,84 @@ fn extract_active_section(current_url: &str) -> Option<ActiveSection> {
     }
 }
 
+/// Ce que le menu a besoin de savoir de l'espace courant.
+///
+/// Une struct et non un uplet : à six champs, `let (a, b, c, d, e, f) = …`
+/// ne se relit plus, et rien n'empêche d'en intervertir deux.
+struct ContexteEspace {
+    nom: String,
+    id: String,
+    logo: String,
+    section: Option<ActiveSection>,
+    peut_administrer: bool,
+    /// Vrai dès qu'**une** compétition de l'espace interdit les matchs hors
+    /// calendrier (carte 550). L'entrée « Saisir un Match » disparaît alors pour
+    /// tout le monde, dans les deux tailles d'écran.
+    hors_calendrier_interdit: bool,
+}
+
+/// `None` quand il n'y a pas d'espace courant — pas connecté, URL sans espace,
+/// ou espace auquel le coach n'appartient pas. Le menu se rend alors sans rien.
+async fn contexte_espace(
+    auth_session: AuthSession,
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Option<ContexteEspace> {
+    let user = auth_session.user?;
+    let current_url = headers
+        .get("hx-current-url")
+        .and_then(|v| v.to_str().ok())?;
+    let sid = extract_space_id(current_url)?;
+    let section = extract_active_section(current_url);
+
+    let spaces = state
+        .spaces
+        .space_repository
+        .find_by_coach_id(&user.id)
+        .await
+        .ok()?;
+    let space = spaces.into_iter().find(|s| s.id == sid)?;
+
+    // Le profil est relu à chaque rendu du menu, jamais mis en cache : une
+    // rétrogradation doit faire disparaître l'entrée au rafraîchissement
+    // suivant, pas à la reconnexion. L'option hors-calendrier suit la même
+    // règle, et pour la même raison — décocher doit se voir tout de suite.
+    let space_id_vo = SpaceId::try_new(&sid).ok()?;
+    let profil = state
+        .spaces
+        .space_repository
+        .find_member_profile(&user.id, &space_id_vo)
+        .await
+        .ok()?;
+    let peut_administrer = profil == Some(SpaceProfile::SpaceAdmin)
+        || user.coach_name.clone().into_inner() == COMPTE_EXPLOITANT;
+
+    let hors_calendrier_interdit = state.hors_calendrier.un_espace_interdit(&sid).await;
+
+    Some(ContexteEspace {
+        nom: space.name,
+        id: sid,
+        logo: space.logo.thumbnail(64, 64),
+        section,
+        peut_administrer,
+        hors_calendrier_interdit,
+    })
+}
+
 pub async fn app_menu(
     auth_session: AuthSession,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let (space_name, space_id, active_section, space_logo, peut_administrer) = {
-        let result: Option<(String, String, Option<ActiveSection>, String, bool)> = async {
-            let user = auth_session.user?;
-            let current_url = headers
-                .get("hx-current-url")
-                .and_then(|v| v.to_str().ok())?;
-            let sid = extract_space_id(current_url)?;
-            let section = extract_active_section(current_url);
-            let spaces = state
-                .spaces
-                .space_repository
-                .find_by_coach_id(&user.id)
-                .await
-                .ok()?;
-            let space = spaces.into_iter().find(|s| s.id == sid)?;
-            let logo = space.logo.thumbnail(64, 64);
-
-            // Le profil est relu à chaque rendu du menu, jamais mis en cache :
-            // une rétrogradation doit faire disparaître l'entrée au
-            // rafraîchissement suivant, pas à la reconnexion.
-            let space_id_vo = SpaceId::try_new(&sid).ok()?;
-            let profil = state
-                .spaces
-                .space_repository
-                .find_member_profile(&user.id, &space_id_vo)
-                .await
-                .ok()?;
-            let peut_administrer = profil == Some(SpaceProfile::SpaceAdmin)
-                || user.coach_name.clone().into_inner() == COMPTE_EXPLOITANT;
-
-            Some((space.name, sid, section, logo, peut_administrer))
-        }
-        .await;
-        match result {
-            Some((name, id, section, logo, admin)) => {
-                (Some(name), Some(id), section, Some(logo), admin)
-            }
-            None => (None, None, None, None, false),
-        }
-    };
+    let ctx = contexte_espace(auth_session, &state, &headers).await;
 
     AppMenu {
-        space_name,
-        space_id,
-        space_logo,
-        active_section,
-        peut_administrer,
+        space_name: ctx.as_ref().map(|c| c.nom.clone()),
+        space_id: ctx.as_ref().map(|c| c.id.clone()),
+        space_logo: ctx.as_ref().map(|c| c.logo.clone()),
+        active_section: ctx.as_ref().and_then(|c| c.section.clone()),
+        peut_administrer: ctx.as_ref().is_some_and(|c| c.peut_administrer),
+        hors_calendrier_interdit: ctx.as_ref().is_some_and(|c| c.hors_calendrier_interdit),
         ..Default::default()
     }
     .into_response()

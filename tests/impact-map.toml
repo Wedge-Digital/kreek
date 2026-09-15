@@ -112,6 +112,13 @@
 # Le seul fichier de l'onglet qui dépende de `spaces` pour autre chose que le
 # décor : il sépare les deux chemins de `require_admin_access`, dont l'un lit le
 # profil d'espace (`SpaceProfile::SpaceAdmin`) et l'autre l'appartenance à la
+# L'option « hors calendrier » et ses trois effets (carte 550). `web` n'est pas
+# un BC de la carte, mais le test regarde le menu — il dépend donc aussi de
+# `spaces`, qui porte l'appartenance lue par `app_menu`. `match_report` est une
+# dépendance **dure** : la garde de création et la phase 1 en lecture seule y
+# vivent.
+"test_competition_hors_calendrier" = ["competitions", "auth", "teams", "spaces",
+                                      "references", "match_report"]
 # compétition. Une régression dans l'un ou l'autre BC doit le réveiller.
 "test_competition_admin_settings" = ["competitions", "spaces", "auth", "teams",
                                      "team_creation", "ranking", "references"]

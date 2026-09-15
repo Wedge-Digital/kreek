@@ -86,6 +86,7 @@ mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_invitations::InvitedCoach;
     use crate::app::competitions::domain::competition_notifications::CompetitionNotifications;
+    use crate::app::competitions::domain::competition_options::CompetitionOptions;
     use crate::app::competitions::domain::competition_rules::CompetitionRules;
     use crate::app::competitions::domain::competition_season::CompetitionSeason;
     use crate::app::competitions::domain::competition_structure::CompetitionStructure;
@@ -214,6 +215,25 @@ mod tests {
         ) -> Result<(), SeasonRepositoryError> {
             self.journal.lock().unwrap().push("save_visibility");
             *self.ecrit.lock().unwrap() = Some(invitations.clone());
+            Ok(())
+        }
+        async fn espace_interdit_hors_calendrier(
+            &self,
+            _: &str,
+        ) -> Result<bool, SeasonRepositoryError> {
+            Ok(false)
+        }
+        async fn find_options(
+            &self,
+            _: &SeasonId,
+        ) -> Result<Option<CompetitionOptions>, SeasonRepositoryError> {
+            Ok(None)
+        }
+        async fn save_options(
+            &self,
+            _: &SeasonId,
+            _: &CompetitionOptions,
+        ) -> Result<(), SeasonRepositoryError> {
             Ok(())
         }
         async fn find_notifications(

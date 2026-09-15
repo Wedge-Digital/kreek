@@ -5,6 +5,7 @@
 //! arrivent à côté de leur assemblage plutôt que dispersés dans `admin/`.
 
 pub mod builders;
+pub mod general_options_panel;
 pub mod general_panel;
 pub mod pools_panel;
 pub mod ranking_panel;

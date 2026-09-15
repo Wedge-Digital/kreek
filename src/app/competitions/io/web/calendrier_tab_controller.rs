@@ -268,7 +268,7 @@ async fn render_full_page(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let pb = match load_page_base(&cid, &sid, state, &competition_id).await {
+    let pb = match load_page_base(&cid, &sid, state, &competition_id, &space_id).await {
         Ok(v) => v,
         Err(r) => return r,
     };

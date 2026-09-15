@@ -4,6 +4,7 @@
 //! qu'ils se lisent ensemble — ils partagent une même intention, « modifier une
 //! compétition déjà lancée », que le reste de `use_cases/` ne partage pas.
 
+pub mod update_general_options_use_case;
 pub mod update_general_settings_use_case;
 pub mod update_pools_settings_use_case;
 pub mod update_ranking_settings_use_case;

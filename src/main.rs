@@ -591,6 +591,15 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 ),
             ),
         ]),
+        hors_calendrier: Arc::new(
+            crate::infrastructure::web::hors_calendrier_adapter::HorsCalendrierAdapter::new(
+                Arc::new(
+                    crate::app::competitions::io::repository::season_repository::SeasonRepository::new(
+                        pool.clone(),
+                    ),
+                ),
+            ),
+        ),
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),

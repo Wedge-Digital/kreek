@@ -93,6 +93,8 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/settings/pools";
     pub const COMPETITION_ADMIN_SETTINGS_TIERS: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/settings/tiers";
+    pub const COMPETITION_ADMIN_SETTINGS_GENERAL_OPTIONS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/settings/general-options";
     pub const COMPETITION_ADMIN_SETTINGS_VISIBILITY: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/settings/visibility";
     pub const NOTIFICATION_SETTINGS_WIDGET: &str =
@@ -378,6 +380,12 @@ impl Routes {
     }
     pub fn admin_settings_tiers(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SETTINGS_TIERS
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_settings_general_options(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SETTINGS_GENERAL_OPTIONS
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

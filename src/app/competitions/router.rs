@@ -15,6 +15,9 @@ use crate::app::competitions::io::web::admin::schedule_tab::schedule_tab;
 use crate::app::competitions::io::web::admin::schedule_widgets::{
     schedule_round_detail_widget, schedule_sidebar_widget,
 };
+use crate::app::competitions::io::web::admin::settings::general_options_panel::{
+    get_settings_general_options, post_settings_general_options,
+};
 use crate::app::competitions::io::web::admin::settings::general_panel::{
     get_settings_general, post_settings_general,
 };
@@ -174,6 +177,10 @@ pub fn router() -> Router<AppState> {
         .route(
             path::COMPETITION_ADMIN_SETTINGS_TIERS,
             get(get_settings_tiers).post(post_settings_tiers),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SETTINGS_GENERAL_OPTIONS,
+            get(get_settings_general_options).post(post_settings_general_options),
         )
         .route(
             path::COMPETITION_ADMIN_SETTINGS_VISIBILITY,

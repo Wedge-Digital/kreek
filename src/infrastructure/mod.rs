@@ -7,3 +7,4 @@ pub mod ranking;
 pub mod spaces;
 pub mod team_creation;
 pub mod teams;
+pub mod web;

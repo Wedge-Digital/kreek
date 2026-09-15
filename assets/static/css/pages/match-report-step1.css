@@ -115,3 +115,32 @@
 }
 .match-report-step1 .mr-prefilled-icon,
 .match-report-step1.mr-prefilled-icon { font-size: 16px; flex-shrink: 0; }
+
+/* ── Sélection figée (carte 550) ─────────────────────────────────────────────
+   Quand la compétition interdit les matchs hors calendrier, la phase 1 montre
+   les quatre noms au lieu des deux widgets. Des lignes étiquetées, pas des
+   champs désactivés : il n'y a rien à modifier, donc rien qui doive ressembler
+   à un champ. */
+.match-report-step1 .mr-figee { display: flex; flex-direction: column; gap: var(--p1); }
+.match-report-step1 .mr-figee-ligne {
+  display: flex; align-items: baseline; gap: var(--p1);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--dark-6);
+}
+.match-report-step1 .mr-figee-ligne:last-child { border-bottom: 0; padding-bottom: 0; }
+.match-report-step1 .mr-figee-label {
+  flex: 0 0 110px;
+  font-size: var(--text-tiny); color: var(--dark-3);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.match-report-step1 .mr-figee-valeur {
+  font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+}
+.match-report-step1 .mr-figee-motif {
+  margin-top: var(--p1);
+  padding: 10px 12px;
+  border-left: 3px solid var(--main-blue);
+  background: rgba(0, 48, 73, 0.05);
+  border-radius: 0 6px 6px 0;
+  font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.55;
+}
