@@ -34,7 +34,7 @@ DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
 PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
-.PHONY: dev dev-demo test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: dev dev-demo e2e-server test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
         load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -42,10 +42,11 @@ help:
 	@echo ""
 	@echo "  Développement"
 	@echo "  ─────────────────────────────────────────────────────"
-	@echo "  dev           Lance le serveur en mode watch"
-	@echo "  dev-demo      Idem, mais servant le jeu de démo (assets/references.example) — requis par e2e"
+	@echo "  dev            Serveur en watch, vrai catalogue (31 rosters, non versionné)"
+	@echo "  dev-demo       Jeu de démonstration (4 rosters) + e-mails au terminal — requis par e2e"
 	@echo "  test          Lance les tests (utilise .env.test)"
-	@echo "  e2e           Lance les tests E2E Playwright (nécessite \`make dev-demo\` lancé)"
+	@echo "  e2e-server     Alias de dev-demo, sous le nom qui dit à quoi il sert"
+	@echo "  e2e            Lance les tests E2E Playwright (nécessite \`make e2e-server\` lancé)"
 	@echo "  test-impacted Idem, mais uniquement les e2e impactés par le diff courant"
 	@echo "  all_tests     test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)"
 	@echo "  migrate       Échappatoire manuelle (le binaire applique déjà les migrations au boot)"
@@ -70,30 +71,63 @@ help:
 	@echo "  Variable : EXEC_PROFILE (défaut : dev)"
 	@echo ""
 
-# ── Développement ─────────────────────────────────────────────────────────────
-# `-w Cargo.toml` : sans lui, un changement de dépendance laissait le serveur
-# tourner sur l'ancien binaire, **en silence** — découvert carte 273, où une
-# vérification e2e attendait une reconstruction qui ne venait jamais.
+# Le serveur de travail — **le vrai catalogue**, 31 rosters.
 #
-# `Cargo.lock` n'est pas surveillé : un `cargo update -p <crate>` seul échappe
-# donc encore au rechargement. Cas plus rare, et l'ajouter fait courir le risque
-# qu'un `cargo run` qui retouche le verrou relance la boucle indéfiniment.
+# `REFERENCES__DIR` est posé en clair bien que ce soit une variable : le défaut
+# de `config/default.toml` est la *démonstration*, et le lire dans un fichier à
+# deux dossiers de là est ce qui a fait chercher une heure pourquoi une équipe
+# Nain rendait 500 sur ses widgets de recrutement (carte 550). Une cible dit ce
+# qu'elle sert.
 #
-# Le niveau de journalisation n'est **pas** posé ici : il vient de `LOG__LEVEL`
-# (`.env.dev`, `config/default.toml`), comme en production. Un `RUST_LOG` en
-# dur dans cette cible aurait supplanté la configuration, et le seul chemin
-# jamais exercé en local serait celui qui tourne en production. Pour ouvrir un
-# BC le temps d'une investigation : `RUST_LOG=kreek::app::players=debug make dev`.
+# Le dossier n'est pas versionné (cf. `.gitignore`). La cible refuse donc plutôt
+# que de retomber en silence sur la démonstration : ce silence **est** le défaut
+# qu'elle corrige, et un 500 sur un widget en est un bien mauvais messager.
 dev:
-	cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
+	@[ -d assets/references ] || { \
+	    echo ""; \
+	    echo "  assets/references est absent — ce catalogue n'est pas versionné."; \
+	    echo "  Installez-le, ou lancez 'make dev-demo' (jeu de demonstration)."; \
+	    echo ""; \
+	    exit 1; \
+	}
+	REFERENCES__DIR=assets/references \
+	  cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
+
 
 # Force le jeu de démonstration versionné, quelle que soit la configuration
 # locale. Utile quand `.env.dev` surcharge REFERENCES__DIR vers un jeu de
 # règles réel : la suite e2e attend les rosters de `assets/references.example`
-# (Granitiers, Zéphyriens, Lanterniers). Sans surcharge locale, `make dev`
-# sert déjà ce jeu — c'est le défaut de config/default.toml.
+# (Granitiers, Zéphyriens, Lanterniers).
+#
+# **Ce qu'il ajoute à `make dev` : `EMAIL__PROVIDER=console`**, et rien d'autre.
+# Les deux servent le même catalogue. Le nom laisse croire à un mode ; il n'y en
+# a pas — c'est `dev` plus les e-mails au terminal, ce qu'attend la suite e2e.
 dev-demo:
 	REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
+
+# Le serveur que la suite e2e attend (carte 550).
+#
+# **C'est `dev-demo`, sous un nom qui le dit.** La suite lit `.env.dev` — voir
+# `tests/e2e/db_helpers.py`, qui y pointe en dur — donc elle interroge la base de
+# travail, pas une base dédiée. Un serveur lancé sur un autre profil écrirait
+# dans une base que les tests ne regardent pas : les données seraient créées, et
+# les tests ne les verraient jamais.
+#
+# `.env.e2e` existe et porte `kreek_e2e` + `BYPASS_AUTH`, mais **rien ne s'en
+# sert**. Ne pas s'y fier : c'est un fichier orphelin, et le prendre pour le
+# profil des tests coûte une demi-journée. La carte 536 propose de donner
+# vraiment sa base à la suite ; tant qu'elle n'est pas faite, c'est `.env.dev`.
+#
+# Les deux profils écoutent sur le même port, donc `curl localhost:3210` répond
+# dans les deux cas. Ce qui les sépare est la base à laquelle le serveur est
+# connecté, et elle ne se voit pas de l'extérieur :
+#
+#     psql "$$url" -At -c "SELECT DISTINCT datname FROM pg_stat_activity \
+#                          WHERE datname LIKE 'kreek%'"
+#
+# Prérequis, portés par `.env.dev` et la base de travail : `BYPASS_AUTH=true`,
+# et le coach `DevCoach` (`make seed_e2e`).
+e2e-server: dev-demo
 
 test: reset_test_db
 	DATABASE_URL="$(TEST_DB_URL)" cargo test

@@ -206,6 +206,54 @@ mod tests {
         }
     }
 
+    /// **`REFERENCES__DIR` surcharge-t-il vraiment `config/default.toml` ?**
+    ///
+    /// Les cibles `dev`, `dev-references` et `dev-demo` en dépendent
+    /// entièrement : elles ne font que poser cette variable. Si la surcharge ne
+    /// prenait pas, les trois serviraient le même catalogue — celui du fichier —
+    /// et rien ne le dirait, sinon un 500 sur un widget de recrutement.
+    ///
+    /// La couche 3 s'écrit `Environment::default().separator("__")`, **sans
+    /// préfixe**. Le CLAUDE.md raconte qu'un `APP__DATABASE__URL` a été ignoré
+    /// en silence des mois durant pour avoir cru le contraire ; ce test évite de
+    /// le redécouvrir sur `references`.
+    ///
+    /// La valeur est lue par `get_string` et non par désérialisation : le
+    /// fichier seul ne suffit pas à bâtir un `AppConfig` — `email.from` vient du
+    /// `.env`, que ce test ne charge pas.
+    fn dir_resolu(surcharge: Option<&str>) -> String {
+        let mut env = config::Environment::default()
+            .separator("__")
+            .try_parsing(true);
+        env = match surcharge {
+            Some(v) => env.source(Some(
+                [("REFERENCES__DIR".to_string(), v.to_string())]
+                    .into_iter()
+                    .collect(),
+            )),
+            None => env.source(Some(std::collections::HashMap::new())),
+        };
+        config::Config::builder()
+            .add_source(config::File::with_name("config/default").required(true))
+            .add_source(env)
+            .build()
+            .expect("config")
+            .get_string("references.dir")
+            .expect("references.dir")
+    }
+
+    #[test]
+    fn la_variable_d_environnement_surcharge_le_fichier() {
+        assert_eq!(dir_resolu(Some("assets/references")), "assets/references");
+    }
+
+    /// Sans la variable, c'est le fichier qui parle — sinon le test ci-dessus
+    /// passerait même si la surcharge ne servait à rien.
+    #[test]
+    fn sans_variable_le_fichier_fait_foi() {
+        assert_eq!(dir_resolu(None), "assets/references.example");
+    }
+
     #[test]
     fn sans_schema_on_prefixe_http() {
         assert_eq!(avec("localhost:3210").app_url(), "http://localhost:3210");
