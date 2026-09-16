@@ -1,6 +1,6 @@
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::io::app_events::appariement::{
-    resoudre_ou_creer_appariement, ContexteAppariement,
+    trouver_appariement, ContexteAppariement,
 };
 use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::routes::AppRoutes;
@@ -92,12 +92,16 @@ async fn handle_event(
         away_team_id,
         pairing_id,
     };
-    let Some(pairing_id) =
-        resoudre_ou_creer_appariement(&contexte, match_day_repo, team_port, event_bus).await
-    else {
+    // **On cherche, on ne fabrique plus** (carte 555).
+    //
+    // L'ancien code créait ici l'appariement manquant d'un rapport manuel. Ce
+    // cas n'existe plus : un rapport naît toujours d'un appariement, dont il
+    // porte l'identifiant dès son premier événement. Fabriquer encore reviendrait
+    // à en créer un second, et c'est ce que la carte 552 a produit.
+    let Some(pairing_id) = trouver_appariement(&contexte, match_day_repo).await else {
         tracing::warn!(
             match_report_id = %match_report_id,
-            "confirmation ignorée : aucun appariement résolu ni créé"
+            "confirmation ignorée : ce rapport ne désigne aucun appariement"
         );
         return;
     };
@@ -214,6 +218,42 @@ mod tests {
         }
     }
 
+    /// Une rencontre déjà programmée, avec sa ligne d'affichage — l'état
+    /// normal depuis la carte 555 : le rapport porte toujours un appariement.
+    async fn appariement_existant(pool: &PgPool, jour: &MatchDay) -> String {
+        use crate::app::competitions::domain::match_day::Pairing;
+        use crate::app::competitions::domain::match_day_repository_port::NewPairingProjection;
+        use crate::app::shared_kernel::bloodbowl::ids::PairingId;
+        use crate::app::shared_kernel::bloodbowl::team::TeamId;
+
+        let pairing = Pairing {
+            id: PairingId::new(),
+            home_team_id: TeamId::try_new(HOME).unwrap(),
+            away_team_id: TeamId::try_new(AWAY).unwrap(),
+        };
+        let projection = NewPairingProjection {
+            season_id: jour.season_id.to_string(),
+            round_name: jour.name.to_string(),
+            round_position: jour.position.into_inner(),
+            round_date_start: None,
+            round_date_end: None,
+            round_day_type: jour.day_type.as_str().to_string(),
+            home_team_name: "Home".into(),
+            home_roster_name: "R".into(),
+            home_coach_name: "c1".into(),
+            home_logo_url: None,
+            away_team_name: "Away".into(),
+            away_roster_name: "R".into(),
+            away_coach_name: "c2".into(),
+            away_logo_url: None,
+        };
+        MatchDayRepository::new(pool.clone())
+            .save_pairing(&jour.id.to_string(), &pairing, &projection)
+            .await
+            .expect("insertion de l'appariement de test");
+        pairing.id.to_string()
+    }
+
     async fn appariements(pool: &PgPool, round_id: &str) -> i64 {
         sqlx::query_scalar!(
             "SELECT count(*) FROM competition_match_day_pairings WHERE match_day_id = $1",
@@ -225,11 +265,19 @@ mod tests {
         .unwrap_or(0)
     }
 
-    /// Le cas de la carte 427 : un rapport saisi hors calendrier obtient son
-    /// appariement **et** sa ligne de résultats dès la confirmation, au lieu de
-    /// rester invisible jusqu'à publication.
+    /// **Une confirmation sans appariement ne fabrique plus rien** (carte 555).
+    ///
+    /// Le listener créait ici l'appariement manquant d'un rapport manuel — la
+    /// carte 427. Ce cas n'existe plus : un rapport naît toujours d'un
+    /// appariement dont il porte l'identifiant. Fabriquer encore produirait un
+    /// second appariement pour la rencontre, ce que la carte 552 a effectivement
+    /// provoqué.
+    ///
+    /// Ces deux tests remplacent `un_rapport_manuel_confirme_obtient_un_appariement_et_une_ligne`
+    /// et `un_rapport_manuel_reconfirme_ne_cree_pas_un_second_appariement`, qui
+    /// affirmaient le comportement retiré.
     #[sqlx::test]
-    async fn un_rapport_manuel_confirme_obtient_un_appariement_et_une_ligne(pool: PgPool) {
+    async fn une_confirmation_sans_appariement_est_ignoree(pool: PgPool) {
         let jour = journee(&pool).await;
         let repo = MatchDayRepository::new(pool.clone());
         let bus = crate::common::services::event_bus::event_bus::new_bus();
@@ -243,7 +291,31 @@ mod tests {
         )
         .await;
 
-        assert_eq!(appariements(&pool, &jour.id.to_string()).await, 1);
+        assert_eq!(
+            appariements(&pool, &jour.id.to_string()).await,
+            0,
+            "aucun appariement ne doit être fabriqué"
+        );
+    }
+
+    /// Le cas nominal : le rapport porte son appariement, et la ligne
+    /// d'affichage passe en saisie.
+    #[sqlx::test]
+    async fn une_confirmation_avec_appariement_passe_la_ligne_en_cours(pool: PgPool) {
+        let jour = journee(&pool).await;
+        let repo = MatchDayRepository::new(pool.clone());
+        let bus = crate::common::services::event_bus::event_bus::new_bus();
+        let pairing = appariement_existant(&pool, &jour).await;
+
+        handle_event(
+            confirmation(&jour.id.to_string(), Some(pairing.clone())),
+            &pool,
+            &repo,
+            &equipes(),
+            &bus,
+        )
+        .await;
+
         let statut: Option<String> = sqlx::query_scalar!(
             "SELECT match_status FROM competition_match_display_proj WHERE match_report_id = $1",
             "01ARZ3NDEKTSV4RRFFQ69G5FAX",
@@ -254,35 +326,6 @@ mod tests {
         assert_eq!(statut.as_deref(), Some("in_progress"));
     }
 
-    /// L'idempotence que la publication assurait déjà, et que la factorisation
-    /// devait préserver : une seconde confirmation retrouve l'appariement au
-    /// lieu d'en créer un jumeau qui doublerait la rencontre au calendrier.
-    #[sqlx::test]
-    async fn un_rapport_manuel_reconfirme_ne_cree_pas_un_second_appariement(pool: PgPool) {
-        let jour = journee(&pool).await;
-        let repo = MatchDayRepository::new(pool.clone());
-        let bus = crate::common::services::event_bus::event_bus::new_bus();
-
-        for _ in 0..2 {
-            handle_event(
-                confirmation(&jour.id.to_string(), None),
-                &pool,
-                &repo,
-                &equipes(),
-                &bus,
-            )
-            .await;
-        }
-
-        assert_eq!(
-            appariements(&pool, &jour.id.to_string()).await,
-            1,
-            "deux confirmations ne doivent produire qu'un appariement"
-        );
-    }
-
-    /// Le chemin normal ne change pas : un rapport programmé porte déjà son
-    /// appariement, rien n'est fabriqué.
     #[sqlx::test]
     async fn un_rapport_programme_confirme_ne_cree_aucun_appariement(pool: PgPool) {
         let jour = journee(&pool).await;

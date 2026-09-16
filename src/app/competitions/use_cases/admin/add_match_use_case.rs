@@ -42,6 +42,94 @@ pub async fn execute(
     team_port: &dyn ITeamInfoPort,
     event_bus: &EventBus,
 ) -> Result<String, AddMatchError> {
+    let enregistre = verifier_et_enregistrer(
+        round_id,
+        season_id,
+        home_team_id,
+        away_team_id,
+        match_day_repo,
+        team_port,
+    )
+    .await?;
+    emettre_creation(
+        &enregistre,
+        Annonce::AuCalendrier,
+        competition_id,
+        season_id,
+        space_id,
+        event_bus,
+    );
+    Ok(enregistre.pairing.id.to_string())
+}
+
+/// La rencontre hors calendrier, saisie par un coach (carte 555).
+///
+/// **Même règle, autre annonce.** Le cœur est partagé — l'invariant de journée
+/// s'applique donc ici comme à l'ajout par un commissaire, sans être écrit deux
+/// fois. Seul l'événement diffère, et cette différence est tout l'objet de la
+/// fonction : `PairingCreated` ferait créer un rapport par
+/// `pairing_created_listener`, alors que sur ce chemin c'est l'appelant qui le
+/// crée, au retour. Deux rapports naîtraient pour une rencontre.
+#[tracing::instrument(skip_all, fields(round_id = ?round_id))]
+pub async fn creer_hors_calendrier(
+    round_id: &str,
+    season_id: &str,
+    competition_id: &str,
+    space_id: &str,
+    home_team_id: &str,
+    away_team_id: &str,
+    match_day_repo: &dyn IMatchDayRepository,
+    team_port: &dyn ITeamInfoPort,
+    event_bus: &EventBus,
+) -> Result<String, AddMatchError> {
+    let enregistre = verifier_et_enregistrer(
+        round_id,
+        season_id,
+        home_team_id,
+        away_team_id,
+        match_day_repo,
+        team_port,
+    )
+    .await?;
+    emettre_creation(
+        &enregistre,
+        Annonce::HorsCalendrier,
+        competition_id,
+        season_id,
+        space_id,
+        event_bus,
+    );
+    Ok(enregistre.pairing.id.to_string())
+}
+
+/// Ce que l'enregistrement a produit, et ce qu'il faut pour l'annoncer.
+struct AppariementEnregistre {
+    pairing: Pairing,
+    match_day: MatchDay,
+    team_display: HashMap<String, TeamInfoDto>,
+}
+
+/// Sous quel événement la création est annoncée. Les deux valeurs portent la
+/// **même** charge utile ; ce qui les sépare est qui les écoute.
+enum Annonce {
+    AuCalendrier,
+    HorsCalendrier,
+}
+
+/// Le cœur : les règles, puis l'enregistrement. **Sans annonce.**
+///
+/// Séparé pour que les deux chemins de création partagent l'invariant au lieu
+/// de le recopier — c'est la seule façon qu'une règle ajoutée demain vaille
+/// pour les deux sans que personne ait à y penser.
+// arch:no-instrument — appelée par deux use cases qui portent chacun leur span
+async fn verifier_et_enregistrer(
+    round_id: &str,
+    season_id: &str,
+    home_team_id: &str,
+    away_team_id: &str,
+    match_day_repo: &dyn IMatchDayRepository,
+    team_port: &dyn ITeamInfoPort,
+) -> Result<AppariementEnregistre, AddMatchError> {
     let match_day = match_day_repo
         .find_by_id(round_id)
         .await
@@ -77,21 +165,11 @@ pub async fn execute(
         .await
         .map_err(|e| AddMatchError::Repository(e.to_string()))?;
 
-    emit_pairing_created(
-        home_team_id,
-        away_team_id,
-        &pairing,
-        competition_id,
-        season_id,
-        space_id,
-        &match_day,
-        &team_display,
-        event_bus,
-    );
-    // L'identifiant de l'appariement créé : le chemin hors calendrier (carte
-    // 552) y rattache son rapport dans la foulée, ce qui est précisément ce qui
-    // manquait — l'appariement était fabriqué sans que le rapport l'apprenne.
-    Ok(pairing.id.to_string())
+    Ok(AppariementEnregistre {
+        pairing,
+        match_day,
+        team_display,
+    })
 }
 
 /// Carte 551 — une équipe joue au plus un match par journée.
@@ -148,35 +226,121 @@ async fn ensure_both_enrolled(
     Err(AddMatchError::TeamsNotEnrolled(names))
 }
 
-#[allow(clippy::too_many_arguments)]
-fn emit_pairing_created(
-    home: &str,
-    away: &str,
-    pairing: &Pairing,
+/// L'annonce, et elle seule.
+///
+/// Les deux variantes portent la **même** charge utile : la différence n'est
+/// pas dans ce qu'on dit, mais dans qui écoute. `PairingCreated` réveille
+/// `pairing_created_listener`, qui crée un rapport ; l'autre non.
+fn emettre_creation(
+    enregistre: &AppariementEnregistre,
+    annonce: Annonce,
     competition_id: &str,
     season_id: &str,
     space_id: &str,
-    match_day: &MatchDay,
-    team_display: &HashMap<String, TeamInfoDto>,
     event_bus: &EventBus,
 ) {
-    let home_info = team_display
-        .get(home)
-        .expect("home team vérifié enrôlé avant émission");
-    let away_info = team_display
-        .get(away)
-        .expect("away team vérifié enrôlé avant émission");
-
-    emettre(
-        event_bus,
-        CompetitionsDomainEvent::PairingCreated {
+    let p = Charge::depuis(enregistre, competition_id, season_id, space_id);
+    let event = match annonce {
+        Annonce::AuCalendrier => CompetitionsDomainEvent::PairingCreated {
             event_id: EventId::new(),
-            pairing_id: pairing.id.to_string(),
+            pairing_id: p.pairing_id,
+            competition_id: p.competition_id,
+            season_id: p.season_id,
+            round_id: p.round_id,
+            home_team_id: p.home_team_id,
+            away_team_id: p.away_team_id,
+            space_id: p.space_id,
+            home_team_name: p.home_team_name,
+            home_roster_name: p.home_roster_name,
+            home_coach_name: p.home_coach_name,
+            home_logo_url: p.home_logo_url,
+            away_team_name: p.away_team_name,
+            away_roster_name: p.away_roster_name,
+            away_coach_name: p.away_coach_name,
+            away_logo_url: p.away_logo_url,
+            round_name: p.round_name,
+            round_position: p.round_position,
+            round_date_start: p.round_date_start,
+            round_date_end: p.round_date_end,
+            round_day_type: p.round_day_type,
+        },
+        Annonce::HorsCalendrier => CompetitionsDomainEvent::OutOfSchedulePairingCreated {
+            event_id: EventId::new(),
+            pairing_id: p.pairing_id,
+            competition_id: p.competition_id,
+            season_id: p.season_id,
+            round_id: p.round_id,
+            home_team_id: p.home_team_id,
+            away_team_id: p.away_team_id,
+            space_id: p.space_id,
+            home_team_name: p.home_team_name,
+            home_roster_name: p.home_roster_name,
+            home_coach_name: p.home_coach_name,
+            home_logo_url: p.home_logo_url,
+            away_team_name: p.away_team_name,
+            away_roster_name: p.away_roster_name,
+            away_coach_name: p.away_coach_name,
+            away_logo_url: p.away_logo_url,
+            round_name: p.round_name,
+            round_position: p.round_position,
+            round_date_start: p.round_date_start,
+            round_date_end: p.round_date_end,
+            round_day_type: p.round_day_type,
+        },
+    };
+    emettre(event_bus, event.to_enveloppe());
+}
+
+/// Les vingt champs communs aux deux événements, assemblés une fois.
+struct Charge {
+    pairing_id: String,
+    competition_id: String,
+    season_id: String,
+    round_id: String,
+    home_team_id: String,
+    away_team_id: String,
+    space_id: String,
+    home_team_name: String,
+    home_roster_name: String,
+    home_coach_name: String,
+    home_logo_url: Option<String>,
+    away_team_name: String,
+    away_roster_name: String,
+    away_coach_name: String,
+    away_logo_url: Option<String>,
+    round_name: String,
+    round_position: i32,
+    round_date_start: Option<String>,
+    round_date_end: Option<String>,
+    round_day_type: String,
+}
+
+impl Charge {
+    fn depuis(
+        e: &AppariementEnregistre,
+        competition_id: &str,
+        season_id: &str,
+        space_id: &str,
+    ) -> Self {
+        let home = e.pairing.home_team_id.to_string();
+        let away = e.pairing.away_team_id.to_string();
+        // Les deux équipes ont été vérifiées enrôlées avant l'enregistrement.
+        let home_info = e
+            .team_display
+            .get(&home)
+            .expect("home team vérifié enrôlé avant émission");
+        let away_info = e
+            .team_display
+            .get(&away)
+            .expect("away team vérifié enrôlé avant émission");
+
+        Self {
+            pairing_id: e.pairing.id.to_string(),
             competition_id: competition_id.to_string(),
             season_id: season_id.to_string(),
-            round_id: match_day.id.to_string(),
-            home_team_id: home.to_string(),
-            away_team_id: away.to_string(),
+            round_id: e.match_day.id.to_string(),
+            home_team_id: home,
+            away_team_id: away,
             space_id: space_id.to_string(),
             home_team_name: home_info.team_name.clone(),
             home_roster_name: home_info.roster_name.clone(),
@@ -186,14 +350,13 @@ fn emit_pairing_created(
             away_roster_name: away_info.roster_name.clone(),
             away_coach_name: away_info.coach_name.clone(),
             away_logo_url: away_info.logo_url.clone(),
-            round_name: match_day.name.to_string(),
-            round_position: match_day.position.into_inner(),
-            round_date_start: match_day.date_start.as_ref().map(|d| d.to_string()),
-            round_date_end: match_day.date_end.as_ref().map(|d| d.to_string()),
-            round_day_type: match_day.day_type.as_str().to_string(),
+            round_name: e.match_day.name.to_string(),
+            round_position: e.match_day.position.into_inner(),
+            round_date_start: e.match_day.date_start.as_ref().map(|d| d.to_string()),
+            round_date_end: e.match_day.date_end.as_ref().map(|d| d.to_string()),
+            round_day_type: e.match_day.day_type.as_str().to_string(),
         }
-        .to_enveloppe(),
-    );
+    }
 }
 
 #[cfg(test)]

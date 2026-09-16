@@ -315,6 +315,27 @@ pub async fn create_match_report(
     // portant, au lieu qu'un appariement lui soit fabriqué après coup sans
     // qu'il l'apprenne : c'est ce renversement qui ferme la classe de défauts
     // des rapports orphelins.
+    // **L'aiguillage** (carte 555). Deux cas métier, deux traitements, décidés
+    // ici — et non enfouis dans l'adapter, où rien ne les nommait.
+    if let Some(mr_id) = rapport_de_la_rencontre(&state, &form).await {
+        // Le match est **déjà au calendrier** : rien à créer, le brouillon
+        // existe depuis le tirage. Le POST du coach vaut confirmation de sa
+        // sélection — sans quoi il repartirait sur un brouillon non confirmé,
+        // et devrait revalider ce qu'il vient d'envoyer.
+        if let Err(e) = create_match_report_use_case::confirmer_si_brouillon(
+            &mr_id,
+            user.id,
+            state.match_report.match_report_repo.as_ref(),
+            &state.app_event_bus,
+        )
+        .await
+        {
+            tracing::error!("create_match_report: confirmation de {mr_id} : {e:?}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+        return ouvrir(&space_id, &mr_id);
+    }
+
     let pairing_id = match programmer_la_rencontre(&state, &space_id, &form).await {
         Ok(id) => id,
         Err(refus) => return refus,
@@ -324,7 +345,34 @@ pub async fn create_match_report(
         Ok(cmd) => cmd,
         Err(refus) => return refus,
     };
-    ouvrir_le_rapport(cmd, &state, &space_id).await
+    creer_le_rapport(cmd, &state, &space_id).await
+}
+
+/// Le rapport de cette rencontre, s'il en existe déjà un.
+///
+/// C'est l'aiguillage entre les deux cas métier : un rapport trouvé signifie
+/// que la rencontre est au calendrier, donc que `pairing_created_listener` a
+/// déjà fait son travail. Rien à créer — il n'y a qu'à ouvrir.
+///
+/// La requête interroge les deux camps : le coach saisit « son » match sans
+/// savoir qui le calendrier a désigné comme recevant.
+async fn rapport_de_la_rencontre(state: &AppState, form: &CreateMatchReportForm) -> Option<String> {
+    state
+        .match_report
+        .match_report_repo
+        .find_id_by_round_and_teams(&form.round_id, &form.home_team_id, &form.away_team_id)
+        .await
+        .ok()
+        .flatten()
+}
+
+fn ouvrir(space_id: &str, match_report_id: &str) -> Response {
+    Redirect::to(
+        &AppRoutes::default()
+            .match_report
+            .edit_match_report(space_id, match_report_id),
+    )
+    .into_response()
 }
 
 /// Carte 550 — la garde serveur. Retirer les entrées de menu cache la fonction ;
@@ -426,12 +474,22 @@ fn construire_commande(
         home_team_id: TeamId::try_new(&form.home_team_id).map_err(|_| mauvaise_requete())?,
         away_team_id: TeamId::try_new(&form.away_team_id).map_err(|_| mauvaise_requete())?,
         created_by,
-        origin: MatchReportOrigin::Pairing,
+        // `Manual` porte ici une seule chose : **le coach a déjà choisi**, donc
+        // la sélection est confirmée dans la foulée. Ce n'est plus une origine
+        // au sens de la carte 552 — le rapport naît toujours d'un appariement,
+        // et il en porte l'identifiant juste en dessous.
+        origin: MatchReportOrigin::Manual,
         pairing_id: Some(pairing_id),
     })
 }
 
-async fn ouvrir_le_rapport(
+/// Crée le rapport de la rencontre qu'on vient de programmer.
+///
+/// **Le contrôleur le crée lui-même, et il est le seul à le faire sur ce
+/// chemin** (carte 555). L'appariement a été annoncé par
+/// `OutOfSchedulePairingCreated`, que `pairing_created_listener` n'écoute pas :
+/// personne d'autre ne s'en mêle, donc rien à dédupliquer et rien à attendre.
+async fn creer_le_rapport(
     cmd: create_match_report_use_case::CreateMatchReportCommand,
     state: &AppState,
     space_id: &str,
@@ -443,12 +501,7 @@ async fn ouvrir_le_rapport(
     )
     .await
     {
-        Ok(mr_id) => {
-            let url = AppRoutes::default()
-                .match_report
-                .edit_match_report(space_id, &mr_id.to_string());
-            Redirect::to(&url).into_response()
-        }
+        Ok(mr_id) => ouvrir(space_id, &mr_id.to_string()),
         Err(create_match_report_use_case::CreateMatchReportError::SameTeam) => {
             formulaire_en_erreur(
                 space_id,

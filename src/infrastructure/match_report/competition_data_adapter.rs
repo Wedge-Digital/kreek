@@ -109,10 +109,18 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
         home_team_id: &str,
         away_team_id: &str,
     ) -> Result<String, CreationAppariementError> {
-        // Le **même** use case que l'ajout d'un match par un commissaire : la
-        // rencontre hors calendrier cesse d'être un chemin parallèle, et hérite
-        // sans rien de plus de l'invariant de journée (carte 551).
-        add_match_use_case::execute(
+        // **Le même cœur que l'ajout par un commissaire, une autre annonce.**
+        //
+        // L'invariant de journée s'applique donc ici sans être écrit deux fois,
+        // et `competitions` reste souverain sur ses appariements — le hors
+        // calendrier ne contourne pas sa règle, il la consulte.
+        //
+        // `creer_hors_calendrier` émet `OutOfSchedulePairingCreated` et **non**
+        // `PairingCreated` : ce dernier ferait créer un rapport par
+        // `pairing_created_listener`, alors que sur ce chemin c'est le
+        // contrôleur qui le crée au retour de cet appel. Deux rapports
+        // naîtraient pour une rencontre — c'est ce que la carte 555 supprime.
+        add_match_use_case::creer_hors_calendrier(
             round_id,
             season_id,
             competition_id,

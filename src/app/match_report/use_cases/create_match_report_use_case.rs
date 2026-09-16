@@ -34,20 +34,17 @@ pub async fn execute(
     repo: &dyn IMatchReportRepository,
     app_event_bus: &EventBus,
 ) -> Result<MatchReportId, CreateMatchReportError> {
-    if let Ok(Some(existing_id)) = repo
-        .find_id_by_round_and_teams(
-            &cmd.round_id.to_string(),
-            &cmd.home_team_id.to_string(),
-            &cmd.away_team_id.to_string(),
-        )
-        .await
-    {
-        let mr_id = MatchReportId::try_new(&existing_id)
-            .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?;
-
-        return confirm_existing(mr_id, cmd.created_by, repo, app_event_bus).await;
-    }
-
+    // **Plus de déduplication ici** (carte 555).
+    //
+    // Elle existait pour départager deux créateurs concurrents : le contrôleur
+    // du hors calendrier et `pairing_created_listener` créaient chacun un
+    // rapport, et le premier arrivé devait retrouver celui de l'autre. Elle n'y
+    // parvenait pas — chacun lisait avant que l'autre n'écrive, d'où 38
+    // rencontres à deux rapports.
+    //
+    // Il n'y a plus qu'un créateur par cas métier : l'événement pour le
+    // calendrier, le contrôleur pour le hors calendrier. L'aiguillage entre les
+    // deux se fait dans le contrôleur, où il se lit.
     let id = MatchReportId::new();
 
     let (draft, event) = MatchReportDraft::create(
@@ -68,17 +65,60 @@ pub async fn execute(
         .await
         .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?;
 
-    // **Plus d'auto-confirmation** (carte 552). Elle existait pour la saisie
-    // manuelle, où le coach venait de choisir ses équipes : lui redemander la
-    // même sélection était un aller-retour pour rien.
+    // Le coach vient de choisir lui-même compétition, journée et équipes : lui
+    // redemander la même sélection serait un aller-retour pour rien.
     //
-    // Il n'y a plus de saisie manuelle. Un rapport naît toujours d'un
-    // appariement, donc ses équipes sont fixées avant lui, et la phase 1 est une
-    // confirmation — la même pour tout le monde. Le `draft` n'est plus consommé
-    // ici ; c'est `confirm_existing` qui le confirmera au passage du coach.
-    let _ = draft;
+    // # Ce que l'auto-confirmation garantit en plus depuis la carte 552
+    //
+    // Le chemin hors calendrier crée désormais un appariement avant son
+    // rapport, ce qui réveille `pairing_created_listener` — lequel crée, lui
+    // aussi, un brouillon. Les deux se courent après : selon celui qui arrive
+    // le premier, le rapport ressort confirmé ou non.
+    //
+    // Confirmer ici rend l'état **déterministe** : le rapport est toujours en
+    // `PreMatch` au retour. Le listener, arrivant après, retrouve ce rapport et
+    // `confirm_existing` le laisse tel quel. Sans cela, l'appelant ne sait pas
+    // dans quel état il récupère la main — et une confirmation de trop répond
+    // `409`, ce que la suite e2e a montré sur une trentaine de tests.
+    if cmd.origin == MatchReportOrigin::Manual {
+        confirm_draft(draft, cmd.created_by, repo, app_event_bus).await?;
+    }
 
     Ok(id)
+}
+
+/// Confirme la sélection d'un rapport **qui existe déjà**, s'il est encore un
+/// brouillon (carte 555).
+///
+/// C'est le cas « la rencontre est au calendrier » : le brouillon a été créé au
+/// tirage par `pairing_created_listener`, et le coach vient de demander à le
+/// saisir. Son POST **est** la confirmation.
+///
+/// Sans elle, le coach repartirait sur un brouillon non confirmé et devrait
+/// revalider une sélection qu'il vient d'envoyer — ce que la confirmation
+/// suivante refuserait d'ailleurs si le calendrier avait retenu l'autre camp.
+///
+/// Les autres états sont rendus tels quels : un rapport déjà commencé n'a pas à
+/// être reconfirmé.
+#[tracing::instrument(skip_all, fields(match_report_id = ?match_report_id))]
+pub async fn confirmer_si_brouillon(
+    match_report_id: &str,
+    confirmed_by: CoachId,
+    repo: &dyn IMatchReportRepository,
+    app_event_bus: &EventBus,
+) -> Result<(), CreateMatchReportError> {
+    let state = repo
+        .find_by_id(match_report_id)
+        .await
+        .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?
+        .ok_or_else(|| CreateMatchReportError::Repository("rapport introuvable".into()))?;
+
+    match state {
+        MatchReportState::Draft(draft) => {
+            confirm_draft(draft, confirmed_by, repo, app_event_bus).await
+        }
+        _ => Ok(()),
+    }
 }
 
 async fn confirm_draft(
@@ -119,34 +159,6 @@ async fn confirm_draft(
         .to_enveloppe(),
     );
     Ok(())
-}
-
-async fn confirm_existing(
-    mr_id: MatchReportId,
-    confirmed_by: CoachId,
-    repo: &dyn IMatchReportRepository,
-    app_event_bus: &EventBus,
-) -> Result<MatchReportId, CreateMatchReportError> {
-    let mr_id_str = mr_id.to_string();
-
-    let state = repo
-        .find_by_id(&mr_id_str)
-        .await
-        .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?
-        .ok_or_else(|| CreateMatchReportError::Repository("rapport introuvable".into()))?;
-
-    match state {
-        MatchReportState::Draft(draft) => {
-            confirm_draft(draft, confirmed_by, repo, app_event_bus).await?;
-            Ok(mr_id)
-        }
-        MatchReportState::PreMatch(_) => Ok(mr_id),
-        MatchReportState::ReadyToPublish(_) => Ok(mr_id),
-        MatchReportState::Published(_) => Ok(mr_id),
-        MatchReportState::Cancelled(_) => {
-            Err(CreateMatchReportError::Repository("rapport annulé".into()))
-        }
-    }
 }
 
 #[cfg(test)]
@@ -272,31 +284,31 @@ mod tests {
         }
     }
 
-    /// **Plus d'auto-confirmation** (carte 552), quelle que soit l'origine.
+    /// La saisie où le coach a **déjà choisi** ressort confirmée, en un seul
+    /// aller-retour.
     ///
-    /// Elle n'existait que pour la saisie manuelle, où le coach venait de
-    /// choisir ses équipes. Il n'y a plus de saisie manuelle : un rapport naît
-    /// toujours d'un appariement, ses équipes sont fixées avant lui, et la
-    /// phase 1 est une confirmation — la même pour tout le monde.
+    /// # Ce que ce test protège depuis la carte 552
     ///
-    /// Ce test remplace `manual_origin_is_auto_confirmed_to_pre_match_in_one_step`,
-    /// qui affirmait exactement le contraire.
+    /// Le chemin hors calendrier crée un appariement avant son rapport, ce qui
+    /// réveille `pairing_created_listener` — lequel crée un brouillon lui
+    /// aussi. Sans cette confirmation, l'état de retour dépend de celui des
+    /// deux qui arrive le premier, et l'appelant ne sait plus s'il doit
+    /// confirmer ou non. Une confirmation de trop répond `409` : c'est ce que
+    /// la suite e2e a montré sur une trentaine de tests.
     #[tokio::test]
-    async fn un_rapport_neuf_reste_en_draft_quelle_que_soit_l_origine() {
-        for origine in [MatchReportOrigin::Manual, MatchReportOrigin::Pairing] {
-            let repo = FakeMatchReportRepo::default();
-            let bus = new_bus();
+    async fn la_saisie_deja_choisie_ressort_confirmee() {
+        let repo = FakeMatchReportRepo::default();
+        let bus = new_bus();
 
-            let id = execute(sample_cmd(origine.clone()), &repo, &bus)
-                .await
-                .unwrap();
+        let id = execute(sample_cmd(MatchReportOrigin::Manual), &repo, &bus)
+            .await
+            .unwrap();
 
-            let state = repo.find_by_id(&id.to_string()).await.unwrap().unwrap();
-            assert!(
-                matches!(state, MatchReportState::Draft(_)),
-                "{origine:?} : la confirmation appartient au coach, pas à la création"
-            );
-        }
+        let state = repo.find_by_id(&id.to_string()).await.unwrap().unwrap();
+        assert!(
+            matches!(state, MatchReportState::PreMatch(_)),
+            "état : {state:?}"
+        );
     }
 
     #[tokio::test]
@@ -312,43 +324,35 @@ mod tests {
         assert!(matches!(state, MatchReportState::Draft(_)));
     }
 
+    /// **Le use case n'est plus idempotent, et c'est voulu** (carte 555).
+    ///
+    /// Il l'était pour départager deux créateurs concurrents — le contrôleur du
+    /// hors calendrier et `pairing_created_listener` — qui créaient chacun un
+    /// rapport pour la même rencontre. La déduplication n'y parvenait pas :
+    /// chacun lisait avant que l'autre n'écrive, d'où 38 rencontres à deux
+    /// rapports en base.
+    ///
+    /// Il n'y a plus qu'un créateur par cas métier, et la garde est remontée
+    /// **dans le contrôleur**, où elle se lit : `rapport_de_la_rencontre`
+    /// aiguille vers l'ouverture du rapport existant au lieu d'en créer un.
+    ///
+    /// Ce test remplace `calling_execute_again_…_confirms_the_existing_draft`,
+    /// qui affirmait l'inverse. Il documente une garantie **perdue**, pour que
+    /// quiconque rappelle `execute` deux fois sache ce qu'il obtient.
     #[tokio::test]
-    async fn calling_execute_again_for_the_same_round_and_teams_confirms_the_existing_draft() {
+    async fn deux_appels_creent_deux_rapports_la_garde_est_ailleurs() {
         let repo = FakeMatchReportRepo::default();
         let bus = new_bus();
-        let cmd = sample_cmd(MatchReportOrigin::Pairing);
-        let round_id = cmd.round_id;
-        let home = cmd.home_team_id;
-        let away = cmd.away_team_id;
-        let coach = cmd.created_by;
-
-        let first_id = execute(cmd, &repo, &bus).await.unwrap();
-        let state = repo
-            .find_by_id(&first_id.to_string())
+        let premier = execute(sample_cmd(MatchReportOrigin::Pairing), &repo, &bus)
             .await
-            .unwrap()
             .unwrap();
-        assert!(matches!(state, MatchReportState::Draft(_)));
-
-        let second_cmd = CreateMatchReportCommand {
-            space_id: SpaceId::new(),
-            competition_id: CompetitionId::new(),
-            season_id: SeasonId::new(),
-            round_id,
-            home_team_id: home,
-            away_team_id: away,
-            created_by: coach,
-            origin: MatchReportOrigin::Pairing,
-            pairing_id: None,
-        };
-        let second_id = execute(second_cmd, &repo, &bus).await.unwrap();
-
-        assert_eq!(first_id, second_id);
-        let state = repo
-            .find_by_id(&first_id.to_string())
+        let second = execute(sample_cmd(MatchReportOrigin::Pairing), &repo, &bus)
             .await
-            .unwrap()
             .unwrap();
-        assert!(matches!(state, MatchReportState::PreMatch(_)));
+
+        assert_ne!(
+            premier, second,
+            "sans garde en amont, deux appels produisent deux rapports"
+        );
     }
 }

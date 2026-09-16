@@ -46,6 +46,44 @@ pub enum CompetitionsDomainEvent {
         round_date_end: Option<String>,
         round_day_type: String,
     },
+    /// Une rencontre existe qui n'était **pas au calendrier** (carte 555).
+    ///
+    /// Même charge utile que [`Self::PairingCreated`], et un nom différent pour
+    /// une seule raison : il ne doit pas faire créer de rapport. Sur ce chemin,
+    /// c'est le contrôleur qui le crée, au retour de l'appel — s'il partait
+    /// aussi par l'événement, on en aurait deux.
+    ///
+    /// Le nom dit un fait du domaine, pas son déclencheur :
+    /// `PairingCreatedFromMatchReport` aurait trahi l'origine, ce que la
+    /// convention proscrit.
+    ///
+    /// Il ne sort pas du BC — voir le bras groupé de [`Self::to_app_event`] —
+    /// mais il est persisté : l'incident du 15 septembre a demandé de croiser
+    /// des ULID et des horodatages pour établir qu'un appariement avait été
+    /// fabriqué hors calendrier, et c'est désormais un `grep` dans `event_log`.
+    OutOfSchedulePairingCreated {
+        event_id: EventId,
+        pairing_id: String,
+        competition_id: String,
+        season_id: String,
+        round_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        space_id: String,
+        home_team_name: String,
+        home_roster_name: String,
+        home_coach_name: String,
+        home_logo_url: Option<String>,
+        away_team_name: String,
+        away_roster_name: String,
+        away_coach_name: String,
+        away_logo_url: Option<String>,
+        round_name: String,
+        round_position: i32,
+        round_date_start: Option<String>,
+        round_date_end: Option<String>,
+        round_day_type: String,
+    },
     PairingDeleted {
         event_id: EventId,
         pairing_id: String,
@@ -55,6 +93,7 @@ pub enum CompetitionsDomainEvent {
 pub const COMPETITION_CREATED: &str = "CompetitionCreated";
 pub const COMPETITION_READY: &str = "CompetitionReady";
 pub const PAIRING_CREATED: &str = "PairingCreated";
+pub const OUT_OF_SCHEDULE_PAIRING_CREATED: &str = "OutOfSchedulePairingCreated";
 pub const PAIRING_DELETED: &str = "PairingDeleted";
 
 impl CompetitionsDomainEvent {
@@ -63,6 +102,7 @@ impl CompetitionsDomainEvent {
             Self::CompetitionCreated { .. } => COMPETITION_CREATED,
             Self::CompetitionReady { .. } => COMPETITION_READY,
             Self::PairingCreated { .. } => PAIRING_CREATED,
+            Self::OutOfSchedulePairingCreated { .. } => OUT_OF_SCHEDULE_PAIRING_CREATED,
             Self::PairingDeleted { .. } => PAIRING_DELETED,
         }
     }
@@ -71,8 +111,9 @@ impl CompetitionsDomainEvent {
         match self {
             Self::CompetitionCreated { competition_id, .. } => competition_id.to_string(),
             Self::CompetitionReady { competition_id, .. } => competition_id.to_string(),
-            Self::PairingCreated { pairing_id, .. } => pairing_id.clone(),
-            Self::PairingDeleted { pairing_id, .. } => pairing_id.clone(),
+            Self::PairingCreated { pairing_id, .. }
+            | Self::OutOfSchedulePairingCreated { pairing_id, .. }
+            | Self::PairingDeleted { pairing_id, .. } => pairing_id.clone(),
         }
     }
 
@@ -97,7 +138,9 @@ impl CompetitionsDomainEvent {
                     value: competition_id.to_string(),
                 },
             ],
-            Self::PairingCreated { .. } | Self::PairingDeleted { .. } => vec![],
+            Self::PairingCreated { .. }
+            | Self::OutOfSchedulePairingCreated { .. }
+            | Self::PairingDeleted { .. } => vec![],
         }
     }
 
@@ -143,7 +186,11 @@ impl CompetitionsDomainEvent {
             //
             // Sans joker, ajouter un variant casse la compilation ici — et son auteur
             // tranche : il sort, ou il rejoint cette liste (carte 506).
-            Self::CompetitionCreated { .. } => None,
+            //
+            // `OutOfSchedulePairingCreated` en fait partie **par construction** : le
+            // faire sortir ferait créer un second rapport par
+            // `pairing_created_listener`, ce que la carte 555 supprime.
+            Self::CompetitionCreated { .. } | Self::OutOfSchedulePairingCreated { .. } => None,
         }
     }
 
