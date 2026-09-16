@@ -349,6 +349,8 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             Arc::new(crate::app::competitions::io::repository::season_repository::SeasonRepository::new(pool.clone())),
             references.repository.clone(),
             Arc::new(crate::app::competitions::io::repository::match_day_repository::MatchDayRepository::new(pool.clone())),
+            competitions_team_info_port.clone(),
+            event_bus.clone(),
         ),
     );
     let match_report_team_data = Arc::new(

@@ -9,7 +9,6 @@
 //! réécrit.
 
 use crate::app::auth::domain::user::User;
-use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::state::AppState;
 
@@ -33,27 +32,6 @@ pub struct PorteeRapport {
     pub competition_id: String,
     pub home_team_id: String,
     pub away_team_id: String,
-}
-
-impl PorteeRapport {
-    /// Depuis un état **annulable**, que la portée du récapitulatif ne sait pas
-    /// lire : celle-ci refuse `PreMatch`, or c'est l'état où l'on abandonne le
-    /// plus souvent un rapport ouvert par erreur.
-    pub fn depuis_etat_annulable(state: &MatchReportState) -> Option<Self> {
-        match state {
-            MatchReportState::PreMatch(pm) => Some(Self {
-                competition_id: pm.competition_id.to_string(),
-                home_team_id: pm.home_team_id.to_string(),
-                away_team_id: pm.away_team_id.to_string(),
-            }),
-            MatchReportState::ReadyToPublish(rtp) => Some(Self {
-                competition_id: rtp.competition_id.to_string(),
-                home_team_id: rtp.home_team_id.to_string(),
-                away_team_id: rtp.away_team_id.to_string(),
-            }),
-            _ => None,
-        }
-    }
 }
 
 /// Autorisé si l'utilisateur est admin d'espace, admin de la compétition du

@@ -59,6 +59,7 @@ pub trait DataMigration: Send + Sync {
 
 pub mod m001_bonus_elite;
 pub mod m002_recalcul_valeurs_equipe;
+pub mod m003_rapports_delies;
 
 /// Le registre, dans son ordre d'exécution.
 ///
@@ -69,6 +70,7 @@ fn registre() -> Vec<Box<dyn DataMigration>> {
     vec![
         Box::new(m001_bonus_elite::BonusElite),
         Box::new(m002_recalcul_valeurs_equipe::RecalculValeursEquipe),
+        Box::new(m003_rapports_delies::RapportsDelies),
     ]
 }
 

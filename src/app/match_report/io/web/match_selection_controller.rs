@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+use crate::app::match_report::ports::CreationAppariementError;
 use crate::app::match_report::use_cases::match_report_access_service::{
     est_administrateur, AccesRapportDeps,
 };
@@ -306,58 +307,135 @@ pub async fn create_match_report(
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
+    if let Err(refus) = garde_hors_calendrier(&state, &form).await {
+        return refus;
+    }
 
-    // Carte 550 — la garde serveur. Retirer les entrées de menu cache la
-    // fonction ; ça n'empêche pas d'appeler la route à la main, et sans ce
-    // refus le réglage serait décoratif.
-    //
-    // La question porte sur la saison **choisie dans le formulaire**, et non sur
-    // l'espace : c'est le seul endroit où elle a une réponse exacte. Le menu,
-    // lui, cache l'entrée dès qu'une compétition de l'espace interdit — les deux
-    // règles diffèrent, et c'est voulu.
-    if !state
+    // Carte 552 — **l'appariement d'abord**. Le rapport naît ensuite en le
+    // portant, au lieu qu'un appariement lui soit fabriqué après coup sans
+    // qu'il l'apprenne : c'est ce renversement qui ferme la classe de défauts
+    // des rapports orphelins.
+    let pairing_id = match programmer_la_rencontre(&state, &space_id, &form).await {
+        Ok(id) => id,
+        Err(refus) => return refus,
+    };
+
+    let cmd = match construire_commande(&space_id, &form, user.id, pairing_id) {
+        Ok(cmd) => cmd,
+        Err(refus) => return refus,
+    };
+    ouvrir_le_rapport(cmd, &state, &space_id).await
+}
+
+/// Carte 550 — la garde serveur. Retirer les entrées de menu cache la fonction ;
+/// ça n'empêche pas d'appeler la route à la main, et sans ce refus le réglage
+/// serait décoratif.
+///
+/// La question porte sur la saison **choisie dans le formulaire**, et non sur
+/// l'espace : c'est le seul endroit où elle a une réponse exacte.
+async fn garde_hors_calendrier(
+    state: &AppState,
+    form: &CreateMatchReportForm,
+) -> Result<(), Response> {
+    if state
         .match_report
         .competition_data
         .autorise_hors_calendrier(&form.season_id)
         .await
     {
-        tracing::info!(
-            season_id = %form.season_id,
-            "création manuelle refusée : la saison interdit les matchs hors calendrier"
-        );
-        return StatusCode::FORBIDDEN.into_response();
+        return Ok(());
     }
+    tracing::info!(
+        season_id = %form.season_id,
+        "création manuelle refusée : la saison interdit les matchs hors calendrier"
+    );
+    Err(StatusCode::FORBIDDEN.into_response())
+}
 
-    let cmd = create_match_report_use_case::CreateMatchReportCommand {
-        space_id: match SpaceId::try_new(&space_id) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        competition_id: match CompetitionId::try_new(&form.competition_id) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        season_id: match SeasonId::try_new(&form.season_id) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        round_id: match RoundId::try_new(&form.round_id) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        home_team_id: match TeamId::try_new(&form.home_team_id) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        away_team_id: match TeamId::try_new(&form.away_team_id) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        created_by: user.id,
-        origin: MatchReportOrigin::Manual,
-        pairing_id: None,
+/// Programme la rencontre au calendrier et rend son appariement (carte 552).
+///
+/// Le refus d'engagement (carte 551) revient **dans le formulaire**, et non en
+/// code sec : c'est une erreur de saisie, que le coach doit pouvoir corriger
+/// sans perdre son écran. Le layout accepte le swap sur 422.
+async fn programmer_la_rencontre(
+    state: &AppState,
+    space_id: &str,
+    form: &CreateMatchReportForm,
+) -> Result<String, Response> {
+    state
+        .match_report
+        .competition_data
+        .creer_appariement(
+            space_id,
+            &form.competition_id,
+            &form.season_id,
+            &form.round_id,
+            &form.home_team_id,
+            &form.away_team_id,
+        )
+        .await
+        .map_err(|e| refus_de_programmation(space_id, e))
+}
+
+fn refus_de_programmation(space_id: &str, e: CreationAppariementError) -> Response {
+    let message = match e {
+        CreationAppariementError::DejaEngagee { equipe, adversaire } => {
+            format!("{equipe} affronte déjà {adversaire} lors de cette journée.")
+        }
+        CreationAppariementError::NonEnrolee(noms) => format!(
+            "Équipe(s) non inscrite(s) à cette saison : {}.",
+            noms.join(", ")
+        ),
+        CreationAppariementError::Indisponible(motif) => {
+            tracing::error!("create_match_report: programmation impossible : {motif}");
+            "La rencontre n'a pas pu être programmée.".to_string()
+        }
     };
+    formulaire_en_erreur(space_id, message)
+}
 
+fn formulaire_en_erreur(space_id: &str, message: String) -> Response {
+    let gabarit = MatchSelectionTemplate {
+        app_routes: Default::default(),
+        widget_url: build_widget_url(space_id),
+        team_widget_url: build_team_widget_url(space_id),
+        space_id: space_id.to_string(),
+        is_prefilled: false,
+        error_message: Some(message),
+        form_action: AppRoutes::default().match_report.new_match_report(space_id),
+        lecture_seule: None,
+    };
+    (StatusCode::UNPROCESSABLE_ENTITY, gabarit).into_response()
+}
+
+/// Le parsing de la requête, et rien d'autre — la commande porte désormais
+/// **toujours** son appariement.
+fn construire_commande(
+    space_id: &str,
+    form: &CreateMatchReportForm,
+    created_by: crate::app::shared_kernel::identity::ids::CoachId,
+    pairing_id: String,
+) -> Result<create_match_report_use_case::CreateMatchReportCommand, Response> {
+    let mauvaise_requete = || StatusCode::BAD_REQUEST.into_response();
+    Ok(create_match_report_use_case::CreateMatchReportCommand {
+        space_id: SpaceId::try_new(space_id).map_err(|_| mauvaise_requete())?,
+        competition_id: CompetitionId::try_new(&form.competition_id)
+            .map_err(|_| mauvaise_requete())?,
+        season_id: SeasonId::try_new(&form.season_id).map_err(|_| mauvaise_requete())?,
+        round_id: RoundId::try_new(&form.round_id).map_err(|_| mauvaise_requete())?,
+        home_team_id: TeamId::try_new(&form.home_team_id).map_err(|_| mauvaise_requete())?,
+        away_team_id: TeamId::try_new(&form.away_team_id).map_err(|_| mauvaise_requete())?,
+        created_by,
+        origin: MatchReportOrigin::Pairing,
+        pairing_id: Some(pairing_id),
+    })
+}
+
+async fn ouvrir_le_rapport(
+    cmd: create_match_report_use_case::CreateMatchReportCommand,
+    state: &AppState,
+    space_id: &str,
+) -> Response {
     match create_match_report_use_case::execute(
         cmd,
         state.match_report.match_report_repo.as_ref(),
@@ -368,11 +446,14 @@ pub async fn create_match_report(
         Ok(mr_id) => {
             let url = AppRoutes::default()
                 .match_report
-                .edit_match_report(&space_id, &mr_id.to_string());
+                .edit_match_report(space_id, &mr_id.to_string());
             Redirect::to(&url).into_response()
         }
         Err(create_match_report_use_case::CreateMatchReportError::SameTeam) => {
-            StatusCode::BAD_REQUEST.into_response()
+            formulaire_en_erreur(
+                space_id,
+                "Une équipe ne peut pas s'affronter elle-même.".into(),
+            )
         }
         Err(e) => {
             tracing::error!("create_match_report: {e:?}");

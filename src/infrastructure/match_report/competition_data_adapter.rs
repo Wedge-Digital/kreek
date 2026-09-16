@@ -4,12 +4,16 @@ use crate::app::competitions::domain::match_day_repository_port::IMatchDayReposi
 use crate::app::competitions::domain::season_repository_port::{
     ISeasonRepository, SeasonRepositoryError,
 };
+use crate::app::competitions::ports::ITeamInfoPort;
+use crate::app::competitions::use_cases::admin::add_match_use_case::{self, AddMatchError};
 use crate::app::match_report::ports::{
-    ICompetitionDataPort, InducementSpecDto, RoundContextDto, TierRulesDto,
+    CreationAppariementError, ICompetitionDataPort, InducementSpecDto, RoundContextDto,
+    TierRulesDto,
 };
 use crate::app::references::domain::inducement_pricing::cout_pour_roster;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
+use crate::common::services::event_bus::event_bus::EventBus;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -18,6 +22,11 @@ pub struct CompetitionDataAdapter {
     season_repo: Arc<dyn ISeasonRepository>,
     reference_repo: Arc<dyn IReferenceRepository>,
     match_day_repo: Arc<dyn IMatchDayRepository>,
+    /// Les deux dépendances de `creer_appariement` (carte 552) : l'adapter est
+    /// le **seul** endroit qui connaisse `competitions`, conformément à la règle
+    /// des adapters inter-BCs.
+    team_info_port: Arc<dyn ITeamInfoPort>,
+    event_bus: EventBus,
 }
 
 impl CompetitionDataAdapter {
@@ -26,13 +35,37 @@ impl CompetitionDataAdapter {
         season_repo: Arc<dyn ISeasonRepository>,
         reference_repo: Arc<dyn IReferenceRepository>,
         match_day_repo: Arc<dyn IMatchDayRepository>,
+        team_info_port: Arc<dyn ITeamInfoPort>,
+        event_bus: EventBus,
     ) -> Self {
         Self {
             competition_repo,
             season_repo,
             reference_repo,
             match_day_repo,
+            team_info_port,
+            event_bus,
         }
+    }
+}
+
+/// Le refus du use case, traduit dans le vocabulaire du port.
+///
+/// `TeamAlreadyScheduled` traverse tel quel : c'est l'invariant de la carte 551,
+/// et le coach doit lire le même message que le commissaire.
+fn traduire(e: AddMatchError) -> CreationAppariementError {
+    match e {
+        AddMatchError::TeamAlreadyScheduled { equipe, adversaire } => {
+            CreationAppariementError::DejaEngagee { equipe, adversaire }
+        }
+        AddMatchError::TeamsNotEnrolled(noms) => CreationAppariementError::NonEnrolee(noms),
+        AddMatchError::RoundNotFound => {
+            CreationAppariementError::Indisponible("journée introuvable".to_string())
+        }
+        AddMatchError::InvalidTeamId => {
+            CreationAppariementError::Indisponible("identifiant d'équipe invalide".to_string())
+        }
+        AddMatchError::Repository(m) => CreationAppariementError::Indisponible(m),
     }
 }
 
@@ -65,6 +98,33 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
             tracing::error!("competition_data_adapter: options {season_id}: {e}");
         }
         autorise_depuis(lues)
+    }
+
+    async fn creer_appariement(
+        &self,
+        space_id: &str,
+        competition_id: &str,
+        season_id: &str,
+        round_id: &str,
+        home_team_id: &str,
+        away_team_id: &str,
+    ) -> Result<String, CreationAppariementError> {
+        // Le **même** use case que l'ajout d'un match par un commissaire : la
+        // rencontre hors calendrier cesse d'être un chemin parallèle, et hérite
+        // sans rien de plus de l'invariant de journée (carte 551).
+        add_match_use_case::execute(
+            round_id,
+            season_id,
+            competition_id,
+            space_id,
+            home_team_id,
+            away_team_id,
+            self.match_day_repo.as_ref(),
+            self.team_info_port.as_ref(),
+            &self.event_bus,
+        )
+        .await
+        .map_err(traduire)
     }
 
     async fn is_competition_admin(

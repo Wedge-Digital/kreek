@@ -68,13 +68,15 @@ pub async fn execute(
         .await
         .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?;
 
-    // Saisie manuelle : le coach vient de choisir lui-même compétition/journée/équipes
-    // via le formulaire — inutile de lui faire revalider la même sélection une seconde
-    // fois (contrairement à l'origine Pairing, où le draft est créé en tâche de fond par
-    // pairing_created_listener avant même que le coach n'ait vu l'écran de sélection).
-    if cmd.origin == MatchReportOrigin::Manual {
-        confirm_draft(draft, cmd.created_by, repo, app_event_bus).await?;
-    }
+    // **Plus d'auto-confirmation** (carte 552). Elle existait pour la saisie
+    // manuelle, où le coach venait de choisir ses équipes : lui redemander la
+    // même sélection était un aller-retour pour rien.
+    //
+    // Il n'y a plus de saisie manuelle. Un rapport naît toujours d'un
+    // appariement, donc ses équipes sont fixées avant lui, et la phase 1 est une
+    // confirmation — la même pour tout le monde. Le `draft` n'est plus consommé
+    // ici ; c'est `confirm_existing` qui le confirmera au passage du coach.
+    let _ = draft;
 
     Ok(id)
 }
@@ -270,17 +272,31 @@ mod tests {
         }
     }
 
+    /// **Plus d'auto-confirmation** (carte 552), quelle que soit l'origine.
+    ///
+    /// Elle n'existait que pour la saisie manuelle, où le coach venait de
+    /// choisir ses équipes. Il n'y a plus de saisie manuelle : un rapport naît
+    /// toujours d'un appariement, ses équipes sont fixées avant lui, et la
+    /// phase 1 est une confirmation — la même pour tout le monde.
+    ///
+    /// Ce test remplace `manual_origin_is_auto_confirmed_to_pre_match_in_one_step`,
+    /// qui affirmait exactement le contraire.
     #[tokio::test]
-    async fn manual_origin_is_auto_confirmed_to_pre_match_in_one_step() {
-        let repo = FakeMatchReportRepo::default();
-        let bus = new_bus();
+    async fn un_rapport_neuf_reste_en_draft_quelle_que_soit_l_origine() {
+        for origine in [MatchReportOrigin::Manual, MatchReportOrigin::Pairing] {
+            let repo = FakeMatchReportRepo::default();
+            let bus = new_bus();
 
-        let id = execute(sample_cmd(MatchReportOrigin::Manual), &repo, &bus)
-            .await
-            .unwrap();
+            let id = execute(sample_cmd(origine.clone()), &repo, &bus)
+                .await
+                .unwrap();
 
-        let state = repo.find_by_id(&id.to_string()).await.unwrap().unwrap();
-        assert!(matches!(state, MatchReportState::PreMatch(_)));
+            let state = repo.find_by_id(&id.to_string()).await.unwrap().unwrap();
+            assert!(
+                matches!(state, MatchReportState::Draft(_)),
+                "{origine:?} : la confirmation appartient au coach, pas à la création"
+            );
+        }
     }
 
     #[tokio::test]

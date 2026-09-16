@@ -548,6 +548,19 @@ mod authorization_tests {
     struct FakeCompetitionData(Result<bool, String>);
     #[async_trait::async_trait]
     impl ICompetitionDataPort for FakeCompetitionData {
+        /// Doublure : le récapitulatif ne programme aucune rencontre.
+        async fn creer_appariement(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Result<String, crate::app::match_report::ports::CreationAppariementError> {
+            unimplemented!("non utilisé par ces tests")
+        }
+
         async fn autorise_hors_calendrier(&self, _: &str) -> bool {
             true
         }

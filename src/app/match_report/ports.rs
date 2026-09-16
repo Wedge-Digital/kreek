@@ -44,6 +44,50 @@ pub trait ICompetitionDataPort: Send + Sync {
     /// La garde qui s'appuie dessus ne protège donc que ce qui a été
     /// explicitement interdit — ce qui est exactement son objet.
     async fn autorise_hors_calendrier(&self, season_id: &str) -> bool;
+
+    /// Programme une rencontre au calendrier et rend son identifiant
+    /// d'appariement (carte 552).
+    ///
+    /// # Une commande, et non une consultation — c'est délibéré
+    ///
+    /// Le `CLAUDE.md` réserve le port à la lecture synchrone et l'app event à la
+    /// propagation d'effet. Ce cas n'est ni l'un ni l'autre : le rapport a
+    /// besoin de l'identifiant **immédiatement** pour le porter dès sa
+    /// création, et un événement ne rend rien à son émetteur.
+    ///
+    /// C'est exactement ce qui manquait : `competitions` fabriquait
+    /// l'appariement pour le compte du rapport et ne le lui disait jamais. En
+    /// renversant le sens — le rapport demande, puis naît avec la réponse — le
+    /// `pairing_id` est renseigné dès le premier événement, et toutes les
+    /// recherches inverses cessent d'être aveugles.
+    ///
+    /// L'invariant de journée (carte 551) s'applique sans rien de plus :
+    /// l'implémentation passe par le même use case que l'ajout d'un match par
+    /// un commissaire.
+    async fn creer_appariement(
+        &self,
+        space_id: &str,
+        competition_id: &str,
+        season_id: &str,
+        round_id: &str,
+        home_team_id: &str,
+        away_team_id: &str,
+    ) -> Result<String, CreationAppariementError>;
+}
+
+/// Pourquoi une rencontre n'a pas pu être programmée (carte 552).
+///
+/// Trois cas distincts et non un `String` : le contrôleur en tire trois
+/// réponses HTTP différentes, et un message libre l'obligerait à lire du texte
+/// pour décider d'un code.
+#[derive(Debug)]
+pub enum CreationAppariementError {
+    /// L'une des deux équipes joue déjà cette journée (carte 551).
+    DejaEngagee { equipe: String, adversaire: String },
+    /// Une équipe n'est pas inscrite à cette saison.
+    NonEnrolee(Vec<String>),
+    /// Journée introuvable, identifiant invalide, panne de dépôt.
+    Indisponible(String),
 }
 
 #[derive(Debug, Clone)]

@@ -3,9 +3,11 @@
 **Priorité : haute — suite de l'incident G. B. L. R du 15 septembre 2026**
 **Épic :** aucune — un renversement de flux, livrable d'un bloc
 **Dépend de :** carte 551 (l'invariant de journée, que l'écran de création doit rencontrer)
+**S'appuie sur :** carte 550, livrée — elle fournit l'option `autorise_hors_calendrier`, sa méthode sur `ICompetitionDataPort`, et la vue figée de la phase 1 que cette carte généralise
 **Fichiers :**
-`src/app/match_report/io/web/match_selection_controller.rs`,
-`src/app/match_report/io/web/templates/match-selection.html`,
+`src/app/match_report/io/web/match_selection_controller.rs` *(reprise du code de la 550)*,
+`src/app/match_report/io/web/templates/match-selection.html` *(reprise du code de la 550)*,
+`src/app/match_report/use_cases/update_match_selection_use_case.rs`,
 `src/app/match_report/use_cases/create_match_report_use_case.rs`,
 `src/app/match_report/use_cases/cancel_match_report_use_case.rs` *(supprimé)*,
 `src/app/match_report/io/web/cancel_match_report_controller.rs` *(supprimé)*,
@@ -56,10 +58,41 @@ ligne de journal : le listener sort sur `Ok(None) => return`.
 | **`MatchReportOrigin`** | supprimé. Hors tests, il ne sert qu'à **une ligne** (`create_match_report_use_case.rs:75`, l'auto-confirmation du chemin manuel), qui disparaît avec le chemin |
 | **Annulation autonome** | supprimée : use case, contrôleur, route, bouton |
 | **Suppression** | seul l'appariement se supprime ; il emporte son rapport ; refusée si le rapport est publié |
+| **Phase 1** | devient une **confirmation pour tout le monde**, admin compris : un rapport né d'un appariement a ses équipes fixées, il n'y a plus rien à y choisir |
+| **La garde de la 550** | se déplace de `create_match_report` vers la création de l'appariement hors calendrier — seul point d'entrée qui subsiste |
 
 Le garde-fou « publié » **redevient effectif sans une ligne de code** :
 `pairing_id` étant désormais toujours renseigné, `find_phases_by_pairings` voit
 enfin les rapports manuels.
+
+## Ce que la carte 550 laisse à reprendre
+
+La 550 a figé la phase 1 **pour les non-admins des compétitions qui interdisent
+le hors-calendrier**. Cette carte supprime la distinction : il n'y a plus de cas
+où les équipes d'un rapport se choisissent.
+
+**Le travail n'est pas perdu, il devient le cas général.** `SelectionFigeeVm` et
+le bloc de gabarit qui affiche les quatre noms en clair sont exactement ce que
+la phase 1 doit montrer désormais à tous. Le champ cesse d'être une `Option`.
+
+Ce qui disparaît, ce sont les mécanismes conditionnels qui l'entouraient, faute
+de cas à distinguer :
+
+| | |
+|---|---|
+| `selection_figee()` | le prédicat à deux conditions — plus rien à décider |
+| `equipes_retenues()` | les équipes du formulaire ne sont jamais retenues |
+| la branche `{% else %}` de `match-selection.html` | les deux widgets de sélection quittent cet écran |
+| `update_match_selection` | se réduit à confirmer `Draft` → `PreMatch` |
+
+Le commentaire de `new_match_report` — « Jamais figée : la garde de
+`create_match_report` interdit déjà d'y arriver » — **devient faux** quand la
+garde se déplace. Le corriger fait partie de la carte.
+
+⚠️ **Ne pas emporter** `ICompetitionDataPort::autorise_hors_calendrier` ni
+`IHorsCalendrierPort` : l'option reste, le menu conditionnel reste, seule change
+la place où la garde s'applique. Règle 4 — lister les consommateurs avant de
+supprimer.
 
 ## Pourquoi l'annulation autonome disparaît
 
@@ -142,6 +175,33 @@ RUR–Pillards n'existe plus depuis le 15/09 à 13:41.
   libérées.
 - **Migration** : les deux requêtes de contrôle renvoient zéro ligne après
   exécution.
+
+## État au 16 septembre 2026 — le cœur est livré, la carte ne l'est pas
+
+Le renversement du flux et la reprise de données sont en place et vérifiés ; il
+reste trois choses, d'où le maintien de cette carte en `ready_to_be_done`.
+
+**Livré :**
+
+- l'appariement créé avant le rapport, via le port `creer_appariement` dont
+  l'adapter appelle le même use case que l'ajout par un commissaire ;
+- l'auto-confirmation retirée : la phase 1 est une confirmation pour tous ;
+- l'annulation autonome retirée — use case, contrôleur, route, bouton sur cinq
+  écrans, et son test e2e ;
+- la migration `m003`, **exécutée sur la base de production importée** : 16
+  rapports déliés traités, les deux contrôles de fin rendent zéro, le rapport
+  de la J15 annulé et ses deux équipes libérées.
+
+**Reste :**
+
+- **`MatchReportOrigin` n'est pas supprimé.** Il n'a plus d'usage fonctionnel
+  mais vit dans `MatchReportCreated`, donc dans l'event store, et le retirer
+  touche une vingtaine de fichiers de tests.
+- **`competitions::match_report_cancelled_listener` n'est pas supprimé.** La
+  section ci-dessus le dit « à vérifier plutôt qu'à supposer » — la vérification
+  n'a pas été faite.
+- **Aucun test e2e du parcours hors calendrier**, ni test unitaire de `m003`.
+  Celle-ci est validée sur données réelles, ce qui ne se rejoue pas en CI.
 
 ## Terminé quand
 

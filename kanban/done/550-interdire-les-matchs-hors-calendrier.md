@@ -40,7 +40,7 @@ est ensuite reconstruit sur la journée 2.
 Aujourd'hui **rien ne permet de fermer cette porte** : le hors-calendrier est
 toujours possible, sans réglage. Cette carte donne le levier.
 
-Elle **ne répare pas** le rapport orphelin : c'est la carte 540, indépendante.
+Elle **ne répare pas** le rapport orphelin : c'est la carte 552, indépendante.
 Un hors-calendrier autorisé continuera de produire le même défaut.
 
 ## 1 · L'option et sa persistance
@@ -279,7 +279,7 @@ calendrier, arrive sur la phase 1 du bon rapport, et la saisie continue.
 **Les matchs hors calendrier déjà saisis.** Décocher n'efface rien et ne bloque
 aucune saisie en cours ; seule la création de nouveaux est refusée.
 
-**Le rapport orphelin de la carte 540.** Fermer la porte n'est pas réparer le
+**Le rapport orphelin de la carte 552.** Fermer la porte n'est pas réparer le
 lien manquant entre un rapport manuel et son appariement.
 
 ## La symétrie
