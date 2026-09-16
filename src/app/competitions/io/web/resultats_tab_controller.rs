@@ -66,7 +66,7 @@ pub async fn get_resultats_tab(
     let authz =
         compute_authorization(&state, &user, &space_id_vo, &competition_id_vo, &season_id).await;
 
-    let (journees, next_cursor) = build_journees(rows, 3, &authz);
+    let (journees, next_cursor) = build_journees(rows, 3, &authz, &space_id);
     let is_htmx = !crate::web::htmx::veut_la_page_entiere(&headers);
 
     if is_htmx {

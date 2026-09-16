@@ -112,7 +112,7 @@ pub async fn get_team_matches_widget(
     .await;
 
     TeamMatchesWidgetTemplate {
-        matches: build_team_matches(rows, &authz, &team_id),
+        matches: build_team_matches(rows, &authz, &team_id, &space_id),
     }
     .into_response()
 }
@@ -157,7 +157,12 @@ mod tests {
 
     fn rendu(rows: Vec<PairingDisplayDto>) -> String {
         TeamMatchesWidgetTemplate {
-            matches: build_team_matches(rows, &ResultAuthorization::unrestricted(), "A"),
+            matches: build_team_matches(
+                rows,
+                &ResultAuthorization::unrestricted(),
+                "A",
+                "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+            ),
         }
         .render()
         .expect("le fragment doit se rendre")

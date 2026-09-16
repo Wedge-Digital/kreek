@@ -1,5 +1,6 @@
 use crate::app::auth::domain::user::User;
 use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
+use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::SpaceId;
@@ -172,9 +173,10 @@ pub fn build_team_matches(
     rows: Vec<PairingDisplayDto>,
     authz: &ResultAuthorization,
     team_id: &str,
+    space_id: &str,
 ) -> Vec<MatchResultatVm> {
     rows.into_iter()
-        .map(|row| to_resultat_vm(row, authz, Some(team_id)))
+        .map(|row| to_resultat_vm(row, authz, Some(team_id), space_id))
         .collect()
 }
 
@@ -182,13 +184,14 @@ pub fn build_journees(
     rows: Vec<PairingDisplayDto>,
     max_rounds: usize,
     authz: &ResultAuthorization,
+    space_id: &str,
 ) -> (Vec<JourneeResultatsVm>, Option<i32>) {
     let mut by_round: BTreeMap<i32, (String, Vec<MatchResultatVm>)> = BTreeMap::new();
     for row in rows {
         let entry = by_round
             .entry(row.round_position)
             .or_insert_with(|| (row.round_name.clone(), Vec::new()));
-        entry.1.push(to_resultat_vm(row, authz, None));
+        entry.1.push(to_resultat_vm(row, authz, None, space_id));
     }
 
     let mut journees: Vec<(i32, JourneeResultatsVm)> = by_round
@@ -274,7 +277,12 @@ mod tests {
     }
 
     fn vm_pour(row: PairingDisplayDto, equipe: &str) -> MatchResultatVm {
-        to_resultat_vm(row, &ResultAuthorization::unrestricted(), Some(equipe))
+        to_resultat_vm(
+            row,
+            &ResultAuthorization::unrestricted(),
+            Some(equipe),
+            "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+        )
     }
 
     #[test]
@@ -333,6 +341,7 @@ mod tests {
             rencontre("A", "B", Some((3, 1)), "completed"),
             &ResultAuthorization::unrestricted(),
             None,
+            "01ARZ3NDEKTSV4RRFFQ69G5FAW",
         );
         assert_eq!(vm.outcome, None);
         assert_eq!(vm.round_label, None);
@@ -353,13 +362,62 @@ mod tests {
             rencontre("C", "A", None, "upcoming"),
             rencontre("A", "D", Some((2, 2)), "completed"),
         ];
-        let vms = build_team_matches(rows, &ResultAuthorization::unrestricted(), "A");
+        let vms = build_team_matches(
+            rows,
+            &ResultAuthorization::unrestricted(),
+            "A",
+            "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+        );
 
         assert_eq!(vms.len(), 3);
         assert_eq!(
             vms.iter().map(|v| v.outcome).collect::<Vec<_>>(),
             vec![None, None, Some(MatchOutcome::Draw)]
         );
+    }
+
+    // ── Le lien vers le rapport ──────────────────────────────────────────────
+
+    /// **Le cas qui manquait.**
+    ///
+    /// Un match à venir n'a pas de `match_report_url` — la projection ne la pose
+    /// qu'à la confirmation du rapport. Sa ligne n'était donc pas cliquable dans
+    /// l'onglet Matchs d'une équipe, seul écran à afficher les trois statuts.
+    #[test]
+    fn un_match_a_venir_mene_quand_meme_a_son_rapport() {
+        let vm = vm_pour(rencontre("A", "B", None, "upcoming"), "A");
+
+        let url = vm.report_url.expect("un match à venir doit être cliquable");
+        assert!(url.contains("p1"), "l'URL doit viser l'appariement : {url}");
+    }
+
+    /// Quand la projection porte l'adresse directe, c'est elle qui sert : le
+    /// repli évite une redirection, il ne la provoque pas.
+    #[test]
+    fn l_adresse_directe_est_preferee_au_repli() {
+        let mut row = rencontre("A", "B", Some((2, 1)), "completed");
+        row.match_report_url = Some("/rapport/direct".to_string());
+
+        let vm = vm_pour(row, "A");
+
+        assert_eq!(vm.report_url.as_deref(), Some("/rapport/direct"));
+    }
+
+    /// L'autorisation prime sur les deux : sans droit, aucune adresse, pas même
+    /// le repli.
+    #[test]
+    fn sans_autorisation_aucune_adresse_meme_a_venir() {
+        let vm = to_resultat_vm(
+            rencontre("A", "B", None, "upcoming"),
+            &ResultAuthorization {
+                is_admin: false,
+                my_team_ids: HashSet::from(["team-c".to_string()]),
+            },
+            Some("A"),
+            "01ARZ3NDEKTSV4RRFFQ69G5FAW",
+        );
+
+        assert_eq!(vm.report_url, None);
     }
 
     #[test]
@@ -370,6 +428,30 @@ mod tests {
         };
         assert!(!authz.allows("team-a", "team-b"));
     }
+}
+
+/// L'adresse où mène une ligne de match.
+///
+/// `match_report_url` quand la projection le porte — c'est le lien direct vers
+/// la saisie, sans redirection. **Sinon `from_pairing`**, qui résout le rapport
+/// de l'appariement à la volée.
+///
+/// # Pourquoi le repli existe
+///
+/// La projection ne pose `match_report_url` **qu'à la confirmation** du
+/// rapport. Un match à venir n'en a donc aucune, et sa ligne n'était pas
+/// cliquable — c'est ce qui manquait à l'onglet Matchs d'une équipe, qui
+/// affiche les trois statuts là où l'onglet Résultats n'en montre que deux.
+///
+/// L'onglet Calendrier n'avait pas le défaut parce qu'il construisait déjà
+/// `from_pairing` lui-même, sans jamais lire `match_report_url`. Les deux
+/// écrans faisaient la même chose de deux façons ; il n'en reste qu'une.
+fn lien_du_rapport(row: &PairingDisplayDto, space_id: &str) -> String {
+    row.match_report_url.clone().unwrap_or_else(|| {
+        AppRoutes::default()
+            .match_report
+            .from_pairing(space_id, &row.pairing_id)
+    })
 }
 
 /// Le view model d'un match.
@@ -388,13 +470,14 @@ fn to_resultat_vm(
     row: PairingDisplayDto,
     authz: &ResultAuthorization,
     reference: Option<&str>,
+    space_id: &str,
 ) -> MatchResultatVm {
     let is_completed = row.match_status == "completed";
     let is_in_progress = row.match_status == "in_progress";
     let outcome = reference.and_then(|equipe| issue_pour(&row, equipe, is_completed));
     let round_label = reference.map(|_| row.round_name.clone());
     let report_url = if authz.allows(&row.home_team_id, &row.away_team_id) {
-        row.match_report_url
+        Some(lien_du_rapport(&row, space_id))
     } else {
         None
     };
