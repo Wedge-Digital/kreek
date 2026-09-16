@@ -68,5 +68,60 @@
       </div>
     </div>
   </div>
+  <!-- Toast global — carte 553.
+       Hors de `.app-layout` : il est en position fixe et n'a aucun besoin du
+       contexte Alpine du layout. En JS nu et non en Alpine, parce qu'Alpine est
+       chargé en `defer` — un toast déclenché tôt serait perdu, et c'est
+       précisément les messages d'erreur qu'on perdrait. -->
+  <div class="toast-zone" aria-live="polite"></div>
+  <script>
+  (function () {
+    var zone = document.currentScript.previousElementSibling;
+
+    // La valeur d'un `HX-Trigger: {"showToast": …}` arrive selon les versions
+    // telle quelle ou enveloppée. Les trois formes sont couvertes plutôt que
+    // d'en supposer une : se tromper ici rend le toast muet sans rien signaler.
+    function texte(detail) {
+      if (typeof detail === 'string') return detail;
+      if (detail && typeof detail.value === 'string') return detail.value;
+      if (detail && typeof detail.message === 'string') return detail.message;
+      return null;
+    }
+
+    function retirer(el) {
+      el.classList.add('toast--enter');
+      setTimeout(function () { el.remove(); }, 200);
+    }
+
+    window.kreekToast = function (message, type) {
+      if (!message) return null;
+      var erreur = type === 'error';
+      var el = document.createElement('div');
+      el.className = 'toast toast--' + (erreur ? 'error' : 'success') + ' toast--enter';
+      el.textContent = message;
+      zone.appendChild(el);
+      // Deux images d'écart : poser la classe et la retirer dans la même frame
+      // ne déclencherait aucune transition.
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { el.classList.remove('toast--enter'); });
+      });
+
+      if (erreur) {
+        // Reste jusqu'au clic : un refus qu'on perd de vue est un refus non reçu.
+        el.addEventListener('click', function () { retirer(el); });
+      } else {
+        setTimeout(function () { retirer(el); }, 2500);
+      }
+      return el;
+    };
+
+    // Les trois `HX-Trigger: showToast` de `team_creation` partaient dans le
+    // vide faute de cet écouteur — aucune ligne de Rust ne change.
+    document.body.addEventListener('showToast', function (evt) {
+      var msg = texte(evt.detail);
+      if (msg) window.kreekToast(msg, 'success');
+    });
+  })();
+  </script>
 </body>
 </html>

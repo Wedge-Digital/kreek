@@ -60,7 +60,9 @@ window.handleScheduleActionResponse = function (xhrLike) {
     try { data = JSON.parse(xhrLike.responseText || '{}'); } catch (e) { /* corps non-JSON */ }
 
     if (xhrLike.status >= 400) {
-        alert(data.error || 'Une erreur est survenue.');
+        // Carte 553 — le toast d'erreur remplace l'`alert()`. Il **reste jusqu'au
+        // clic** : un refus qui s'efface seul est un refus non reçu.
+        window.kreekToast(data.error || 'Une erreur est survenue.', 'error');
         return false;
     }
 
@@ -77,7 +79,13 @@ window.handleScheduleActionResponse = function (xhrLike) {
     if (data.skipped_groups && data.skipped_groups.length) {
         messages.push("Poule(s) sans effectif suffisant (moins de 2 équipes assignées), aucun appariement généré : " + data.skipped_groups.join(', '));
     }
-    if (messages.length) alert(messages.join('\n'));
+    // Un toast par message, et non un seul multi-lignes : `textContent` ne rend
+    // pas les retours à la ligne, et chacun se ferme indépendamment.
+    //
+    // Type `warning` et non `success` : ces messages disent que l'action n'a pas
+    // fait tout ce qu'on croyait, donc ils persistent jusqu'au clic comme une
+    // erreur — mais l'action a réussi, d'où la couleur distincte.
+    messages.forEach(function (m) { window.kreekToast(m, 'warning'); });
     return true;
 };
 </script>

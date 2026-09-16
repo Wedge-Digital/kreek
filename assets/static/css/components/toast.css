@@ -1,0 +1,80 @@
+/* Toast global — carte 553.
+   Le composant de notification du layout : il porte les `HX-Trigger:
+   {"showToast": …}` que personne n'écoutait, et les messages de
+   `handleScheduleActionResponse` qui passaient par `alert()`.
+
+   Valeurs reprises de `.mr-toast` (`pages/match-report-shared.css`), qui reste
+   en place : l'aligner sur ce composant est un autre chantier. */
+
+.toast-zone {
+  position: fixed;
+  right: var(--p2);
+  bottom: var(--p2);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--p1);
+  /* La zone ne capte rien : seuls les toasts d'erreur, qui se ferment au clic,
+     rétablissent `pointer-events`. Sans ça, une bande invisible en bas à droite
+     avalerait les clics de la page. */
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 420px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--white);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast--enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.toast--success { background: var(--green); }
+.toast--error   { background: var(--red); }
+.toast--warning { background: var(--orange); }
+
+/* Erreur et avertissement restent jusqu'au clic — d'où `pointer-events`, le
+   curseur et la croix. Un toast qui s'efface seul est moins bon que l'`alert()`
+   qu'il remplace : l'admin clique, regarde ailleurs, et l'information est
+   perdue sans que rien ne se soit passé à l'écran.
+
+   L'avertissement est persistant pour la même raison que l'erreur : il dit que
+   l'action n'a pas fait tout ce qu'on croyait — des rencontres conservées, des
+   équipes ignorées. Sa couleur diffère parce que l'action, elle, a réussi. */
+.toast--error,
+.toast--warning {
+  position: relative;
+  pointer-events: auto;
+  cursor: pointer;
+  padding-right: 42px;
+}
+
+.toast--error::after,
+.toast--warning::after {
+  content: "✕";
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* La tabbar mobile occupe le bas de l'écran (~64px) : sans ce décalage, le
+   toast se poserait dessus. */
+@media (max-width: 768px) {
+  .toast-zone {
+    left: var(--p2);
+    right: var(--p2);
+    bottom: calc(64px + var(--p2));
+  }
+  .toast { max-width: none; }
+}

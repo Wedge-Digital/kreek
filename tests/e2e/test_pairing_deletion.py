@@ -221,23 +221,19 @@ def test_vider_une_journee_conserve_les_rencontres_publiees(page: Page, space_id
     page.locator(".round-item").first.click()
     page.wait_for_selector(".match-list")
 
-    # Le compte-rendu passe par un alert() : sans le branchement sur
-    # handleScheduleActionResponse, aucune boîte ne s'ouvre et rien ne signale
-    # que des rencontres ont résisté.
-    messages = []
-    page.on("dialog", lambda d: (messages.append(d.message), d.accept()))
+    # Le compte-rendu passe par le toast global (carte 553) : sans le
+    # branchement sur handleScheduleActionResponse, rien n'apparaît et rien ne
+    # signale que des rencontres ont résisté.
+    #
+    # Le toast remplace l'`alert()` d'avant, et avec lui la boucle
+    # `wait_for_timeout` qu'imposait un dialogue natif : Playwright attend
+    # désormais un élément du DOM, comme partout ailleurs.
     page.locator(".btn-danger-sm", has_text="Vider les matchs").click()
 
-    # `page.wait_for_timeout` et non `time.sleep` : en API synchrone, les
-    # événements Playwright (dont les dialogues) ne sont dépilés que pendant un
-    # appel Playwright.
-    for _ in range(30):
-        if messages:
-            break
-        page.wait_for_timeout(300)
-
-    assert messages, "un compte-rendu doit être affiché"
-    assert "conservée(s)" in messages[0], messages[0]
+    toast = page.locator(".toast--warning").first
+    toast.wait_for(state="visible", timeout=10_000)
+    message = toast.inner_text()
+    assert "conservée(s)" in message, message
 
     reste = query_db(
         "SELECT id FROM competition_match_day_pairings "
