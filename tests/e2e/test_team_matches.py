@@ -174,8 +174,12 @@ def test_le_coach_de_l_equipe_peut_ouvrir_le_rapport(browser, matchs_ctx):
         vue.goto(_url(matchs_ctx, matchs_ctx["sienne"]) + "/matchs", wait_until="load")
         expect(vue.locator(".team-matches")).to_be_visible(timeout=10000)
 
-        expect(vue.locator(".match-widget-link")).to_have_count(1)
-        expect(vue.locator(".match-widget--clickable")).to_have_count(1)
+        # **Deux liens et non un** (carte 554) : le match joué de la J2, et
+        # celui de la J1 qui est encore à venir. Une ligne de match mène
+        # toujours à son rapport — c'est le repli sur `from_pairing` quand la
+        # projection ne porte pas encore d'adresse directe.
+        expect(vue.locator(".match-widget-link")).to_have_count(2)
+        expect(vue.locator(".match-widget--clickable")).to_have_count(2)
     finally:
         contexte.close()
 
@@ -195,7 +199,21 @@ def test_un_visiteur_ne_voit_pas_le_lien_du_rapport(browser, matchs_ctx):
         vue_tiers.goto(url, wait_until="load")
         expect(vue_tiers.locator(".team-matches")).to_be_visible(timeout=10000)
         expect(vue_tiers.locator(".match-widget")).not_to_have_count(0)
-        expect(vue_tiers.locator(".match-widget-link")).to_have_count(0)
+
+        # **Le match joué, et lui seul.**
+        #
+        # On ne compte plus les liens de la page entière : depuis la carte 554,
+        # le match **à venir** de cette fiche est celui que le coach simple
+        # joue lui-même contre cette équipe, et il a le droit de l'ouvrir. Le
+        # compter ferait échouer le test sur un droit légitime.
+        #
+        # Le match de la J2 est le seul qui porte un score, et le seul qui ne
+        # concerne pas le coach simple : c'est celui dont le lien doit manquer.
+        joue = vue_tiers.locator(".match-widget").filter(
+            has=vue_tiers.locator(".match-score-tds")
+        )
+        expect(joue).to_have_count(1)
+        expect(joue.locator(".match-widget-link")).to_have_count(0)
     finally:
         contexte.close()
 

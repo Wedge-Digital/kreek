@@ -50,12 +50,14 @@ from playwright.sync_api import Page, expect
 from htmx_helpers import cliquer_quand_cable
 
 from db_helpers import query_db as _query_db
+from competition_lifecycle import liberer_les_equipes
 
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
 def _create_draft(space_id: str, ctx: dict, round_id: str, home_idx: int, away_idx: int) -> str:
+    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], round_id, ctx["teams"][home_idx], ctx["teams"][away_idx])
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={

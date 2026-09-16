@@ -15,6 +15,7 @@ import re
 import pytest
 import requests
 from playwright.sync_api import Page, expect
+from competition_lifecycle import liberer_les_equipes
 
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
@@ -22,6 +23,7 @@ _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 def _create_draft(space_id: str, ctx: dict, home_idx: int = 0, away_idx: int = 1) -> str:
     """POST /match-report/new → retourne le match_report_id depuis le Location header."""
+    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], ctx["round_id"], ctx["teams"][home_idx], ctx["teams"][away_idx])
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={

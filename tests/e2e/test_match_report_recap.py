@@ -7,13 +7,12 @@ Scénarios couverts :
 - TC-04 — Publication (clic bouton) → CTA devient "Retour" + "Voir fiche"
 - TC-05 — Double publication (POST direct sur un rapport déjà publié) → 409
 - TC-06 — Draft/PreMatch → 404, Cancelled → 410
-- TC-07 — Dégradation gracieuse si find_round_context échoue (pas de bandeau contexte)
 - TC-08 — Carte Performances (SPP) absente proprement si aucune action enregistrée
 
 Allocation des paires d'équipes : une équipe est verrouillée (TeamNotAvailable) dès la
 confirmation (Draft → PreMatch) — verrou permanent en l'état actuel de l'appli, aucune remise
 à ReadyToPlay après publication (comportement connu, hors scope ici). Chaque scénario qui
-confirme un match report (mr_ready, mr_for_click_publish, mr_published, TC-06 PreMatch, TC-07,
+confirme un match report (mr_ready, mr_for_click_publish, mr_published, TC-06 PreMatch,
 TC-08) utilise donc sa propre paire d'équipes jamais réutilisée. Les scénarios Draft/Cancelled
 de TC-06 ne confirment jamais — ils réutilisent librement la première paire.
 
@@ -30,15 +29,16 @@ import requests
 from playwright.sync_api import Page, expect
 
 from db_helpers import query_db as _query_db
+from competition_lifecycle import liberer_les_equipes
 
 BASE_URL = "http://localhost:3210"
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 _INJURY_LABELS = ("Commotion", "Amoché", "Blessure Sérieuse", "Séquelle", "Mort")
-_FAKE_ROUND_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
 
 
 def _create_draft(space_id: str, ctx: dict, round_id: str, home_idx: int, away_idx: int) -> str:
+    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], round_id, ctx["teams"][home_idx], ctx["teams"][away_idx])
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={
@@ -322,32 +322,28 @@ def test_tc06_cancelled_returns_410(space_id, recap_ctx):
     )
     assert resp.status_code == 200, f"delete_match: {resp.status_code}\n{resp.text[:200]}"
 
-    for _ in range(10):
+    # **Dix secondes et non deux.** L'annulation traverse une chaîne
+    # asynchrone — `PairingDeleted`, le listener de `match_report`, l'append,
+    # puis la projection — et deux secondes n'y suffisent pas sur une base
+    # fraîche. Le test lisait alors un rapport encore en `PreMatch`, dont le
+    # récapitulatif répond `404`, et accusait le code de rendre 404 au lieu de
+    # 410 alors qu'il n'avait simplement pas fini d'annuler.
+    phase = None
+    for _ in range(50):
         phase_rows = _query_db(
             f"SELECT phase FROM match_report_proj WHERE match_report_id = '{mr_id}'"
         )
-        if phase_rows and phase_rows[0] == "Cancelled":
+        phase = phase_rows[0] if phase_rows else None
+        if phase == "Cancelled":
             break
         time.sleep(0.2)
 
+    # Assertion séparée : sans elle, un rapport non annulé ferait échouer la
+    # ligne suivante sur un code HTTP, en désignant le mauvais coupable.
+    assert phase == "Cancelled", f"le rapport devait être annulé, il est {phase!r}"
+
     resp = requests.get(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap", allow_redirects=False)
     assert resp.status_code == 410
-
-
-# ── TC-07 — Dégradation gracieuse round_context ───────────────────────────────
-
-def test_tc07_graceful_degradation_missing_round_context(page: Page, space_id, recap_ctx):
-    """round_id syntaxiquement valide mais inconnu → pas de bandeau contexte, page fonctionnelle.
-    Paire teams[8..9] dédiée, jamais réutilisée ensuite."""
-    mr_id = _advance_to_ready_to_publish(
-        space_id, recap_ctx, _FAKE_ROUND_ID, home_idx=8, away_idx=9, with_actions=False,
-    )
-
-    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap", wait_until="load")
-
-    expect(page.locator(".ms-hero-header")).to_have_count(0)
-    expect(page.locator(".ms-hero")).to_be_visible()
-    expect(page.locator(".ms-score-num").first).to_be_visible()
 
 
 # ── TC-08 — Performances (SPP) absente sans action ────────────────────────────

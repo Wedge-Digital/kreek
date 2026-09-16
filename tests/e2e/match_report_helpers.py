@@ -21,13 +21,14 @@ import time
 
 import requests
 
-from competition_lifecycle import BASE_URL
+from competition_lifecycle import liberer_les_equipes, BASE_URL
 from db_helpers import query_db
 
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
 def create_draft(space_id, ctx, round_id, home_team_id, away_team_id):
+    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], round_id, home_team_id, away_team_id)
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={

@@ -34,6 +34,7 @@ import pytest
 import requests
 
 from db_helpers import attendre_que, query_db
+from competition_lifecycle import liberer_les_equipes
 
 BASE_URL = "http://localhost:3210"
 
@@ -62,6 +63,7 @@ def _creer_rapport(space_id, ctx, round_id, home, away):
         "home_team_id": home,
         "away_team_id": away,
     }
+    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], round_id, home, away)
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new", data=champs, allow_redirects=False
     )

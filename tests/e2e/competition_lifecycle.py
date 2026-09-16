@@ -33,6 +33,8 @@ Deux constructions d'équipe cohabitent, et ce n'est pas un doublon :
 import re
 import time
 
+import requests
+
 from htmx_helpers import cliquer_quand_cable
 from playwright.sync_api import Page, expect
 
@@ -591,3 +593,62 @@ def build_full_competition(
         }
     finally:
         page.close()
+
+
+def liberer_les_equipes(
+    space_id: str,
+    competition_id: str,
+    season_id: str,
+    round_id: str,
+    home_team_id: str,
+    away_team_id: str,
+) -> None:
+    """Rend ces deux équipes disponibles pour un match sur cette journée.
+
+    # Pourquoi c'est nécessaire depuis la carte 551
+
+    Une équipe ne joue **qu'un match par journée**. `build_full_competition`
+    apparie toutes les journées : chaque équipe y a déjà un adversaire, tiré au
+    sort. Un test qui demande `teams[0]` contre `teams[1]` réclame donc un couple
+    que le tirage n'a pas formé, entre deux équipes déjà prises — et
+    l'application le refuse, à juste titre.
+
+    # Pourquoi elle ne vide pas la journée
+
+    Elle l'a fait, et c'était un piège : plusieurs tests d'un même fichier
+    créent des rapports sur **le même round**. Vider supprimait les appariements
+    des précédents, donc **annulait leurs rapports** — huit tests de
+    `test_match_report_step3_4_actions` tombaient sans que rien ne dise
+    pourquoi, le symptôme étant un widget qui ne se chargeait pas.
+
+    Elle ne retire donc que les rencontres qui **engagent l'une des deux
+    équipes**, et laisse les autres intactes.
+
+    Sans effet quand le couple demandé est déjà apparié : c'est alors le match
+    que le test veut ouvrir, et le supprimer annulerait son rapport.
+    """
+    from db_helpers import query_db
+
+    deja = query_db(
+        "SELECT id FROM competition_match_day_pairings "
+        f"WHERE match_day_id = '{round_id}' "
+        f"  AND ((home_team_id = '{home_team_id}' AND away_team_id = '{away_team_id}') "
+        f"    OR (home_team_id = '{away_team_id}' AND away_team_id = '{home_team_id}'))"
+    )
+    if deja:
+        return
+
+    genants = query_db(
+        "SELECT id FROM competition_match_day_pairings "
+        f"WHERE match_day_id = '{round_id}' "
+        f"  AND (home_team_id IN ('{home_team_id}', '{away_team_id}') "
+        f"    OR away_team_id IN ('{home_team_id}', '{away_team_id}'))"
+    )
+    for pairing_id in genants:
+        requests.delete(
+            f"{BASE_URL}/app/{space_id}/competitions/{competition_id}/{season_id}"
+            f"/admin/schedule/delete-match",
+            json={"pairing_id": pairing_id.strip()},
+            headers={"Content-Type": "application/json", "HX-Request": "true"},
+            timeout=30,
+        )
