@@ -77,6 +77,47 @@ impl MatchDay {
     pub fn is_rest(&self) -> bool {
         self.day_type == MatchDayType::Rest
     }
+
+    /// L'appariement qui empêche `a` et `b` de se rencontrer cette journée —
+    /// celui où **l'une des deux** est déjà engagée (carte 551).
+    ///
+    /// # Pourquoi l'appariement et non un booléen
+    ///
+    /// Le refus doit nommer l'équipe fautive et son adversaire : « Les Pillards
+    /// affrontent déjà Lady's Ghosts ». Un `bool` obligerait l'appelant à
+    /// reparcourir les appariements pour dire quoi que ce soit d'utile, alors
+    /// que le parcours vient d'avoir lieu ici.
+    ///
+    /// # Les deux camps, et non le seul domicile
+    ///
+    /// Une équipe engagée **à l'extérieur** est tout aussi occupée. Ne regarder
+    /// que `home_team_id` laisserait passer la moitié des cas — celle des
+    /// déplacements — et le défaut ressemblerait à une donnée corrompue plutôt
+    /// qu'à une règle incomplète.
+    ///
+    /// Le couple déjà programmé n'est pas un cas à part : si `a`-`b` existe,
+    /// alors `a` est déjà engagée, et c'est cet appariement qui est rendu.
+    pub fn engagement_existant(&self, a: &TeamId, b: &TeamId) -> Option<&Pairing> {
+        self.pairings.iter().find(|p| p.engage(a) || p.engage(b))
+    }
+}
+
+impl Pairing {
+    /// `equipe` joue-t-elle cette rencontre, d'un camp ou de l'autre ?
+    pub fn engage(&self, equipe: &TeamId) -> bool {
+        self.home_team_id == *equipe || self.away_team_id == *equipe
+    }
+
+    /// L'adversaire de `equipe` dans cette rencontre, si elle y joue.
+    pub fn adversaire_de(&self, equipe: &TeamId) -> Option<&TeamId> {
+        if self.home_team_id == *equipe {
+            Some(&self.away_team_id)
+        } else if self.away_team_id == *equipe {
+            Some(&self.home_team_id)
+        } else {
+            None
+        }
+    }
 }
 
 fn normalize_pair(a: &str, b: &str) -> (String, String) {
@@ -209,5 +250,100 @@ mod tests {
             let norm = normalize_pair(a, b);
             assert_ne!(norm, normalize_pair("team-1", "team-2"));
         }
+    }
+
+    // ── L'invariant de journée (carte 551) ───────────────────────────────────
+
+    /// Un identifiant neuf. Pas de littéral « team-a » : `TeamId` est un ULID,
+    /// et `try_new("team-a")` échoue en `InvalidLength`.
+    fn equipe() -> TeamId {
+        TeamId::new()
+    }
+
+    fn journee_avec(pairings: Vec<Pairing>) -> MatchDay {
+        MatchDay {
+            id: MatchId::new(),
+            season_id: SeasonId::new(),
+            name: MatchDayName::try_new("Journée 15".to_string()).unwrap(),
+            day_type: MatchDayType::FixedDate,
+            date_start: None,
+            date_end: None,
+            position: MatchDayPosition::try_new(14).unwrap(),
+            pairings,
+        }
+    }
+
+    fn rencontre(domicile: &TeamId, exterieur: &TeamId) -> Pairing {
+        Pairing {
+            id: PairingId::new(),
+            home_team_id: domicile.clone(),
+            away_team_id: exterieur.clone(),
+        }
+    }
+
+    #[test]
+    fn une_journee_vide_n_engage_personne() {
+        let (a, b) = (equipe(), equipe());
+        assert!(journee_avec(vec![]).engagement_existant(&a, &b).is_none());
+    }
+
+    #[test]
+    fn une_equipe_engagee_a_domicile_bloque() {
+        let (a, b, c) = (equipe(), equipe(), equipe());
+        let journee = journee_avec(vec![rencontre(&a, &c)]);
+
+        let bloquant = journee.engagement_existant(&a, &b).expect("a joue déjà");
+        assert_eq!(bloquant.adversaire_de(&a), Some(&c));
+    }
+
+    /// **Le test qui compte.**
+    ///
+    /// Une implémentation ne regardant que `home_team_id` passerait tous les
+    /// autres et manquerait celui-ci — c'est-à-dire la moitié des rencontres,
+    /// celle des déplacements.
+    #[test]
+    fn une_equipe_engagee_a_l_exterieur_bloque_aussi() {
+        let (a, b, c) = (equipe(), equipe(), equipe());
+        let journee = journee_avec(vec![rencontre(&c, &a)]);
+
+        let bloquant = journee.engagement_existant(&a, &b).expect("a joue déjà");
+        assert_eq!(bloquant.adversaire_de(&a), Some(&c));
+    }
+
+    /// La seconde équipe compte autant que la première : `engagement_existant`
+    /// n'est pas orienté.
+    #[test]
+    fn la_seconde_equipe_bloque_tout_autant() {
+        let (a, b, c) = (equipe(), equipe(), equipe());
+        let journee = journee_avec(vec![rencontre(&b, &c)]);
+
+        assert!(journee.engagement_existant(&a, &b).is_some());
+    }
+
+    /// Le couple déjà programmé n'est pas un cas à part — il tombe sous la même
+    /// règle, et c'est pourquoi aucune vérification supplémentaire n'est écrite.
+    #[test]
+    fn le_meme_couple_est_deja_engage() {
+        let (a, b) = (equipe(), equipe());
+        let journee = journee_avec(vec![rencontre(&a, &b)]);
+
+        assert!(journee.engagement_existant(&a, &b).is_some());
+        // Et dans l'autre sens, l'appariement ayant pu retenir l'autre camp.
+        assert!(journee.engagement_existant(&b, &a).is_some());
+    }
+
+    #[test]
+    fn des_equipes_libres_ne_sont_pas_bloquees_par_les_autres_rencontres() {
+        let (a, b) = (equipe(), equipe());
+        let (c, d) = (equipe(), equipe());
+        let journee = journee_avec(vec![rencontre(&c, &d)]);
+
+        assert!(journee.engagement_existant(&a, &b).is_none());
+    }
+
+    #[test]
+    fn adversaire_de_rend_none_pour_une_equipe_absente() {
+        let (a, b, c) = (equipe(), equipe(), equipe());
+        assert_eq!(rencontre(&a, &b).adversaire_de(&c), None);
     }
 }

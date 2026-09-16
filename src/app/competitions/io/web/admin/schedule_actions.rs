@@ -109,6 +109,18 @@ fn add_match_refused(names: &[String]) -> Response {
         .into_response()
 }
 
+/// Carte 551 — même forme que `add_match_refused` : 422 + `ErrorResult`, que
+/// `handleScheduleActionResponse` rend en toast d'erreur persistant.
+fn team_already_scheduled_refused(equipe: &str, adversaire: &str) -> Response {
+    let message =
+        format!("Match non créé : {equipe} affronte déjà {adversaire} lors de cette journée.");
+    (
+        StatusCode::UNPROCESSABLE_ENTITY,
+        Json(ErrorResult { error: message }),
+    )
+        .into_response()
+}
+
 fn pairings_already_exist_refused() -> Response {
     let message = "Cette journée a déjà des appariements. Videz-les d'abord (\"Vider les matchs\") avant de régénérer.".to_string();
     (
@@ -577,9 +589,12 @@ pub async fn post_add_match(
     )
     .await
     {
-        Ok(()) => schedule_changed_with_warning(vec![], vec![], vec![]),
+        Ok(_) => schedule_changed_with_warning(vec![], vec![], vec![]),
         Err(add_match_use_case::AddMatchError::TeamsNotEnrolled(names)) => {
             add_match_refused(&names)
+        }
+        Err(add_match_use_case::AddMatchError::TeamAlreadyScheduled { equipe, adversaire }) => {
+            team_already_scheduled_refused(&equipe, &adversaire)
         }
         Err(add_match_use_case::AddMatchError::RoundNotFound) => {
             StatusCode::NOT_FOUND.into_response()

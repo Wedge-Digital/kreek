@@ -186,8 +186,6 @@
                                  "team_creation", "references", "ranking", "spaces"]
 # L'annulation libère le verrou de `teams` et défait la ligne de `competitions`,
 # par le bus d'app events.
-"test_annuler_un_rapport" = ["match_report", "competitions", "teams",
-                             "team_creation", "references", "ranking", "spaces"]
 # N'affiche que deux pages, mais les mots-clefs viennent du corpus et les
 # libellés de l'adapter : `references` et `players` suffisent, plus ce qu'il
 # faut pour qu'une équipe et ses joueurs existent.
@@ -204,6 +202,13 @@
                                   "ranking", "spp_calculator", "references", "team_creation", "spaces"]
 "test_pairing_deletion" = ["competitions", "match_report", "teams", "players",
                            "references", "ranking", "team_creation", "spaces", "spp_calculator"]
+
+# L'invariant de journée (carte 551) : la règle vit dans le domaine de
+# `competitions`, et le test exerce la route d'ajout manuel de l'admin —
+# le chemin qui ne la connaissait pas. `teams` et `team_creation` sont
+# traversés par la construction des quatre équipes enrôlées.
+"test_invariant_journee" = ["competitions", "teams", "team_creation", "spaces",
+                            "references"]
 
 # Coups de pouce et trésorerie : le seul test qui achète réellement des
 # inducements. `teams` y est vérifié, pas traversé — c'est sa trésorerie et son
