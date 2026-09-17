@@ -26,16 +26,26 @@ _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 _TEAM_ID_RE = re.compile(r"/inducements/([0-9A-Z]{26})")
 
 
-def _create_pre_match(space_id: str, ctx: dict, home_idx: int, away_idx: int) -> str:
+def _create_pre_match(
+    space_id: str, ctx: dict, home_idx: int, away_idx: int, round_idx: int = 0
+) -> str:
     """Crée un match report — origine Manual, auto-confirmée en PreMatch en
     un seul appel (cf. create_match_report_use_case::execute)."""
-    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], ctx["round_id"], ctx["teams"][home_idx], ctx["teams"][away_idx])
+    round_id = ctx["round_ids"][round_idx]
+    liberer_les_equipes(
+        space_id,
+        ctx["competition_id"],
+        ctx["season_id"],
+        round_id,
+        ctx["teams"][home_idx],
+        ctx["teams"][away_idx],
+    )
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={
             "competition_id": ctx["competition_id"],
             "season_id": ctx["season_id"],
-            "round_id": ctx["round_id"],
+            "round_id": round_id,
             "home_team_id": ctx["teams"][home_idx],
             "away_team_id": ctx["teams"][away_idx],
         },
@@ -80,6 +90,14 @@ def inducements_ctx(browser, space_id):
         "competition_id": full["competition_id"],
         "season_id": full["season_id"],
         "round_id": full["round_ids"][0],
+        # **Toutes les journées, et pas seulement la première.**
+        #
+        # Depuis la carte 551, une équipe ne joue qu'un match par journée. Deux
+        # rapports de ce fichier partageant une équipe doivent donc vivre sur
+        # deux journées : sinon, créer le second libère l'équipe commune, ce qui
+        # supprime l'appariement du premier et annule son rapport — sa page
+        # d'inducements répond alors 404, sans que rien ne le dise.
+        "round_ids": full["round_ids"],
         "teams": full["team_ids"],
     }
 
@@ -87,7 +105,7 @@ def inducements_ctx(browser, space_id):
 @pytest.fixture(scope="module")
 def inducements_mr(space_id, inducements_ctx):
     """Match report en PreMatch avec TeamValues enregistrées (après fan factor POST)."""
-    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=2, away_idx=3)
+    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=2, away_idx=3, round_idx=0)
     resp = _post_fan_factor(space_id, mr_id)
     assert resp.status_code in (302, 303), f"fan factor POST: {resp.status_code}"
     location = resp.headers.get("Location", "")
@@ -97,7 +115,7 @@ def inducements_mr(space_id, inducements_ctx):
 @pytest.fixture(scope="module")
 def underdog_inducements_location(space_id, inducements_ctx):
     """Fait passer le TopDog (POST direct, panier vide) → retourne l'URL Underdog."""
-    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=0, away_idx=1)
+    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=0, away_idx=1, round_idx=1)
     resp = _post_fan_factor(space_id, mr_id)
     assert resp.status_code in (302, 303), f"fan factor POST: {resp.status_code}"
     location = resp.headers.get("Location", "")
@@ -206,7 +224,7 @@ def test_underdog_pass_redirects_to_step3(page: Page, space_id, underdog_inducem
 def test_pass_discards_pending_selection(page: Page, space_id, inducements_ctx):
     """'Passer' soumet toujours un panier vide, même si des inducements sont
     sélectionnés localement (comportement attendu : édition annulée)."""
-    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=1, away_idx=2)
+    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=1, away_idx=2, round_idx=2)
     resp = _post_fan_factor(space_id, mr_id)
     location = resp.headers.get("Location", "")
     if "/inducements/" not in location:
