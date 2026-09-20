@@ -29,6 +29,7 @@ Thumbs.db
 
 # Local scripts (data extraction, one-off tools)
 /scripts/__pycache__
+/scripts/impact/__pycache__
 
 # Tests E2E (Playwright)
 /tests/e2e/__pycache__
