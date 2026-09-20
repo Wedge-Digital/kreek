@@ -2,6 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{RosterPositionUid, TeamValue};
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
+use crate::app::match_report::use_cases::record_inducements_use_case::RecordInducementsError;
 use crate::app::match_report::use_cases::record_inducements_use_case::{
     self, InducementPurchaseCmd, MercenaryLevel, MercenaryPurchaseCmd, RecordInducementsCommand,
     RecordInducementsOutcome,
@@ -274,25 +275,59 @@ pub async fn post_inducements(
         Err(record_inducements_use_case::RecordInducementsError::NotInPreMatchPhase) => {
             StatusCode::CONFLICT.into_response()
         }
-        // Un refus du domaine est une saisie invalide, pas une panne : 422 et
-        // une ligne `warn`, là où le `Err(e)` générique en faisait un 500 muet.
-        //
-        // `UnknownInducement` en particulier signalait jusqu'ici *rien du tout*
-        // — l'achat était filtré en silence après avoir été facturé
-        // (carte 406). Il vaut mieux un refus lisible qu'un mercenaire évaporé.
-        Err(record_inducements_use_case::RecordInducementsError::Domain(e)) => {
-            tracing::warn!(
-                match_report_id = %match_report_id,
-                team_id = %team_id,
-                erreur = %e,
-                "post_inducements refusé par le domaine"
-            );
-            (StatusCode::UNPROCESSABLE_ENTITY, e.to_string()).into_response()
+        Err(e) => match refus_d_achat(&e) {
+            Some((statut, message)) => {
+                tracing::warn!(
+                    match_report_id = %match_report_id,
+                    team_id = %team_id,
+                    erreur = ?e,
+                    "post_inducements refusé"
+                );
+                (statut, message).into_response()
+            }
+            None => {
+                tracing::error!("post_inducements: {e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        },
+    }
+}
+
+/// Le statut et le message d'un achat refusé — `None` pour ce qui est une
+/// vraie panne.
+///
+/// **422 et non 500** : ces refus sont des saisies invalides, et le `Err(e)`
+/// générique en faisait des 500 muets.
+///
+/// `UnknownInducement` signalait jusqu'ici *rien du tout* — l'achat était
+/// filtré en silence après avoir été facturé (carte 406). Il vaut mieux un
+/// refus lisible qu'un mercenaire évaporé.
+///
+/// `UnauthorizedInducement` tombait dans le générique, faute d'être atteignable
+/// autrement qu'en forgeant la requête. La carte 561, en retirant de la liste
+/// autorisée les coups de pouce auxquels l'équipe n'a pas droit, en a fait un
+/// chemin normal — et la CI a répondu 500.
+///
+/// Les variantes restantes sont nommées une par une : une panne de lecture ou
+/// d'écriture est bien un 500, et un joker aurait laissé le prochain refus y
+/// retomber en silence.
+fn refus_d_achat(erreur: &RecordInducementsError) -> Option<(StatusCode, String)> {
+    match erreur {
+        RecordInducementsError::Domain(e) => {
+            Some((StatusCode::UNPROCESSABLE_ENTITY, e.to_string()))
         }
-        Err(e) => {
-            tracing::error!("post_inducements: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        RecordInducementsError::UnauthorizedInducement(uid) => Some((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("Coup de pouce non autorisé pour cette équipe : {uid}"),
+        )),
+        RecordInducementsError::NotFound
+        | RecordInducementsError::NotInPreMatchPhase
+        | RecordInducementsError::TeamValuesNotRecorded
+        | RecordInducementsError::TreasuryUnavailable(_)
+        | RecordInducementsError::TierRulesUnavailable(_)
+        | RecordInducementsError::Repository(_)
+        | RecordInducementsError::InvalidMercenaryPosition(_)
+        | RecordInducementsError::PlayerCountUnavailable(_) => None,
     }
 }
 
@@ -338,4 +373,50 @@ fn parse_purchases(selection_json: &str) -> Vec<InducementPurchaseCmd> {
             qty: item.qty,
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::domain::error::DomainError;
+
+    fn statut(erreur: RecordInducementsError) -> Option<StatusCode> {
+        refus_d_achat(&erreur).map(|(s, _)| s)
+    }
+
+    /// Carte 561 — le refus que la CI a reçu en 500. Le coup de pouce n'est pas
+    /// dans ce que le tier autorise à cette équipe : une saisie invalide.
+    #[test]
+    fn un_coup_de_pouce_non_autorise_est_un_refus_pas_une_panne() {
+        let erreur = RecordInducementsError::UnauthorizedInducement("WANDERING_APOTHECARY".into());
+        let (statut, message) = refus_d_achat(&erreur).expect("un refus, pas une panne");
+
+        assert_eq!(statut, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(
+            message.contains("WANDERING_APOTHECARY"),
+            "le message doit nommer le coup de pouce : {message}"
+        );
+    }
+
+    #[test]
+    fn un_refus_du_domaine_reste_un_refus() {
+        let erreur = RecordInducementsError::Domain(DomainError::UnknownInducement {
+            uid: "BRIBES".into(),
+        });
+        assert_eq!(statut(erreur), Some(StatusCode::UNPROCESSABLE_ENTITY));
+    }
+
+    /// Le contre-exemple : une panne de lecture reste un 500. Sans lui, une
+    /// fonction qui rendrait 422 pour tout passerait les deux tests ci-dessus.
+    #[test]
+    fn une_panne_de_lecture_reste_une_panne() {
+        assert_eq!(
+            statut(RecordInducementsError::TierRulesUnavailable("base".into())),
+            None
+        );
+        assert_eq!(
+            statut(RecordInducementsError::Repository("base".into())),
+            None
+        );
+    }
 }

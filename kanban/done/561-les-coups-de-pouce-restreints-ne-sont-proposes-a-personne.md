@@ -10,6 +10,7 @@
 `src/app/references/io/web/inducement_selector_controller.rs`,
 `src/infrastructure/match_report/competition_data_adapter.rs`,
 `assets/references.example/inducements_fr.json`,
+`src/app/match_report/io/web/inducements_controller.rs`,
 `tests/e2e/test_inducements_restreints.py` *(nouveau)*,
 `tests/e2e/test_inducement_treasury.py`, `tests/impact-map.toml`
 
@@ -81,6 +82,28 @@ Masseurs douteux à l'underdog, qui est celle des deux équipes qui vaut le
 moins — donc parfois `DEMO_ZEPHYR`, qui n'y a pas droit. Il passait parce que
 l'achat ne vérifiait rien. Trois Renforts remplacent les deux Masseurs, à
 somme égale : le test porte sur la trésorerie, pas sur les restrictions.
+
+## Le refus répondait 500 — corrigé après la CI
+
+Le test e2e a reçu **500 au lieu de 422** au premier passage en CI, et c'est
+lui qui a découvert le défaut suivant.
+
+Le refus a bien lieu, mais par `UnauthorizedInducement`, que la couche
+applicative lève quand un uid n'est pas dans la liste du tier. Le contrôleur
+ne traduisait que `Domain(_)` en 422 ; celui-là tombait dans le `Err(e)`
+générique, donc en 500.
+
+Il était jusqu'ici inatteignable autrement qu'en forgeant la requête, ce qui
+explique que personne ne l'ait vu. **Cette carte en fait un chemin normal** :
+retirer de la liste autorisée les coups de pouce auxquels l'équipe n'a pas
+droit, c'est précisément faire passer les achats interdits par ce garde-fou.
+
+La décision est extraite dans `refus_d_achat`, qui rend le statut et le message
+d'un refus et `None` pour une vraie panne. Ses variantes sont **nommées une par
+une** : un joker aurait laissé le prochain refus retomber en 500 sans bruit.
+Trois tests unitaires, dont un contre-exemple — une panne de lecture reste un
+500, sans quoi une fonction qui rendrait 422 pour tout passerait les deux
+autres.
 
 ## Terminé quand
 
