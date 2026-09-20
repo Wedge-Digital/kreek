@@ -237,6 +237,13 @@ mod tests {
         async fn delete_lines_for_match(&self, _: &str) -> Result<(), RankingRepositoryError> {
             unimplemented!("hors du périmètre du rejeu")
         }
+        async fn reassign_round_for_match(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Result<(), RankingRepositoryError> {
+            Ok(())
+        }
         async fn find_all_lines_for_season(
             &self,
             _: &str,

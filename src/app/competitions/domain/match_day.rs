@@ -100,6 +100,28 @@ impl MatchDay {
     pub fn engagement_existant(&self, a: &TeamId, b: &TeamId) -> Option<&Pairing> {
         self.pairings.iter().find(|p| p.engage(a) || p.engage(b))
     }
+
+    /// Accueille une rencontre venue d'une autre journée (carte 557).
+    ///
+    /// Même règle que pour une rencontre nouvelle : si l'une des deux équipes
+    /// joue déjà ici, le déplacement est refusé, et c'est **l'appariement
+    /// bloquant** qui est rendu — l'appelant doit pouvoir dire lequel.
+    pub fn accueillir(&mut self, pairing: Pairing) -> Result<(), Pairing> {
+        if let Some(bloquant) =
+            self.engagement_existant(&pairing.home_team_id, &pairing.away_team_id)
+        {
+            return Err(bloquant.clone());
+        }
+        self.pairings.push(pairing);
+        Ok(())
+    }
+
+    /// Retire une rencontre de cette journée, et la rend pour qu'une autre
+    /// l'accueille. `None` si elle n'y était pas.
+    pub fn liberer(&mut self, pairing_id: &PairingId) -> Option<Pairing> {
+        let position = self.pairings.iter().position(|p| &p.id == pairing_id)?;
+        Some(self.pairings.remove(position))
+    }
 }
 
 impl Pairing {
@@ -318,6 +340,42 @@ mod tests {
         let journee = journee_avec(vec![rencontre(&b, &c)]);
 
         assert!(journee.engagement_existant(&a, &b).is_some());
+    }
+
+    // ── Le déplacement d'une rencontre (carte 557) ────────────────────────────
+
+    #[test]
+    fn une_journee_libre_accueille_la_rencontre() {
+        let (a, b) = (equipe(), equipe());
+        let mut cible = journee_avec(vec![]);
+
+        assert!(cible.accueillir(rencontre(&a, &b)).is_ok());
+        assert_eq!(cible.pairings.len(), 1);
+    }
+
+    /// Le refus nomme l'appariement bloquant, comme pour un ajout : un
+    /// déplacement ne contourne pas la règle de la carte 551.
+    #[test]
+    fn une_journee_ou_une_equipe_joue_deja_refuse_en_nommant_le_match() {
+        let (a, b, c) = (equipe(), equipe(), equipe());
+        let mut cible = journee_avec(vec![rencontre(&c, &b)]);
+
+        let bloquant = cible
+            .accueillir(rencontre(&a, &b))
+            .expect_err("b joue déjà");
+        assert_eq!(bloquant.adversaire_de(&b), Some(&c));
+        assert_eq!(cible.pairings.len(), 1, "rien n'est ajouté sur un refus");
+    }
+
+    #[test]
+    fn liberer_rend_la_rencontre_et_la_retire() {
+        let (a, b) = (equipe(), equipe());
+        let deplacee = rencontre(&a, &b);
+        let mut depart = journee_avec(vec![deplacee.clone()]);
+
+        assert_eq!(depart.liberer(&deplacee.id), Some(deplacee));
+        assert!(depart.pairings.is_empty());
+        assert_eq!(depart.liberer(&PairingId::new()), None);
     }
 
     /// Le couple déjà programmé n'est pas un cas à part — il tombe sous la même

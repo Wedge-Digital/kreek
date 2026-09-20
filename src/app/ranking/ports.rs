@@ -122,6 +122,14 @@ pub trait IRankingRepository: Send + Sync {
         match_report_id: &str,
     ) -> Result<(), RankingRepositoryError>;
 
+    /// Date les lignes d'un match d'une autre journée (carte 557). La journée
+    /// n'entre dans aucun calcul : la colonne change, les cumuls non.
+    async fn reassign_round_for_match(
+        &self,
+        match_report_id: &str,
+        round_id: &str,
+    ) -> Result<(), RankingRepositoryError>;
+
     /// Toutes les lignes de la saison, **dans l'ordre où elles ont été
     /// enregistrées**.
     ///

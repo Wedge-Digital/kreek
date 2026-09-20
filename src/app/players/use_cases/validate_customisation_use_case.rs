@@ -356,6 +356,13 @@ mod tests {
         ) -> Result<bool, RepositoryError> {
             Ok(false)
         }
+        async fn find_ids_by_match(
+            &self,
+            _: &TeamId,
+            _: &str,
+        ) -> Result<Vec<PlayerId>, RepositoryError> {
+            Ok(vec![])
+        }
     }
 
     // ── Aides ─────────────────────────────────────────────────────────────────

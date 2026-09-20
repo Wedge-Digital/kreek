@@ -78,6 +78,16 @@ pub enum MatchReportAppEvent {
     /// Le rapport repasse en état corrigeable : les BCs qui en avaient tiré des
     /// conséquences doivent les défaire.
     MatchReportUnpublished(MatchReportUnpublishedPayload),
+    /// Un rapport **publié** a changé de journée (carte 557). `ranking` déplace
+    /// ses lignes ; `players` reçoit son propre événement par équipe. Un
+    /// rapport non publié ne fait rien sortir : ces BCs ne le connaissent pas.
+    MatchReportRoundReassigned {
+        event_id: EventId,
+        match_report_id: String,
+        season_id: String,
+        round_id: String,
+        round_label: String,
+    },
 }
 
 /// Identifiants seulement, **aucune action** : chaque BC défait ce qu'il a
@@ -185,6 +195,7 @@ impl MatchReportAppEvent {
     pub const MATCH_REPORT_UNPUBLISHED: &'static str = "MatchReportUnpublished";
     pub const JOURNEYMEN_FIELDED: &'static str = "MatchReportJourneymenFielded";
     pub const JOURNEYMEN_WITHDRAWN: &'static str = "MatchReportJourneymenWithdrawn";
+    pub const MATCH_REPORT_ROUND_REASSIGNED: &'static str = "MatchReportRoundReassigned";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -194,6 +205,7 @@ impl MatchReportAppEvent {
             Self::MatchReportUnpublished(_) => Self::MATCH_REPORT_UNPUBLISHED,
             Self::JourneymenFielded { .. } => Self::JOURNEYMEN_FIELDED,
             Self::JourneymenWithdrawn { .. } => Self::JOURNEYMEN_WITHDRAWN,
+            Self::MatchReportRoundReassigned { .. } => Self::MATCH_REPORT_ROUND_REASSIGNED,
         }
     }
 
@@ -211,6 +223,9 @@ impl MatchReportAppEvent {
                 match_report_id, ..
             }
             | Self::JourneymenWithdrawn {
+                match_report_id, ..
+            }
+            | Self::MatchReportRoundReassigned {
                 match_report_id, ..
             } => match_report_id.clone(),
         };

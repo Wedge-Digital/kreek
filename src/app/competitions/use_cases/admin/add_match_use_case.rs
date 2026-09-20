@@ -440,6 +440,16 @@ mod tests {
         > {
             Ok(())
         }
+        async fn move_pairing(
+            &self,
+            _: &str,
+            _: &MatchDay,
+        ) -> Result<
+            (),
+            crate::app::competitions::domain::match_day_repository_port::MatchDayRepositoryError,
+        > {
+            Ok(())
+        }
         async fn ensure_match_days_from_structure(
             &self,
             _: &str,

@@ -616,21 +616,33 @@
 .ms-page.ms-cta-row { flex-direction: column; }
 }
 
-/* ── Zone de correction d'un rapport publié ──────────────────────────────── */
+/* ── Barre d'administration, sous le cartouche (carte 557) ───────────────── */
 
-.ms-page .ms-correct-zone,
-.ms-page.ms-correct-zone {
-  margin-top: var(--p2);
-  padding-top: var(--p2);
-  border-top: 1px solid var(--dark-5);
+.ms-page .ms-admin-bar,
+.ms-page.ms-admin-bar {
   display: flex;
-  flex-direction: column;
-  gap: var(--p05);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p1) var(--p2);
+  margin-top: var(--p2);
+  padding: 12px 16px;
+  background: var(--white);
+  border: 1px solid var(--dark-5);
+  border-left: 3px solid var(--dark-3);
+  border-radius: 12px;
+}
+.ms-page .ms-admin-bar-label,
+.ms-page.ms-admin-bar-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dark-3);
 }
 
 .ms-page .ms-correct-btn,
 .ms-page.ms-correct-btn {
-  align-self: flex-start;
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 18px;
   background: transparent;
@@ -656,16 +668,9 @@
 .ms-page .ms-correct-btn:disabled:hover,
 .ms-page.ms-correct-btn:disabled:hover { background: transparent; border-color: var(--dark-5); }
 
-.ms-page .ms-correct-hint,
-.ms-page.ms-correct-hint {
-  font-size: var(--text-tiny);
-  color: var(--dark-3);
-  line-height: 1.5;
-  max-width: 52ch;
-}
-
 .ms-page .ms-correct-blocked,
 .ms-page.ms-correct-blocked {
+  flex-basis: 100%;
   display: flex;
   align-items: flex-start;
   gap: 8px;

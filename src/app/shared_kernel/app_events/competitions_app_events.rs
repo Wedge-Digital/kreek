@@ -24,18 +24,31 @@ pub enum CompetitionsAppEvent {
         event_id: EventId,
         pairing_id: String,
     },
+    /// La rencontre a changé de journée (carte 557). `match_report` suit son
+    /// rapport ; le nom de la journée d'arrivée évite aux BCs aval de relire
+    /// le calendrier.
+    PairingMoved {
+        event_id: EventId,
+        pairing_id: String,
+        season_id: String,
+        from_round_id: String,
+        to_round_id: String,
+        to_round_name: String,
+    },
 }
 
 impl CompetitionsAppEvent {
     pub const COMPETITION_CREATED: &'static str = "CompetitionCreated";
     pub const PAIRING_CREATED: &'static str = "PairingCreated";
     pub const PAIRING_DELETED: &'static str = "PairingDeleted";
+    pub const PAIRING_MOVED: &'static str = "PairingMoved";
 
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::CompetitionCreated { .. } => Self::COMPETITION_CREATED,
             Self::PairingCreated { .. } => Self::PAIRING_CREATED,
             Self::PairingDeleted { .. } => Self::PAIRING_DELETED,
+            Self::PairingMoved { .. } => Self::PAIRING_MOVED,
         }
     }
 
@@ -43,7 +56,9 @@ impl CompetitionsAppEvent {
         let emitter = match self {
             Self::CompetitionCreated { competition_id, .. } => competition_id.to_string(),
             Self::PairingCreated { pairing_id, .. } => pairing_id.clone(),
-            Self::PairingDeleted { pairing_id, .. } => pairing_id.clone(),
+            Self::PairingDeleted { pairing_id, .. } | Self::PairingMoved { pairing_id, .. } => {
+                pairing_id.clone()
+            }
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),

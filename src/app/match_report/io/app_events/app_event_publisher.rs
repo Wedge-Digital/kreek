@@ -133,7 +133,67 @@ async fn aiguiller(
             handle_journeymen_withdrawn(match_report_id, team_id, withdrawn, app_event_bus, repo)
                 .await
         }
+        MatchReportDomainEvent::RoundReassigned { round_id } => {
+            handle_round_reassigned(
+                match_report_id,
+                &round_id.to_string(),
+                app_event_bus,
+                repo,
+                competition_data,
+            )
+            .await
+        }
         _ => {}
+    }
+}
+
+/// Le changement de journée ne sort que pour un rapport **publié** (carte
+/// 557) : `ranking` et `players` n'ont rien enregistré d'un rapport qui ne
+/// l'est pas, et n'auraient rien à déplacer.
+///
+/// Le libellé de la journée est résolu ici, une fois, pour les deux BCs aval :
+/// c'est ce que `publish_player_impact_events` fait déjà à la publication.
+async fn handle_round_reassigned(
+    match_report_id: &str,
+    round_id: &str,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
+    competition_data: &dyn ICompetitionDataPort,
+) {
+    let published = match repo.find_by_id(match_report_id).await {
+        Ok(Some(MatchReportState::Published(p))) => p,
+        Ok(Some(_)) => return,
+        Ok(None) => return log_unexpected_state(match_report_id, "connu"),
+        Err(e) => return log_reread_error(match_report_id, e),
+    };
+    let round_label = competition_data
+        .find_round_context(&published.season_id.to_string(), round_id)
+        .await
+        .map(|c| c.round_name)
+        .unwrap_or_default();
+
+    publier(
+        app_event_bus,
+        MatchReportAppEvent::MatchReportRoundReassigned {
+            event_id: EventId::new(),
+            match_report_id: match_report_id.to_string(),
+            season_id: published.season_id.to_string(),
+            round_id: round_id.to_string(),
+            round_label: round_label.clone(),
+        }
+        .to_enveloppe(),
+    );
+    for team_id in [&published.home_team_id, &published.away_team_id] {
+        publier(
+            app_event_bus,
+            PlayerMatchImpactAppEvent::TeamMatchRelocated {
+                team_id: team_id.to_string(),
+                match_report_id: match_report_id.to_string(),
+                round_id: round_id.to_string(),
+                round_label: round_label.clone(),
+            }
+            .to_enveloppe(),
+        );
     }
 }
 

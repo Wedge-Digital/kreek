@@ -282,6 +282,19 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            MatchReportDomainEvent::RoundReassigned { round_id } => {
+                sqlx::query(
+                    "UPDATE match_report_proj
+                     SET round_id = $2, version = $3, updated_at = now()
+                     WHERE match_report_id = $1",
+                )
+                .bind(match_report_id)
+                .bind(round_id.to_string())
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
         }
         Ok(())
     }

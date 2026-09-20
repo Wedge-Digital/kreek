@@ -5,6 +5,7 @@ use crate::app::players::domain::match_impact::{
 use crate::app::players::domain::player::{Player, PlayerId, TeamId};
 use crate::app::players::domain::value_objects::{SkillId, SkillName};
 use crate::app::players::io::app_events::team_match_concluded_listener::handle_team_match_concluded;
+use crate::app::players::io::app_events::team_match_relocated_listener::handle_team_match_relocated;
 use crate::app::players::ports::IPlayerRepository;
 use crate::app::players::ports::ISkillCatalogPort;
 use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
@@ -70,6 +71,25 @@ async fn handle_event(
         return revert_team_match_impact(player_repo, team_id, match_report_id).await;
     }
 
+    // Un fait d'équipe lui aussi (carte 557), traité dans la même tâche pour
+    // la même raison : ne jamais se disputer la version d'un joueur.
+    if let PlayerMatchImpactAppEvent::TeamMatchRelocated {
+        team_id,
+        match_report_id,
+        round_id,
+        round_label,
+    } = &app_event
+    {
+        return handle_team_match_relocated(
+            player_repo,
+            team_id,
+            match_report_id,
+            round_id,
+            round_label,
+        )
+        .await;
+    }
+
     let (context_payload, player) = match &app_event {
         PlayerMatchImpactAppEvent::PlayerPerformedTouchdown(c)
         | PlayerMatchImpactAppEvent::PlayerPerformedPass(c)
@@ -84,7 +104,8 @@ async fn handle_event(
             load_player(player_repo, &context.player_id).await,
         ),
         PlayerMatchImpactAppEvent::TeamMatchConcluded { .. }
-        | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. } => {
+        | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. }
+        | PlayerMatchImpactAppEvent::TeamMatchRelocated { .. } => {
             unreachable!("traités plus haut")
         }
     };
@@ -134,7 +155,8 @@ async fn handle_event(
             player.record_injury(context, to_injury_type(&injury_type))
         }
         PlayerMatchImpactAppEvent::TeamMatchConcluded { .. }
-        | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. } => unreachable!(),
+        | PlayerMatchImpactAppEvent::TeamMatchImpactReverted { .. }
+        | PlayerMatchImpactAppEvent::TeamMatchRelocated { .. } => unreachable!(),
     };
 
     // En lot : les deux événements du même joueur, dans l'ordre, ou aucun.

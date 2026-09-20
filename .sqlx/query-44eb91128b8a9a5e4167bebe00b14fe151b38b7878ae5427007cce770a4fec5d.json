@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ranking_lines SET round_id = $2 WHERE match_report_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "44eb91128b8a9a5e4167bebe00b14fe151b38b7878ae5427007cce770a4fec5d"
+}

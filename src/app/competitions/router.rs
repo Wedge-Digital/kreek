@@ -61,6 +61,9 @@ use crate::app::competitions::io::web::new_competition_phase_5::{
 use crate::app::competitions::io::web::resultats_tab_controller::get_resultats_tab;
 use crate::app::competitions::io::web::widget_tester_controller::get_competitions_widget_tester;
 use crate::app::competitions::io::web::widgets::latest_results_widget::latest_results_widget;
+use crate::app::competitions::io::web::widgets::move_pairing_widget::{
+    get_move_pairing_targets, get_move_pairing_widget, post_move_pairing,
+};
 use crate::app::competitions::io::web::widgets::notification_settings_widget::{
     get_notification_settings_widget, post_notification_settings,
 };
@@ -229,5 +232,17 @@ pub fn router() -> Router<AppState> {
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH,
             delete(delete_match),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH_WIDGET,
+            get(get_move_pairing_widget),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH_TARGETS,
+            get(get_move_pairing_targets),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH,
+            post(post_move_pairing),
         )
 }

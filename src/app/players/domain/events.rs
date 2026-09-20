@@ -1,5 +1,5 @@
 use crate::app::players::domain::match_impact::{
-    InjuryType, MatchContext, MatchReportId, SppEarned, StatKind,
+    InjuryType, MatchContext, MatchReportId, RoundId, SppEarned, StatKind,
 };
 use crate::app::players::domain::player::{
     AcquisitionMode, PlayerId, RosterMembership, Spp, TeamId, ValueKpo,
@@ -190,6 +190,20 @@ pub enum PlayerDomainEvent {
         player_id: PlayerId,
         team_id: TeamId,
         match_report_id: MatchReportId,
+    },
+    /// Le match a changé de journée (carte 557) : l'historique de ce joueur le
+    /// date désormais de là.
+    ///
+    /// Un événement et non une réécriture du contexte de `MatchConcluded` :
+    /// l'historique se reconstruit à la lecture, et `build_match_history`
+    /// applique celui-ci par-dessus. Le libellé voyage avec lui pour la même
+    /// raison que dans `MatchContext` — zéro appel inter-BC en lecture.
+    MatchRelocated {
+        player_id: PlayerId,
+        team_id: TeamId,
+        match_report_id: MatchReportId,
+        round_id: RoundId,
+        round_label: String, // arch:ok texte libre dénormalisé, comme MatchContext
     },
     /// Le coach a renvoyé ce joueur. Il cesse d'appartenir à l'effectif ; il
     /// n'est pas effacé — `players` est event-sourcé, et le joueur garde ses
@@ -389,6 +403,7 @@ impl PlayerDomainEvent {
             Self::PlayerAvailabilityRestored { .. } => "PlayerAvailabilityRestored",
             Self::MatchConcluded { .. } => "MatchConcluded",
             Self::MatchImpactReverted { .. } => "MatchImpactReverted",
+            Self::MatchRelocated { .. } => "MatchRelocated",
             Self::JourneymanHired { .. } => "JourneymanHired",
             Self::JourneymanLost { .. } => "JourneymanLost",
             Self::JourneymanWithdrawn { .. } => "JourneymanWithdrawn",
@@ -482,6 +497,7 @@ impl PlayerDomainEvent {
             | Self::PlayerAvailabilityRestored { .. }
             | Self::MatchConcluded { .. }
             | Self::MatchImpactReverted { .. }
+            | Self::MatchRelocated { .. }
             | Self::JourneymanHired { .. }
             | Self::JourneymanLost { .. }
             | Self::JourneymanWithdrawn { .. }

@@ -133,6 +133,9 @@ mod tests {
         async fn delete_pairing(&self, _: &str) -> Result<(), MatchDayRepositoryError> {
             Ok(())
         }
+        async fn move_pairing(&self, _: &str, _: &MatchDay) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
         async fn ensure_match_days_from_structure(
             &self,
             _: &str,

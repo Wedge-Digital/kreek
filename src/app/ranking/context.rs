@@ -1,5 +1,6 @@
 use crate::app::ranking::io::app_events::{
-    match_report_published_listener, match_report_unpublished_listener,
+    match_report_published_listener, match_report_round_reassigned_listener,
+    match_report_unpublished_listener,
 };
 use crate::app::ranking::io::repository::ranking_repository::PgRankingRepository;
 use crate::app::ranking::ports::{IRankingAdminPort, IRankingCompetitionPort, IRankingRepository};
@@ -22,6 +23,7 @@ pub fn init_listeners(
 ) {
     let repo: Arc<dyn IRankingRepository> = Arc::new(PgRankingRepository::new(pool));
     match_report_unpublished_listener::init(app_event_bus, repo.clone());
+    match_report_round_reassigned_listener::init(app_event_bus, repo.clone());
     match_report_published_listener::init(app_event_bus, repo, competition_port);
 }
 

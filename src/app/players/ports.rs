@@ -180,6 +180,14 @@ pub trait IPlayerRepository: Send + Sync {
         team_id: &TeamId,
         match_report_id: &str,
     ) -> Result<bool, RepositoryError>;
+
+    /// Les joueurs de cette équipe qui ont conclu ce match (carte 557) : ceux
+    /// dont l'historique doit suivre quand le match change de journée.
+    async fn find_ids_by_match(
+        &self,
+        team_id: &TeamId,
+        match_report_id: &str,
+    ) -> Result<Vec<PlayerId>, RepositoryError>;
 }
 
 // ── ACL vers le BC `references` (catalogue de compétences, matrice de coût) ────

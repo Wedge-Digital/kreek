@@ -296,6 +296,9 @@ mod tests {
             self.deleted.lock().unwrap().push(pairing_id.to_string());
             Ok(())
         }
+        async fn move_pairing(&self, _: &str, _: &MatchDay) -> Result<(), MatchDayRepositoryError> {
+            Ok(())
+        }
         async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> {
             Ok(self.days.clone())
         }

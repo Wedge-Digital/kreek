@@ -64,6 +64,16 @@ pub enum PlayerMatchImpactAppEvent {
         team_id: String,
         match_report_id: String,
     },
+    /// Le match a changé de journée (carte 557) : l'historique de chaque joueur
+    /// de cette équipe doit désormais le dater de là. Un événement par équipe,
+    /// comme `TeamMatchConcluded` ; le libellé voyage avec, pour que `players`
+    /// n'ait rien à demander à personne.
+    TeamMatchRelocated {
+        team_id: String,
+        match_report_id: String,
+        round_id: String,
+        round_label: String,
+    },
 }
 
 impl PlayerMatchImpactAppEvent {
@@ -76,6 +86,7 @@ impl PlayerMatchImpactAppEvent {
     pub const PLAYER_INJURED: &'static str = "PlayerInjured";
     pub const TEAM_MATCH_CONCLUDED: &'static str = "TeamMatchConcluded";
     pub const TEAM_MATCH_IMPACT_REVERTED: &'static str = "TeamMatchImpactReverted";
+    pub const TEAM_MATCH_RELOCATED: &'static str = "TeamMatchRelocated";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -88,6 +99,7 @@ impl PlayerMatchImpactAppEvent {
             Self::PlayerInjured { .. } => Self::PLAYER_INJURED,
             Self::TeamMatchConcluded { .. } => Self::TEAM_MATCH_CONCLUDED,
             Self::TeamMatchImpactReverted { .. } => Self::TEAM_MATCH_IMPACT_REVERTED,
+            Self::TeamMatchRelocated { .. } => Self::TEAM_MATCH_RELOCATED,
         }
     }
 
@@ -104,6 +116,9 @@ impl PlayerMatchImpactAppEvent {
                 match_report_id, ..
             } => match_report_id,
             Self::TeamMatchImpactReverted {
+                match_report_id, ..
+            }
+            | Self::TeamMatchRelocated {
                 match_report_id, ..
             } => match_report_id,
         }

@@ -38,6 +38,8 @@ pub enum DomainError {
         max: u8,
     },
     CorrectionNotAllowed(CorrectionBlocker),
+    /// Un rapport annulé n'a plus de journée à changer (carte 557).
+    ReportCancelled,
 }
 
 impl fmt::Display for DomainError {
@@ -48,6 +50,7 @@ impl fmt::Display for DomainError {
             }
             Self::SameTeam => write!(f, "les deux équipes doivent être différentes"),
             Self::InvalidEventSequence => write!(f, "séquence d'événements invalide"),
+            Self::ReportCancelled => write!(f, "le rapport est annulé"),
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),
             Self::BudgetExceeded { spent, budget } => {

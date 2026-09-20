@@ -7,7 +7,8 @@ use crate::app::match_report::domain::value_objects::MatchAction;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
 use crate::app::match_report::io::web::builders::{
     build_correction_zone, build_performance_rows, build_round_context_vm, build_submitted_by,
-    build_team_banner, CorrectionZoneVm, PerformanceRowVm, RoundContextVm, TeamBannerVm,
+    build_team_banner, AdminBarVm, CorrectionZoneVm, PerformanceRowVm, RoundContextVm,
+    TeamBannerVm,
 };
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm,
@@ -16,7 +17,7 @@ use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::app::match_report::use_cases::correction_eligibility_service;
 use crate::app::match_report::use_cases::match_report_access_service::{
-    is_authorized, AccesRapportDeps, PorteeRapport,
+    est_administrateur, is_authorized, AccesRapportDeps, PorteeRapport,
 };
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
@@ -52,7 +53,7 @@ pub struct RecapTemplate {
     pub mvps: Vec<MvpRowVm>,
     pub injuries: Vec<InjuryRowVm>,
     pub performances: Vec<PerformanceRowVm>,
-    pub correction: Option<CorrectionZoneVm>,
+    pub admin_bar: Option<AdminBarVm>,
     pub under_correction: bool,
     pub publish_url: String,
     pub back_to_step5_url: String,
@@ -77,6 +78,9 @@ struct RecapSource<'a> {
     competition_id: String,
     season_id: String,
     round_id: String,
+    /// `None` sur les rapports d'avant la carte 552, qui naissaient sans
+    /// appariement : pas de déplacement possible, la barre le tait.
+    pairing_id: Option<String>,
     created_by: String,
     home_actions: &'a [MatchAction],
     away_actions: &'a [MatchAction],
@@ -97,6 +101,7 @@ impl<'a> RecapSource<'a> {
             competition_id: rtp.competition_id.to_string(),
             season_id: rtp.season_id.to_string(),
             round_id: rtp.round_id.to_string(),
+            pairing_id: rtp.pairing_id.clone(),
             created_by: rtp.created_by.to_string(),
             home_actions: &rtp.home_actions,
             away_actions: &rtp.away_actions,
@@ -117,6 +122,7 @@ impl<'a> RecapSource<'a> {
             competition_id: p.competition_id.to_string(),
             season_id: p.season_id.to_string(),
             round_id: p.round_id.to_string(),
+            pairing_id: p.pairing_id.clone(),
             created_by: p.created_by.to_string(),
             home_actions: &p.home_actions,
             away_actions: &p.away_actions,
@@ -179,9 +185,16 @@ pub async fn get_recap(
         return StatusCode::FORBIDDEN.into_response();
     }
 
-    build_recap_template(&space_id, &match_report_id, is_published, source, &state)
-        .await
-        .into_response()
+    build_recap_template(
+        &space_id,
+        &match_report_id,
+        is_published,
+        source,
+        &user,
+        &state,
+    )
+    .await
+    .into_response()
 }
 
 // ── Autorisation ──────────────────────────────────────────────────────────────
@@ -224,6 +237,7 @@ async fn build_recap_template(
     match_report_id: &str,
     is_published: bool,
     source: RecapSource<'_>,
+    user: &User,
     state: &AppState,
 ) -> RecapTemplate {
     let (home_info, away_info) = tokio::join!(
@@ -272,6 +286,7 @@ async fn build_recap_template(
     };
 
     let routes = AppRoutes::default();
+    let move_widget_url = build_move_widget_url(&source, space_id, user, &routes, state).await;
     RecapTemplate {
         app_routes: routes,
         space_id: space_id.to_string(),
@@ -296,7 +311,7 @@ async fn build_recap_template(
         ),
         injuries: InjuryRowVm::all_from_domain(source.home_actions, source.away_actions),
         performances,
-        correction,
+        admin_bar: AdminBarVm::build(correction, move_widget_url),
         under_correction: !is_published && source.was_published_before,
         publish_url: routes.match_report.recap_publish(space_id, match_report_id),
         back_to_step5_url: routes.match_report.step5(space_id, match_report_id),
@@ -308,6 +323,34 @@ async fn build_recap_template(
         home_team_detail_url: routes.teams.team_detail(space_id, &source.home_team_id),
         result,
     }
+}
+
+/// L'adresse du widget de déplacement, pour un administrateur et un rapport
+/// qui a un appariement (carte 557). Le prédicat est celui de la carte 550 :
+/// admin d'espace ou de compétition, **sans** les coachs.
+async fn build_move_widget_url(
+    source: &RecapSource<'_>,
+    space_id: &str,
+    user: &User,
+    routes: &AppRoutes,
+    state: &AppState,
+) -> Option<String> {
+    let pairing_id = source.pairing_id.as_deref()?;
+    let admin = est_administrateur(
+        &AccesRapportDeps::from_state(state),
+        user,
+        space_id,
+        &source.competition_id,
+    )
+    .await;
+    admin.then(|| {
+        routes.competitions.admin_schedule_move_match_widget(
+            space_id,
+            &source.competition_id,
+            &source.season_id,
+            pairing_id,
+        )
+    })
 }
 
 async fn build_correction_zone_for(

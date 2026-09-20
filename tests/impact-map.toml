@@ -204,6 +204,10 @@
 # spp_calculator : coût des compétences calculé au récapitulatif.
 "test_match_report_recap" = ["match_report", "players", "teams", "spp_calculator",
                              "competitions", "references", "ranking", "team_creation", "spaces"]
+# Déplacer un match (carte 557) : le widget est à `competitions`, le rapport,
+# le classement et l'historique des joueurs suivent par app events.
+"test_deplacer_un_match" = ["competitions", "match_report", "ranking", "players", "teams",
+                            "references", "team_creation", "spaces"]
 "test_match_report_correction" = ["match_report", "competitions", "teams", "players",
                                   "ranking", "spp_calculator", "references", "team_creation", "spaces"]
 "test_pairing_deletion" = ["competitions", "match_report", "teams", "players",

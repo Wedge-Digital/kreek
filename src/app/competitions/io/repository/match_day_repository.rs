@@ -286,6 +286,38 @@ impl IMatchDayRepository for MatchDayRepository {
         Ok(())
     }
 
+    async fn move_pairing(
+        &self,
+        pairing_id: &str,
+        to: &MatchDay,
+    ) -> Result<(), MatchDayRepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(db_err)?;
+        sqlx::query("UPDATE competition_match_day_pairings SET match_day_id = $2 WHERE id = $1")
+            .bind(pairing_id)
+            .bind(to.id.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+        sqlx::query(
+            "UPDATE competition_match_display_proj
+             SET round_id = $2, round_name = $3, round_position = $4,
+                 round_date_start = $5, round_date_end = $6, round_day_type = $7
+             WHERE pairing_id = $1",
+        )
+        .bind(pairing_id)
+        .bind(to.id.to_string())
+        .bind(to.name.as_ref())
+        .bind(to.position.into_inner())
+        .bind(to.date_start.as_ref().map(|d| d.as_ref()))
+        .bind(to.date_end.as_ref().map(|d| d.as_ref()))
+        .bind(to.day_type.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(db_err)?;
+        tx.commit().await.map_err(db_err)?;
+        Ok(())
+    }
+
     async fn list_resultats(
         &self,
         season_id: &str,

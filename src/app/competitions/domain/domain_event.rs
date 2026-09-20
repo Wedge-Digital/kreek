@@ -88,6 +88,22 @@ pub enum CompetitionsDomainEvent {
         event_id: EventId,
         pairing_id: String,
     },
+    /// Une rencontre a changé de journée (carte 557).
+    ///
+    /// Le nom de la journée d'arrivée voyage avec l'événement : `match_report`
+    /// et `players` en ont besoin pour leurs libellés, et ils n'ont pas à
+    /// relire le calendrier de `competitions` pour ça.
+    PairingMoved {
+        event_id: EventId,
+        pairing_id: String,
+        season_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        from_round_id: String,
+        to_round_id: String,
+        to_round_name: String,
+    },
 }
 
 pub const COMPETITION_CREATED: &str = "CompetitionCreated";
@@ -95,6 +111,7 @@ pub const COMPETITION_READY: &str = "CompetitionReady";
 pub const PAIRING_CREATED: &str = "PairingCreated";
 pub const OUT_OF_SCHEDULE_PAIRING_CREATED: &str = "OutOfSchedulePairingCreated";
 pub const PAIRING_DELETED: &str = "PairingDeleted";
+pub const PAIRING_MOVED: &str = "PairingMoved";
 
 impl CompetitionsDomainEvent {
     pub fn to_event_type(&self) -> &'static str {
@@ -104,6 +121,7 @@ impl CompetitionsDomainEvent {
             Self::PairingCreated { .. } => PAIRING_CREATED,
             Self::OutOfSchedulePairingCreated { .. } => OUT_OF_SCHEDULE_PAIRING_CREATED,
             Self::PairingDeleted { .. } => PAIRING_DELETED,
+            Self::PairingMoved { .. } => PAIRING_MOVED,
         }
     }
 
@@ -113,7 +131,8 @@ impl CompetitionsDomainEvent {
             Self::CompetitionReady { competition_id, .. } => competition_id.to_string(),
             Self::PairingCreated { pairing_id, .. }
             | Self::OutOfSchedulePairingCreated { pairing_id, .. }
-            | Self::PairingDeleted { pairing_id, .. } => pairing_id.clone(),
+            | Self::PairingDeleted { pairing_id, .. }
+            | Self::PairingMoved { pairing_id, .. } => pairing_id.clone(),
         }
     }
 
@@ -140,7 +159,8 @@ impl CompetitionsDomainEvent {
             ],
             Self::PairingCreated { .. }
             | Self::OutOfSchedulePairingCreated { .. }
-            | Self::PairingDeleted { .. } => vec![],
+            | Self::PairingDeleted { .. }
+            | Self::PairingMoved { .. } => vec![],
         }
     }
 
@@ -177,6 +197,21 @@ impl CompetitionsDomainEvent {
             Self::PairingDeleted { pairing_id, .. } => Some(CompetitionsAppEvent::PairingDeleted {
                 event_id: EventId::new(),
                 pairing_id: pairing_id.clone(),
+            }),
+            Self::PairingMoved {
+                pairing_id,
+                season_id,
+                from_round_id,
+                to_round_id,
+                to_round_name,
+                ..
+            } => Some(CompetitionsAppEvent::PairingMoved {
+                event_id: EventId::new(),
+                pairing_id: pairing_id.clone(),
+                season_id: season_id.clone(),
+                from_round_id: from_round_id.clone(),
+                to_round_id: to_round_id.clone(),
+                to_round_name: to_round_name.clone(),
             }),
             // **Ceux qui ne sortent pas du BC**, nommés un par un.
             //

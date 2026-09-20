@@ -96,6 +96,11 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         | PlayerDomainEvent::FoulCommitted { context, .. }
         | PlayerDomainEvent::InjurySustained { context, .. }
         | PlayerDomainEvent::MatchConcluded { context, .. } => Some(context.match_report_id.0.clone()),
+        // Le changement de journée s'applique à l'entrée du match, comme un
+        // fait de plus sur lui (carte 557).
+        PlayerDomainEvent::MatchRelocated {
+            match_report_id, ..
+        } => Some(match_report_id.0.clone()),
         PlayerDomainEvent::PlayerCreated { .. }
         | PlayerDomainEvent::InitialSkillEarned { .. }
         | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
@@ -141,6 +146,10 @@ fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
             entry.opponent_team_name = context.opponent_team_name.clone();
             entry.team_score = *team_score;
             entry.opponent_score = *opponent_score;
+        }
+        // Postérieur à `MatchConcluded` dans le flux : il l'emporte.
+        PlayerDomainEvent::MatchRelocated { round_label, .. } => {
+            entry.round_label = round_label.clone();
         }
         PlayerDomainEvent::TouchdownScored { spp_earned, .. } => push(
             entry,
@@ -236,6 +245,30 @@ mod tests {
             team_score,
             opponent_score,
         }
+    }
+
+    /// Le déplacement d'un match (carte 557) : le libellé de journée qu'affiche
+    /// l'historique est le dernier connu, sans que `MatchConcluded` change.
+    #[test]
+    fn un_match_deplace_est_date_de_sa_nouvelle_journee() {
+        let events = vec![
+            touchdown("mr1"),
+            concluded("mr1", "Journée 1", "Bone Crushers", 2, 1),
+            PlayerDomainEvent::MatchRelocated {
+                player_id: PlayerId("p1".into()),
+                team_id: TeamId("t1".into()),
+                match_report_id: MatchReportId("mr1".into()),
+                round_id: RoundId("r2".into()),
+                round_label: "Journée 4".into(),
+            },
+        ];
+
+        let history = build_match_history(&events);
+
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].round_label, "Journée 4");
+        assert_eq!(history[0].opponent_team_name, "Bone Crushers");
+        assert_eq!(history[0].actions.len(), 1, "les actions restent");
     }
 
     #[test]

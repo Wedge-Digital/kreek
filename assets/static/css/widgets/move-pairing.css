@@ -1,0 +1,81 @@
+/* Widget « Déplacer sur une autre journée » (carte 557).
+   Portée : `.move-pairing`, la racine du fragment. Le bouton reprend l'allure
+   des actions d'administration de la page du rapport sans en dépendre : un
+   widget ne s'appuie que sur sa propre feuille. */
+
+.move-pairing { display: contents; }
+
+.move-pairing .move-pairing-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: transparent;
+  color: var(--dark-2);
+  border: 1px solid var(--dark-4);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.move-pairing .move-pairing-btn:hover { background: var(--dark-6); border-color: var(--dark-3); }
+.move-pairing .move-pairing-btn[aria-expanded="true"] { background: var(--dark-6); }
+
+.move-pairing .move-pairing-panel {
+  flex-basis: 100%;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--p1);
+  margin-top: var(--p1);
+  padding-top: var(--p1);
+  border-top: 1px solid var(--dark-5);
+}
+.move-pairing .move-pairing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 260px;
+}
+.move-pairing .move-pairing-label {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+}
+.move-pairing .move-pairing-current { color: var(--dark-4); }
+
+.move-pairing .move-pairing-submit,
+.move-pairing .move-pairing-cancel {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+.move-pairing .move-pairing-submit {
+  background: var(--dark-1);
+  color: var(--white);
+  border: 1px solid var(--dark-1);
+}
+.move-pairing .move-pairing-submit:disabled {
+  background: var(--dark-5);
+  border-color: var(--dark-5);
+  color: var(--dark-3);
+  cursor: not-allowed;
+}
+.move-pairing .move-pairing-cancel {
+  background: transparent;
+  color: var(--dark-2);
+  border: 1px solid var(--dark-4);
+}
+.move-pairing .move-pairing-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .move-pairing .move-pairing-field { min-width: 0; flex-basis: 100%; }
+}

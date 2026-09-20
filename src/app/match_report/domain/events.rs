@@ -157,6 +157,17 @@ pub enum MatchReportDomainEvent {
         unpublished_by: CoachId,
         unpublished_at: DateTime<Utc>,
     },
+    /// Le match a changé de journée (carte 557). Un fait qui vient de
+    /// `competitions`, nommé en termes de ce rapport et non de son origine :
+    /// le rapport est désormais rattaché à cette journée-là.
+    ///
+    /// Un événement et non une réécriture de `MatchReportCreated` : `m003`
+    /// avait dû s'y résoudre pour réparer une donnée qui n'avait jamais été
+    /// vraie ; ici la journée d'origine **était** vraie, et l'historique la
+    /// garde.
+    RoundReassigned {
+        round_id: RoundId,
+    },
 }
 
 impl MatchReportDomainEvent {
@@ -177,6 +188,7 @@ impl MatchReportDomainEvent {
             Self::PostMatchRecorded { .. } => "PostMatchRecorded",
             Self::MatchReportPublished { .. } => "MatchReportPublished",
             Self::MatchReportUnpublished { .. } => "MatchReportUnpublished",
+            Self::RoundReassigned { .. } => "RoundReassigned",
         }
     }
 

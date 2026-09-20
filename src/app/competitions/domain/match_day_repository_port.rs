@@ -123,6 +123,16 @@ pub trait IMatchDayRepository: Send + Sync {
 
     async fn delete_pairing(&self, pairing_id: &str) -> Result<(), MatchDayRepositoryError>;
 
+    /// Déplace une rencontre vers une autre journée (carte 557) : l'appariement
+    /// et les colonnes de journée de sa ligne d'affichage, dans une seule
+    /// transaction. La journée d'arrivée est reçue entière — ses six colonnes
+    /// sont recopiées, comme `save_pairing` le fait à la création.
+    async fn move_pairing(
+        &self,
+        pairing_id: &str,
+        to: &MatchDay,
+    ) -> Result<(), MatchDayRepositoryError>;
+
     async fn ensure_match_days_from_structure(
         &self,
         season_id: &str,

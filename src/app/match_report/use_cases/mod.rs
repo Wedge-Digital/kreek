@@ -5,6 +5,7 @@ pub mod hate_keywords_service;
 pub mod init_temp_players_use_case;
 pub mod match_report_access_service;
 pub mod publish_match_report_use_case;
+pub mod reassign_round_use_case;
 pub mod record_action_use_case;
 pub mod record_fan_factor_use_case;
 pub mod record_inducements_use_case;

@@ -81,6 +81,14 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/add-match";
     pub const COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/delete-match";
+    /// Le déplacement d'une rencontre (carte 557) : le widget que la page du
+    /// rapport compose, la liste JSON des journées cibles, et l'action.
+    pub const COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH_WIDGET: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/move-match/widget";
+    pub const COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH_TARGETS: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/move-match/targets";
+    pub const COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/move-match";
     pub const COMPETITION_ADMIN_SUMMARY: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/summary";
     pub const COMPETITION_ADMIN_SETTINGS: &str =
@@ -344,6 +352,44 @@ impl Routes {
     }
     pub fn admin_schedule_delete_match(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SCHEDULE_DELETE_MATCH
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    /// Le `pairing_id` est cuit dans l'adresse, comme le veut la règle 4 des
+    /// widgets : la page hôte ne sait rien de plus que cette adresse.
+    pub fn admin_schedule_move_match_widget(
+        &self,
+        sid: &str,
+        cid: &str,
+        season_id: &str,
+        pairing_id: &str,
+    ) -> String {
+        format!(
+            "{}?pairing_id={pairing_id}",
+            path::COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH_WIDGET
+                .replace("{space_id}", sid)
+                .replace("{competition_id}", cid)
+                .replace("{season_id}", season_id)
+        )
+    }
+    pub fn admin_schedule_move_match_targets(
+        &self,
+        sid: &str,
+        cid: &str,
+        season_id: &str,
+        pairing_id: &str,
+    ) -> String {
+        format!(
+            "{}?pairing_id={pairing_id}",
+            path::COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH_TARGETS
+                .replace("{space_id}", sid)
+                .replace("{competition_id}", cid)
+                .replace("{season_id}", season_id)
+        )
+    }
+    pub fn admin_schedule_move_match(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_MOVE_MATCH
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)

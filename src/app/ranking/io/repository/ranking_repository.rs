@@ -195,6 +195,22 @@ impl IRankingRepository for PgRankingRepository {
         Ok(())
     }
 
+    async fn reassign_round_for_match(
+        &self,
+        match_report_id: &str,
+        round_id: &str,
+    ) -> Result<(), RankingRepositoryError> {
+        sqlx::query!(
+            "UPDATE ranking_lines SET round_id = $2 WHERE match_report_id = $1",
+            match_report_id,
+            round_id,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+        Ok(())
+    }
+
     async fn insert_lines(&self, lines: &[RankingLine]) -> Result<(), RankingRepositoryError> {
         let mut tx = self.pool.begin().await.map_err(db_err)?;
         for line in lines {

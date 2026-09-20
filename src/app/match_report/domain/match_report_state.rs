@@ -5,7 +5,7 @@ use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatc
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::CorrectionEligibility;
-use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::bloodbowl::ids::{MatchReportId, RoundId};
 use crate::app::shared_kernel::identity::ids::SpaceId;
 
 #[derive(Debug)]
@@ -37,6 +37,33 @@ impl MatchReportState {
             Self::Published(p) => Some(&p.space_id),
             Self::Cancelled(_) => None,
         }
+    }
+
+    /// Rattache le rapport à une autre journée (carte 557), quel que soit son
+    /// avancement : `(version attendue à l'append, événement)`.
+    ///
+    /// **Un seul point pour les quatre états** : la règle est la même partout,
+    /// et la répartir dans quatre structs aurait donné quatre occasions de la
+    /// faire dériver. `None` quand la journée est déjà celle-là — rien à
+    /// écrire, et un événement vide dans le flux n'apprendrait rien.
+    pub fn reassign_round(
+        &self,
+        round_id: RoundId,
+    ) -> Result<Option<(u64, MatchReportDomainEvent)>, DomainError> {
+        let (courante, version) = match self {
+            Self::Draft(d) => (&d.round_id, d.version),
+            Self::PreMatch(pm) => (&pm.round_id, pm.version),
+            Self::ReadyToPublish(rtp) => (&rtp.round_id, rtp.version),
+            Self::Published(p) => (&p.round_id, p.version),
+            Self::Cancelled(_) => return Err(DomainError::ReportCancelled),
+        };
+        if courante == &round_id {
+            return Ok(None);
+        }
+        Ok(Some((
+            version,
+            MatchReportDomainEvent::RoundReassigned { round_id },
+        )))
     }
 }
 
@@ -412,11 +439,45 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                     .map_err(|_| DomainError::InvalidEventSequence)?;
                 MatchReportState::ReadyToPublish(rtp)
             }
+            // Le changement de journée vaut pour les quatre états vivants
+            // (carte 557) : la journée change, le reste de l'état non.
+            (Some(vivant), MatchReportDomainEvent::RoundReassigned { round_id }) => {
+                rejouer_la_journee(vivant, round_id.clone())?
+            }
             _ => return Err(DomainError::InvalidEventSequence),
         });
     }
 
     state.ok_or(DomainError::EmptyEventStream)
+}
+
+fn rejouer_la_journee(
+    state: MatchReportState,
+    round_id: RoundId,
+) -> Result<MatchReportState, DomainError> {
+    Ok(match state {
+        MatchReportState::Draft(mut d) => {
+            d.round_id = round_id;
+            d.version += 1;
+            MatchReportState::Draft(d)
+        }
+        MatchReportState::PreMatch(mut pm) => {
+            pm.round_id = round_id;
+            pm.version += 1;
+            MatchReportState::PreMatch(pm)
+        }
+        MatchReportState::ReadyToPublish(mut rtp) => {
+            rtp.round_id = round_id;
+            rtp.version += 1;
+            MatchReportState::ReadyToPublish(rtp)
+        }
+        MatchReportState::Published(mut p) => {
+            p.round_id = round_id;
+            p.version += 1;
+            MatchReportState::Published(p)
+        }
+        MatchReportState::Cancelled(_) => return Err(DomainError::InvalidEventSequence),
+    })
 }
 
 #[cfg(test)]
@@ -1160,5 +1221,132 @@ mod tests {
             Ok(MatchReportState::Cancelled(c)) => assert_eq!(c.id, mr_id),
             _ => panic!("attendu Cancelled"),
         }
+    }
+
+    // ── Le changement de journée (carte 557) ─────────────────────────────────
+
+    fn brouillon_et_journee() -> (Vec<MatchReportDomainEvent>, RoundId) {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let created = created_event(
+            mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+        );
+        (vec![created], RoundId::new())
+    }
+
+    fn journee_de(state: &MatchReportState) -> RoundId {
+        match state {
+            MatchReportState::Draft(d) => d.round_id.clone(),
+            MatchReportState::PreMatch(pm) => pm.round_id.clone(),
+            MatchReportState::ReadyToPublish(rtp) => rtp.round_id.clone(),
+            MatchReportState::Published(p) => p.round_id.clone(),
+            MatchReportState::Cancelled(_) => panic!("annulé"),
+        }
+    }
+
+    #[test]
+    fn rehydrate_round_reassigned_change_la_journee_d_un_brouillon() {
+        let (mut events, nouvelle) = brouillon_et_journee();
+        events.push(MatchReportDomainEvent::RoundReassigned {
+            round_id: nouvelle.clone(),
+        });
+
+        let state = rehydrate(events).unwrap();
+
+        assert!(matches!(state, MatchReportState::Draft(_)));
+        assert_eq!(journee_de(&state), nouvelle);
+    }
+
+    /// Le même événement vaut pour les quatre états vivants : ici le rapport
+    /// publié, qui est le cas de la carte — et le plus lourd de conséquences.
+    #[test]
+    fn rehydrate_round_reassigned_change_la_journee_d_un_rapport_publie() {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let nouvelle = RoundId::new();
+        let events = vec![
+            created_event(
+                mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
+            MatchReportDomainEvent::PostMatchRecorded {
+                home_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(
+                    10_000,
+                )
+                .unwrap(),
+                away_gain: crate::app::match_report::domain::value_objects::MatchGain::try_new(
+                    5_000,
+                )
+                .unwrap(),
+                home_fan_mod:
+                    crate::app::match_report::domain::value_objects::FanFactorMod::try_new(1)
+                        .unwrap(),
+                away_fan_mod:
+                    crate::app::match_report::domain::value_objects::FanFactorMod::try_new(-1)
+                        .unwrap(),
+                summary_title: None,
+                summary_body: None,
+                recorded_by: coach_id,
+            },
+            MatchReportDomainEvent::MatchReportPublished {
+                published_by: coach_id,
+                published_at: chrono::Utc::now(),
+            },
+            MatchReportDomainEvent::RoundReassigned {
+                round_id: nouvelle.clone(),
+            },
+        ];
+
+        let state = rehydrate(events).unwrap();
+
+        assert!(matches!(state, MatchReportState::Published(_)));
+        assert_eq!(journee_de(&state), nouvelle);
+    }
+
+    #[test]
+    fn reassign_round_rend_l_evenement_et_la_version_attendue() {
+        let (events, nouvelle) = brouillon_et_journee();
+        let state = rehydrate(events).unwrap();
+
+        let (version, event) = state
+            .reassign_round(nouvelle.clone())
+            .unwrap()
+            .expect("journée différente");
+
+        assert_eq!(version, 1);
+        assert!(
+            matches!(event, MatchReportDomainEvent::RoundReassigned { round_id } if round_id == nouvelle)
+        );
+    }
+
+    /// Rien à écrire quand la journée est déjà la bonne : un événement vide
+    /// dans le flux n'apprendrait rien.
+    #[test]
+    fn reassign_round_vers_la_meme_journee_ne_produit_rien() {
+        let (events, _) = brouillon_et_journee();
+        let state = rehydrate(events).unwrap();
+        let courante = journee_de(&state);
+
+        assert!(state.reassign_round(courante).unwrap().is_none());
+    }
+
+    #[test]
+    fn reassign_round_est_refuse_sur_un_rapport_annule() {
+        let (mut events, nouvelle) = brouillon_et_journee();
+        events.push(MatchReportDomainEvent::MatchReportCancelled {
+            reason: "test".into(),
+            journeymen: vec![],
+            home_team_id: None,
+            away_team_id: None,
+            pairing_id: None,
+        });
+        let state = rehydrate(events).unwrap();
+
+        assert!(matches!(
+            state.reassign_round(nouvelle),
+            Err(DomainError::ReportCancelled)
+        ));
     }
 }

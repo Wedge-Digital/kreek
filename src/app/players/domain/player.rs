@@ -3,7 +3,8 @@ use crate::app::players::domain::events::{PlayerDomainEvent, UndoEffect};
 use crate::app::players::domain::match_impact::{
     CasualtyCount, FoulCount, InjuryType, InterceptionCount, MatchContext, MatchReportId,
     MatchesPlayedCount, MvpCount, PassCount, PersistentInjuryCount, PlayerInjuryRecord,
-    PlayerParticipationStatus, SppEarned, StatAdjustment, StatKind, StatMalus, TouchdownCount,
+    PlayerParticipationStatus, RoundId, SppEarned, StatAdjustment, StatKind, StatMalus,
+    TouchdownCount,
 };
 use crate::app::players::domain::value_objects::{
     CustomisationId, DisplayOrder, JerseyVo, KpoDelta, PersonalName, PositionNameVo, RosterLineId,
@@ -599,6 +600,13 @@ impl Player {
                 player.version += 1;
                 Some(player)
             }
+            // Rien ne change dans l'état du joueur : le match est le même, seule
+            // sa date dans l'historique — reconstruit à la lecture — bouge.
+            PlayerDomainEvent::MatchRelocated { .. } => {
+                let mut player = current?;
+                player.version += 1;
+                Some(player)
+            }
             // Le joueur n'est pas effacé : il garde ses SPP, ses compétences et
             // son historique. Seule son appartenance change, et c'est elle que
             // les lectures d'effectif regardent.
@@ -983,6 +991,23 @@ impl Player {
             context,
             team_score,
             opponent_score,
+        }
+    }
+
+    /// Date ce match d'une autre journée dans l'historique du joueur (carte
+    /// 557). Le fait est établi par `competitions` ; ici on l'enregistre.
+    pub fn relocate_match(
+        &self,
+        match_report_id: MatchReportId,
+        round_id: RoundId,
+        round_label: String,
+    ) -> PlayerDomainEvent {
+        PlayerDomainEvent::MatchRelocated {
+            player_id: self.id.clone(),
+            team_id: self.team_id.clone(),
+            match_report_id,
+            round_id,
+            round_label,
         }
     }
 

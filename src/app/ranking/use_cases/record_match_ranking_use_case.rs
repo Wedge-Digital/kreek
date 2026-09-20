@@ -267,6 +267,13 @@ mod tests {
                 .retain(|l| l.match_report_id.to_string() != match_report_id);
             Ok(())
         }
+        async fn reassign_round_for_match(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Result<(), RankingRepositoryError> {
+            Ok(())
+        }
         async fn find_manual_totals_for_season(
             &self,
             _: &str,

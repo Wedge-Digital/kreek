@@ -115,6 +115,34 @@ pub async fn build_submitted_by(
     coach_data.find_coach_name(created_by).await
 }
 
+// ── Barre d'administration (carte 557) ───────────────────────────────────────
+
+/// Les actions réservées, sous le cartouche. Chacune porte son propre droit :
+/// la correction reste ouverte à qui peut voir un rapport publié — les deux
+/// coachs compris, c'est leur match — quand le déplacement n'est offert qu'aux
+/// administrateurs. La barre n'existe que s'il y a au moins une action.
+pub struct AdminBarVm {
+    pub correction: Option<CorrectionZoneVm>,
+    /// L'adresse du widget de `competitions`, `pairing_id` cuit dedans. `None`
+    /// pour qui n'administre pas, ou pour un rapport sans appariement.
+    pub move_widget_url: Option<String>,
+}
+
+impl AdminBarVm {
+    pub fn build(
+        correction: Option<CorrectionZoneVm>,
+        move_widget_url: Option<String>,
+    ) -> Option<Self> {
+        if correction.is_none() && move_widget_url.is_none() {
+            return None;
+        }
+        Some(Self {
+            correction,
+            move_widget_url,
+        })
+    }
+}
+
 // ── Zone de correction d'un rapport publié ────────────────────────────────────
 
 pub struct CorrectionZoneVm {

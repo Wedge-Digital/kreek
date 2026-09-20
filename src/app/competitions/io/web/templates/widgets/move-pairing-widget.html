@@ -1,0 +1,59 @@
+{# Déplacer une rencontre sur une autre journée (carte 557).
+
+   Composé par la barre d'administration de la page du rapport, qui ne connaît
+   que l'adresse de ce fragment. `hx-disinherit="*"` : la page hôte ne doit
+   rien injecter dans le POST.
+
+   La racine est en `display: contents` : le bouton se range en ligne avec les
+   autres actions de la barre, et le panneau, en pleine largeur, passe à la
+   ligne — sans que la barre sache qu'ils viennent du même fragment.
+
+   Un succès rend ce même fragment sur sa nouvelle journée, replié, et le
+   serveur déclenche le toast global. Un refus est un 422 dont le corps porte
+   le motif : HTMX ne swappe pas, le script le passe au toast en erreur. #}
+<div class="move-pairing" hx-disinherit="*" x-data="{ ouvert: false }">
+  <button type="button" class="move-pairing-btn" @click="ouvert = !ouvert" :aria-expanded="ouvert">
+    <span>&#128197;</span> D&eacute;placer sur une autre journ&eacute;e
+  </button>
+  <form class="move-pairing-panel" x-show="ouvert" x-cloak
+        hx-post="{{ post_url }}"
+        hx-target="closest .move-pairing"
+        hx-swap="outerHTML">
+    <input type="hidden" name="pairing_id" value="{{ pairing_id }}">
+    <div class="move-pairing-field">
+      <label class="move-pairing-label">
+        Journ&eacute;e cible <span class="move-pairing-current">(actuelle : {{ current_round_name }})</span>
+      </label>
+      <kreek-select name="round_id" url="{{ targets_url }}" placeholder="Choisir une journ&eacute;e&hellip;"
+                    event="moveTargetSelected" event-fields="name"></kreek-select>
+    </div>
+    <button type="submit" class="move-pairing-submit"
+            @move-target-selected.window="cible = $event.detail.name"
+            x-data="{ cible: '' }"
+            :disabled="!cible"
+            x-text="cible ? 'Déplacer en ' + cible + ' →' : 'Déplacer →'">D&eacute;placer &#8594;</button>
+    <button type="button" class="move-pairing-cancel" @click="ouvert = false">Annuler</button>
+    <p class="move-pairing-hint">
+      Le match et son rapport changent de journ&eacute;e. Les r&eacute;sultats, le classement et
+      l&#39;historique des joueurs suivent.
+    </p>
+  </form>
+</div>
+<script>
+(function () {
+    // Racine retrouvée par `currentScript`, sans id global (règle 6 des widgets).
+    const racine = document.currentScript.previousElementSibling;
+    // Un refus est un 422 : HTMX ne swappe rien et lève `htmx:afterRequest`
+    // avec `failed`. Le motif est dans le corps, au même format que ceux du
+    // calendrier, et il part dans le toast global — en erreur, donc persistant.
+    racine.addEventListener('htmx:afterRequest', function (evt) {
+        if (!evt.detail.failed) return;
+        let motif = 'Le déplacement a échoué.';
+        try {
+            const corps = JSON.parse(evt.detail.xhr.responseText);
+            if (corps && corps.error) motif = corps.error;
+        } catch (_) {}
+        if (window.kreekToast) window.kreekToast(motif, 'error');
+    });
+})();
+</script>

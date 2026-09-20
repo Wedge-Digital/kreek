@@ -125,6 +125,9 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::MatchImpactReverted {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
+        PlayerDomainEvent::MatchRelocated {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerDismissed {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
@@ -341,7 +344,8 @@ pub async fn upsert_player_projection(
             .await
             .map_err(RepositoryError::Database)?;
         }
-        PlayerDomainEvent::MatchConcluded { player_id, .. } => {
+        PlayerDomainEvent::MatchConcluded { player_id, .. }
+        | PlayerDomainEvent::MatchRelocated { player_id, .. } => {
             sqlx::query("UPDATE players_proj SET version = version + 1 WHERE player_id = $1")
                 .bind(&player_id.0)
                 .execute(&mut **tx)
@@ -1005,6 +1009,27 @@ impl IPlayerRepository for PgPlayerRepository {
         .map_err(RepositoryError::Database)?;
 
         Ok(spent)
+    }
+
+    /// Même chemin JSON que `has_spent_spp_since_match`, épinglé par le même
+    /// test de forme.
+    async fn find_ids_by_match(
+        &self,
+        team_id: &TeamId,
+        match_report_id: &str,
+    ) -> Result<Vec<PlayerId>, RepositoryError> {
+        let ids: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT player_id FROM players_events
+             WHERE team_id = $1
+               AND event_type = 'MatchConcluded'
+               AND payload -> 'MatchConcluded' -> 'context' ->> 'match_report_id' = $2",
+        )
+        .bind(&team_id.0)
+        .bind(match_report_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+        Ok(ids.into_iter().map(PlayerId).collect())
     }
 
     async fn find_by_team_id(&self, team_id: &TeamId) -> Result<Vec<Player>, RepositoryError> {
