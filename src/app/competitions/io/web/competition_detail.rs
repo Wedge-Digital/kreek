@@ -521,7 +521,7 @@ pub async fn get_competition_detail(
         "standings",
         &auth_session,
         &state,
-         vec![],
+        vec![],
         vec![],
         vec![],
         vec![],
