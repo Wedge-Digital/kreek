@@ -2,10 +2,45 @@
 
    Copiées de `rawpages/app-team-costly-mistakes.html`, et **scopées sous
    `.costly-mistakes`** : le nom du fichier est le sélecteur de portée (axe 15 de
-   `check-arch`). Les huit sélecteurs de la maquette qui n'étaient pas en `.cm-`
-   — `.alert`, `.cta-primary`, `.meta-*`, `.demo-switcher` — sont restés
-   dehors : les trois premiers vivent déjà dans le global, le dernier n'existe
-   que pour la maquette. */
+   `check-arch`).
+
+   Les sélecteurs de la maquette qui n'étaient pas en `.cm-` avaient été laissés
+   dehors, au motif qu'ils « vivent déjà dans le global ». **C'était faux**, et
+   la page s'affichait sans panneaux, sans encart et sans bouton (carte 562) :
+   `.alert`, `.panel*`, `.meta-*` et `.cta-primary` sont définis sous
+   `.dis-page` et `.rec-page`, chacun dans sa propre portée. Ils sont repris
+   ici, copiés de `widgets/dis-page.css`, la page dont l'en-tête ci-dessous
+   s'inspire déjà.
+
+   Seules les variantes réellement employées sont reprises : `alert--warn`,
+   `alert--error`, `meta-value--alert` et `cta-primary--destructive` restent
+   chez leur propriétaire, faute de markup ici. `.demo-switcher` n'existe que
+   pour la maquette. */
+
+/* ── Les tokens de rôle, sans lesquels rien n'a de couleur ────────────────
+   Copiés de la maquette d'origine, `rawpages/app-team-costly-mistakes.html`,
+   où ils sont déclarés sur `:root`. Ils n'existent **nulle part** dans le
+   global : `common.css` n'en porte aucun, et `dis-page.css` comme
+   `rec-page.css` les déclarent chacune sous sa propre racine.
+
+   Sans eux, `var(--role-action)` ne vaut rien : le bouton du jet perdait son
+   fond et gardait son texte blanc, donc devenait invisible sur le panneau
+   blanc. Le liseré de l'en-tête, le badge de phase, la tranche mise en
+   évidence et les quatre verdicts tombaient de la même façon (carte 562).
+
+   `--role-safe` et `--tint-safe` ne vivent que dans la maquette : aucune
+   autre feuille ne les porte, et les verdicts « crise évitée » les
+   réclamaient déjà. */
+.costly-mistakes {
+  --role-action:  #003049;  /* action réversible */
+  --role-risk:    #A61B1B;  /* perte définitive */
+  --role-caution: #8F4116;  /* incident temporaire */
+  --role-safe:    #2F6B4F;  /* crise évitée */
+  --tint-action:  rgba(0,48,73,0.06);
+  --tint-risk:    rgba(166,27,27,0.08);
+  --tint-caution: rgba(143,65,22,0.10);
+  --tint-safe:    rgba(47,107,79,0.10);
+}
 
 .costly-mistakes { display: flex; flex-direction: column; gap: var(--p1); max-width: 900px; margin: 0 auto; }
 /* ── En-tête — repris de la page de renvois ───────────────────────────── */
@@ -30,9 +65,17 @@
 .costly-mistakes .cm-table th, .costly-mistakes .cm-table td { padding: 7px 10px; text-align: center; border-bottom: 1px solid var(--dark-5); }
 .costly-mistakes .cm-table th { color: var(--dark-3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
 .costly-mistakes .cm-table th:first-child, .costly-mistakes .cm-table td:first-child { text-align: left; }
-.costly-mistakes .cm-table tr.current td { background: var(--tint-action); font-weight: 700; color: var(--dark-0); }
-.costly-mistakes .cm-table tr.current td:first-child { border-left: 3px solid var(--role-action); }
-.costly-mistakes .cm-table td.hit { background: var(--tint-risk); color: var(--role-risk); border-radius: 4px; }
+/* `cm-band--current` et `cm-cell--hit`, les noms que pose
+   `teams-costly-mistakes-table.html`. La feuille stylait `tr.current` et
+   `td.hit`, que le partiel n'écrit nulle part : ni la tranche du coach ni la
+   colonne atteinte par le dé n'étaient mises en évidence — les deux seules
+   choses que cette table existe pour montrer (carte 562).
+
+   Le nom du markup l'emporte : il suit la convention `cm-` de toute la feuille,
+   là où `current` et `hit` sont des noms nus qu'un autre écran revendiquerait. */
+.costly-mistakes .cm-table tr.cm-band--current td { background: var(--tint-action); font-weight: 700; color: var(--dark-0); }
+.costly-mistakes .cm-table tr.cm-band--current td:first-child { border-left: 3px solid var(--role-action); }
+.costly-mistakes .cm-table td.cm-cell--hit { background: var(--tint-risk); color: var(--role-risk); border-radius: 4px; }
 /* ── Le dé ────────────────────────────────────────────────────────────── */
 .costly-mistakes .cm-roll-zone { display: flex; flex-direction: column; align-items: center; gap: var(--p1); padding: var(--p2) 0; }
 .costly-mistakes .cm-die {
@@ -95,3 +138,38 @@
   border: 1px solid var(--dark-4); font-weight: 700; color: var(--dark-2);
 }
 .costly-mistakes .cm-footer { display: flex; justify-content: flex-end; }
+
+/* ── Ce que le gabarit emprunte à la page de renvois ──────────────────────
+   Copié de `widgets/dis-page.css`, seule la portée change. Ces classes n'ont
+   jamais été globales : les croire telles est ce qui a livré la page sans
+   styles (carte 562). */
+.costly-mistakes .meta-label { font-size: var(--text-tiny); color: var(--dark-3); }
+.costly-mistakes .meta-value { font-size: var(--text-small); color: var(--dark-1); font-weight: 600; }
+
+.costly-mistakes .panel { background: var(--white); border-radius: 10px; padding: var(--p2); min-width: 0; }
+.costly-mistakes .panel-title {
+  font-family: var(--font-title); font-size: var(--h5); font-weight: 700;
+  color: var(--dark-1); margin-bottom: var(--p05);
+}
+.costly-mistakes .panel-sub { font-size: var(--text-tiny); color: var(--dark-3); margin-bottom: var(--p1); }
+
+.costly-mistakes .alert {
+  border-radius: 8px; padding: var(--p1); font-size: var(--text-tiny);
+  line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;
+}
+.costly-mistakes .alert--info { background: var(--tint-action); color: var(--dark-2); }
+
+.costly-mistakes .cta-primary {
+  width: 100%; border: none; border-radius: 8px; padding: 14px;
+  background: var(--role-action); color: var(--white); font-size: var(--text-small);
+  font-weight: 600; cursor: pointer; transition: background 0.15s;
+  display: block; text-align: center; text-decoration: none;
+}
+.costly-mistakes .cta-primary:hover { background: var(--dark-1); }
+
+/* Le motif d'un jet en échec. Même forme que l'encart, en teinte de risque —
+   `alert--error` de la page de renvois. */
+.costly-mistakes .cm-roll-error {
+  border-radius: 8px; padding: var(--p1); font-size: var(--text-tiny);
+  line-height: 1.5; background: var(--tint-risk); color: var(--dark-1);
+}

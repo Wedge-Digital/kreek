@@ -233,7 +233,60 @@ def test_2_au_dessus_du_seuil_le_bandeau_propose_le_jet(page: Page, space_id, ri
     expect(cta.first).to_have_attribute("hx-get", re.compile(r"/costly-mistakes$"))
 
 
-def test_3_le_jet_affiche_son_resultat_et_la_tresorerie_suit(page: Page, space_id, riche):
+def test_3_la_page_porte_ses_styles(page: Page, space_id, riche):
+    """**Les styles appliqués, jamais les classes présentes.**
+
+    La page s'est affichée sans aucun de ses styles alors que sa feuille était
+    bien construite, bien servie et bien scopée (carte 562) : ses classes
+    étaient là, et rien ne les définissait sous `.costly-mistakes`. Un test qui
+    chercherait `.panel` dans le DOM aurait été vert tout du long.
+
+    Trois mesures, une par défaut corrigé : les tokens de couleur, qui
+    n'existaient que sous d'autres racines ; les huit règles empruntées à la
+    page de renvois, crues globales ; et les deux sélecteurs de table, qui ne
+    portaient pas le nom que le partiel écrit.
+    """
+    page.goto(f"{BASE_URL}/app/{space_id}/teams/{riche}/costly-mistakes", wait_until="load")
+    expect(page.locator(".cm-table")).to_be_visible()
+
+    mesures = page.evaluate(
+        """() => {
+            const style = (sel) => {
+                const el = document.querySelector(sel);
+                return el ? getComputedStyle(el) : null;
+            };
+            const racine = style('.costly-mistakes');
+            const panneau = style('.panel');
+            const bouton = style('.cm-btn-roll');
+            const cellule = style('.cm-band--current td');
+            return {
+                roleAction: racine.getPropertyValue('--role-action').trim(),
+                tintSafe: racine.getPropertyValue('--tint-safe').trim(),
+                fondPanneau: panneau && panneau.backgroundColor,
+                fondBouton: bouton && bouton.backgroundColor,
+                texteBouton: bouton && bouton.color,
+                fondTrancheCourante: cellule && cellule.backgroundColor,
+            };
+        }"""
+    )
+
+    transparent = "rgba(0, 0, 0, 0)"
+    assert mesures["roleAction"], "le token --role-action ne se résout pas"
+    assert mesures["tintSafe"], "le token --tint-safe ne se résout pas"
+    assert mesures["fondPanneau"] not in (None, transparent), (
+        f"les panneaux n'ont pas de fond : {mesures['fondPanneau']}"
+    )
+    assert mesures["fondBouton"] not in (None, transparent), (
+        "le bouton du jet n'a pas de fond — son texte blanc le rend invisible "
+        f"sur le panneau blanc : {mesures['fondBouton']} / {mesures['texteBouton']}"
+    )
+    assert mesures["fondTrancheCourante"] not in (None, transparent), (
+        "la tranche du coach n'est pas mise en évidence : "
+        f"{mesures['fondTrancheCourante']}"
+    )
+
+
+def test_4_le_jet_affiche_son_resultat_et_la_tresorerie_suit(page: Page, space_id, riche):
     """Chemin nominal. Aucune assertion sur l'issue : le dé est tiré par le
     serveur, et attendre un incident précis serait instable une fois sur six."""
     avant = _tresorerie(riche)
@@ -272,7 +325,7 @@ def jet_fait(space_id, riche):
     return riche
 
 
-def test_4_un_second_jet_est_refuse_et_ne_reprend_rien(space_id, riche, jet_fait):
+def test_5_un_second_jet_est_refuse_et_ne_reprend_rien(space_id, riche, jet_fait):
     """La raison d'être de cette carte : un double jet **retirerait de l'argent
     deux fois**. Le bouton est désactivé après le premier — il faut donc poster
     sans passer par l'interface, ce qu'un utilisateur mal intentionné ferait."""
@@ -284,7 +337,7 @@ def test_4_un_second_jet_est_refuse_et_ne_reprend_rien(space_id, riche, jet_fait
     assert _tresorerie(riche) == avant, "la trésorerie ne doit pas rebouger"
 
 
-def test_5_un_coach_tiers_ne_peut_pas_jeter_le_de(space_id, riche, jet_fait):
+def test_6_un_coach_tiers_ne_peut_pas_jeter_le_de(space_id, riche, jet_fait):
     """Le jet a un effet financier et son URL est devinable : le droit garde le
     **POST**, pas seulement l'affichage."""
     avant = _tresorerie(riche)
@@ -301,14 +354,14 @@ def test_5_un_coach_tiers_ne_peut_pas_jeter_le_de(space_id, riche, jet_fait):
     assert _jeter(space_id, riche).status_code == 409
 
 
-def test_6_la_page_hors_phase_est_refusee(space_id, riche, jet_fait):
+def test_7_la_page_hors_phase_est_refusee(space_id, riche, jet_fait):
     """Après le jet, l'équipe est repartie jouer : l'écran n'a plus d'objet."""
     assert _phase(riche) == "ReadyToPlay"
     page = requests.get(f"{BASE_URL}/app/{space_id}/teams/{riche}/costly-mistakes")
     assert page.status_code == 422
 
 
-def test_7_une_equipe_inconnue_ne_donne_pas_d_ecran(space_id):
+def test_8_une_equipe_inconnue_ne_donne_pas_d_ecran(space_id):
     inconnue = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
     assert requests.get(
         f"{BASE_URL}/app/{space_id}/teams/{inconnue}/costly-mistakes"
