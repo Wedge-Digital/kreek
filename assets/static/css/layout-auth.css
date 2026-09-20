@@ -21,14 +21,16 @@
   position: relative;
 }
 
-/* La moitié de la largeur du panneau, centrée par le flex de `.auth-right`.
-   `height: auto` tient le ratio ; `max-height` empêche le débordement sur une
-   fenêtre basse, et `object-fit: contain` garantit que cette borne, si elle
-   mord, rétrécit l'image au lieu de l'écraser. Le positionnement absolu qui
-   précédait imposait les deux dimensions du panneau, ce qui interdisait toute
-   taille intermédiaire. */
+/* Sa taille naturelle, centrée par le flex de `.auth-right`. `height: auto`
+   tient le ratio ; `max-height` empêche le débordement sur une fenêtre basse,
+   et `object-fit: contain` garantit que cette borne, si elle mord, rétrécit
+   l'image au lieu de l'écraser.
+
+   Deux largeurs imposées ont été retirées dans cet ordre : le positionnement
+   absolu, qui plaquait les deux dimensions du panneau et interdisait toute
+   taille intermédiaire, puis le `width: 50%` qui l'avait remplacé — il
+   redimensionnait l'illustration au lieu de la laisser se poser. */
 .right-auth-img {
-  width: 50%;
   height: auto;
   max-height: 100%;
   object-fit: contain;
