@@ -9,6 +9,16 @@ pub struct Inducement {
     pub cost: u32,
     #[serde(rename = "reducedCost")]
     pub reduced_cost: Option<u32>,
+    /// Les règles spéciales qui donnent droit à `reduced_cost` (carte 560).
+    ///
+    /// **Le corpus y met aussi des ligues** — le cuisinier halfling y désigne
+    /// `HALFLING_THIMBLE_CUP`. Une entrée qui n'est pas une règle spéciale ne
+    /// correspondra jamais à celles d'un roster, et reste donc sans effet :
+    /// c'est ce qui rend la lecture de ce champ sûre. Voir
+    /// `inducement_pricing`, qui porte le cas halfling en dur pour cette
+    /// raison.
+    #[serde(rename = "reducedCostFor", default)]
+    pub reduced_cost_for: Vec<String>,
     #[serde(rename = "maxQuantity")]
     pub max_quantity: u32,
     pub category: String,

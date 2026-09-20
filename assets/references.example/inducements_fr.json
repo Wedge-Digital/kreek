@@ -6,11 +6,12 @@
       "uid": "DEMO_RENFORT_TEMPORAIRE",
       "name": "Renfort Temporaire",
       "cost": 20,
-      "reducedCost": null,
+      "reducedCost": 10,
+      "reducedCostFor": ["LOW_COST_LINEMEN"],
       "maxQuantity": 3,
       "category": "COMMON",
       "restrictedTo": [],
-      "description": "Ajoute un remplaçant pour la durée de la rencontre."
+      "description": "Ajoute un remplaçant pour la durée de la rencontre. Moitié prix pour une équipe dont les hommes de base sont bon marché."
     },
     {
       "uid": "DEMO_CHARIOT_DE_VIVRES",
@@ -41,6 +42,16 @@
       "category": "BIASED_REFEREE",
       "restrictedTo": [],
       "description": "Ferme les yeux sur la première action déloyale de l'équipe."
+    },
+    {
+      "uid": "DEMO_GUERISSEUR_ITINERANT",
+      "name": "Guérisseur Itinérant",
+      "cost": 40,
+      "reducedCost": null,
+      "maxQuantity": 1,
+      "category": "SPECIALIZED",
+      "restrictedTo": ["APOTHECARY"],
+      "description": "Soigne un joueur une fois par rencontre. Réservé aux équipes qui ont le droit d'engager un apothicaire."
     },
     {
       "uid": "DEMO_MASSEUR_DOUTEUX",

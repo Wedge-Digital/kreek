@@ -1,5 +1,7 @@
+use crate::app::references::domain::inducement_availability::est_disponible_pour;
 use crate::app::references::domain::inducement_pricing::cout_pour_roster;
 use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::references::domain::profil_roster::ProfilRoster;
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -127,16 +129,20 @@ fn build_inducement_items(
         .split(',')
         .filter(|s| !s.is_empty())
         .collect();
+    // Le profil est résolu **une fois** : il vaut pour toute la liste, et le
+    // catalogue se parcourt linéairement.
+    let profil = ProfilRoster::depuis(&params.roster_id, repo.find_team_by_uid(&params.roster_id));
     let mut common = vec![];
     let mut special = vec![];
     for uid in &allowed {
         let Some(ind) = repo.find_inducement_by_uid(uid) else {
             continue;
         };
-        if !params.roster_id.is_empty()
-            && !ind.restricted_to.is_empty()
-            && !ind.restricted_to.contains(&params.roster_id)
-        {
+        // `restrictedTo` désigne selon l'entrée un roster, une règle spéciale
+        // ou un membre du staff. Le comparer au seul identifiant de roster
+        // écartait les quatre coups de pouce restreints du corpus de
+        // production, pour toutes les équipes (carte 561).
+        if !params.roster_id.is_empty() && !est_disponible_pour(ind, &profil) {
             continue;
         }
         let item = InducementSelectorItem {
@@ -146,7 +152,7 @@ fn build_inducement_items(
             // Le **même calcul** que celui du prix débité, et pour cette
             // raison-là : afficher `ind.cost` ici ferait lire 100 au coach —
             // ou 300 — et lui prélèverait l'autre (carte 507).
-            unit_cost: cout_pour_roster(ind, &params.roster_id),
+            unit_cost: cout_pour_roster(ind, &profil),
             max_qty: ind.max_quantity as u8,
             is_common: is_common_category(&ind.category),
             initial_qty: *initial_qtys.get(&ind.uid).unwrap_or(&0),

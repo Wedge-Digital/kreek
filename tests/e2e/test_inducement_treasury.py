@@ -139,7 +139,12 @@ def coups_de_pouce_ctx(browser, space_id):
 
     petite_monnaie = abs(tv_home - tv_away) + _cout(achats_topdog)
     # De quoi dépasser la petite monnaie, sans dépasser le budget.
-    achats_underdog = [(ARBITRE, 1), (MAGE, 1), (MASSEUR, 2)]  # 170
+    # Le masseur n'a plus sa place ici : il est restreint à `DEMO_GRANIT`, et
+    # l'underdog est celle des deux équipes qui vaut le moins — donc parfois
+    # `DEMO_ZEPHYR`, qui n'y a pas droit. La restriction n'était appliquée
+    # qu'à l'affichage jusqu'à la carte 561 ; elle l'est désormais aussi à
+    # l'achat. Trois renforts valent les deux masseurs, le total ne bouge pas.
+    achats_underdog = [(ARBITRE, 1), (MAGE, 1), (RENFORT, 3)]  # 170
     assert _cout(achats_underdog) > petite_monnaie, "le scénario doit faire payer l'underdog"
     assert _cout(achats_underdog) <= petite_monnaie + PLAFOND_APPOINT, "et rester dans le budget"
     r = _acheter(space_id, mr_id, underdog, achats_underdog)

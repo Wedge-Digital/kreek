@@ -10,8 +10,10 @@ use crate::app::match_report::ports::{
     CreationAppariementError, ICompetitionDataPort, InducementSpecDto, RoundContextDto,
     TierRulesDto,
 };
+use crate::app::references::domain::inducement_availability::est_disponible_pour;
 use crate::app::references::domain::inducement_pricing::cout_pour_roster;
 use crate::app::references::domain::port::IReferenceRepository;
+use crate::app::references::domain::profil_roster::ProfilRoster;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::common::services::event_bus::event_bus::EventBus;
 use async_trait::async_trait;
@@ -166,10 +168,12 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
             .tiers
             .iter()
             .find(|t| t.rosters.contains(&roster_id.to_string()))?;
+        let profil =
+            ProfilRoster::depuis(roster_id, self.reference_repo.find_team_by_uid(roster_id));
         let allowed_inducements = tier
             .inducements
             .iter()
-            .filter_map(|uid| build_inducement_spec(uid, roster_id, &*self.reference_repo))
+            .filter_map(|uid| build_inducement_spec(uid, &profil, &*self.reference_repo))
             .collect();
         let allowed_star_players = tier
             .star_players
@@ -194,23 +198,30 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
     }
 }
 
-/// C'est **le prix débité**, celui qui part de la trésorerie du coach.
+/// La spec du coup de pouce pour ce roster : **le prix débité**, celui qui part
+/// de la trésorerie du coach, et le droit d'y toucher.
 ///
-/// Il prend le roster parce qu'un coup de pouce peut coûter moins cher à
-/// certaines équipes — le cuistot halfling. `find_tier_rules_for_roster` le
-/// connaissait déjà et ne le transmettait pas : le prix réduit du corpus
-/// n'était lu nulle part, et l'équipe halfling payait son cuistot 300 kPo
-/// (carte 507).
+/// Il prend le profil du roster parce qu'un coup de pouce peut coûter moins
+/// cher à certaines équipes — le cuistot halfling, et les deux coups de pouce
+/// de « Chantage et Corruption ». `find_tier_rules_for_roster` connaissait déjà
+/// le roster et ne le transmettait pas : le prix réduit du corpus n'était lu
+/// nulle part, et l'équipe halfling payait son cuistot 300 kPo (carte 507).
 fn build_inducement_spec(
     uid: &str,
-    roster_id: &str,
+    profil: &ProfilRoster<'_>,
     repo: &dyn IReferenceRepository,
 ) -> Option<InducementSpecDto> {
     let ind = repo.find_inducement_by_uid(uid)?;
+    // **Le même filtre que le sélecteur** (carte 561). Il ne filtrait rien ici,
+    // et le sélecteur décidait seul : un achat forgé à la main passait, faute
+    // que la liste donnée au domaine exclue ce à quoi l'équipe n'a pas droit.
+    if !est_disponible_pour(ind, profil) {
+        return None;
+    }
     Some(InducementSpecDto {
         uid: ind.uid.clone(),
         max_qty: ind.max_quantity as u8,
-        unit_cost: cout_pour_roster(ind, roster_id),
+        unit_cost: cout_pour_roster(ind, profil),
     })
 }
 
@@ -272,21 +283,29 @@ mod tests {
     /// Le dépôt est le **vrai jeu de démonstration**, pas un mock : si le
     /// cuistot en disparaissait, ce test le dirait au lieu de continuer à
     /// prouver quelque chose sur un corpus imaginaire.
+    /// Le prix débité à ce roster, tel que le tier le donnerait.
+    fn prix_debite(repo: &InMemoryReferenceRepository, uid: &str, roster: &str) -> u32 {
+        let profil = ProfilRoster::depuis(roster, repo.find_team_by_uid(roster));
+        build_inducement_spec(uid, &profil, repo)
+            .unwrap_or_else(|| panic!("le jeu de démonstration porte {uid}"))
+            .unit_cost
+    }
+
     #[test]
     fn le_cuistot_est_debite_a_prix_reduit_pour_les_halflings() {
         let repo = InMemoryReferenceRepository::load_for_tests();
-        let spec = build_inducement_spec("HALFLING_MASTER_CHEF", "HALFLING", &repo)
-            .expect("le jeu de démonstration porte le cuistot");
-        assert_eq!(spec.unit_cost, 100);
+        assert_eq!(prix_debite(&repo, "HALFLING_MASTER_CHEF", "HALFLING"), 100);
     }
 
     #[test]
     fn le_cuistot_est_debite_plein_tarif_aux_autres() {
         let repo = InMemoryReferenceRepository::load_for_tests();
         for roster in ["DEMO_GRANIT", "DEMO_ZEPHYR", "GNOME"] {
-            let spec = build_inducement_spec("HALFLING_MASTER_CHEF", roster, &repo)
-                .expect("le jeu de démonstration porte le cuistot");
-            assert_eq!(spec.unit_cost, 300, "roster {roster}");
+            assert_eq!(
+                prix_debite(&repo, "HALFLING_MASTER_CHEF", roster),
+                300,
+                "roster {roster}"
+            );
         }
     }
 
@@ -295,8 +314,35 @@ mod tests {
     #[test]
     fn les_autres_coups_de_pouce_gardent_leur_prix() {
         let repo = InMemoryReferenceRepository::load_for_tests();
-        let a = build_inducement_spec("DEMO_MAGE_DES_BRUMES", "HALFLING", &repo).unwrap();
-        let b = build_inducement_spec("DEMO_MAGE_DES_BRUMES", "DEMO_GRANIT", &repo).unwrap();
-        assert_eq!((a.unit_cost, b.unit_cost), (60, 60));
+        assert_eq!(prix_debite(&repo, "DEMO_MAGE_DES_BRUMES", "HALFLING"), 60);
+        assert_eq!(
+            prix_debite(&repo, "DEMO_MAGE_DES_BRUMES", "DEMO_GRANIT"),
+            60
+        );
+    }
+
+    /// **Le prix débité par la règle de la carte 560**, celle qui lit
+    /// `reducedCostFor` au corpus.
+    ///
+    /// Le jeu de démonstration porte la règle sur le Renfort Temporaire, réduit
+    /// pour un roster aux hommes de base bon marché : `DEMO_LANTERNE` porte
+    /// `LOW_COST_LINEMEN`, les deux autres non. Le corpus de production la porte
+    /// sur les Pots-de-vin et le Représentant véreux, pour « Chantage et
+    /// Corruption » — même mécanisme, et lui n'est pas versionné.
+    #[test]
+    fn le_tarif_reduit_d_une_regle_speciale_est_bien_celui_debite() {
+        let repo = InMemoryReferenceRepository::load_for_tests();
+        assert_eq!(
+            prix_debite(&repo, "DEMO_RENFORT_TEMPORAIRE", "DEMO_LANTERNE"),
+            10
+        );
+        assert_eq!(
+            prix_debite(&repo, "DEMO_RENFORT_TEMPORAIRE", "DEMO_GRANIT"),
+            20
+        );
+        assert_eq!(
+            prix_debite(&repo, "DEMO_RENFORT_TEMPORAIRE", "DEMO_ZEPHYR"),
+            20
+        );
     }
 }
