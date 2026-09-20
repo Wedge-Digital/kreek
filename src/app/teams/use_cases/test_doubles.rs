@@ -25,6 +25,14 @@ pub struct FakeTeamRepository {
     /// Les lots successivement appendus, dans l'ordre — ce qui permet de
     /// vérifier qu'un refus n'a **rien** écrit.
     pub batches: Mutex<Vec<Vec<TeamDomainEvent>>>,
+    /// Combien des prochains ajouts seront rejetés en `ConcurrentWrite`
+    /// (carte 563).
+    ///
+    /// La course réelle — un écouteur qui écrit entre la lecture et l'ajout —
+    /// ne se reproduit pas à volonté dans un test séquentiel. Ce compteur la
+    /// joue, et permet de vérifier qu'un jet la traverse. Zéro par défaut :
+    /// aucun test existant ne change de comportement.
+    pub conflits_a_simuler: Mutex<u8>,
 }
 
 impl FakeTeamRepository {
@@ -32,7 +40,15 @@ impl FakeTeamRepository {
         Self {
             events: Mutex::new(events),
             batches: Mutex::new(Vec::new()),
+            conflits_a_simuler: Mutex::new(0),
         }
+    }
+
+    /// Le même dépôt, qui rejettera ses `combien` prochains ajouts.
+    pub fn en_conflit(events: Vec<TeamDomainEvent>, combien: u8) -> Self {
+        let depot = Self::with_events(events);
+        *depot.conflits_a_simuler.lock().unwrap() = combien;
+        depot
     }
 
     pub fn appended(&self) -> Vec<TeamDomainEvent> {
@@ -75,6 +91,13 @@ impl ITeamRepository for FakeTeamRepository {
         events: &[TeamDomainEvent],
         expected_version: u64,
     ) -> Result<u64, RepositoryError> {
+        {
+            let mut restants = self.conflits_a_simuler.lock().unwrap();
+            if *restants > 0 {
+                *restants -= 1;
+                return Err(RepositoryError::ConcurrentWrite);
+            }
+        }
         let mut store = self.events.lock().unwrap();
         if store.len() as u64 != expected_version {
             return Err(RepositoryError::ConcurrentWrite);

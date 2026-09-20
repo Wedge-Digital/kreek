@@ -35,9 +35,39 @@ pub enum ApplyCostlyMistakesError {
     Repository(RepositoryError),
 }
 
+/// Le jet, avec **une** seconde chance si la version a bougé sous nos pieds.
+///
+/// La validation des renvois déclenche des écouteurs qui écrivent sur la même
+/// équipe ; un jet posté dans cette fenêtre voyait son ajout rejeté, et le
+/// coach recevait une erreur serveur (carte 563).
+///
+/// Réessayer est sûr : l'ajout rejeté n'a **rien écrit**. L'équipe est relue et
+/// le dé relancé sur son état frais, ce qui est plus juste que de rejouer un dé
+/// tiré sur une trésorerie périmée.
+///
+/// **Une seule fois, pas une boucle.** Un conflit qui persiste n'est plus une
+/// course mais un problème d'écriture, et l'escamoter ferait d'une étape en
+/// échec une étape qui rassure.
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: ApplyCostlyMistakesCommand,
+    team_repo: &dyn ITeamRepository,
+    dice: &dyn IDiceRoller,
+) -> Result<CostlyMistakesOutcome, ApplyCostlyMistakesError> {
+    match tenter(&cmd, team_repo, dice).await {
+        Err(ApplyCostlyMistakesError::Repository(RepositoryError::ConcurrentWrite)) => {
+            tracing::warn!(
+                team_id = %cmd.team_id,
+                "jet des erreurs coûteuses : version dépassée, seconde tentative"
+            );
+            tenter(&cmd, team_repo, dice).await
+        }
+        autre => autre,
+    }
+}
+
+async fn tenter(
+    cmd: &ApplyCostlyMistakesCommand,
     team_repo: &dyn ITeamRepository,
     dice: &dyn IDiceRoller,
 ) -> Result<CostlyMistakesOutcome, ApplyCostlyMistakesError> {
@@ -288,6 +318,40 @@ mod tests {
             vec!["d6"],
             "le dé est tiré avant la garde, et jeté avec le refus"
         );
+    }
+
+    /// Carte 563 — la course que la CI a prise en flagrant délit : un écouteur
+    /// écrivait sur l'équipe entre la lecture et l'ajout, et le coach recevait
+    /// une erreur serveur. L'ajout rejeté n'ayant rien écrit, le jet est relancé
+    /// sur l'état frais.
+    #[tokio::test]
+    async fn un_conflit_de_version_est_reessaye_une_fois() {
+        let teams = FakeTeamRepository::en_conflit(equipe(345, GamePhase::CostlyMistakes), 1);
+        let de = DeTruque::avec(1, 3, (6, 6));
+
+        let issue = jeter(&teams, &de)
+            .await
+            .expect("la seconde tentative aboutit");
+
+        assert_eq!(issue.incident, IncidentType::Major);
+        assert_eq!(teams.batch_count(), 1, "un seul lot écrit, pas deux");
+    }
+
+    /// Une seule seconde chance. Un conflit qui persiste n'est plus une course
+    /// mais un problème d'écriture, et l'escamoter ferait d'une étape en échec
+    /// une étape qui rassure.
+    #[tokio::test]
+    async fn un_conflit_qui_persiste_remonte() {
+        let teams = FakeTeamRepository::en_conflit(equipe(345, GamePhase::CostlyMistakes), 2);
+        let de = DeTruque::avec(1, 3, (6, 6));
+
+        let erreur = jeter(&teams, &de).await.unwrap_err();
+
+        assert!(matches!(
+            erreur,
+            ApplyCostlyMistakesError::Repository(RepositoryError::ConcurrentWrite)
+        ));
+        assert_eq!(teams.batch_count(), 0, "rien n'a été écrit");
     }
 
     #[tokio::test]

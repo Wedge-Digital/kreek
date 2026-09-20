@@ -3,6 +3,7 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::teams::domain::costly_mistakes::tranches_affichables;
 use crate::app::teams::domain::team::GamePhase;
 use crate::app::teams::domain::value_objects::{IncidentType, Kpo};
+use crate::app::teams::ports::RepositoryError;
 use crate::app::teams::use_cases::apply_costly_mistakes_use_case::CostlyMistakesOutcome;
 use crate::app::teams::use_cases::apply_costly_mistakes_use_case::{
     self, ApplyCostlyMistakesCommand, ApplyCostlyMistakesError,
@@ -117,20 +118,48 @@ pub async fn post_costly_mistakes_roll(
     .await
     {
         Ok(issue) => fragment(issue),
-        Err(ApplyCostlyMistakesError::TeamNotFound) => StatusCode::NOT_FOUND.into_response(),
-        // **409 et non 422** : la requête est bien formée, c'est l'état qui a
-        // changé. Typiquement un second jet — `CostlyMistakesApplied` a reposé
-        // `ReadyToPlay`, donc la garde de phase du domaine refuse. L'idempotence
-        // ne demande ni verrou ni jeton, elle sort du modèle.
-        Err(ApplyCostlyMistakesError::Domain(e)) => {
-            tracing::warn!(team_id = %team_id, "jet refusé : {e:?}");
-            StatusCode::CONFLICT.into_response()
-        }
-        Err(e) => {
-            tracing::error!("post_costly_mistakes_roll: {e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+        Err(e) => reponse_de_refus(&team_id, e),
     }
+}
+
+/// Le statut d'un jet qui n'a pas abouti — deux refus, une seule panne.
+///
+/// **409 et non 422 pour le refus du domaine** : la requête est bien formée,
+/// c'est l'état qui a changé. Typiquement un second jet — `CostlyMistakesApplied`
+/// a reposé `ReadyToPlay`, donc la garde de phase refuse. L'idempotence ne
+/// demande ni verrou ni jeton, elle sort du modèle.
+///
+/// **409 et non 500 pour le conflit de version** (carte 563). Le use case a
+/// déjà retenté une fois ; s'il en reste un, l'équipe est écrite par ailleurs
+/// et le coach n'a qu'à recommencer. Un conflit de version n'est traité comme
+/// une panne nulle part ailleurs : l'édition d'effectif invite à réessayer, le
+/// panier de customisation re-rend l'état réel, la création de joueur y lit un
+/// « déjà traité ». Le jet était le seul à en faire un 500, et la CI l'a payé
+/// huit fois en un passage.
+///
+/// Les variantes de dépôt sont nommées une par une : une nouvelle y retomberait
+/// autrement en 500 sans que personne ne l'ait décidé.
+fn statut_du_refus(erreur: &ApplyCostlyMistakesError) -> StatusCode {
+    match erreur {
+        ApplyCostlyMistakesError::TeamNotFound => StatusCode::NOT_FOUND,
+        ApplyCostlyMistakesError::Domain(_) => StatusCode::CONFLICT,
+        ApplyCostlyMistakesError::Repository(RepositoryError::ConcurrentWrite) => {
+            StatusCode::CONFLICT
+        }
+        ApplyCostlyMistakesError::Repository(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+/// Le journal suit le statut : une panne s'écrit en `error`, un refus en `warn`.
+fn reponse_de_refus(team_id: &str, erreur: ApplyCostlyMistakesError) -> Response {
+    let statut = statut_du_refus(&erreur);
+    match statut {
+        StatusCode::INTERNAL_SERVER_ERROR => {
+            tracing::error!(team_id = %team_id, "post_costly_mistakes_roll: {erreur:?}")
+        }
+        _ => tracing::warn!(team_id = %team_id, "jet non abouti : {erreur:?}"),
+    }
+    statut.into_response()
 }
 
 /// Le résultat, rendu en fragment — le composant qui tient l'animation
@@ -463,5 +492,42 @@ mod tests {
             assert_eq!(lignes[n - 2].kind, "total", "{incident:?}");
             assert_eq!(lignes[n - 1].kind, "rest", "{incident:?}");
         }
+    }
+
+    // ── Le statut d'un jet qui n'aboutit pas (carte 563) ────────────────────
+
+    /// **Le défaut que la CI a pris huit fois en un passage.** Un écouteur
+    /// écrivait sur l'équipe entre la lecture et l'ajout, et le coach recevait
+    /// une erreur serveur là où il n'avait qu'à recommencer.
+    #[test]
+    fn un_conflit_de_version_est_un_409_pas_un_500() {
+        let erreur = ApplyCostlyMistakesError::Repository(
+            crate::app::teams::ports::RepositoryError::ConcurrentWrite,
+        );
+        assert_eq!(statut_du_refus(&erreur), StatusCode::CONFLICT);
+    }
+
+    /// Le contre-exemple, sans lequel une fonction qui rendrait 409 pour tout
+    /// passerait le test ci-dessus : une vraie panne de dépôt reste un 500.
+    #[test]
+    fn une_panne_de_depot_reste_un_500() {
+        let erreur = ApplyCostlyMistakesError::Repository(
+            crate::app::teams::ports::RepositoryError::PhaseWithoutBasket(GamePhase::ReadyToPlay),
+        );
+        assert_eq!(statut_du_refus(&erreur), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn un_second_jet_reste_un_409_et_une_equipe_inconnue_un_404() {
+        assert_eq!(
+            statut_du_refus(&ApplyCostlyMistakesError::TeamNotFound),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            statut_du_refus(&ApplyCostlyMistakesError::Domain(
+                crate::app::teams::domain::error::DomainError::WrongGamePhase(None)
+            )),
+            StatusCode::CONFLICT
+        );
     }
 }
