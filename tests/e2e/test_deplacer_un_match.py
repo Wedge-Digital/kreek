@@ -19,7 +19,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import build_full_competition, liberer_les_equipes
 from db_helpers import attendre_que, query_db
-from htmx_helpers import cliquer_quand_cable
+from htmx_helpers import attendre_cablage
 from match_report_helpers import play_match
 
 BASE_URL = "http://localhost:3210"
@@ -72,6 +72,19 @@ def _url_move(space_id, ctx) -> str:
 
 # ── Le déplacement, par l'écran ───────────────────────────────────────────────
 
+def _attendre_le_widget(page: Page) -> None:
+    """Le widget est inséré par htmx puis pris en main par Alpine, et le
+    bouton qui déplie le panneau est un `@click` Alpine sans attribut `hx-*` :
+    `cliquer_quand_cable` ne le verrait jamais câblé, htmx ne le câble pas.
+
+    Ce qui rend le widget opérant, c'est le câblage du formulaire — lui porte
+    le `hx-post` — et l'initialisation d'Alpine sur la racine, sans laquelle
+    le `@click` est inerte. On attend les deux, dans cet ordre."""
+    attendre_cablage(page, ".move-pairing-panel")
+    racine = page.locator(".move-pairing").first.element_handle(timeout=10_000)
+    page.wait_for_function("e => !!e._x_dataStack", arg=racine, timeout=10_000)
+
+
 def test_un_administrateur_deplace_un_match_publie(page: Page, space_id, ctx, match_publie):
     cible = ctx["round_ids"][1]
     # Le tirage a déjà donné un adversaire à chaque équipe sur chaque journée :
@@ -86,7 +99,8 @@ def test_un_administrateur_deplace_un_match_publie(page: Page, space_id, ctx, ma
     page.goto(_url_recap(space_id, match_publie["mr_id"]))
     expect(page.locator(".ms-admin-bar")).to_be_visible()
 
-    cliquer_quand_cable(page, ".move-pairing-btn")
+    _attendre_le_widget(page)
+    page.locator(".move-pairing-btn").click()
     select = page.locator("kreek-select[name='round_id']")
     select.locator(".ks-control").click()
     select.locator(".ks-option:not(.ks-empty)").first.wait_for(timeout=5000)
