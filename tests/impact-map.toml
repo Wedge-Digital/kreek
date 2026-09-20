@@ -204,6 +204,10 @@
 # spp_calculator : coût des compétences calculé au récapitulatif.
 "test_match_report_recap" = ["match_report", "players", "teams", "spp_calculator",
                              "competitions", "references", "ranking", "team_creation", "spaces"]
+# L'effectif après une mort (carte 559) : un match publié tue un joueur, puis
+# l'édition d'effectif de `players` reprend son numéro.
+"test_effectif_apres_une_mort" = ["players", "match_report", "competitions", "teams",
+                                  "references", "team_creation", "spaces", "ranking"]
 # Déplacer un match (carte 557) : le widget est à `competitions`, le rapport,
 # le classement et l'historique des joueurs suivent par app events.
 "test_deplacer_un_match" = ["competitions", "match_report", "ranking", "players", "teams",

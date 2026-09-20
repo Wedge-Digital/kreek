@@ -1169,6 +1169,17 @@ impl Player {
         })
     }
 
+    /// Tient-il encore son numéro et son rang dans l'effectif ? (carte 559)
+    ///
+    /// Un mort reste membre — sa mort est un statut de participation, pas un
+    /// départ — mais il ne tient plus de place : son numéro et son rang sont
+    /// libres pour les vivants. C'est le vocabulaire de `teams`, où un perdu
+    /// n'entre ni dans le plafond de seize ni dans le quota de son poste, porté
+    /// ici pour ce que `players` possède : les maillots et l'ordre d'affichage.
+    pub fn occupe_une_place(&self) -> bool {
+        self.participation_status != PlayerParticipationStatus::Dead
+    }
+
     /// **Le `match` exhaustif est le garde-fou**, pas une préférence de style.
     /// C'est lui qui a forcé la question au moment d'ouvrir `Journeyman` —
     /// un `is_active()` l'aurait tranchée en silence, et dans le bon sens par
@@ -1696,6 +1707,33 @@ mod match_impact_tests {
         let event = player.record_injury(sample_context(), InjuryType::Mort);
         let player = Player::apply(Some(player), &event).unwrap();
         assert_eq!(player.participation_status, PlayerParticipationStatus::Dead);
+    }
+
+    /// Carte 559 — un mort reste membre, mais ne tient plus son numéro ni son
+    /// rang ; un blessé, si.
+    #[test]
+    fn un_mort_ne_tient_plus_sa_place_un_blesse_si() {
+        let vivant = sample_player();
+        assert!(vivant.occupe_une_place());
+
+        let blesse = Player::apply(
+            Some(vivant.clone()),
+            &vivant.record_injury(sample_context(), InjuryType::BlessureSerieuse),
+        )
+        .unwrap();
+        assert!(blesse.occupe_une_place());
+
+        let mort = Player::apply(
+            Some(vivant.clone()),
+            &vivant.record_injury(sample_context(), InjuryType::Mort),
+        )
+        .unwrap();
+        assert!(!mort.occupe_une_place());
+        assert_eq!(
+            mort.membership,
+            RosterMembership::Active,
+            "membre, mais sans place"
+        );
     }
 
     #[test]

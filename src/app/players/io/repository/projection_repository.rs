@@ -155,7 +155,9 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
     /// pas de quoi charger tout l'effectif pour le filtrer ensuite.
     async fn jerseys_by_team_id(&self, team_id: &TeamId) -> Result<Vec<u16>, RepositoryError> {
         let lignes: Vec<(Option<i16>,)> = sqlx::query_as(
-            "SELECT jersey FROM players_proj WHERE team_id = $1 AND membership <> 'Dismissed'",
+            "SELECT jersey FROM players_proj
+             WHERE team_id = $1 AND membership <> 'Dismissed'
+               AND participation_status <> 'Dead'",
         )
         .bind(&team_id.0)
         .fetch_all(&self.pool)

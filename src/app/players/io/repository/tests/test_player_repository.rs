@@ -144,6 +144,29 @@ async fn le_maillot_d_un_renvoye_redevient_attribuable(pool: PgPool) {
     assert_eq!(apres, vec![1, 2], "le 3 est libéré");
 }
 
+/// Carte 559 — le maillot d'un mort est libre lui aussi : il reste membre de
+/// l'effectif, il ne tient plus sa place. Sans ce filtre, un journalier
+/// recevait le premier numéro après celui du mort, laissant un trou.
+#[sqlx::test]
+async fn le_maillot_d_un_mort_redevient_attribuable(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let proj = PgPlayerProjectionRepository::new(pool);
+    let team_id = TeamId("t-maillot-du-mort".into());
+    let tombe = PlayerId("tombe-au-combat".into());
+
+    seed_player_with_jersey(&repo, &PlayerId("un".into()), &team_id, 1).await;
+    seed_player_with_jersey(&repo, &tombe, &team_id, 2).await;
+
+    let joueur = repo.find_by_id(&tombe).await.unwrap().unwrap();
+    let deces = joueur.record_injury(sample_context(), InjuryType::Mort);
+    repo.append(&tombe, &team_id, &deces, joueur.version + 1)
+        .await
+        .unwrap();
+
+    let pris = proj.jerseys_by_team_id(&team_id).await.unwrap();
+    assert_eq!(pris, vec![1], "le 2 est libéré par la mort de son porteur");
+}
+
 /// Carte 456 — les journaliers restants sont perdus à la clôture de la phase.
 ///
 /// Éprouvé sur le dépôt plutôt que sur le listener : ce qui compte est que

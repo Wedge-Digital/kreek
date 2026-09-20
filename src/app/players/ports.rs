@@ -114,6 +114,9 @@ pub trait IPlayerProjectionRepository: Send + Sync {
     /// d'appartenance vive au même endroit que celui des autres lectures : un
     /// maillot laissé par un renvoyé doit redevenir attribuable, et c'est
     /// exactement ce qu'une seconde requête avait déjà failli manquer.
+    ///
+    /// Celui d'un mort l'est aussi (carte 559) : il reste membre, il ne tient
+    /// plus sa place — la règle de `Player::occupe_une_place`, appliquée en SQL.
     async fn jerseys_by_team_id(&self, team_id: &TeamId) -> Result<Vec<u16>, RepositoryError>;
 
     /// Nombre de joueurs alignables au prochain match — les indisponibles

@@ -88,6 +88,11 @@ fn ensure_all_active(
 /// sur le seul lot : donner à un joueur le numéro d'un coéquipier qu'on ne
 /// touche pas est un conflit, alors que reprendre celui d'un renvoyé n'en est
 /// pas un — ce dernier a quitté l'effectif et ne figure pas dans `roster`.
+///
+/// **Un mort ne tient plus sa place** (carte 559) : il reste membre, donc dans
+/// `roster`, mais son numéro et son rang sont libres. L'écran d'édition ne le
+/// montre pas ; compter ses valeurs revenait à refuser « deux joueurs portent
+/// le même numéro » contre un joueur que le coach ne pouvait pas voir.
 fn ensure_no_duplicates(
     roster: &[Player],
     rows: &[RosterRowCommand],
@@ -97,7 +102,7 @@ fn ensure_no_duplicates(
 
     let mut jerseys = BTreeSet::new();
     let mut ordres = BTreeSet::new();
-    for player in roster {
+    for player in roster.iter().filter(|p| p.occupe_une_place()) {
         let ligne = soumis.get(player.id.0.as_str());
         let jersey = ligne.map_or(player.jersey, |r| r.jersey);
         let ordre = ligne.map_or(player.display_order, |r| Some(r.display_order));
@@ -157,6 +162,9 @@ fn events_for(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::players::domain::match_impact::{
+        InjuryType, MatchContext, MatchReportId, RoundId as MatchImpactRoundId,
+    };
     use crate::app::players::domain::player::{Spp, ValueKpo};
     use crate::app::players::domain::value_objects::{
         DisplayOrder, JerseyVo, PersonalName, PositionNameVo, RosterLineId,
@@ -206,7 +214,8 @@ mod tests {
             | PlayerDomainEvent::PlayerDismissed { player_id, .. }
             | PlayerDomainEvent::PlayerRenamed { player_id, .. }
             | PlayerDomainEvent::PlayerJerseyChanged { player_id, .. }
-            | PlayerDomainEvent::PlayerReordered { player_id, .. } => player_id.0.clone(),
+            | PlayerDomainEvent::PlayerReordered { player_id, .. }
+            | PlayerDomainEvent::InjurySustained { player_id, .. } => player_id.0.clone(),
             autre => panic!("événement non géré par la doublure : {autre:?}"),
         }
     }
@@ -287,6 +296,23 @@ mod tests {
             starting_value: ValueKpo(100),
             starting_membership: RosterMembership::Active,
             starting_personal_name: None,
+        }
+    }
+
+    /// Une mort en match, telle que `players` l'enregistre : c'est ce qui laisse
+    /// le joueur membre de l'effectif sans place à tenir.
+    fn mort(id: &str) -> PlayerDomainEvent {
+        PlayerDomainEvent::InjurySustained {
+            player_id: PlayerId(id.into()),
+            team_id: TeamId(EQUIPE.into()),
+            context: MatchContext {
+                match_report_id: MatchReportId("mr-fatal".into()),
+                round_id: MatchImpactRoundId("r1".into()),
+                round_label: "Journée 1".into(),
+                opponent_team_id: TeamId("adversaire".into()),
+                opponent_team_name: "Bone Crushers".into(),
+            },
+            injury_type: InjuryType::Mort,
         }
     }
 
@@ -387,6 +413,59 @@ mod tests {
             "le renvoyé ne fait plus partie de l'effectif"
         );
         assert_eq!(effectif[0].jersey.unwrap().into_inner(), 2);
+    }
+
+    /// Carte 559 — un mort reste membre de l'effectif, mais son numéro est
+    /// libre. Avant, « deux joueurs portent le même numéro » refusait le 2 à
+    /// « un » à cause d'un joueur que l'écran ne montrait même plus.
+    #[tokio::test]
+    async fn update_roster_ignores_dead_player_jersey_when_checking_uniqueness() {
+        let repo = FakePlayerRepo::avec(vec![
+            cree("un", Some(1)),
+            cree("tombe", Some(2)),
+            mort("tombe"),
+        ]);
+
+        let effectif = execute(commande(vec![ligne("un", None, Some(2), 0)]), &repo, &bus())
+            .await
+            .expect("reprendre le numéro d'un mort doit être permis");
+
+        let un = effectif.iter().find(|p| p.id.0 == "un").unwrap();
+        assert_eq!(un.jersey.unwrap().into_inner(), 2);
+    }
+
+    /// Même règle pour le rang : le mort en tenait un, il ne le tient plus.
+    #[tokio::test]
+    async fn update_roster_ignores_dead_player_display_order_when_checking_uniqueness() {
+        let repo = FakePlayerRepo::avec(vec![cree("un", Some(1)), cree("tombe", Some(2))]);
+        // « tombe » est rangé au rang 3 de son vivant, puis meurt.
+        execute(
+            commande(vec![ligne("tombe", None, Some(2), 3)]),
+            &repo,
+            &bus(),
+        )
+        .await
+        .unwrap();
+        repo.flux
+            .lock()
+            .unwrap()
+            .push(("tombe".into(), mort("tombe")));
+
+        execute(commande(vec![ligne("un", None, Some(1), 3)]), &repo, &bus())
+            .await
+            .expect("reprendre le rang d'un mort doit être permis");
+    }
+
+    /// Le contraire reste vrai : un blessé vivant tient toujours sa place.
+    #[tokio::test]
+    async fn update_roster_still_rejects_duplicate_jersey_against_living_player() {
+        let repo = FakePlayerRepo::avec(vec![cree("un", Some(1)), cree("deux", Some(2))]);
+
+        let erreur = execute(commande(vec![ligne("un", None, Some(2), 0)]), &repo, &bus())
+            .await
+            .unwrap_err();
+
+        assert!(matches!(erreur, UpdateRosterError::DuplicateJersey));
     }
 
     #[tokio::test]
