@@ -285,3 +285,53 @@ def test_un_post_trafique_ne_change_pas_les_equipes(space_id, competition):
     assert _equipes_du_rapport(mr_id) == avant, "les équipes ont été changées"
 
     _regler(space_id, competition, True)
+
+
+@pytest.fixture
+def brouillon_neuf(browser, space_id):
+    """Une compétition à elle, pour un rapport encore en `Draft`.
+
+    Celle du module ne convient pas : `test_un_post_trafique…` confirme son unique
+    rapport, qui passe en `PreMatch` et n'affiche plus la phase 1.
+    """
+    return build_full_competition(browser, space_id, 2, 1)
+
+
+def _en_membre_simple(page: Page) -> None:
+    """Connecte la page en membre simple, **sur les seules requêtes de l'app**.
+
+    `set_extra_http_headers` poserait l'en-tête sur les polices Google aussi,
+    dont le préflight CORS échouerait — cf. `test_player_customisation.py`.
+    """
+    page.route(
+        f"{BASE_URL}/**",
+        lambda route: route.continue_(
+            headers={**route.request.headers, "x-bypass-auth-profile": "simple"}
+        ),
+    )
+
+
+def test_un_membre_simple_commence_son_rapport_depuis_la_phase_figee(
+    page: Page, space_id, brouillon_neuf
+):
+    """**Le vrai bouton, pas un POST forgé** (carte 564).
+
+    En lecture seule, le formulaire n'a plus aucun champ et part vide. Le
+    serveur exigeait les cinq champs de la création, et répondait `missing
+    field competition_id` : le coach ne pouvait plus commencer son rapport. Le
+    test précédent ne le voyait pas, parce qu'il envoie un corps complet.
+    """
+    _regler(space_id, brouillon_neuf, False)
+    mr_id = _rapport_de_la_journee(brouillon_neuf["round_ids"][0])
+    avant = _equipes_du_rapport(mr_id)
+
+    _en_membre_simple(page)
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}", wait_until="load")
+    expect(page.locator(".mr-figee").first).to_be_visible(timeout=15000)
+
+    page.get_by_role("button", name="Commencer").click()
+
+    expect(page).to_have_url(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2", timeout=15000)
+    assert _equipes_du_rapport(mr_id) == avant, "les équipes ont été changées"
+
+    _regler(space_id, brouillon_neuf, True)

@@ -296,6 +296,23 @@ pub struct CreateMatchReportForm {
     pub away_team_id: String,
 }
 
+/// Le corps du POST de la phase 1 sur un rapport **existant**.
+///
+/// Distinct de `CreateMatchReportForm`, et ses deux champs sont facultatifs
+/// (carte 564) : quand la sélection est figée, le gabarit n'affiche que des
+/// noms, et le formulaire part **vide**. Exiger les cinq champs de la création
+/// faisait échouer l'extraction avant le handler — `missing field
+/// competition_id` — alors même que ces valeurs auraient été ignorées. Le coach
+/// ne pouvait plus commencer son rapport.
+///
+/// La compétition, la saison et la journée ne sont pas lues : elles ne changent
+/// pas après la création. Le widget les envoie quand même ; elles sont écartées.
+#[derive(Deserialize)]
+pub struct UpdateMatchSelectionForm {
+    pub home_team_id: Option<String>,
+    pub away_team_id: Option<String>,
+}
+
 // ── Handlers POST ────────────────────────────────────────────────────────────
 
 pub async fn create_match_report(
@@ -520,14 +537,17 @@ async fn creer_le_rapport(
 /// Celles du formulaire, sauf quand la sélection est figée pour cet utilisateur
 /// (carte 550) : ce sont alors celles déjà enregistrées. Le rapport doit être en
 /// `Draft` pour qu'on en soit là — les autres états ne passent pas par ce POST.
+///
+/// `None` quand la sélection n'est pas figée et que le formulaire n'a pas porté
+/// les deux équipes : il n'y a rien à confirmer.
 async fn equipes_retenues(
     state: &AppState,
     user: &crate::app::auth::domain::user::User,
     space_id: &str,
     match_report_id: &str,
-    form: &CreateMatchReportForm,
-) -> (String, String) {
-    let saisies = (form.home_team_id.clone(), form.away_team_id.clone());
+    form: &UpdateMatchSelectionForm,
+) -> Option<(String, String)> {
+    let saisies = form.home_team_id.clone().zip(form.away_team_id.clone());
 
     let Ok(Some(MatchReportState::Draft(draft))) = state
         .match_report
@@ -551,10 +571,10 @@ async fn equipes_retenues(
     .await;
 
     match figee {
-        Some(_) => (
+        Some(_) => Some((
             draft.home_team_id.to_string(),
             draft.away_team_id.to_string(),
-        ),
+        )),
         None => saisies,
     }
 }
@@ -563,7 +583,7 @@ pub async fn update_match_selection(
     auth_session: AuthSession,
     Path((space_id, match_report_id)): Path<(String, String)>,
     State(state): State<AppState>,
-    Form(form): Form<CreateMatchReportForm>,
+    Form(form): Form<UpdateMatchSelectionForm>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
@@ -578,8 +598,11 @@ pub async fn update_match_selection(
     // `PreMatch`, donc le refuser empêcherait le coach de commencer son rapport.
     // Et un corps trafiqué produit alors exactement ce qu'aurait produit un
     // corps honnête — rien à mettre en mots à l'écran.
-    let (home_saisi, away_saisi) =
-        equipes_retenues(&state, &user, &space_id, &match_report_id, &form).await;
+    let Some((home_saisi, away_saisi)) =
+        equipes_retenues(&state, &user, &space_id, &match_report_id, &form).await
+    else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
 
     let cmd = update_match_selection_use_case::UpdateMatchSelectionCommand {
         match_report_id: match MatchReportId::try_new(&match_report_id) {
