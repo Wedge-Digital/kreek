@@ -6,8 +6,11 @@
   handleContext(e) {
     var d = e.detail;
     if (d.season_id) {
-      htmx.ajax('GET',
-        '{{ team_widget_url }}' + (('{{ team_widget_url }}').indexOf('?') === -1 ? '?' : '&') + 'season_id=' + encodeURIComponent(d.season_id),
+      {# Carte 565 — `set` et non un ajout : en édition, l'URL porte déjà un
+         `season_id`, et le doublon faisait refuser la requête (400). #}
+      var url = new URL('{{ team_widget_url }}', window.location.origin);
+      url.searchParams.set('season_id', d.season_id);
+      htmx.ajax('GET', url.pathname + url.search,
         { target: '#teams-container', swap: 'innerHTML' });
     }
   }

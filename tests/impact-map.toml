@@ -398,6 +398,11 @@
 # test n'exerce pas.
 "test_accueil_derniers_resultats" = ["news", "competitions", "match_report", "teams", "players",
                                      "references", "team_creation", "spaces", "spp_calculator"]
+# La phase 1 d'un rapport en édition (carte 565) : la page de `match_report`
+# compose le widget de compétition (`competitions`) et celui des équipes
+# (`teams`) ; la fixture traverse la même construction que ci-dessus.
+"test_match_selection_edition" = ["match_report", "competitions", "teams", "auth", "spaces",
+                                  "references", "team_creation"]
 
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
