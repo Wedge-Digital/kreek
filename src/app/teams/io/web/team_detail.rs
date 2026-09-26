@@ -232,6 +232,11 @@ pub struct TeamDetailVm {
     pub matches_widget_url: String,
     pub staff: StaffVm,
     pub banner: Option<BannerVm>,
+    /// Même droit que le bandeau (`peut_modifier_effectif`) : le widget
+    /// d'édition du logo n'apparaît que pour qui pourrait aussi éditer
+    /// l'effectif — propriétaire de l'équipe ou administrateur de l'espace.
+    pub peut_editer_logo: bool,
+    pub logo_widget_url: String,
 }
 
 impl TeamDetailVm {
@@ -299,6 +304,10 @@ impl TeamDetailVm {
                 .team_matches_widget(space_id, &team.id.to_string()),
             staff: StaffVm::from(team, reroll_price_kpo),
             banner,
+            peut_editer_logo: peut_editer,
+            logo_widget_url: app_routes
+                .teams
+                .team_logo_widget(space_id, &team.id.to_string()),
         }
     }
 }
@@ -865,6 +874,8 @@ mod tests {
                 grand_total: 0,
             },
             banner: None,
+            peut_editer_logo: false,
+            logo_widget_url: "/widget-logo".into(),
         }
     }
 

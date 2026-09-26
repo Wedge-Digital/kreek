@@ -137,6 +137,7 @@ const FEUILLES_APP: &[&str] = &[
     "widgets/roster-picker-widget.css",
     "widgets/roster-picker.css",
     "widgets/skill-picker.css",
+    "widgets/team-logo.css",
     // En **dernier**, et c'est délibéré : la feuille amont de Tom Select était
     // un `<link>` posé après celui du bundle, donc elle gagnait les égalités de
     // spécificité contre tout ce qu'il contient — `components/tom-select.css`

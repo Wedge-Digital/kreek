@@ -15,6 +15,7 @@ pub mod path {
     /// le fragment nu, sans la fiche autour.
     pub const TEAM_MATCHES: &str = "/app/{space_id}/teams/{team_id}/matchs";
     pub const DISMISS_TEAM: &str = "/app/{space_id}/teams/{team_id}/dismiss";
+    pub const TEAM_LOGO_WIDGET: &str = "/app/{space_id}/teams/{team_id}/widgets/logo";
     pub const PENDING_ENROLLMENT_WIDGET: &str = "/app/{space_id}/team/widgets/pending";
     pub const ENROLLED_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/enrolled";
     pub const MY_TEAMS_WIDGET: &str = "/app/{space_id}/team/widgets/my-teams";
@@ -101,6 +102,9 @@ impl Routes {
         path::DISMISS_TEAM
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
+    }
+    pub fn team_logo_widget(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::TEAM_LOGO_WIDGET, space_id, team_id)
     }
     pub fn pending_enrollment_widget(&self, space_id: &str) -> String {
         path::PENDING_ENROLLMENT_WIDGET.replace("{space_id}", space_id)
@@ -279,6 +283,7 @@ mod tests {
             ("dismiss_enrollment", r.dismiss_enrollment(SPACE, TEAM)),
             ("dismiss_team", r.dismiss_team(SPACE, TEAM)),
             ("team_detail", r.team_detail(SPACE, TEAM)),
+            ("team_logo_widget", r.team_logo_widget(SPACE, TEAM)),
         ]
     }
 

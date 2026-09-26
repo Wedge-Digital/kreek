@@ -3,6 +3,7 @@ pub mod approve_enrollment;
 pub mod basket_hydration_service;
 pub mod basket_mutation;
 pub mod buy_staff;
+pub mod change_team_logo;
 pub mod commands;
 pub mod dismiss_staff;
 pub mod dismiss_team;
