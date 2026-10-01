@@ -126,9 +126,16 @@ ce n'est pas un fantôme.
 
 ## Émission et journalisation
 
-Le use case émet le domain event par `emettre()` sur le bus interne du BC —
-jamais `.send(` direct, c'est l'axe 12. Aucun publisher à toucher, puisque rien
-ne sort.
+**Le use case n'émet pas.** Dans `teams`, c'est le dépôt qui le fait, après le
+commit (`team_repository.rs:400-408`) — « le seul point qui les couvre tous »,
+deux des quatre chemins vers `ReadyToPlay` passant par des listeners. Déviation
+assumée du patron de `players` et `match_report`, et le use case n'a donc qu'à
+appeler `append`.
+
+Corrigé en phase 5 : cette section affirmait d'abord le contraire.
+
+Aucun publisher à toucher, puisque rien ne sort du BC. Le use case est
+instrumenté (axe 11).
 
 ## Règles métier
 
