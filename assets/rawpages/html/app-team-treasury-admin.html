@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trésorerie (admin) — Les Korrigans FC</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ── Repris tel quel de app-team-detail.html ─────────────────────── */
+    .team-page { max-width: 1400px; margin: 0 auto; }
+    .team-header {
+      background: var(--white); border-radius: 10px 10px 0 0; padding: var(--p2);
+      display: flex; align-items: flex-start; gap: var(--p3);
+      border-bottom: 2px solid var(--dark-5);
+    }
+    .team-header-logo {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #003049, #555770);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 900; font-size: 36px; color: var(--white);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .team-header-info { flex: 1; display: flex; flex-direction: column; gap: var(--p1); }
+    .team-header-name { font-family: var(--font-title); font-size: var(--h2); font-weight: 800; color: var(--dark-0); }
+    .team-header-top  { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+    .team-header-meta { display: flex; flex-wrap: wrap; gap: var(--p2); }
+    .meta-item   { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label  { font-size: var(--text-tiny); color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value  { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+    .team-status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: var(--text-tiny); font-weight: 700; white-space: nowrap;
+      background: rgba(98,149,132,0.15); color: var(--green);
+    }
+    .team-status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .tabs { display: flex; gap: 2px; }
+    .tab {
+      padding: 12px var(--p2); font-size: var(--text-small); font-weight: 600;
+      color: var(--dark-3); cursor: pointer; border-bottom: 3px solid transparent;
+    }
+    .tab.active { color: var(--main-blue); border-bottom-color: var(--main-blue); }
+
+    /* ── Trésorerie ──────────────────────────────────────────────────── */
+    .treasury { background: var(--white); border-radius: 0 0 10px 10px; padding: var(--p2); }
+
+    /* Bandeau de synthèse — l'équation du solde, lue de gauche à droite */
+    .tr-summary {
+      display: flex; align-items: stretch; flex-wrap: wrap;
+      gap: var(--p2); padding-bottom: var(--p2);
+      border-bottom: 1px solid var(--dark-5); margin-bottom: var(--p2);
+    }
+    .tr-balance { display: flex; flex-direction: column; gap: 4px; padding-right: var(--p2); }
+    .tr-balance-label {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+    }
+    .tr-balance-value {
+      font-family: var(--font-title); font-size: 42px; font-weight: 800;
+      color: var(--main-blue); line-height: 1;
+    }
+    .tr-balance-unit { font-size: var(--text-small); font-weight: 600; color: var(--dark-3); margin-left: 4px; }
+
+    /* L'équation : dotation + encaissé − dépensé = solde */
+    .tr-equation { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; }
+    .tr-term { display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
+    .tr-term-label { font-size: var(--text-tiny); color: var(--dark-3); }
+    .tr-term-value { font-size: var(--text-small); font-weight: 700; color: var(--dark-1); white-space: nowrap; }
+    .tr-term-value.credit { color: var(--green); }
+    .tr-term-value.debit  { color: var(--dark-1); }
+    .tr-op { font-size: var(--text-medium); color: var(--dark-4); font-weight: 300; line-height: 1; }
+
+    /* Relevé */
+    .tr-statement-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: var(--p1); margin-bottom: var(--p1); flex-wrap: wrap;
+    }
+    .tr-statement-title {
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .tr-statement-hint { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    .tr-table-wrap { overflow-x: auto; }
+    .tr-table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+    .tr-table th {
+      text-align: left; padding: 8px var(--p1); font-size: var(--text-tiny);
+      color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.5px;
+      font-weight: 600; border-bottom: 1px solid var(--dark-5); white-space: nowrap;
+    }
+    .tr-table th.num, .tr-table td.num { text-align: right; }
+    .tr-table td { padding: 12px var(--p1); border-bottom: 1px solid var(--dark-6); vertical-align: top; }
+    .tr-table tbody tr:hover { background: var(--dark-7); }
+
+    .tr-date { color: var(--dark-3); font-size: var(--text-tiny); white-space: nowrap; }
+
+    .tr-movement { display: flex; align-items: flex-start; gap: 10px; }
+    .tr-icon {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      background: var(--dark-6);
+    }
+    .tr-icon--credit  { background: rgba(98,149,132,0.15); }
+    .tr-icon--debit   { background: rgba(0,48,73,0.07); }
+    .tr-icon--fix     { background: rgba(255,107,53,0.12); }
+    .tr-label { font-weight: 600; color: var(--dark-1); }
+    .tr-detail { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+
+    .tr-amount { font-weight: 700; white-space: nowrap; }
+    .tr-amount.credit { color: var(--green); }
+    .tr-amount.debit  { color: var(--dark-1); }
+    .tr-running { color: var(--dark-2); font-weight: 600; white-space: nowrap; }
+
+    /* Une correction n'est pas un mouvement ordinaire : elle défait le précédent */
+    .tr-row--fix td { background: rgba(255,107,53,0.03); }
+    .tr-badge-fix {
+      display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 10px;
+      background: rgba(255,107,53,0.15); color: #9A5000;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      vertical-align: 2px;
+    }
+
+    /* La dotation ouvre le relevé : c'est le point de départ, pas un mouvement */
+    .tr-row--origin td { background: var(--dark-7); }
+    .tr-row--origin .tr-label { color: var(--main-blue); }
+
+    /* Séparateur de journée */
+    .tr-row--sep td {
+      padding: 6px var(--p1); background: var(--white);
+      border-bottom: 1px solid var(--dark-5);
+      font-size: var(--text-tiny); font-weight: 700; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ── Modifier la trésorerie — réservé aux admins ──────────────────
+       Le bouton se pose dans le bandeau de synthèse : c'est le solde qu'on
+       vient modifier, l'action est là où se lit son effet. */
+    .tr-admin-action { margin-left: auto; display: flex; align-items: flex-end; }
+    .tr-btn-adjust {
+      display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+      padding: 10px var(--p1); border-radius: 8px; font-family: inherit;
+      border: 1.5px solid var(--main-blue); background: var(--white);
+      color: var(--main-blue); font-size: var(--text-tiny); font-weight: 700;
+      transition: background 0.12s, color 0.12s;
+    }
+    .tr-btn-adjust:hover, .tr-btn-adjust.is-open { background: var(--main-blue); color: var(--white); }
+
+    /* Panneau en ligne, jamais une modale : le solde et le relevé restent sous
+       les yeux pendant la saisie. Même choix que la confirmation de
+       suppression de customisation (app-player-detail-custo-suppression). */
+    .tr-adm {
+      border: 1px solid var(--dark-4); border-radius: 10px; background: var(--dark-7);
+      padding: var(--p1) var(--p2) var(--p1); margin-bottom: var(--p2);
+    }
+    .tr-adm-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1); margin-bottom: var(--p1);
+    }
+    .tr-adm-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+    }
+    .tr-adm-close {
+      width: 26px; height: 26px; border-radius: 6px; line-height: 1; font-size: 13px;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-3);
+    }
+    .tr-adm-close:hover { border-color: var(--red); color: var(--red); }
+
+    .tr-adm-form { display: flex; gap: var(--p2); flex-wrap: wrap; align-items: flex-start; }
+    .tr-adm-field { display: flex; flex-direction: column; gap: 6px; }
+    .tr-adm-field--grow { flex: 1; min-width: 260px; }
+    .tr-adm-label {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+    }
+    /* Le sens porte le signe, le montant reste positif — c'est le
+       `MovementDirection { Credit, Debit }` du domaine, tel quel. */
+    .tr-adm-sign { display: flex; }
+    .tr-adm-sign button {
+      padding: 9px var(--p1); font-family: inherit; white-space: nowrap;
+      font-size: var(--text-tiny); font-weight: 700;
+      border: 1.5px solid var(--dark-4); background: var(--white); color: var(--dark-3);
+    }
+    .tr-adm-sign button:first-child { border-radius: 8px 0 0 8px; }
+    .tr-adm-sign button:last-child  { border-radius: 0 8px 8px 0; border-left: none; }
+    .tr-adm-sign button.on.credit { background: var(--green); border-color: var(--green); color: var(--white); }
+    .tr-adm-sign button.on.debit  { background: var(--main-blue); border-color: var(--main-blue); color: var(--white); }
+
+    .tr-adm-input {
+      width: 100%; padding: 9px var(--p1); border-radius: 8px;
+      border: 1.5px solid var(--dark-4); background: var(--white);
+      font-size: var(--text-small); color: var(--dark-1);
+    }
+    .tr-adm-input:focus { outline: none; border-color: var(--main-blue); }
+    .tr-adm-input--amount { width: 120px; text-align: right; }
+    .tr-adm-input.is-invalid { border-color: var(--red); }
+    .tr-adm-hint { font-size: 11px; color: var(--dark-3); }
+
+    .tr-adm-foot {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--p1); flex-wrap: wrap;
+      margin-top: var(--p1); padding-top: var(--p1); border-top: 1px solid var(--dark-5);
+    }
+    .tr-adm-outcome { font-size: var(--text-small); color: var(--dark-2); }
+    .tr-adm-outcome strong { color: var(--dark-0); }
+    .tr-adm-outcome.error { color: var(--red); font-weight: 600; }
+    .tr-adm-apply {
+      padding: 11px var(--p2); border-radius: 8px;
+      background: var(--main-blue); color: var(--white);
+      font-family: var(--font-title); font-size: var(--text-small); font-weight: 700;
+    }
+    .tr-adm-apply:disabled { opacity: 0.4; cursor: default; }
+
+    /* L'ajustement d'un commissaire — ni un mouvement automatique, ni une
+       correction de rapport. Violet, pour ne se confondre avec aucun des deux. */
+    .tr-icon--adjust { background: rgba(111,53,165,0.12); }
+    .tr-row--adjust td { background: rgba(111,53,165,0.04); }
+    .tr-badge-admin {
+      display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 10px;
+      background: rgba(111,53,165,0.15); color: var(--light-1);
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      vertical-align: 2px;
+    }
+    /* La ligne écrite à l'instant : le relevé va du plus ancien au plus
+       récent, elle arrive donc en bas — loin du panneau qui l'a produite. */
+    .tr-row--fresh td { animation: trFresh 2s ease-out; }
+    @keyframes trFresh {
+      from { background: rgba(255,215,0,0.4); }
+      to   { background: rgba(111,53,165,0.04); }
+    }
+
+    /* État vide — une équipe qui vient d'être créée */
+    .tr-empty { padding: var(--p3) var(--p2); text-align: center; }
+    .tr-empty-icon  { font-size: 40px; opacity: 0.35; }
+    .tr-empty-title { font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-2); margin-top: var(--p1); }
+    .tr-empty-text  { font-size: var(--text-small); color: var(--dark-3); margin-top: 6px; max-width: 460px; margin-left: auto; margin-right: auto; }
+
+    /* Sélecteur de démonstration — outil de maquette, n'existe pas en prod */
+    .demo-switcher {
+      display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap;
+      background: var(--dark-7); border: 1px dashed var(--dark-4);
+      border-radius: 8px; padding: 10px var(--p1); margin-bottom: var(--p1);
+    }
+    .demo-switcher-label { font-size: var(--text-tiny); color: var(--dark-3); font-weight: 600; }
+    .state-pill {
+      padding: 5px 12px; border-radius: 14px; border: 1px solid var(--dark-4);
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600; cursor: pointer;
+    }
+    .state-pill.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+
+    @media (max-width: 768px) {
+      .team-header { flex-direction: column; align-items: center; text-align: center; }
+      .team-header-meta { justify-content: center; }
+      .tr-summary { flex-direction: column; gap: var(--p1); }
+      .tr-balance { padding-right: 0; }
+      .tr-balance-value { font-size: 34px; }
+      /* La colonne « solde après » disparaît avant les montants : le solde
+         courant reste lisible dans le bandeau, le détail du mouvement non. */
+      .tr-table th:nth-child(4), .tr-table td:nth-child(4) { display: none; }
+      .tabs { overflow-x: auto; }
+      .tr-admin-action { margin-left: 0; }
+      .tr-btn-adjust { width: 100%; justify-content: center; }
+      .tr-adm { padding: var(--p1); }
+      .tr-adm-form { flex-direction: column; gap: var(--p1); }
+      .tr-adm-input--amount { width: 100%; }
+      .tr-adm-foot { flex-direction: column; align-items: stretch; }
+      .tr-adm-apply { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item active">Équipes</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- Sélecteur de démonstration — outil de maquette, n'existe pas en prod -->
+        <div class="demo-switcher">
+          <span class="demo-switcher-label">Aperçu maquette :</span>
+          <button class="state-pill" data-state="coach" onclick="setState('coach')">Coach — lecture seule</button>
+          <button class="state-pill active" data-state="admin" onclick="setState('admin')">Admin — relevé</button>
+          <button class="state-pill" data-state="saisie" onclick="setState('saisie')">Admin — saisie</button>
+          <button class="state-pill" data-state="refus" onclick="setState('refus')">Admin — retrait refusé</button>
+          <button class="state-pill" data-state="applique" onclick="setState('applique')">Admin — après application</button>
+        </div>
+
+        <div style="margin-bottom: var(--p1);">
+          <a href="app-team-detail.html" style="color: var(--dark-3); font-size: var(--text-tiny);">← Les Korrigans FC</a>
+        </div>
+
+        <div class="team-page">
+
+          <!-- En-tête — repris de app-team-detail.html -->
+          <div class="team-header">
+            <div class="team-header-logo">KF</div>
+            <div class="team-header-info">
+              <div class="team-header-top">
+                <div class="team-header-name">Les Korrigans FC</div>
+                <span class="team-status-badge">Prête à jouer</span>
+              </div>
+              <div class="team-header-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Roster</div>
+                  <div class="meta-value">Elfes Sylvestres</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Coach</div>
+                  <div class="meta-value">Colonel Castor</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Ligue</div>
+                  <div class="meta-value">Ligue de Condate</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Valeur d'équipe</div>
+                  <div class="meta-value">873 kPo</div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Trésorerie</div>
+                  <div class="meta-value" id="hdr-balance">85 kPo</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Onglets -->
+          <div class="tabs" style="background: var(--white); padding: 0 var(--p2); border-bottom: 1px solid var(--dark-5);">
+            <div class="tab">Joueurs &amp; Staff</div>
+            <div class="tab">Matchs</div>
+            <div class="tab active">Trésorerie</div>
+          </div>
+
+          <div class="treasury">
+
+            <!-- ══ Le relevé ════════════════════════════════════════════
+                 Cette variante ne maquette que l'équipe en cours de saison :
+                 l'état vide reste dans `app-team-treasury.html`, déjà validé.
+                 Le bouton y vit pareillement, dans le même bandeau. -->
+            <div id="state-loaded">
+
+              <!-- Synthèse : l'équation qui explique le solde -->
+              <div class="tr-summary">
+                <div class="tr-balance">
+                  <div class="tr-balance-label">Solde</div>
+                  <div class="tr-balance-value" id="sum-balance">85<span class="tr-balance-unit">kPo</span></div>
+                </div>
+                <div class="tr-equation">
+                  <div class="tr-term">
+                    <div class="tr-term-label">Dotation de départ</div>
+                    <div class="tr-term-value">510 kPo</div>
+                  </div>
+                  <div class="tr-op">+</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Encaissé</div>
+                    <div class="tr-term-value credit" id="sum-credited">125 kPo</div>
+                  </div>
+                  <div class="tr-op">−</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Dépensé</div>
+                    <div class="tr-term-value debit" id="sum-debited">550 kPo</div>
+                  </div>
+                  <div class="tr-op">=</div>
+                  <div class="tr-term">
+                    <div class="tr-term-label">Solde</div>
+                    <div class="tr-term-value" id="sum-balance-term">85 kPo</div>
+                  </div>
+                </div>
+
+                <!-- Réservé aux admins — `SpacePermissions::is_admin()`, qui exclut
+                     délibérément le propriétaire. Le coach de l'équipe ne voit
+                     pas ce bouton ; la page, elle, se lit par tout le monde. -->
+                <div class="tr-admin-action" id="adm-action">
+                  <button class="tr-btn-adjust" id="adm-open" onclick="togglePanel()">
+                    <span>⚖️</span> Modifier la trésorerie
+                  </button>
+                </div>
+              </div>
+
+              <!-- ══ Panneau d'ajustement — admins seulement ══════════════ -->
+              <div class="tr-adm" id="adm-panel" style="display: none;">
+                <div class="tr-adm-head">
+                  <div class="tr-adm-title"><span>⚖️</span> Modifier la trésorerie</div>
+                  <button class="tr-adm-close" onclick="closePanel()" title="Fermer">✕</button>
+                </div>
+
+                <div class="tr-adm-form">
+                  <div class="tr-adm-field">
+                    <div class="tr-adm-label">Sens</div>
+                    <div class="tr-adm-sign">
+                      <button type="button" class="credit on" id="sg-credit" onclick="setSign('credit')">+ Créditer</button>
+                      <button type="button" class="debit" id="sg-debit" onclick="setSign('debit')">− Débiter</button>
+                    </div>
+                  </div>
+
+                  <div class="tr-adm-field">
+                    <div class="tr-adm-label">Montant</div>
+                    <input type="number" min="5" step="5" max="500" id="adm-amount" value="120"
+                           class="tr-adm-input tr-adm-input--amount" oninput="refresh()">
+                    <div class="tr-adm-hint">multiple de 5, 500 kPo au plus</div>
+                  </div>
+
+                  <div class="tr-adm-field tr-adm-field--grow">
+                    <div class="tr-adm-label">Motif</div>
+                    <input type="text" id="adm-reason" class="tr-adm-input" oninput="refresh()"
+                           placeholder="Compensation du forfait des Griffons d'Argent — journée 3">
+                    <div class="tr-adm-hint">Obligatoire — il s'affiche dans le relevé, lu par tous les coachs.</div>
+                  </div>
+                </div>
+
+                <div class="tr-adm-foot">
+                  <div class="tr-adm-outcome" id="adm-outcome"></div>
+                  <button class="tr-adm-apply" id="adm-apply" onclick="apply()">Appliquer</button>
+                </div>
+              </div>
+
+              <div class="tr-statement-head">
+                <div class="tr-statement-title">Relevé des mouvements</div>
+                <div class="tr-statement-hint" id="sum-count">Du plus ancien au plus récent — 11 mouvements</div>
+              </div>
+
+              <div class="tr-table-wrap">
+                <table class="tr-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Mouvement</th>
+                      <th class="num">Montant</th>
+                      <th class="num">Solde après</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+
+                    <tr class="tr-row--origin">
+                      <td class="tr-date">12 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon">🏁</div>
+                          <div>
+                            <div class="tr-label">Dotation de départ</div>
+                            <div class="tr-detail">Création de l'équipe</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+510 kPo</span></td>
+                      <td class="num"><span class="tr-running">510 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--sep"><td colspan="4">Journée 1 — contre les Trolls du Bief</td></tr>
+
+                    <tr>
+                      <td class="tr-date">12 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🎯</div>
+                          <div>
+                            <div class="tr-label">Coups de pouce</div>
+                            <div class="tr-detail">Apothicaire itinérant · Chef cuisinier</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−100 kPo</span></td>
+                      <td class="num"><span class="tr-running">410 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">14 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--credit">💰</div>
+                          <div>
+                            <div class="tr-label">Recette d'après-match</div>
+                            <div class="tr-detail">Victoire 2–1 · 15 000 spectateurs</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+60 kPo</span></td>
+                      <td class="num"><span class="tr-running">470 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">14 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🧍</div>
+                          <div>
+                            <div class="tr-label">Recrutement</div>
+                            <div class="tr-detail">Gwenn, Passeuse — n° 7</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−90 kPo</span></td>
+                      <td class="num"><span class="tr-running">380 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">14 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🧢</div>
+                          <div>
+                            <div class="tr-label">Personnel</div>
+                            <div class="tr-detail">Apothicaire</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−120 kPo</span></td>
+                      <td class="num"><span class="tr-running">260 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--sep"><td colspan="4">Journée 2 — contre les Griffons d'Argent</td></tr>
+
+                    <tr>
+                      <td class="tr-date">19 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--debit">🎯</div>
+                          <div>
+                            <div class="tr-label">Coups de pouce</div>
+                            <div class="tr-detail">Sorcier</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−15 kPo</span></td>
+                      <td class="num"><span class="tr-running">245 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">21 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--credit">💰</div>
+                          <div>
+                            <div class="tr-label">Recette d'après-match</div>
+                            <div class="tr-detail">Défaite 0–3 · 11 000 spectateurs</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+35 kPo</span></td>
+                      <td class="num"><span class="tr-running">280 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--fix">
+                      <td class="tr-date">21 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--fix">↩️</div>
+                          <div>
+                            <div class="tr-label">Recette annulée<span class="tr-badge-fix">Correction</span></div>
+                            <div class="tr-detail">Le rapport de la journée 2 a été corrigé — la recette précédente est reprise</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−35 kPo</span></td>
+                      <td class="num"><span class="tr-running">245 kPo</span></td>
+                    </tr>
+
+                    <tr class="tr-row--fix">
+                      <td class="tr-date">21 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--fix">↩️</div>
+                          <div>
+                            <div class="tr-label">Coups de pouce remboursés<span class="tr-badge-fix">Correction</span></div>
+                            <div class="tr-detail">Rendus avec l'annulation du rapport — Sorcier</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+15 kPo</span></td>
+                      <td class="num"><span class="tr-running">260 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">22 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--credit">💰</div>
+                          <div>
+                            <div class="tr-label">Recette d'après-match</div>
+                            <div class="tr-detail">Défaite 0–3 · 11 000 spectateurs · rapport corrigé</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit">+30 kPo</span></td>
+                      <td class="num"><span class="tr-running">290 kPo</span></td>
+                    </tr>
+
+                    <tr>
+                      <td class="tr-date">22 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--fix">💸</div>
+                          <div>
+                            <div class="tr-label">Bourde coûteuse</div>
+                            <div class="tr-detail">Jet de 3 — « Fraude fiscale »</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount debit">−205 kPo</span></td>
+                      <td class="num"><span class="tr-running">85 kPo</span></td>
+                    </tr>
+
+                    <!-- Écrite par l'ajustement — masquée tant qu'il n'a pas eu lieu.
+                         Elle arrive en bas : le relevé va du plus ancien au plus récent. -->
+                    <tr class="tr-row--adjust" id="adm-new-row" style="display: none;">
+                      <td class="tr-date">23 août</td>
+                      <td>
+                        <div class="tr-movement">
+                          <div class="tr-icon tr-icon--adjust">⚖️</div>
+                          <div>
+                            <div class="tr-label">Ajustement de trésorerie<span class="tr-badge-admin">Admin</span></div>
+                            <div class="tr-detail" id="adm-new-detail">Par Bagouze — Compensation du forfait des Griffons d'Argent, journée 3</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="num"><span class="tr-amount credit" id="adm-new-amount">+120 kPo</span></td>
+                      <td class="num"><span class="tr-running" id="adm-new-running">205 kPo</span></td>
+                    </tr>
+
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div><!-- /treasury -->
+        </div><!-- /team-page -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script>
+/* Comportement de maquette.
+
+   Le formulaire est **vivant** : le sens, le montant et le motif recalculent
+   l'annonce de solde et l'activation du bouton. C'est ce qui permet de juger
+   les trois règles de saisie à l'écran, plutôt que sur cinq copies figées du
+   même markup. Les pastilles ne font que poser un cas de départ. */
+
+const SOLDE      = 85;    // solde courant de l'équipe
+const PAS        = 5;     // tous les prix du jeu sont des multiples de 5 kPo
+const PLAFOND    = 500;   // garde-fou de frappe : 1200 au lieu de 120
+const ENCAISSE   = 125;
+const DEPENSE    = 550;
+const MOUVEMENTS = 11;
+const MOTIF_CREDIT = "Compensation du forfait des Griffons d'Argent, journée 3";
+const MOTIF_DEBIT  = "Pénalité — effectif non déclaré avant le coup d'envoi, journée 3";
+const ADMIN = 'Bagouze';  // le commissaire — pas Colonel Castor, qui coache l'équipe
+
+let sens = 'credit';
+
+const el = (id) => document.getElementById(id);
+
+/* ── Le panneau ──────────────────────────────────────────────────────── */
+
+function togglePanel() {
+  el('adm-panel').style.display === 'none' ? openPanel() : closePanel();
+}
+
+function openPanel() {
+  el('adm-panel').style.display = '';
+  el('adm-open').classList.add('is-open');
+  refresh();
+}
+
+function closePanel() {
+  el('adm-panel').style.display = 'none';
+  el('adm-open').classList.remove('is-open');
+}
+
+function setSign(s) {
+  sens = s;
+  el('sg-credit').classList.toggle('on', s === 'credit');
+  el('sg-debit').classList.toggle('on', s === 'debit');
+  refresh();
+}
+
+/* ── Les règles de saisie, dans l'ordre où elles bloquent ────────────────
+   montant strictement positif · multiple de 5 · plafonné · retrait couvert
+   par le solde · motif saisi.
+
+   Le plafond passe **avant** le solde : 1200 au lieu de 120 est une faute de
+   frappe, et le dire ainsi vaut mieux que « le solde ne couvre pas ». */
+
+function refresh() {
+  const montant   = parseInt(el('adm-amount').value, 10);
+  const motif     = el('adm-reason').value.trim();
+  const champ     = el('adm-amount');
+  const sortie    = el('adm-outcome');
+  const appliquer = el('adm-apply');
+
+  champ.classList.remove('is-invalid');
+  sortie.classList.remove('error');
+  appliquer.disabled = true;
+
+  if (!montant || montant <= 0) {
+    sortie.textContent = 'Saisis un montant.';
+    return;
+  }
+  if (montant % PAS !== 0) {
+    champ.classList.add('is-invalid');
+    sortie.classList.add('error');
+    sortie.textContent = 'Le montant doit être un multiple de ' + PAS + ' kPo.';
+    return;
+  }
+  if (montant > PLAFOND) {
+    champ.classList.add('is-invalid');
+    sortie.classList.add('error');
+    sortie.textContent = 'Le montant est plafonné à ' + PLAFOND + ' kPo.';
+    return;
+  }
+  if (sens === 'debit' && montant > SOLDE) {
+    champ.classList.add('is-invalid');
+    sortie.classList.add('error');
+    sortie.textContent = 'Le solde ne couvre pas ce retrait : ' + SOLDE + ' kPo disponibles.';
+    return;
+  }
+  if (!motif) {
+    sortie.textContent = 'Le motif est obligatoire.';
+    return;
+  }
+  const apres = sens === 'credit' ? SOLDE + montant : SOLDE - montant;
+  sortie.innerHTML = 'Le solde passera de <strong>' + SOLDE + ' kPo</strong> à <strong>'
+                   + apres + ' kPo</strong>.';
+  appliquer.disabled = false;
+}
+
+/* ── Ce que l'écriture produit : une ligne de plus en bas du relevé, le
+      bandeau à jour, le panneau refermé. ─────────────────────────────── */
+
+function apply() {
+  const montant = parseInt(el('adm-amount').value, 10);
+  const motif   = el('adm-reason').value.trim();
+  const credit  = sens === 'credit';
+  const apres   = credit ? SOLDE + montant : SOLDE - montant;
+
+  el('adm-new-detail').textContent = 'Par ' + ADMIN + ' — ' + motif;
+  const mt = el('adm-new-amount');
+  mt.textContent = (credit ? '+' : '−') + montant + ' kPo';
+  mt.className   = 'tr-amount ' + (credit ? 'credit' : 'debit');
+  el('adm-new-running').textContent = apres + ' kPo';
+
+  const ligne = el('adm-new-row');
+  ligne.style.display = '';
+  ligne.classList.remove('tr-row--fresh');
+  void ligne.offsetWidth;              // relance l'animation de surlignage
+  ligne.classList.add('tr-row--fresh');
+
+  el('sum-balance').innerHTML      = apres + '<span class="tr-balance-unit">kPo</span>';
+  el('sum-balance-term').textContent = apres + ' kPo';
+  el('sum-credited').textContent   = (credit ? ENCAISSE + montant : ENCAISSE) + ' kPo';
+  el('sum-debited').textContent    = (credit ? DEPENSE : DEPENSE + montant) + ' kPo';
+  el('sum-count').textContent      = 'Du plus ancien au plus récent — ' + (MOUVEMENTS + 1) + ' mouvements';
+  el('hdr-balance').textContent    = apres + ' kPo';
+
+  closePanel();
+  marquer('applique');
+  ligne.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/* ── Les pastilles ───────────────────────────────────────────────────── */
+
+function reset() {
+  el('adm-new-row').style.display = 'none';
+  el('sum-balance').innerHTML      = SOLDE + '<span class="tr-balance-unit">kPo</span>';
+  el('sum-balance-term').textContent = SOLDE + ' kPo';
+  el('sum-credited').textContent   = ENCAISSE + ' kPo';
+  el('sum-debited').textContent    = DEPENSE + ' kPo';
+  el('sum-count').textContent      = 'Du plus ancien au plus récent — ' + MOUVEMENTS + ' mouvements';
+  el('hdr-balance').textContent    = SOLDE + ' kPo';
+}
+
+function preset(s, montant, motif) {
+  el('adm-amount').value = montant;
+  el('adm-reason').value = motif;
+  setSign(s);
+}
+
+function marquer(nom) {
+  document.querySelectorAll('.state-pill').forEach(function (p) {
+    p.classList.toggle('active', p.dataset.state === nom);
+  });
+}
+
+function setState(nom) {
+  marquer(nom);
+  reset();
+  el('adm-action').style.display = (nom === 'coach') ? 'none' : '';
+
+  if (nom === 'coach' || nom === 'admin') { closePanel(); return; }
+  if (nom === 'saisie')   { preset('credit', 120, MOTIF_CREDIT); openPanel(); return; }
+  if (nom === 'refus')    { preset('debit',  200, MOTIF_DEBIT);  openPanel(); return; }
+  if (nom === 'applique') { preset('credit', 120, MOTIF_CREDIT); apply(); }
+}
+
+setState('admin');
+</script>
+</body>
+</html>
