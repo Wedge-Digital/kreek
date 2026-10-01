@@ -221,14 +221,6 @@
       font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
       vertical-align: 2px;
     }
-    /* La ligne écrite à l'instant : le relevé va du plus ancien au plus
-       récent, elle arrive donc en bas — loin du panneau qui l'a produite. */
-    .tr-row--fresh td { animation: trFresh 2s ease-out; }
-    @keyframes trFresh {
-      from { background: rgba(255,215,0,0.4); }
-      to   { background: rgba(111,53,165,0.04); }
-    }
-
     /* État vide — une équipe qui vient d'être créée */
     .tr-empty { padding: var(--p3) var(--p2); text-align: center; }
     .tr-empty-icon  { font-size: 40px; opacity: 0.35; }
@@ -626,7 +618,9 @@
                     </tr>
 
                     <!-- Écrite par l'ajustement — masquée tant qu'il n'a pas eu lieu.
-                         Elle arrive en bas : le relevé va du plus ancien au plus récent. -->
+                         Elle arrive en bas : le relevé va du plus ancien au plus
+                         récent. Pas de surlignage : le chiffre qu'on regarde après
+                         « Appliquer » est le solde du bandeau, qui change à vue. -->
                     <tr class="tr-row--adjust" id="adm-new-row" style="display: none;">
                       <td class="tr-date">23 août</td>
                       <td>
@@ -764,11 +758,7 @@ function apply() {
   mt.className   = 'tr-amount ' + (credit ? 'credit' : 'debit');
   el('adm-new-running').textContent = apres + ' kPo';
 
-  const ligne = el('adm-new-row');
-  ligne.style.display = '';
-  ligne.classList.remove('tr-row--fresh');
-  void ligne.offsetWidth;              // relance l'animation de surlignage
-  ligne.classList.add('tr-row--fresh');
+  el('adm-new-row').style.display = '';
 
   el('sum-balance').innerHTML      = apres + '<span class="tr-balance-unit">kPo</span>';
   el('sum-balance-term').textContent = apres + ' kPo';
@@ -779,7 +769,6 @@ function apply() {
 
   closePanel();
   marquer('applique');
-  ligne.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /* ── Les pastilles ───────────────────────────────────────────────────── */
