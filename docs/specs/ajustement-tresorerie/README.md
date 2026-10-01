@@ -22,7 +22,7 @@ change, notées à leur place.
 
 | Page | État |
 |---|---|
-| `panneau-d-ajustement/` | phases 1, 2 et 3 faites |
+| `panneau-d-ajustement/` | phases 1 à 4 faites |
 
 ## Ce que la fonctionnalité suppose déjà acquis
 
