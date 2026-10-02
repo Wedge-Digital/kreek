@@ -25,6 +25,7 @@ use crate::app::teams::io::web::widgets::recruitment_cart_widget::{
 use crate::app::teams::io::web::widgets::recruitment_catalog_widget::{
     add_journeyman, add_player, add_staff, recruitment_catalog,
 };
+use crate::app::teams::io::web::widgets::team_identity_widget::team_identity_widget;
 use crate::app::teams::io::web::widgets::team_match_context_widget::get_team_match_context_json;
 use crate::app::teams::io::web::widgets::team_selection_tester::get_team_selection_tester;
 use crate::app::teams::io::web::widgets::team_selection_widget::{
@@ -68,6 +69,7 @@ fn routes_ouvertes() -> Router<AppState> {
         .route(path::TEAM_TREASURY_ADJUST, post(adjust_treasury))
         .route(path::TEAM_MATCHES, get(team_page_matches))
         .route(path::DISMISS_TEAM, post(dismiss_team))
+        .route(path::TEAM_IDENTITY_WIDGET, get(team_identity_widget))
         .route(
             path::PENDING_ENROLLMENT_WIDGET,
             get(pending_enrollment_widget),

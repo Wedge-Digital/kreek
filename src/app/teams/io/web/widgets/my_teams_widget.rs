@@ -54,7 +54,7 @@ fn initials(name: &str) -> String {
         .to_uppercase()
 }
 
-/// Duplication assumée de `team_detail.rs::status_display` : ici sur des
+/// Duplication assumée de `status_view_models.rs::status_display` : ici sur des
 /// strings issues de `team_proj`, pas sur l'agrégat — à garder synchronisées
 /// manuellement si le vocabulaire de statut évolue.
 fn status_label_and_class(status: &str, game_phase: Option<&str>) -> (String, String) {

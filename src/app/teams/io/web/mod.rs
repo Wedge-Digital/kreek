@@ -6,6 +6,7 @@ pub mod dismissals;
 pub mod dismissals_view_models;
 pub mod garde_action_equipe;
 pub mod recruitment;
+pub mod status_view_models;
 pub mod team_detail;
 #[cfg(test)]
 pub mod tests;

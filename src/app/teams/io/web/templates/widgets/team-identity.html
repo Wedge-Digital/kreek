@@ -1,0 +1,22 @@
+{# L'identité d'une équipe (carte 566) — logo, nom, statut, roster · coach.
+
+   Le bloc ne sait rien de la page qui l'accueille : il occupe la largeur
+   qu'on lui donne et tronque le nom avant de céder le badge. La feuille est
+   `widgets/team-identity.css`, portée par `.team-identity`. #}
+<div class="team-identity" hx-disinherit="*">
+    {% if let Some(logo) = vm.logo_url %}
+    <img src="{{ logo }}" class="team-identity-logo" alt="{{ vm.name }}">
+    {% else %}
+    <div class="team-identity-logo team-identity-logo--initials">{{ vm.initials }}</div>
+    {% endif %}
+    <div class="team-identity-info">
+        <div class="team-identity-name">
+            <span class="team-identity-name-text">{{ vm.name }}</span>
+            <span class="team-status-badge team-status-badge--{{ vm.status_css_class }}">{{ vm.status_label }}</span>
+        </div>
+        {# Le coach peut manquer (`coach_name` est un texte libre, vide quand le
+           formulaire de création ne l'a pas reçu) : pas de span vide, et le
+           séparateur ne suit le roster que s'il y a un coach après lui. #}
+        <div class="team-identity-sub"><span class="team-identity-roster">{{ vm.roster_name }}</span>{% if !vm.coach_name.is_empty() %}<span class="team-identity-coach">{{ vm.coach_name }}</span>{% endif %}</div>
+    </div>
+</div>

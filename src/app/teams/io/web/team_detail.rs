@@ -2,6 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
+use crate::app::teams::io::web::status_view_models::status_display;
 use crate::app::teams::io::web::treasury_tab;
 use crate::app::teams::ports::{
     IRosterCatalogPort, ITeamRepository, RepositoryError, TreasuryMovementRow,
@@ -301,27 +302,6 @@ impl TeamDetailVm {
             staff: StaffVm::from(team, reroll_price_kpo),
             banner,
         }
-    }
-}
-
-fn status_display(team: &Team) -> (String, String) {
-    match &team.participation_status {
-        ParticipationStatus::Dismissed => ("Renvoyée".into(), "dismissed".into()),
-        ParticipationStatus::Rejected => ("Inscription refusée".into(), "dismissed".into()),
-        ParticipationStatus::PendingEnrollment => {
-            ("En attente d'inscription".into(), "pending".into())
-        }
-        ParticipationStatus::Enrolled => match &team.game_phase {
-            Some(GamePhase::ReadyToPlay) => ("Prête à jouer".into(), "ready".into()),
-            Some(GamePhase::MatchReporting) => ("Rapport en cours".into(), "phase".into()),
-            Some(GamePhase::PlayerImprovement) => ("Phase d'amélioration".into(), "phase".into()),
-            Some(GamePhase::Recruitment) => ("Phase de recrutement".into(), "phase".into()),
-            Some(GamePhase::Dismissals) => ("Phase de renvois".into(), "phase".into()),
-            Some(GamePhase::CostlyMistakes) => ("Erreurs coûteuses".into(), "phase".into()),
-            Some(GamePhase::TemporaryRetirement) => ("Retraite temporaire".into(), "phase".into()),
-            Some(GamePhase::OffSeason) => ("Off-season".into(), "offseason".into()),
-            None => ("Inscrite".into(), "ready".into()),
-        },
     }
 }
 

@@ -1,0 +1,62 @@
+/* Widget « identité d'équipe » (carte 566) — BC teams.
+ *
+ * Logo, nom, badge de statut, roster · coach. Rendu sur le modèle du bloc de
+ * match (`components/match-widget.css`), badge sur celui de la fiche équipe
+ * (`pages/team-page.css`) : mêmes teintes, mêmes variantes.
+ *
+ * Le bloc occupe la largeur que l'hôte lui donne. Le nom se tronque avant le
+ * badge, qui reste entier. */
+
+.team-identity { display: flex; align-items: center; gap: var(--p1); min-width: 0; }
+
+.team-identity .team-identity-logo {
+  width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; overflow: hidden;
+  object-fit: cover; display: block;
+}
+.team-identity .team-identity-logo--initials {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-size: 13px; font-weight: 900; color: var(--white);
+  background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+}
+
+.team-identity .team-identity-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* `flex-wrap` : quand la largeur manque, le badge passe sous le nom plutôt
+   que de l'écraser. Sans lui, le badge — qui ne rétrécit pas — prenait toute
+   la place et le nom tombait à zéro pixel dans une colonne de 140px. */
+.team-identity .team-identity-name {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0;
+}
+.team-identity .team-identity-name-text {
+  font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.team-identity .team-identity-sub {
+  font-size: var(--text-tiny); color: var(--dark-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.team-identity .team-identity-roster:not(:last-child)::after { content: " · "; }
+
+.team-identity .team-status-badge {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+.team-identity .team-status-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0;
+}
+.team-identity .team-status-badge--pending   { background: rgba(255,107,53,0.12); color: var(--orange); }
+.team-identity .team-status-badge--ready     { background: rgba(98,149,132,0.15); color: var(--green); }
+.team-identity .team-status-badge--phase     { background: rgba(0,48,73,0.10);    color: var(--main-blue); }
+.team-identity .team-status-badge--offseason { background: var(--dark-6);         color: var(--dark-3); }
+.team-identity .team-status-badge--dismissed { background: rgba(224,32,32,0.10);  color: var(--red); }
+
+@media (max-width: 768px) {
+  .team-identity { gap: 8px; }
+  .team-identity .team-identity-logo { width: 32px; height: 32px; border-radius: 6px; }
+  .team-identity .team-identity-logo--initials { font-size: 10px; }
+  .team-identity .team-identity-name { gap: 2px 6px; }
+  .team-identity .team-identity-name-text { font-size: 14px; }
+  .team-identity .team-identity-sub { font-size: 11px; }
+  /* Comme dans les Résultats : le coach reste, le roster s'efface. */
+  .team-identity .team-identity-roster { display: none; }
+  .team-identity .team-status-badge { font-size: 10px; padding: 1px 6px; }
+}
