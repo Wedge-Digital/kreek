@@ -1,5 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::ranking::io::web::builders::build_classement_groups;
+use crate::app::ranking::io::web::builders::{build_classement_groups, TeamUrls};
 use crate::app::ranking::use_cases::standings_service::tiebreak_order_of;
 use crate::state::AppState;
 use askama::Template;
@@ -11,6 +11,9 @@ pub struct ClassementRowVm {
     pub rank: u32,
     pub team_name: String,
     pub team_link: String,
+    /// Le widget d'identité de l'équipe, que la case Équipe charge ; le nom
+    /// s'affiche en attendant (carte 567).
+    pub team_identity_url: String,
     pub played: u32,
     pub wins: u32,
     pub draws: u32,
@@ -131,7 +134,10 @@ async fn build_vm(
         vec![]
     } else {
         build_classement_groups(
-            space_id,
+            &TeamUrls {
+                space_id,
+                links: state.ranking.team_links_port.as_ref(),
+            },
             lines.unwrap_or_default(),
             &manual.unwrap_or_default(),
             &teams,

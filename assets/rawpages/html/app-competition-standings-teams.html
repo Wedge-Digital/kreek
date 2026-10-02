@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classement — identité des équipes</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Maquette : l'onglet Classement, où chaque équipe se présente comme dans
+       les Résultats — logo, nom, roster · coach — avec son statut en badge.
+
+       Deux propriétaires, deux blocs de style :
+       - `.team-identity` est le widget d'identité fourni par le BC teams
+         (carte 566). Il ignore tout du tableau qui l'accueille.
+       - `.standings-*` / `.s-*` est le tableau du BC ranking (carte 567). Il
+         réserve une case au widget et ne style pas son contenu. */
+
+    body { background: var(--dark-7); padding: var(--p2); }
+    .mq-page { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p2); }
+    .mq-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0); }
+    .mq-note  { font-size: var(--text-tiny); color: var(--dark-3); }
+    .mq-group-title {
+      font-size: var(--text-tiny); font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--dark-2); margin-bottom: var(--p05);
+    }
+    .card-shadow { box-shadow: 0 2px 8px rgba(28,28,41,0.06); }
+
+    /* ═══ Widget d'identité — BC teams ═══════════════════════════════════ */
+    .team-identity { display: flex; align-items: center; gap: var(--p1); min-width: 0; }
+
+    /* Logo : même rendu que le bloc de match — image, ou initiales sur dégradé. */
+    .team-identity-logo {
+      width: 44px; height: 44px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-size: 13px; font-weight: 900; color: var(--white);
+      background: linear-gradient(135deg, var(--dark-2) 0%, var(--dark-3) 100%);
+    }
+    .team-identity-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .team-identity-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .team-identity-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .team-identity-name-text {
+      font-size: var(--text-small); font-weight: 600; color: var(--dark-1);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+    }
+    .team-identity-sub {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .team-identity-roster::after { content: " · "; }
+
+    /* Badge de statut — les cinq teintes de la fiche équipe (team-page.css),
+       mêmes libellés que `status_display()`. */
+    .team-status-badge {
+      display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+    }
+    .team-status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .team-status-badge--pending   { background: rgba(255,107,53,0.12); color: var(--orange); }
+    .team-status-badge--ready     { background: rgba(98,149,132,0.15); color: var(--green); }
+    .team-status-badge--phase     { background: rgba(0,48,73,0.10);    color: var(--main-blue); }
+    .team-status-badge--offseason { background: var(--dark-6);         color: var(--dark-3); }
+    .team-status-badge--dismissed { background: rgba(224,32,32,0.10);  color: var(--red); }
+
+    @media (max-width: 768px) {
+      .team-identity { gap: 8px; }
+      .team-identity-logo { width: 32px; height: 32px; border-radius: 6px; font-size: 10px; }
+      .team-identity-name { gap: 6px; }
+      .team-identity-name-text { font-size: 14px; }
+      .team-identity-sub { font-size: 11px; }
+      .team-identity-roster { display: none; }   /* comme dans les Résultats */
+      .team-status-badge { font-size: 10px; padding: 1px 6px; }
+    }
+
+    /* ═══ Tableau de classement — BC ranking ═════════════════════════════ */
+    .standings-table { background: var(--white); border-radius: var(--card-radius); overflow: hidden; }
+
+    .standings-head, .standings-row {
+      display: grid;
+      grid-template-columns: 30px 1fr repeat(5, 56px) 60px;
+      grid-template-areas: "rank team mj v n d man pts";
+      column-gap: var(--p1);
+      padding: 10px 16px;
+      align-items: center;
+    }
+    .standings-head {
+      background: var(--dark-0); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .standings-row {
+      border-bottom: 1px solid var(--dark-6);
+      font-size: var(--text-tiny);
+      cursor: pointer;
+    }
+    .standings-row:last-child      { border-bottom: none; }
+    .standings-row:nth-child(even) { background: var(--dark-7); }
+    .standings-row:hover           { background: var(--dark-6); }
+
+    .h-rank { grid-area: rank; } .h-team { grid-area: team; }
+    .h-mj { grid-area: mj; } .h-v { grid-area: v; } .h-n { grid-area: n; } .h-d { grid-area: d; }
+    .h-man { grid-area: man; } .h-pts { grid-area: pts; }
+    .h-num { text-align: center; }
+
+    .s-rank { grid-area: rank; text-align: center; font-weight: 700; color: var(--dark-3); }
+    .s-rank--first { color: var(--dark-0); }
+    .s-team { grid-area: team; min-width: 0; }   /* la case réservée au widget */
+    .s-mj { grid-area: mj; } .s-v { grid-area: v; } .s-n { grid-area: n; } .s-d { grid-area: d; }
+    .s-man { grid-area: man; } .s-pts { grid-area: pts; }
+    .s-num { text-align: center; color: var(--dark-2); }
+    .s-man a { color: var(--link-blue); font-weight: 600; }
+    .s-pts { text-align: center; font-weight: 700; font-size: var(--text-small); color: var(--dark-0); }
+
+    /* Mobile : toutes les colonnes chiffrées restent (les masquer priverait le
+       lecteur de la décomposition du total). Le widget d'identité prend la
+       première ligne sur toute la largeur — Pts compris, sinon les noms se
+       tronquent dès 15 caractères ; tous les chiffres passent dessous,
+       alignés sur les en-têtes. Le rang couvre les deux lignes. */
+    @media (max-width: 768px) {
+      body { padding: var(--p1); }
+      .standings-head, .standings-row {
+        grid-template-columns: 22px 1fr repeat(5, 26px) 32px;
+        column-gap: 4px;
+        padding: 8px var(--p1);
+      }
+      .standings-head { font-size: 10px; letter-spacing: 0; }
+      .standings-row {
+        grid-template-areas:
+          "rank team team team team team team team"
+          "rank .    mj   v    n    d    man  pts";
+        row-gap: 6px;
+      }
+      .s-num { font-size: 12px; }
+      .s-pts { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+<div class="mq-page">
+
+  <div>
+    <div class="mq-title">Classement</div>
+    <p class="mq-note">Maquette — chaque équipe s'affiche comme dans les Résultats : logo, nom, roster · coach, et son statut en badge. Le bloc identité est le widget du BC teams ; le tableau, celui du BC ranking. Réduire la fenêtre sous 768px pour la version mobile.</p>
+  </div>
+
+  <div>
+    <div class="mq-group-title">Poule A</div>
+    <div class="standings-table card-shadow">
+      <div class="standings-head">
+        <div class="h-rank">#</div>
+        <div class="h-team">Équipe</div>
+        <div class="h-mj h-num">MJ</div>
+        <div class="h-v h-num">V</div>
+        <div class="h-n h-num">N</div>
+        <div class="h-d h-num">D</div>
+        <div class="h-man h-num" title="Points de classement manuels">Man.</div>
+        <div class="h-pts h-num">Pts</div>
+      </div>
+
+      <div class="standings-row">
+        <div class="s-rank s-rank--first">🏆1</div>
+        <div class="s-team">
+          <div class="team-identity">
+            <div class="team-identity-logo"><img src="../../static/img/new-logo-64.png" alt="Les Korrigans FC"></div>
+            <div class="team-identity-info">
+              <div class="team-identity-name">
+                <span class="team-identity-name-text">Les Korrigans FC</span>
+                <span class="team-status-badge team-status-badge--ready">Prête à jouer</span>
+              </div>
+              <div class="team-identity-sub"><span class="team-identity-roster">Elfes Sylvestres</span><span>Colonel Castor</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="s-mj s-num">8</div><div class="s-v s-num">6</div><div class="s-n s-num">1</div><div class="s-d s-num">1</div>
+        <div class="s-man s-num">—</div>
+        <div class="s-pts">19</div>
+      </div>
+
+      <div class="standings-row">
+        <div class="s-rank">2</div>
+        <div class="s-team">
+          <div class="team-identity">
+            <div class="team-identity-logo">OB</div>
+            <div class="team-identity-info">
+              <div class="team-identity-name">
+                <span class="team-identity-name-text">Orc Boyz United</span>
+                <span class="team-status-badge team-status-badge--phase">Rapport en cours</span>
+              </div>
+              <div class="team-identity-sub"><span class="team-identity-roster">Orques</span><span>Grumbak</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="s-mj s-num">8</div><div class="s-v s-num">5</div><div class="s-n s-num">2</div><div class="s-d s-num">1</div>
+        <div class="s-man s-num">—</div>
+        <div class="s-pts">17</div>
+      </div>
+
+      <div class="standings-row">
+        <div class="s-rank">3</div>
+        <div class="s-team">
+          <div class="team-identity">
+            <div class="team-identity-logo">SS</div>
+            <div class="team-identity-info">
+              <div class="team-identity-name">
+                <span class="team-identity-name-text">Skaven Speedsters de la Grande Fosse Pestilentielle</span>
+                <span class="team-status-badge team-status-badge--phase">Phase de recrutement</span>
+              </div>
+              <div class="team-identity-sub"><span class="team-identity-roster">Skavens</span><span>Rat'Mustache</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="s-mj s-num">8</div><div class="s-v s-num">5</div><div class="s-n s-num">1</div><div class="s-d s-num">2</div>
+        <div class="s-man s-num">—</div>
+        <div class="s-pts">16</div>
+      </div>
+
+      <div class="standings-row">
+        <div class="s-rank">4</div>
+        <div class="s-team">
+          <div class="team-identity">
+            <div class="team-identity-logo">DI</div>
+            <div class="team-identity-info">
+              <div class="team-identity-name">
+                <span class="team-identity-name-text">Dwarf Ironbreakers</span>
+                <span class="team-status-badge team-status-badge--ready">Prête à jouer</span>
+              </div>
+              <div class="team-identity-sub"><span class="team-identity-roster">Nains</span><span>Durin Barbefer</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="s-mj s-num">8</div><div class="s-v s-num">4</div><div class="s-n s-num">1</div><div class="s-d s-num">3</div>
+        <div class="s-man s-num">—</div>
+        <div class="s-pts">13</div>
+      </div>
+
+      <div class="standings-row">
+        <div class="s-rank">5</div>
+        <div class="s-team">
+          <div class="team-identity">
+            <div class="team-identity-logo">CW</div>
+            <div class="team-identity-info">
+              <div class="team-identity-name">
+                <span class="team-identity-name-text">Chaos Warriors</span>
+                <span class="team-status-badge team-status-badge--phase">Phase d'amélioration</span>
+              </div>
+              <div class="team-identity-sub"><span class="team-identity-roster">Élus du Chaos</span><span>Khorne Flakes</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="s-mj s-num">8</div><div class="s-v s-num">3</div><div class="s-n s-num">2</div><div class="s-d s-num">3</div>
+        <div class="s-man s-num">—</div>
+        <div class="s-pts">11</div>
+      </div>
+
+      <div class="standings-row">
+        <div class="s-rank">6</div>
+        <div class="s-team">
+          <div class="team-identity">
+            <div class="team-identity-logo">DE</div>
+            <div class="team-identity-info">
+              <div class="team-identity-name">
+                <span class="team-identity-name-text">Dark Elves Ravens</span>
+                <span class="team-status-badge team-status-badge--dismissed">Renvoyée</span>
+              </div>
+              <div class="team-identity-sub"><span class="team-identity-roster">Elfes Noirs</span><span>Malekith Jr</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="s-mj s-num">8</div><div class="s-v s-num">3</div><div class="s-n s-num">1</div><div class="s-d s-num">4</div>
+        <div class="s-man s-num"><a href="app-manual-ranking-points.html" title="Voir le détail des points manuels">−1</a></div>
+        <div class="s-pts">10</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

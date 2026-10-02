@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::ranking::domain::standings::TiebreakOrder;
-use crate::app::ranking::io::web::builders::build_detailed_groups;
+use crate::app::ranking::io::web::builders::{build_detailed_groups, TeamUrls};
 use crate::app::ranking::io::web::tiebreak_labels::{tiebreak_label, tiebreak_short_label};
 use crate::app::ranking::use_cases::standings_service::tiebreak_order_of;
 use crate::state::AppState;
@@ -161,7 +161,10 @@ async fn build_vm(
         vec![]
     } else {
         build_detailed_groups(
-            space_id,
+            &TeamUrls {
+                space_id,
+                links: state.ranking.team_links_port.as_ref(),
+            },
             lines.unwrap_or_default(),
             &manual.unwrap_or_default(),
             &teams,

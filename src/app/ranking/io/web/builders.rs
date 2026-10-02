@@ -8,11 +8,30 @@ use crate::app::ranking::io::web::widgets::classement_widget::{
 use crate::app::ranking::io::web::widgets::detailed_standings_widget::{
     CellState, DetailedGroupVm, DetailedRowVm, TiebreakCellVm,
 };
-use crate::app::ranking::ports::{EnrolledTeamInfo, RankingGroupInfo, RankingLineRow};
+use crate::app::ranking::ports::{
+    EnrolledTeamInfo, IRankingTeamLinksPort, RankingGroupInfo, RankingLineRow,
+};
 use crate::app::ranking::use_cases::standings_service::build_ordered_standings;
-use crate::app::routes::AppRoutes;
 use std::collections::HashMap;
 use std::collections::HashSet;
+
+/// Les adresses d'équipe d'un classement : l'espace courant, et le port qui
+/// sait les construire (carte 567). `ranking` ne connaît pas les routes de
+/// `teams` — c'est l'adapter d'infrastructure qui les lui fournit.
+pub struct TeamUrls<'a> {
+    pub space_id: &'a str,
+    pub links: &'a dyn IRankingTeamLinksPort,
+}
+
+impl TeamUrls<'_> {
+    fn detail(&self, team_id: &str) -> String {
+        self.links.team_detail_url(self.space_id, team_id)
+    }
+
+    fn identity(&self, team_id: &str) -> String {
+        self.links.team_identity_url(self.space_id, team_id)
+    }
+}
 
 /// Une poule et les données qui la concernent — le **découpage seul**, sans rendu.
 /// Partagé par les deux onglets de classement : sans lui, la règle « chaque poule
@@ -92,7 +111,7 @@ fn slice_for(
 }
 
 pub fn build_classement_groups(
-    space_id: &str,
+    urls: &TeamUrls,
     lines: Vec<RankingLineRow>,
     manual: &HashMap<String, i32>,
     teams: &[EnrolledTeamInfo],
@@ -101,7 +120,7 @@ pub fn build_classement_groups(
 ) -> Vec<ClassementGroupVm> {
     split_into_groups(&lines, teams, groups)
         .into_iter()
-        .map(|slice| build_group_vm(space_id, slice, manual, order))
+        .map(|slice| build_group_vm(urls, slice, manual, order))
         .collect()
 }
 
@@ -109,7 +128,7 @@ pub fn build_classement_groups(
 /// autonome dont les rangs repartent à 1. Ordonner avant de découper donnerait
 /// des rangs globaux — le leader de la poule 2 pourrait afficher un rang 3.
 fn build_group_vm(
-    space_id: &str,
+    urls: &TeamUrls,
     slice: GroupSlice,
     manual: &HashMap<String, i32>,
     order: &TiebreakOrder,
@@ -118,7 +137,7 @@ fn build_group_vm(
     ClassementGroupVm {
         title: slice.title,
         has_enrolled_teams: !slice.teams.is_empty(),
-        rows: build_classement_rows(space_id, ordered, &slice.teams),
+        rows: build_classement_rows(urls, ordered, &slice.teams),
     }
 }
 
@@ -126,7 +145,7 @@ fn build_group_vm(
 /// nom depuis les équipes inscrites (port `competitions`), construit le lien, et
 /// remplit le VM. Ni tri ni calcul de rang ici — cf. `domain/standings.rs`.
 pub fn build_classement_rows(
-    space_id: &str,
+    urls: &TeamUrls,
     ordered: Vec<(TeamStanding, Rank)>,
     teams: &[EnrolledTeamInfo],
 ) -> Vec<ClassementRowVm> {
@@ -137,7 +156,8 @@ pub fn build_classement_rows(
             ClassementRowVm {
                 rank: rank.0,
                 team_name: resolve_team_name(&team_id, teams),
-                team_link: AppRoutes::default().teams.team_detail(space_id, &team_id),
+                team_link: urls.detail(&team_id),
+                team_identity_url: urls.identity(&team_id),
                 played: standing.totals.matches_played.0,
                 wins: standing.totals.wins.0,
                 draws: standing.totals.draws.0,
@@ -168,7 +188,7 @@ fn resolve_team_name(team_id: &str, teams: &[EnrolledTeamInfo]) -> String {
 /// Même découpage par poule que le classement simple — les deux onglets ne
 /// peuvent pas diverger sur le périmètre d'un classement.
 pub fn build_detailed_groups(
-    space_id: &str,
+    urls: &TeamUrls,
     lines: Vec<RankingLineRow>,
     manual: &HashMap<String, i32>,
     teams: &[EnrolledTeamInfo],
@@ -177,12 +197,12 @@ pub fn build_detailed_groups(
 ) -> Vec<DetailedGroupVm> {
     split_into_groups(&lines, teams, groups)
         .into_iter()
-        .map(|slice| build_detailed_group_vm(space_id, slice, manual, order))
+        .map(|slice| build_detailed_group_vm(urls, slice, manual, order))
         .collect()
 }
 
 fn build_detailed_group_vm(
-    space_id: &str,
+    urls: &TeamUrls,
     slice: GroupSlice,
     manual: &HashMap<String, i32>,
     order: &TiebreakOrder,
@@ -191,12 +211,12 @@ fn build_detailed_group_vm(
     DetailedGroupVm {
         title: slice.title,
         has_enrolled_teams: !slice.teams.is_empty(),
-        rows: build_detailed_rows(space_id, ordered, &slice.teams, order),
+        rows: build_detailed_rows(urls, ordered, &slice.teams, order),
     }
 }
 
 pub fn build_detailed_rows(
-    space_id: &str,
+    urls: &TeamUrls,
     ordered: Vec<(TeamStanding, Rank)>,
     teams: &[EnrolledTeamInfo],
     order: &TiebreakOrder,
@@ -209,13 +229,13 @@ pub fn build_detailed_rows(
         .into_iter()
         .zip(outcomes)
         .map(|((standing, rank), outcome)| {
-            to_detailed_row(space_id, standing, rank, teams, order, outcome)
+            to_detailed_row(urls, standing, rank, teams, order, outcome)
         })
         .collect()
 }
 
 fn to_detailed_row(
-    space_id: &str,
+    urls: &TeamUrls,
     standing: TeamStanding,
     rank: Rank,
     teams: &[EnrolledTeamInfo],
@@ -226,7 +246,7 @@ fn to_detailed_row(
     DetailedRowVm {
         rank: rank.0,
         team_name: resolve_team_name(&team_id, teams),
-        team_link: AppRoutes::default().teams.team_detail(space_id, &team_id),
+        team_link: urls.detail(&team_id),
         played: standing.totals.matches_played.0,
         wins: standing.totals.wins.0,
         draws: standing.totals.draws.0,
@@ -346,6 +366,26 @@ mod tests {
         (standing, Rank(rank))
     }
 
+    /// Des adresses reconnaissables, pour vérifier qu'elles viennent du port
+    /// et de lui seul.
+    struct FakeLinks;
+
+    impl IRankingTeamLinksPort for FakeLinks {
+        fn team_detail_url(&self, space_id: &str, team_id: &str) -> String {
+            format!("/fiche/{space_id}/{team_id}")
+        }
+        fn team_identity_url(&self, space_id: &str, team_id: &str) -> String {
+            format!("/identite/{space_id}/{team_id}")
+        }
+    }
+
+    fn urls() -> TeamUrls<'static> {
+        TeamUrls {
+            space_id: "sp1",
+            links: &FakeLinks,
+        }
+    }
+
     fn empty_order() -> TiebreakOrder {
         TiebreakOrder::empty()
     }
@@ -359,7 +399,7 @@ mod tests {
         let teams = vec![team(&t1, "A"), team(&t2, "B"), team(&t3, "C")];
         let ordered = vec![ranked(&t1, 3, 1), ranked(&t2, 9, 2), ranked(&t3, 6, 2)];
 
-        let rows = build_classement_rows("sp1", ordered, &teams);
+        let rows = build_classement_rows(&urls(), ordered, &teams);
 
         assert_eq!(
             rows.iter()
@@ -377,7 +417,7 @@ mod tests {
     fn resolves_team_names_from_enrolled_teams() {
         let t1 = TeamId::new();
         let rows = build_classement_rows(
-            "sp1",
+            &urls(),
             vec![ranked(&t1, 3, 1)],
             &[team(&t1, "Les Guerriers")],
         );
@@ -387,20 +427,30 @@ mod tests {
     #[test]
     fn falls_back_to_team_id_when_name_unresolved() {
         let t1 = TeamId::new();
-        let rows = build_classement_rows("sp1", vec![ranked(&t1, 3, 1)], &[]);
+        let rows = build_classement_rows(&urls(), vec![ranked(&t1, 3, 1)], &[]);
         assert_eq!(rows[0].team_name, t1.to_string());
     }
 
+    /// Carte 567 — les deux adresses d'équipe viennent du port : `ranking`
+    /// n'écrit aucune route de `teams`.
     #[test]
-    fn builds_team_detail_link_from_space_and_team_id() {
+    fn les_adresses_d_equipe_viennent_du_port() {
         let t1 = TeamId::new();
-        let rows = build_classement_rows("sp1", vec![ranked(&t1, 3, 1)], &[team(&t1, "A")]);
-        assert_eq!(
-            rows[0].team_link,
-            AppRoutes::default()
-                .teams
-                .team_detail("sp1", &t1.to_string())
+        let rows = build_classement_rows(&urls(), vec![ranked(&t1, 3, 1)], &[team(&t1, "A")]);
+        assert_eq!(rows[0].team_link, format!("/fiche/sp1/{t1}"));
+        assert_eq!(rows[0].team_identity_url, format!("/identite/sp1/{t1}"));
+    }
+
+    #[test]
+    fn le_classement_detaille_prend_aussi_son_lien_du_port() {
+        let t1 = TeamId::new();
+        let rows = build_detailed_rows(
+            &urls(),
+            vec![ranked(&t1, 3, 1)],
+            &[team(&t1, "A")],
+            &empty_order(),
         );
+        assert_eq!(rows[0].team_link, format!("/fiche/sp1/{t1}"));
     }
 
     #[test]
@@ -410,7 +460,7 @@ mod tests {
         let lines = vec![line(&t1, 3), line(&t2, 9)];
 
         let none = build_classement_groups(
-            "sp1",
+            &urls(),
             lines.clone(),
             &HashMap::new(),
             &teams,
@@ -419,7 +469,7 @@ mod tests {
         );
         let single_group = [group("g1", "Poule unique", &[&t1, &t2])];
         let single = build_classement_groups(
-            "sp1",
+            &urls(),
             lines,
             &HashMap::new(),
             &teams,
@@ -453,7 +503,7 @@ mod tests {
         ];
 
         let result = build_classement_groups(
-            "sp1",
+            &urls(),
             lines,
             &HashMap::new(),
             &teams,
@@ -481,7 +531,7 @@ mod tests {
         lines[1].td_for = 7;
         let order = TiebreakOrder::new(vec![TiebreakCriterion::NbTd]);
 
-        let result = build_classement_groups("sp1", lines, &HashMap::new(), &teams, &[], &order);
+        let result = build_classement_groups(&urls(), lines, &HashMap::new(), &teams, &[], &order);
 
         assert_eq!(result[0].rows[0].team_name, "Prolifique");
         assert_eq!(result[0].rows[0].rank, 1);
@@ -499,7 +549,7 @@ mod tests {
         ];
 
         let result = build_classement_groups(
-            "sp1",
+            &urls(),
             vec![],
             &HashMap::new(),
             &teams,
@@ -519,7 +569,7 @@ mod tests {
         let groups = vec![group("g1", "Poule 1", &[&t1]), group("g2", "Poule 2", &[])];
 
         let result = build_classement_groups(
-            "sp1",
+            &urls(),
             vec![],
             &HashMap::new(),
             &teams,
@@ -558,7 +608,7 @@ mod tests {
         lines[1].td_for = 2;
 
         let groups = build_detailed_groups(
-            "sp1",
+            &urls(),
             lines,
             &HashMap::new(),
             &[team(&t1, "A"), team(&t2, "B")],
@@ -579,7 +629,7 @@ mod tests {
         let lines = vec![line(&t1, 6), line(&t2, 6)];
 
         let groups = build_detailed_groups(
-            "sp1",
+            &urls(),
             lines,
             &HashMap::new(),
             &[team(&t1, "A"), team(&t2, "B")],
@@ -600,7 +650,7 @@ mod tests {
         let lines = vec![line(&t1, 9), line(&t2, 6)];
 
         let groups = build_detailed_groups(
-            "sp1",
+            &urls(),
             lines,
             &HashMap::new(),
             &[team(&t1, "A"), team(&t2, "B")],
@@ -636,7 +686,8 @@ mod tests {
             group("g2", "Poule 2", &[&b1, &b2]),
         ];
 
-        let result = build_detailed_groups("sp1", lines, &HashMap::new(), &teams, &groups, &order);
+        let result =
+            build_detailed_groups(&urls(), lines, &HashMap::new(), &teams, &groups, &order);
 
         assert_eq!(states_of(&result[0].rows[0]), vec!["sd-decisive"]);
         assert_eq!(states_of(&result[1].rows[0]), vec!["sd-tied"]);
@@ -653,7 +704,7 @@ mod tests {
         lines[0].td_against = 6;
 
         let groups = build_detailed_groups(
-            "sp1",
+            &urls(),
             lines,
             &HashMap::new(),
             &[team(&t1, "A")],
@@ -677,7 +728,7 @@ mod tests {
         let groups = vec![group("g1", "Poule 1", &[&t1]), group("g2", "Poule 2", &[])];
 
         let result = build_classement_groups(
-            "sp1",
+            &urls(),
             vec![],
             &HashMap::new(),
             &teams,
@@ -700,7 +751,7 @@ mod tests {
     fn une_equipe_sans_point_manuel_rend_none() {
         let t = TeamId::new();
         let groupes = build_classement_groups(
-            "sp1",
+            &urls(),
             vec![line(&t, 6)],
             &HashMap::new(),
             &[team(&t, "A")],
@@ -716,7 +767,7 @@ mod tests {
     fn le_total_affiche_inclut_le_point_manuel() {
         let t = TeamId::new();
         let groupes = build_classement_groups(
-            "sp1",
+            &urls(),
             vec![line(&t, 3)],
             &manuels(&[(&t, 2)]),
             &[team(&t, "A")],
@@ -734,7 +785,7 @@ mod tests {
     fn un_total_negatif_se_rend_signe() {
         let t = TeamId::new();
         let groupes = build_classement_groups(
-            "sp1",
+            &urls(),
             vec![line(&t, 1)],
             &manuels(&[(&t, -3)]),
             &[team(&t, "A")],
@@ -751,7 +802,7 @@ mod tests {
     fn le_detaille_rend_les_memes_valeurs() {
         let t = TeamId::new();
         let groupes = build_detailed_groups(
-            "sp1",
+            &urls(),
             vec![line(&t, 3)],
             &manuels(&[(&t, -1)]),
             &[team(&t, "A")],
@@ -778,14 +829,15 @@ mod tests {
         let equipes = [team(&a, "A"), team(&b, "B")];
 
         let compact = build_classement_groups(
-            "sp1",
+            &urls(),
             lignes.clone(),
             &cartes,
             &equipes,
             &[],
             &empty_order(),
         );
-        let detaille = build_detailed_groups("sp1", lignes, &cartes, &equipes, &[], &empty_order());
+        let detaille =
+            build_detailed_groups(&urls(), lignes, &cartes, &equipes, &[], &empty_order());
 
         let totaux_compact: Vec<i32> = compact[0].rows.iter().map(|r| r.total).collect();
         let totaux_detaille: Vec<i32> = detaille[0].rows.iter().map(|r| r.total).collect();

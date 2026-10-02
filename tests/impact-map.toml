@@ -390,6 +390,10 @@
                            "references", "team_creation", "spaces", "spp_calculator"]
 "test_detailed_standings" = ["ranking", "competitions", "match_report", "teams", "players",
                              "references", "team_creation", "spaces", "spp_calculator"]
+# Cartes 566-567 : chaque ligne charge le widget d'identité de `teams`.
+"test_classement_identite_equipe" = ["ranking", "teams", "competitions", "match_report",
+                                     "players", "references", "team_creation", "spaces",
+                                     "spp_calculator"]
 
 # ── Accueil d'espace ─────────────────────────────────────────────────────────
 # Widget "Derniers résultats" (BC competitions) chargé sur la page d'accueil

@@ -14,7 +14,7 @@
 }
 .ranking-classement-widget .standings-header,
 .ranking-classement-widget.standings-header {
-  display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
+  display: grid; grid-template-columns: 30px 1fr repeat(6, 48px);
   padding: 12px 16px; gap: 8px; align-items: center;
   background: var(--dark-0); color: var(--white);
   font-size: var(--text-tiny); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
@@ -23,7 +23,7 @@
 .ranking-classement-widget.standings-header-num { text-align: center; }
 .ranking-classement-widget .standings-row,
 .ranking-classement-widget.standings-row {
-  display: grid; grid-template-columns: 30px 1fr 60px 60px 60px 60px 60px 60px;
+  display: grid; grid-template-columns: 30px 1fr repeat(6, 48px);
   padding: 12px 16px; gap: 8px; align-items: center;
   border-bottom: 1px solid var(--dark-6); font-size: var(--text-small);
   cursor: pointer;
@@ -36,8 +36,22 @@
 .ranking-classement-widget.standings-row:hover           { background: var(--dark-5); }
 .ranking-classement-widget .standings-rank,
 .ranking-classement-widget.standings-rank { color: var(--dark-3); font-weight: 700; text-align: center; }
+/* La case Équipe accueille le widget d'identité de `teams` (carte 567), dont
+   elle ne style pas le contenu. `min-width: 0` laisse le widget tronquer le
+   nom : sans lui, un élément de grille ne descend pas sous sa largeur de
+   contenu et pousserait les colonnes chiffrées hors de l'écran. `overflow`
+   garantit qu'il ne débordera jamais sur MJ. Le nom nu n'est que la valeur
+   d'attente, le temps que le widget arrive.
+
+   Colonnes chiffrées à 48px : dans la page de compétition, le tableau ne
+   dispose que de ~620px à 1280 de large, et 6 × 60px laissaient 140px au
+   nom. */
 .ranking-classement-widget .standings-team,
-.ranking-classement-widget.standings-team { font-weight: 500; color: var(--dark-1); }
+.ranking-classement-widget.standings-team { font-weight: 500; color: var(--dark-1); min-width: 0; overflow: hidden; }
+.ranking-classement-widget .standings-team-name,
+.ranking-classement-widget.standings-team-name {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .ranking-classement-widget .standings-num,
 .ranking-classement-widget.standings-num  { text-align: center; color: var(--dark-2); }
 .ranking-classement-widget .standings-manual,
@@ -61,21 +75,31 @@
 
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
-  /* Colonnes numériques resserrées et nom d'équipe tronqué en fin de ligne
-     plutôt que replié sur trois lignes. Toutes les colonnes sont conservées :
-     les masquer priverait le lecteur de la décomposition du total. */
+  /* Toutes les colonnes sont conservées : les masquer priverait le lecteur de
+     la décomposition du total. C'est la ligne qui se replie (carte 567) : le
+     widget d'identité prend la première sur toute la largeur — Pts compris,
+     sinon les noms se tronquent dès quinze caractères — et les six chiffres
+     passent dessous, alignés sur les en-têtes. Le rang couvre les deux. */
   .ranking-classement-widget .standings-header,
 .ranking-classement-widget.standings-header,
 .ranking-classement-widget .standings-row,
 .ranking-classement-widget.standings-row {
-    grid-template-columns: 22px 1fr 28px 28px 28px 28px 32px 34px;
-    padding: 10px var(--p1); gap: 4px;
+    grid-template-columns: 22px 1fr repeat(5, 26px) 32px;
+    padding: 10px var(--p1); column-gap: 4px;
   }
+  .ranking-classement-widget .standings-header,
+.ranking-classement-widget.standings-header { font-size: 10px; letter-spacing: 0; }
+  .ranking-classement-widget .standings-row,
+.ranking-classement-widget.standings-row { row-gap: 6px; }
+  .ranking-classement-widget .standings-rank,
+.ranking-classement-widget.standings-rank { grid-row: span 2; }
   .ranking-classement-widget .standings-team,
-.ranking-classement-widget.standings-team {
-    font-size: 13px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+.ranking-classement-widget.standings-team { grid-column: 2 / -1; font-size: 13px; }
+  /* Le premier chiffre saute la colonne Équipe ; les suivants s'enchaînent. */
+  .ranking-classement-widget .standings-team + .standings-num,
+.ranking-classement-widget.standings-team + .standings-num { grid-column-start: 3; }
+  .ranking-classement-widget .standings-num,
+.ranking-classement-widget.standings-num { font-size: 12px; }
 }
 
 /* ── Accès aux points manuels (carte 452) ─────────────────────────────────

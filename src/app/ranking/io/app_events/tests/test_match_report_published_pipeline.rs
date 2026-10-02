@@ -134,11 +134,28 @@ impl crate::app::ranking::ports::IRankingAdminPort for FakeAdmin {
     }
 }
 
+/// Le pipeline ne rend aucun classement : les adresses ne sont jamais lues.
+struct FakeLinks;
+
+impl crate::app::ranking::ports::IRankingTeamLinksPort for FakeLinks {
+    fn team_detail_url(&self, _: &str, _: &str) -> String {
+        String::new()
+    }
+    fn team_identity_url(&self, _: &str, _: &str) -> String {
+        String::new()
+    }
+}
+
 #[sqlx::test]
 async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
-    let ranking = RankingContext::new(&pool, competition_port.clone(), Arc::new(FakeAdmin));
+    let ranking = RankingContext::new(
+        &pool,
+        competition_port.clone(),
+        Arc::new(FakeAdmin),
+        Arc::new(FakeLinks),
+    );
     match_report_published_listener::init(
         &app_event_bus,
         ranking.repository.clone(),
@@ -191,7 +208,12 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
 async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
     let app_event_bus = new_bus();
     let competition_port: Arc<dyn IRankingCompetitionPort> = Arc::new(FakeCompetitionPort);
-    let ranking = RankingContext::new(&pool, competition_port.clone(), Arc::new(FakeAdmin));
+    let ranking = RankingContext::new(
+        &pool,
+        competition_port.clone(),
+        Arc::new(FakeAdmin),
+        Arc::new(FakeLinks),
+    );
     match_report_published_listener::init(
         &app_event_bus,
         ranking.repository.clone(),

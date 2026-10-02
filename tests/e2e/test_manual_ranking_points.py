@@ -101,13 +101,17 @@ def _lire_compact(page: Page, ctx: dict) -> list[dict]:
     page.goto(_onglet_classement(ctx), wait_until="load")
     page.wait_for_selector(".ranking-classement-widget .standings-row", timeout=15000)
     lignes = page.locator(".ranking-classement-widget .standings-row")
+    # La case Équipe porte le widget d'identité (carte 567) : badge et coach
+    # s'y ajoutent au nom. On attend qu'il ait remplacé le nom d'attente, puis
+    # on ne lit que le nom.
+    expect(lignes.locator(".team-identity")).to_have_count(lignes.count(), timeout=10000)
     sortie = []
     for i in range(lignes.count()):
         r = lignes.nth(i)
         sortie.append(
             {
                 "rang": r.locator(".standings-rank").inner_text().strip().lstrip("🏆"),
-                "equipe": r.locator(".standings-team").inner_text().strip(),
+                "equipe": r.locator(".team-identity-name-text").inner_text().strip(),
                 "manuel": r.locator(".standings-manual").inner_text().strip(),
                 "total": r.locator(".standings-pts").inner_text().strip(),
             }

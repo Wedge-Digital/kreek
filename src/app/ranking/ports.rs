@@ -286,6 +286,21 @@ pub trait IRankingCompetitionPort: Send + Sync {
     async fn find_groups(&self, season_id: &str) -> Vec<RankingGroupInfo>;
 }
 
+// ── Adresses d'équipe (carte 567) ─────────────────────────────────────────────
+
+/// Les adresses d'équipe dont le classement a besoin : la fiche, vers laquelle
+/// une ligne mène, et l'identité, que la case Équipe charge.
+///
+/// **Un port, et non `AppRoutes.teams`.** `ranking` construisait ses liens
+/// d'équipe lui-même, donc connaissait les routes de `teams` ; y ajouter
+/// l'adresse d'un widget aurait fait référencer à un BC le widget d'un autre
+/// (règle 1 des widgets). L'adapter d'infrastructure les fournit — `ranking`
+/// sait ce qu'il lui faut, pas qui le sert.
+pub trait IRankingTeamLinksPort: Send + Sync {
+    fn team_detail_url(&self, space_id: &str, team_id: &str) -> String;
+    fn team_identity_url(&self, space_id: &str, team_id: &str) -> String;
+}
+
 // ── ACL d'autorisation (carte 450) ────────────────────────────────────────────
 
 /// Qui a le droit d'attribuer ou de retirer des points manuels.
