@@ -297,3 +297,145 @@ def test_l_onglet_joueurs_reste_accessible_apres_un_aller_retour(page: Page, tre
     expect(page.locator(".players-widget")).to_be_visible(timeout=10000)
     expect(page.locator(".team-treasury")).to_have_count(0)
     expect(page.locator(".team-tabs .tab.active")).to_have_text("Joueurs & Staff")
+
+
+# ── Le panneau d'ajustement (carte 560) ───────────────────────────────────────
+#
+# **Quatre scénarios et non cinq.** Les refus serveur — membre simple à 403,
+# montant hors bornes, motif vide, retrait non couvert — sont couverts par les
+# tests de handler de la carte 559, qui montent le routeur de production et
+# frappent les mêmes chemins. Les rejouer ici coûterait des secondes de suite
+# pour prouver à nouveau, moins précisément, ce qui l'est déjà.
+#
+# Ne restent que les quatre choses qu'un navigateur seul établit : qu'Alpine vit
+# après un swap htmx, que ses garde-fous sont branchés, que le swap
+# `#app-content` fait bouger les deux soldes à l'écran, et qu'un membre simple
+# ne voit pas le bouton.
+
+
+def _ouvrir_le_panneau(page: Page, ctx: dict) -> None:
+    """Va au relevé par l'onglet — pas par l'URL directe.
+
+    C'est volontaire : le bouton arrive alors par un **swap htmx**, et traverse
+    la fenêtre où un élément est peint, cliquable et pourtant inerte. Charger
+    l'URL directement éviterait le piège que ces tests existent pour éprouver.
+    """
+    page.goto(_url_equipe(ctx, ctx["equipe"]), wait_until="load")
+    cliquer_quand_cable(page, ".team-tabs a:has-text('Trésorerie')")
+    expect(page.locator(".team-treasury")).to_be_visible(timeout=10000)
+    page.locator(".tr-btn-adjust").click()
+    expect(page.locator(".tr-adm")).to_be_visible()
+
+
+def test_le_panneau_d_ajustement_s_ouvre_au_clic(page: Page, tresorerie_ctx):
+    """**Alpine vit après le swap d'onglet**, et c'est tout l'enjeu.
+
+    Le `x-data` arrive dans un fragment échangé par htmx, avec le `<script>` qui
+    définit sa fonction. Si l'ordre ne tenait pas — ou si une seconde instance
+    d'Alpine se disputait le composant, le piège que le `CLAUDE.md` documente —
+    le panneau resterait fermé au clic, sans erreur de console.
+    """
+    page.goto(_url_equipe(tresorerie_ctx, tresorerie_ctx["equipe"]), wait_until="load")
+    cliquer_quand_cable(page, ".team-tabs a:has-text('Trésorerie')")
+    expect(page.locator(".team-treasury")).to_be_visible(timeout=10000)
+
+    # Fermé au départ : `x-cloak` et `x-show` doivent déjà avoir parlé.
+    expect(page.locator(".tr-adm")).to_be_hidden()
+
+    page.locator(".tr-btn-adjust").click()
+    expect(page.locator(".tr-adm")).to_be_visible()
+
+    page.locator(".tr-adm-close").click()
+    expect(page.locator(".tr-adm")).to_be_hidden()
+
+
+def test_les_garde_fous_du_panneau_sont_branches(page: Page, tresorerie_ctx):
+    """Les refus client, et la liaison aux bornes du view model.
+
+    **Pourquoi pas « le solde ne couvre pas ».** Le plafond est vérifié
+    **avant** le solde, et il vaut 500 : une équipe qui détient 500 kPo ou plus
+    ne peut donc jamais atteindre ce refus-là, puisque tout montant capable de
+    dépasser sa caisse dépasse d'abord le plafond. Constaté en écrivant ce test,
+    sur une équipe à plus de 500. Le refus existe et il est juste — les tests de
+    handler l'éprouvent sur une caisse vidée — simplement il n'est pas
+    atteignable ici.
+
+    Ce qui l'est, et que seul un navigateur établit : que `cfg.max` et
+    `cfg.solde` descendent bien du view model jusqu'à Alpine. Le second se lit
+    dans l'annonce, qui calcule le solde d'après.
+    """
+    _ouvrir_le_panneau(page, tresorerie_ctx)
+    solde = _kpo(page.locator(".tr-balance-value").inner_text())
+    assert solde >= 500, (
+        f"ce test suppose une caisse au-delà du plafond, {solde} kPo trouvés — "
+        "si la fixture change, c'est le refus de solde qu'il faut éprouver ici"
+    )
+
+    page.locator(".tr-adm-sign button:has-text('Débiter')").click()
+    page.locator("input[name='note']").fill("Sanction")
+
+    # Au-delà du plafond — `cfg.max`.
+    page.locator("input[name='amount_kpo']").fill("505")
+    expect(page.locator(".tr-adm-apply")).to_be_disabled()
+    expect(page.locator(".tr-adm-outcome")).to_contain_text("plafonné")
+
+    # Pas un multiple de 5 — `cfg.pas`.
+    page.locator("input[name='amount_kpo']").fill("123")
+    expect(page.locator(".tr-adm-apply")).to_be_disabled()
+    expect(page.locator(".tr-adm-outcome")).to_contain_text("multiple de 5")
+
+    # Tenable : le bouton revient, et l'annonce calcule depuis `cfg.solde`.
+    page.locator("input[name='amount_kpo']").fill("5")
+    expect(page.locator(".tr-adm-apply")).to_be_enabled()
+    expect(page.locator(".tr-adm-outcome")).to_contain_text(str(solde - 5))
+
+    # Et le motif vidé rebloque : c'est la dernière des cinq règles.
+    page.locator("input[name='note']").fill("")
+    expect(page.locator(".tr-adm-apply")).to_be_disabled()
+    expect(page.locator(".tr-adm-outcome")).to_contain_text("motif est obligatoire")
+
+
+def test_un_credit_applique_monte_les_deux_soldes_a_l_ecran(page: Page, tresorerie_ctx):
+    """**Le scénario qui vaut la carte.**
+
+    La réponse vise `#app-content` et non la zone d'onglets, parce que la
+    trésorerie s'affiche à deux endroits dont l'un vit hors de cette zone. Ce
+    test les lit tous les deux **après** le swap : un ciblage trop étroit
+    laisserait l'en-tête sur l'ancien chiffre, et les deux se contrediraient à
+    l'écran sans qu'aucun test serveur ne le voie.
+    """
+    _ouvrir_le_panneau(page, tresorerie_ctx)
+    avant = _kpo(page.locator(".tr-balance-value").inner_text())
+
+    page.locator("input[name='amount_kpo']").fill("120")
+    page.locator("input[name='note']").fill("Compensation du forfait — journée 3")
+    page.locator(".tr-adm-apply").click()
+
+    attendu = avant + 120
+    en_tete = page.locator(".meta-item").filter(has_text="Trésorerie").locator(".meta-value")
+    expect(page.locator(".tr-balance-value")).to_contain_text(str(attendu), timeout=10000)
+    expect(en_tete).to_contain_text(str(attendu))
+
+    # La ligne est au relevé, avec son motif et son auteur — aucune colonne du
+    # grand livre ne les porte, ils viennent du payload de l'événement.
+    ligne = page.locator(".tr-table tbody tr").filter(has_text="Ajustement de trésorerie")
+    expect(ligne).to_have_count(1)
+    expect(ligne.locator(".tr-detail")).to_contain_text("Compensation du forfait")
+    expect(ligne.locator(".tr-detail")).to_contain_text("Par ")
+
+    # Et le panneau s'est refermé tout seul : la page a été re-rendue.
+    expect(page.locator(".tr-adm")).to_be_hidden()
+
+
+def test_un_membre_simple_ne_voit_pas_le_bouton(tresorerie_ctx):
+    """En HTTP, et non au navigateur : le middleware n'échange l'identité que
+    sur une session vide, donc un parcours Playwright demanderait un contexte
+    neuf pour prouver exactement la même chose.
+    """
+    url = _url_equipe(tresorerie_ctx, tresorerie_ctx["equipe"]) + "/tresorerie"
+
+    corps = requests.get(url, headers={"X-Bypass-Auth-Profile": "simple"}, timeout=20).text
+
+    assert "Relevé des mouvements" in corps, "le relevé reste lisible par tous"
+    assert "tr-btn-adjust" not in corps, "un membre simple ne doit pas voir le bouton"
+    assert "ajustementTresorerie" not in corps, "ni l'Alpine du panneau"

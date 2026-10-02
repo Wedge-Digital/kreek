@@ -35,7 +35,7 @@ PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
 .PHONY: dev dev-demo e2e-server test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db seed_accounts seed_e2e lint check-arch coverage analyze help
+        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 help:
@@ -58,6 +58,7 @@ help:
 	@echo "  init_remote_demo_db  Idem sur la base de démo distante ($(DEMO_ENV_FILE)) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée"
 	@echo "  init_remote_prod_db  Première mise en service de la production ($(PROD_ENV_FILE)) — DROP+CREATE...OWNER, refuse une base déjà peuplée, sans seed de comptes, triple confirmation"
 	@echo "  import_prod_db  Recopie la production dans une base locale — détruit la cible, refuse toute cible distante (TARGET_PROFILE=test, YES=1)"
+	@echo "  backup_prod_db  Sauvegarde la production dans dumps/ — lecture seule, rien n'est restauré"
 	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
 	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
 	@echo ""
@@ -238,6 +239,13 @@ reset_db:
 import_prod_db:
 	@SOURCE_PROFILE="$(SOURCE_PROFILE)" TARGET_PROFILE="$(TARGET_PROFILE)" YES="$(YES)" \
 	 bash scripts/import_prod_db.sh
+
+# Sauvegarde la production dans `dumps/` — le même dump qu'`import_prod_db`,
+# sans restauration. Lecture seule sur la source, donc ni garde ni question.
+#
+#   make backup_prod_db
+backup_prod_db:
+	@SOURCE_PROFILE="$(SOURCE_PROFILE)" bash scripts/backup_prod_db.sh
 
 reset_test_db:
 	$(call refuser_si_distant,$(TEST_DB_URL))

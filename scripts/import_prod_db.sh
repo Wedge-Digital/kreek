@@ -43,21 +43,8 @@ SOURCE_PROFILE="${SOURCE_PROFILE:-remote.prod}"
 TARGET_PROFILE="${TARGET_PROFILE:-dev}"
 YES="${YES:-0}"
 
-rouge=$'\033[31m'; vert=$'\033[32m'; gras=$'\033[1m'; nul=$'\033[0m'
-
-echec() { echo ""; echo "  ${rouge}${gras}/!\\  $*${nul}"; echo ""; exit 1; }
-
-url_du_profil() {
-    local fichier=".env.$1"
-    [ -f "$fichier" ] || echec "Profil « $1 » introuvable : $fichier n'existe pas."
-    local url
-    url=$(grep -E '^DATABASE__URL=' "$fichier" | head -1 | cut -d= -f2- | tr -d '"'"'")
-    [ -n "$url" ] || echec "Aucun DATABASE__URL dans $fichier."
-    printf '%s' "$url"
-}
-
-hote_de() { printf '%s' "$1" | sed -E 's#^[^:]+://([^/]*@)?([^:/?]+).*#\2#'; }
-sans_secret() { printf '%s' "$1" | sed -E 's#://[^@]*@#://***@#'; }
+# shellcheck source=lib/prod_db.sh
+source scripts/lib/prod_db.sh
 
 SOURCE_URL=$(url_du_profil "$SOURCE_PROFILE")
 TARGET_URL=$(url_du_profil "$TARGET_PROFILE")
@@ -96,18 +83,9 @@ if [ "$YES" != "1" ]; then
 fi
 
 # ── Le dump ──────────────────────────────────────────────────────────────────
-mkdir -p dumps
-HORODATAGE=$(date +%Y_%m_%d_%H_%M_%S)
-DUMP="dumps/${SOURCE_HOTE}_prod-${HORODATAGE}.dump"
-
 echo ""
 echo "  ${gras}1/4${nul}  Lecture de la production…"
-# `-Fc` plutôt que du SQL : `pg_restore` peut alors ignorer ce qu'il ne sait pas
-# rejouer sans avaler tout le fichier. `--no-owner` et `--no-privileges` parce
-# que les rôles de production n'existent pas en local — sans eux, la
-# restauration échoue sur chaque `ALTER TABLE ... OWNER TO`.
-pg_dump --format=custom --no-owner --no-privileges --file="$DUMP" "$SOURCE_URL"
-echo "      $DUMP ($(du -h "$DUMP" | cut -f1))"
+dumper_production "$SOURCE_URL" "$SOURCE_HOTE"
 
 # ── La cible ─────────────────────────────────────────────────────────────────
 echo "  ${gras}2/4${nul}  Remise à zéro de la cible…"

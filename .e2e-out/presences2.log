@@ -1,0 +1,186 @@
+....FFFF                                                                 [100%]
+=================================== FAILURES ===================================
+___ test_j4_tirer_puis_valider_ecrit_les_rencontres_au_calendrier[chromium] ____
+
+page = <Page url='http://localhost:3210/app/01M2116VWQRGDGFT62EBBW33CY/competitions/01M25M46KWM68B6579AWZC4HZM/01M25M46KZRDCV1VRBEZYKHAXS/admin/presences'>
+space_id = '01M2116VWQRGDGFT62EBBW33CY'
+competition = {'competition_id': '01M25M46KWM68B6579AWZC4HZM', 'season_id': '01M25M46KZRDCV1VRBEZYKHAXS', 'name': 'Ligue E2E Lifecyc...M4758GBBG229MQD1CHTWY', '01M25M47A418YDKENT1VV7F950', '01M25M47CF74QVS7X207ZE2C2K', '01M25M47ER1XDXXS5EFA7FMP85'], ...}
+
+    def test_j4_tirer_puis_valider_ecrit_les_rencontres_au_calendrier(
+        page: Page, space_id, competition
+    ):
+        """Le seul test qui prouve que `confirm_draw` fait ce qu'il dit.
+    
+        Quatre présents donnent deux rencontres, et elles doivent se retrouver dans les
+        tables du Calendrier — donc leur projection avec.
+        """
+        round_id = competition["round_ids"][3]
+        assert (
+            _poster(
+                space_id,
+                competition,
+                "launch",
+                {"round_id": round_id, "deadline": LOINTAIN, "auto_remind": False},
+            ).status_code
+            == 200
+        )
+        _tous_presents(space_id, competition, round_id)
+        assert _poster(space_id, competition, "close", {"round_id": round_id}).status_code == 200
+    
+        _ouvrir_la_journee(page, space_id, competition, round_id)
+        cliquer_quand_cable(page, ".panel-footer .btn-primary-sm")
+    
+        # L'aperçu : deux rencontres, et **des noms**, jamais un identifiant.
+        expect(page.locator(".panel-title")).to_contain_text("Tirage proposé", timeout=15000)
+        expect(page.locator(".draw-row")).to_have_count(2)
+        premier = page.locator(".draw-row .draw-home").first
+>       expect(premier).not_to_contain_text("01", use_inner_text=True)
+E       AssertionError: Locator expected not to contain text '01'
+E       Actual value: Team HTTP Granitiers 1789042761101520000 
+E       Call log:
+E         - Expect "to_contain_text" with timeout 5000ms
+E         - waiting for locator(".draw-row .draw-home").first
+E           14 × locator resolved to <span class="draw-home">Team HTTP Granitiers 1789042761101520000</span>
+E              - unexpected value "Team HTTP Granitiers 1789042761101520000"
+
+test_competition_presences.py:292: AssertionError
+______ test_j4_une_defection_apres_le_tirage_propose_sans_agir[chromium] _______
+
+page = <Page url='about:blank'>, space_id = '01M2116VWQRGDGFT62EBBW33CY'
+competition = {'competition_id': '01M25M46KWM68B6579AWZC4HZM', 'season_id': '01M25M46KZRDCV1VRBEZYKHAXS', 'name': 'Ligue E2E Lifecyc...M4758GBBG229MQD1CHTWY', '01M25M47A418YDKENT1VV7F950', '01M25M47CF74QVS7X207ZE2C2K', '01M25M47ER1XDXXS5EFA7FMP85'], ...}
+
+    def test_j4_une_defection_apres_le_tirage_propose_sans_agir(
+        page: Page, space_id, competition
+    ):
+        """R12 — le panneau de défection **propose**, il n'agit pas.
+    
+        Et les autres rencontres ne bougent pas : leurs coachs ont déjà noté leur
+        adversaire, et refaire le tirage entier ferait trois mécontents pour en soulager
+        un.
+    
+        Dépend du scénario précédent, qui a apparié J4.
+        """
+        round_id = competition["round_ids"][3]
+        avant = set(_appariements_en_base(competition, round_id))
+>       assert len(avant) == 2, "le scénario précédent doit avoir apparié la journée"
+E       AssertionError: le scénario précédent doit avoir apparié la journée
+E       assert 0 == 2
+E        +  where 0 = len(set())
+
+test_competition_presences.py:316: AssertionError
+_ test_j4_valider_la_reparation_ne_touche_que_la_rencontre_concernee[chromium] _
+
+page = <Page url='http://localhost:3210/app/01M2116VWQRGDGFT62EBBW33CY/competitions/01M25M46KWM68B6579AWZC4HZM/01M25M46KZRDCV1VRBEZYKHAXS/admin/presences'>
+space_id = '01M2116VWQRGDGFT62EBBW33CY'
+competition = {'competition_id': '01M25M46KWM68B6579AWZC4HZM', 'season_id': '01M25M46KZRDCV1VRBEZYKHAXS', 'name': 'Ligue E2E Lifecyc...M4758GBBG229MQD1CHTWY', '01M25M47A418YDKENT1VV7F950', '01M25M47CF74QVS7X207ZE2C2K', '01M25M47ER1XDXXS5EFA7FMP85'], ...}
+
+    def test_j4_valider_la_reparation_ne_touche_que_la_rencontre_concernee(
+        page: Page, space_id, competition
+    ):
+        """La rencontre touchée change, **les autres ne bougent pas**.
+    
+        Dépend des deux scénarios précédents.
+        """
+        round_id = competition["round_ids"][3]
+        avant = set(_appariements_en_base(competition, round_id))
+    
+        _ouvrir_la_journee(page, space_id, competition, round_id)
+>       expect(page.locator(".panel-title")).to_contain_text("ne tient plus", timeout=15000)
+E       AssertionError: Locator expected to contain text 'ne tient plus'
+E       Actual value: 
+E             Sondage clos
+E            
+E       Call log:
+E         - Expect "to_contain_text" with timeout 15000ms
+E         - waiting for locator(".panel-title")
+E           33 × locator resolved to <div class="panel-title">↵      Sondage clos↵    </div>
+E              - unexpected value "
+E             Sondage clos
+E           "
+
+test_competition_presences.py:358: AssertionError
+___ test_j5_vider_la_journee_au_calendrier_ramene_l_onglet_a_clos[chromium] ____
+
+page = <Page url='http://localhost:3210/app/01M2116VWQRGDGFT62EBBW33CY/competitions/01M25M46KWM68B6579AWZC4HZM/01M25M46KZRDCV1VRBEZYKHAXS/admin/presences'>
+space_id = '01M2116VWQRGDGFT62EBBW33CY'
+competition = {'competition_id': '01M25M46KWM68B6579AWZC4HZM', 'season_id': '01M25M46KZRDCV1VRBEZYKHAXS', 'name': 'Ligue E2E Lifecyc...M4758GBBG229MQD1CHTWY', '01M25M47A418YDKENT1VV7F950', '01M25M47CF74QVS7X207ZE2C2K', '01M25M47ER1XDXXS5EFA7FMP85'], ...}
+
+    def test_j5_vider_la_journee_au_calendrier_ramene_l_onglet_a_clos(
+        page: Page, space_id, competition
+    ):
+        """R24 — l'appariement se lit **sur la journée**, jamais sur la campagne.
+    
+        C'est ce que la règle promet, et rien d'autre ne le vérifie : vider la journée
+        depuis le Calendrier doit ramener l'onglet Présences à « clos », sans qu'aucune
+        réconciliation n'ait à tourner. Avec la forme précédente — la campagne se
+        souvenant de ses rencontres — l'onglet aurait continué à dire « appariée ».
+        """
+        round_id = competition["round_ids"][4]
+        assert (
+            _poster(
+                space_id,
+                competition,
+                "launch",
+                {"round_id": round_id, "deadline": LOINTAIN, "auto_remind": False},
+            ).status_code
+            == 200
+        )
+        _tous_presents(space_id, competition, round_id)
+        assert _poster(space_id, competition, "close", {"round_id": round_id}).status_code == 200
+    
+        _ouvrir_la_journee(page, space_id, competition, round_id)
+        cliquer_quand_cable(page, ".panel-footer .btn-primary-sm")
+        expect(page.locator(".panel-title")).to_contain_text("Tirage proposé", timeout=15000)
+        cliquer_quand_cable(page, ".panel-footer .btn-primary-sm")
+        attendre_que(
+            lambda: len(_appariements_en_base(competition, round_id)) == 2,
+            quoi="la journée appariée",
+        )
+    
+        # Le Calendrier vide la journée — un autre onglet, un autre chemin.
+        vidage = requests.post(
+            f"{_base(space_id, competition)}/schedule/clear-round",
+            json={"round_id": round_id},
+            headers=ENTETES,
+            timeout=30,
+        )
+        assert vidage.status_code in (200, 204), vidage.text[:300]
+        attendre_que(
+            lambda: not _appariements_en_base(competition, round_id),
+            quoi="la journée vidée",
+        )
+    
+        _ouvrir_la_journee(page, space_id, competition, round_id)
+    
+>       expect(page.locator(".panel-title")).to_contain_text("Sondage clos", timeout=15000)
+E       AssertionError: Locator expected to contain text 'Sondage clos'
+E       Actual value: - img "Espace E2E"
+E       - text: + 🔍
+E       - img "Logo"
+E       - text: Espace E2E
+E       - link "Déconnexion":
+E         - /url: /auth/logout
+E       - text: 👤 Les Compétitions Saisir un Match Créer une équipe Mes équipes ⚙️ Espace 🏆 Ligue E2E Lifecycle 1789042757768589000 — Saison E2E Lifecycle 1789042760383164000 Administration de la compétition · 1 administrateur
+E       - link "← Retour à la compétition":
+E         - /url: /app/01M2116VWQRGDGFT62EBBW33CY/competitions/01M25M46KWM68B6579AWZC4HZM/01M25M46KZRDCV1VRBEZYKHAXS
+E       - text: Admin 📋 Résumé 📋 Inscriptions 🎲 Poules 📅 Calendrier 👥 Présences ⚙️ Paramètres 👥 Sondez les coachs avant chaque journée, puis appariez les présents.
+E       - button "J1 1 réponses sur 4"
+E       - button "J2 1 présents sur 4"
+E       - button "J3 1 présents sur 4"
+E       - button "J4 4 présents sur 4"
+E       - button "J5 Journée appariée"
+E       - paragraph: Choisissez une journée à gauche pour voir sa campagne de présence.
+E       Error: element(s) not found 
+E       Call log:
+E         - Expect "to_contain_text" with timeout 15000ms
+E         - waiting for locator(".panel-title")
+E           8 × locator resolved to <div class="panel-title">Journée appariée</div>
+E             - unexpected value "Journée appariée"
+
+test_competition_presences.py:425: AssertionError
+=========================== short test summary info ============================
+FAILED test_competition_presences.py::test_j4_tirer_puis_valider_ecrit_les_rencontres_au_calendrier[chromium]
+FAILED test_competition_presences.py::test_j4_une_defection_apres_le_tirage_propose_sans_agir[chromium]
+FAILED test_competition_presences.py::test_j4_valider_la_reparation_ne_touche_que_la_rencontre_concernee[chromium]
+FAILED test_competition_presences.py::test_j5_vider_la_journee_au_calendrier_ramene_l_onglet_a_clos[chromium]
+4 failed, 4 passed in 34.40s
