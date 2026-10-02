@@ -686,6 +686,10 @@ pub async fn upsert_player_projection(
         let (player_id, _) = player_and_team_id(event);
         recompute_persistent_injuries(tx, &player_id.to_string()).await?;
     }
+    if event_touches_spp_remaining(event) {
+        let (player_id, _) = player_and_team_id(event);
+        recompute_spp_remaining(tx, &player_id.to_string()).await?;
+    }
 
     Ok(())
 }
@@ -785,6 +789,76 @@ fn event_touches_stats(event: &PlayerDomainEvent) -> bool {
                 ..
             }
     )
+}
+
+/// Les événements qui peuvent déplacer le solde de SPP (carte 569) — tout ce
+/// qui touche `spp`, `acquired_skills` ou `stat_increases` dans l'agrégat.
+///
+/// **Aucun joker, et c'est délibéré.** Chaque variant est nommé et classé : un
+/// événement ajouté demain ne compile pas tant qu'on n'a pas décidé s'il touche
+/// le solde. Une liste qui l'oublierait afficherait un solde faux sans un
+/// bruit — c'est la règle de `to_app_event`, appliquée à une projection.
+fn event_touches_spp_remaining(event: &PlayerDomainEvent) -> bool {
+    match event {
+        // Les gains de match.
+        PlayerDomainEvent::TouchdownScored { .. }
+        | PlayerDomainEvent::PassCompleted { .. }
+        | PlayerDomainEvent::InterceptionMade { .. }
+        | PlayerDomainEvent::CasualtyInflicted { .. }
+        | PlayerDomainEvent::MatchMvpNamed { .. }
+        // Les dépenses, et ce qui entre dans `acquired_skills` — une compétence
+        // payée en SPP compte, une Haine ou une customisation à coût nul non,
+        // mais le solde se recalcule et le dit lui-même.
+        | PlayerDomainEvent::PlayerSkillPurchased { .. }
+        | PlayerDomainEvent::PlayerStatIncreased { .. }
+        | PlayerDomainEvent::InitialSkillEarned { .. }
+        | PlayerDomainEvent::PlayerHatredGained { .. }
+        | PlayerDomainEvent::PlayerSkillCustomised { .. }
+        | PlayerDomainEvent::PlayerSppCustomised { .. }
+        // L'embauche retire Solitaire (4+) des compétences acquises.
+        | PlayerDomainEvent::JourneymanHired { .. }
+        // Les annulations : elles ne disent pas ce qu'elles défont.
+        | PlayerDomainEvent::MatchImpactReverted { .. }
+        | PlayerDomainEvent::PlayerCustomisationReverted { .. }
+        // La création pose le solde de départ.
+        | PlayerDomainEvent::PlayerCreated { .. } => true,
+
+        PlayerDomainEvent::InitialRosterCompleted { .. }
+        | PlayerDomainEvent::FoulCommitted { .. }
+        | PlayerDomainEvent::InjurySustained { .. }
+        | PlayerDomainEvent::PlayerAvailabilityRestored { .. }
+        | PlayerDomainEvent::MatchConcluded { .. }
+        | PlayerDomainEvent::MatchRelocated { .. }
+        | PlayerDomainEvent::PlayerDismissed { .. }
+        | PlayerDomainEvent::JourneymanLost { .. }
+        | PlayerDomainEvent::JourneymanWithdrawn { .. }
+        | PlayerDomainEvent::PlayerRenamed { .. }
+        | PlayerDomainEvent::PlayerJerseyChanged { .. }
+        | PlayerDomainEvent::PlayerReordered { .. }
+        | PlayerDomainEvent::PlayerStatCustomised { .. }
+        | PlayerDomainEvent::PlayerValueCustomised { .. }
+        | PlayerDomainEvent::PlayerValueRecalibrated { .. } => false,
+    }
+}
+
+/// Repose le solde de SPP, **recalculé** depuis `Player::spp_remaining` — la
+/// seule définition du solde. `pub(crate)` pour la migration `m007`, qui
+/// remplit les joueurs existants par ce même chemin.
+pub(crate) async fn recompute_spp_remaining(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    player_id: &str,
+) -> Result<(), RepositoryError> {
+    let events = load_events_in_tx(tx, player_id).await?;
+    let Some(player) = Player::from_events(&events) else {
+        return Ok(());
+    };
+    sqlx::query("UPDATE players_proj SET spp_remaining = $2 WHERE player_id = $1")
+        .bind(player_id)
+        .bind(player.spp_remaining() as i32)
+        .execute(&mut **tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+    Ok(())
 }
 
 /// Les événements qui peuvent déplacer le compteur de blessures persistantes

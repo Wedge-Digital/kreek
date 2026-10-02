@@ -1835,3 +1835,92 @@ async fn la_lecture_de_l_effectif_porte_les_blessures_persistantes(pool: PgPool)
         .unwrap();
     assert_eq!(effectif[0].persistent_injuries, 1);
 }
+
+// ── Solde de SPP (carte 569) ──────────────────────────────────────────────────
+
+async fn solde(pool: &PgPool, player_id: &str) -> i32 {
+    sqlx::query_scalar("SELECT spp_remaining FROM players_proj WHERE player_id = $1")
+        .bind(player_id)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+/// Un gain le crédite, une dépense le débite — `spp`, lui, garde le cumul.
+#[sqlx::test]
+async fn le_solde_suit_les_gains_et_les_depenses(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-solde".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let pose = p
+        .customise_spp(custo_id("c1"), SppAmount::try_new(15).unwrap(), "B".into())
+        .unwrap();
+    repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
+    assert_eq!(solde(&pool, "p").await, 15);
+
+    repo.append(
+        &joueur,
+        &team_id,
+        &augmentation(&joueur, &team_id, StatKind::Ma),
+        3,
+    )
+    .await
+    .unwrap();
+    assert_eq!(solde(&pool, "p").await, 9, "l'augmentation coûte 6");
+
+    let proj = PgPlayerProjectionRepository::new(pool.clone());
+    let lu = proj.find_by_id(&joueur.0).await.unwrap().unwrap();
+    assert_eq!(
+        (lu.spp, lu.spp_remaining),
+        (15, 9),
+        "le cumul reste, le solde baisse"
+    );
+}
+
+/// La compensation de match ne dit pas combien elle retire : le solde est
+/// recalculé, et revient à son niveau d'avant le match.
+#[sqlx::test]
+async fn une_compensation_de_match_retire_les_gains_du_solde(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-solde-revert".into());
+    let joueur = PlayerId("p".into());
+    seed_player(&repo, &joueur, &team_id).await;
+
+    let touchdown = PlayerDomainEvent::TouchdownScored {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        context: sample_context(),
+        spp_earned: SppEarned::try_new(3).unwrap(),
+    };
+    repo.append(&joueur, &team_id, &touchdown, 2).await.unwrap();
+    assert_eq!(solde(&pool, "p").await, 3);
+
+    let annulation = PlayerDomainEvent::MatchImpactReverted {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        match_report_id: MatchReportId("mr1".into()),
+    };
+    repo.append(&joueur, &team_id, &annulation, 3)
+        .await
+        .unwrap();
+    assert_eq!(solde(&pool, "p").await, 0);
+}
+
+#[sqlx::test]
+async fn le_retrait_de_spp_customises_les_retire_du_solde(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-solde-custo".into());
+    let joueur = PlayerId("p".into());
+    let p = seed_player(&repo, &joueur, &team_id).await;
+
+    let pose = p
+        .customise_spp(custo_id("c1"), SppAmount::try_new(4).unwrap(), "B".into())
+        .unwrap();
+    repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
+    assert_eq!(solde(&pool, "p").await, 4);
+
+    retirer(&repo, &joueur, "c1", 3, &team_id).await;
+    assert_eq!(solde(&pool, "p").await, 0);
+}

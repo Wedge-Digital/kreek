@@ -225,6 +225,7 @@ mod tests {
             pa_delta: deltas[3],
             av_delta: deltas[4],
             persistent_injuries: 0,
+            spp_remaining: 0,
         }
     }
 

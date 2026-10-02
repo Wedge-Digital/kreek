@@ -73,6 +73,11 @@ pub struct PlayerProjection {
     /// d'elles seules (carte 568). Recalculé depuis l'agrégat dans la
     /// transaction de l'événement, comme les deltas.
     pub persistent_injuries: i16,
+
+    /// Le solde de SPP — ce que le joueur peut encore dépenser, quand `spp`
+    /// porte le cumul des gains (carte 569). Recalculé depuis
+    /// `Player::spp_remaining` dans la transaction de l'événement.
+    pub spp_remaining: i32,
 }
 
 #[async_trait]

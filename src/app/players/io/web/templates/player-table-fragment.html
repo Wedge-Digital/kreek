@@ -117,9 +117,9 @@
             {% else %}
             <td class="player-bp cell-readonly"><span class="player-none">—</span></td>
             {% endif %}
-            {# Le **solde**, pas le cumul gagné (carte 492) : un tiret quand
-               l'agrégat manque, jamais le chiffre d'avant correction. #}
-            <td class="player-spp cell-readonly">{% if let Some(s) = p.spp %}{{ s }}{% else %}—{% endif %}</td>
+            {# Le **solde**, pas le cumul gagné (carte 492), lu dans la
+               projection (carte 569). #}
+            <td class="player-spp cell-readonly">{{ p.spp }}</td>
             <td class="player-value cell-readonly">{{ p.value_kpo }} kPo</td>
           </tr>
           {% endfor %}

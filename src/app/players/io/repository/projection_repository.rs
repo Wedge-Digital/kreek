@@ -32,7 +32,7 @@ impl PgPlayerProjectionRepository {
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
                     participation_status, membership, ma_delta, st_delta, ag_delta, pa_delta, av_delta,
-                    persistent_injuries
+                    persistent_injuries, spp_remaining
              FROM players_proj
              WHERE team_id = $1 AND membership <> 'Dismissed'
                AND (NOT $2 OR participation_status <> 'Dead')
@@ -68,6 +68,7 @@ impl PgPlayerProjectionRepository {
                     pa_delta: r.get("pa_delta"),
                     av_delta: r.get("av_delta"),
                     persistent_injuries: r.get("persistent_injuries"),
+                    spp_remaining: r.get("spp_remaining"),
                     jersey: r.get("jersey"),
                     base_skills,
                     acquired_skills,
@@ -115,7 +116,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
             "SELECT player_id, team_id, space_id, position_name, roster_line_id,
                     personal_name, jersey, base_skills, acquired_skills, spp, value_kpo,
                     participation_status, membership, ma_delta, st_delta, ag_delta, pa_delta, av_delta,
-                    persistent_injuries
+                    persistent_injuries, spp_remaining
              FROM players_proj WHERE player_id = $1",
         )
         .bind(player_id)
@@ -143,6 +144,7 @@ impl IPlayerProjectionRepository for PgPlayerProjectionRepository {
                 pa_delta: r.get("pa_delta"),
                 av_delta: r.get("av_delta"),
                 persistent_injuries: r.get("persistent_injuries"),
+                spp_remaining: r.get("spp_remaining"),
                 jersey: r.get("jersey"),
                 base_skills,
                 acquired_skills,

@@ -9,7 +9,6 @@ use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use std::collections::HashMap;
 
 // ── View models ───────────────────────────────────────────────────────────────
 
@@ -79,18 +78,17 @@ pub struct PlayerRowVm {
     pub acquired_skills: Vec<AcquiredSkillProjection>,
     /// SPP **encore disponibles**, pas le cumul gagné (carte 492).
     ///
-    /// La projection porte le cumul : `PlayerSkillPurchased` et
-    /// `PlayerStatIncreased` n'en retirent rien, seuls les chemins d'annulation
-    /// le font. La réserve est dérivée par le domaine et n'est jamais stockée —
-    /// c'est l'agrégat qui la donne.
-    ///
-    /// `None` quand l'agrégat manque : la cellule rend alors un tiret. Retomber
-    /// sur le cumul afficherait sans le dire le chiffre qu'on corrige.
-    pub spp: Option<u32>,
+    /// `players_proj.spp` porte le cumul : `PlayerSkillPurchased` et
+    /// `PlayerStatIncreased` n'en retirent rien. Le solde est projeté à part,
+    /// `spp_remaining`, recalculé depuis `Player::spp_remaining` dans la
+    /// transaction de chaque gain et de chaque dépense (carte 569) — la feuille
+    /// ne rejoue plus l'agrégat pour le lire.
+    pub spp: u32,
     pub value_kpo: i32,
-    /// Caractéristiques résolues — base du poste, moins les malus de séquelles,
-    /// plus les augmentations achetées en SPP. `None` si le poste est introuvable
-    /// au catalogue : la table affiche alors un tiret plutôt qu'une valeur fausse.
+    /// Caractéristiques résolues — base du poste plus les deltas projetés :
+    /// séquelles, augmentations achetées en SPP, customisations (carte 569).
+    /// `None` si le poste est introuvable au catalogue : la table affiche alors
+    /// un tiret plutôt qu'une valeur fausse.
     pub stats: Option<ResolvedPlayerStats>,
     /// Le statut de participation, **tel que le domaine le dit**.
     ///
@@ -230,14 +228,13 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
         .unwrap_or_default();
 
     let catalog = state.players.skill_catalog.as_ref();
-    let derives = resolve_team_derived(state, team, catalog).await;
 
     projections
         .into_iter()
         .map(|p| {
             let base_skills = build_base_skills(&p, catalog);
             let keywords = mots_clefs_du_poste(&p.roster_line_id, catalog);
-            let derive = derives.get(&p.player_id);
+            let stats = stats_de_la_projection(&p, catalog);
             PlayerRowVm {
                 player_id: p.player_id,
                 jersey: p.jersey,
@@ -245,9 +242,10 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
                 position_name: p.position_name,
                 base_skills,
                 acquired_skills: p.acquired_skills,
-                spp: derive.map(|d| d.spp_remaining),
+                // Un solde négatif n'existe pas : `Player::spp_remaining` sature.
+                spp: u32::try_from(p.spp_remaining).unwrap_or(0),
                 value_kpo: p.value_kpo,
-                stats: derive.and_then(|d| d.stats),
+                stats,
                 participation: PlayerParticipationStatus::from_str(&p.participation_status),
                 absence: Absence::depuis_le_statut(&p.participation_status),
                 // Un compteur négatif n'existe pas : la colonne est reposée
@@ -259,46 +257,17 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
         .collect()
 }
 
-/// Ce que seuls les agrégats savent, indexé par joueur.
-///
-/// **Les caractéristiques** : la projection ne porte ni les malus de séquelles
-/// ni les augmentations achetées — elle n'enregistre de `PlayerStatIncreased`
-/// que son coût en valeur d'équipe. `None` quand le poste est introuvable au
-/// catalogue ; la table affiche alors des tirets.
-///
-/// **La réserve de SPP** : elle est dérivée et jamais stockée, et `players_proj`
-/// ne porte que le cumul des gains (carte 492).
-///
-/// Les deux vivent dans la **même** carte parce qu'ils viennent de la même
-/// requête. Mais la réserve n'est pas dans le `Option` : elle ne dépend pas du
-/// catalogue, et un poste illisible ne doit pas coûter ses SPP à un joueur.
-pub struct PlayerDerived {
-    pub stats: Option<ResolvedPlayerStats>,
-    pub spp_remaining: u32,
-}
-
-/// Une seule requête pour toute l'équipe : `find_by_team_id` lit les événements
-/// d'un coup et hydrate en mémoire.
-async fn resolve_team_derived(
-    state: &AppState,
-    team: &TeamId,
+/// Base du poste plus deltas de la projection — la feuille d'équipe ne
+/// rejoue plus aucun agrégat (carte 569).
+fn stats_de_la_projection(
+    p: &PlayerProjection,
     catalog: &dyn ISkillCatalogPort,
-) -> HashMap<String, PlayerDerived> {
-    state
-        .players
-        .repository
-        .find_by_team_id(team)
-        .await
-        .unwrap_or_default()
-        .iter()
-        .map(|player| {
-            let derive = PlayerDerived {
-                stats: player_stats_service::resolve_stats(player, catalog),
-                spp_remaining: player.spp_remaining(),
-            };
-            (player.id.0.clone(), derive)
-        })
-        .collect()
+) -> Option<ResolvedPlayerStats> {
+    player_stats_service::resolve_stats_from_deltas(
+        &p.roster_line_id,
+        [p.ma_delta, p.st_delta, p.ag_delta, p.pa_delta, p.av_delta],
+        catalog,
+    )
 }
 
 #[cfg(test)]
@@ -313,7 +282,7 @@ mod tests_sous_total {
             position_name: String::new(),
             base_skills: vec![],
             acquired_skills: vec![],
-            spp: None,
+            spp: 0,
             value_kpo: valeur,
             stats: None,
             participation: statut,

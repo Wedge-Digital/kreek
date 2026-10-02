@@ -19,14 +19,7 @@ pub fn resolve_stats(
     player: &Player,
     catalog: &dyn ISkillCatalogPort,
 ) -> Option<ResolvedPlayerStats> {
-    let base = catalog.find_position(player.roster_line_id.as_ref())?;
-    let mut stats = ResolvedPlayerStats {
-        ma: base.ma,
-        st: base.st,
-        ag: base.ag,
-        pa: base.pa,
-        av: base.av,
-    };
+    let mut stats = base_stats(player.roster_line_id.as_ref(), catalog)?;
     for adj in &player.stat_adjustments {
         apply_malus(&mut stats, adj.stat, adj.malus.into_inner());
     }
@@ -40,6 +33,51 @@ pub fn resolve_stats(
         apply_offset(&mut stats, custo.stat, custo.offset as i16);
     }
     Some(stats)
+}
+
+/// Les mêmes caractéristiques, résolues depuis la **projection** (carte 569) :
+/// la base du poste plus les cinq deltas de `players_proj`, que
+/// `recompute_stat_deltas` tient déjà signés — séquelles, augmentations et
+/// customisations confondues. La feuille d'équipe s'en sert pour ne plus
+/// rejouer d'agrégat.
+///
+/// **Le plancher à zéro n'est posé qu'une fois.** `resolve_stats` sature après
+/// chaque ajustement, une somme de deltas à la fin seulement : les deux ne
+/// divergent que si une caractéristique a traversé zéro en route, ce que le
+/// jeu ne produit pas. `le_plancher_ne_s_applique_qu_a_la_somme` le pose.
+pub fn resolve_stats_from_deltas(
+    roster_line_id: &str,
+    deltas: [i16; 5],
+    catalog: &dyn ISkillCatalogPort,
+) -> Option<ResolvedPlayerStats> {
+    let mut stats = base_stats(roster_line_id, catalog)?;
+    let ordre = [
+        StatKind::Ma,
+        StatKind::St,
+        StatKind::Ag,
+        StatKind::Pa,
+        StatKind::Av,
+    ];
+    for (stat, delta) in ordre.into_iter().zip(deltas) {
+        apply_offset(&mut stats, stat, delta);
+    }
+    Some(stats)
+}
+
+/// La base du poste, lue au catalogue `references`. `None` si le poste y est
+/// introuvable : la table affiche alors des tirets.
+fn base_stats(
+    roster_line_id: &str,
+    catalog: &dyn ISkillCatalogPort,
+) -> Option<ResolvedPlayerStats> {
+    let base = catalog.find_position(roster_line_id)?;
+    Some(ResolvedPlayerStats {
+        ma: base.ma,
+        st: base.st,
+        ag: base.ag,
+        pa: base.pa,
+        av: base.av,
+    })
 }
 
 /// Un malus va toujours dans le sens de la dégradation — soit l'inverse d'un
@@ -207,6 +245,55 @@ mod tests {
         });
         let stats = resolve_stats(&player, &FakeSkillCatalog).unwrap();
         assert_eq!(stats.ag, 4);
+    }
+
+    // ── Depuis la projection (carte 569) ──────────────────────────────────
+
+    /// Les deltas tels que `recompute_stat_deltas` les écrit pour un même
+    /// joueur : séquelle de MV (−1), augmentation d'AG (seuil −1), AR
+    /// customisé (+1). Les deux chemins doivent dire la même chose.
+    #[test]
+    fn depuis_les_deltas_le_resultat_est_celui_de_l_agregat() {
+        let mut player = sample_player();
+        player.stat_adjustments.push(StatAdjustment {
+            stat: StatKind::Ma,
+            malus: StatMalus::try_new(1).unwrap(),
+        });
+        player.stat_increases.push(StatIncrease {
+            stat: StatKind::Ag,
+            spp_cost: SppCost::try_new(1).unwrap(),
+            value_delta: ValueKpo(0),
+        });
+        player.stat_customisations.push(StatCustomisation {
+            stat: StatKind::Av,
+            offset: 1,
+        });
+        let agregat = resolve_stats(&player, &FakeSkillCatalog).unwrap();
+        let projection =
+            resolve_stats_from_deltas("BLITZER", [-1, 0, -1, 0, 1], &FakeSkillCatalog).unwrap();
+        assert_eq!(projection, agregat);
+    }
+
+    #[test]
+    fn depuis_les_deltas_un_poste_inconnu_ne_rend_rien() {
+        assert!(resolve_stats_from_deltas("UNKNOWN", [0; 5], &FakeSkillCatalog).is_none());
+    }
+
+    /// L'écart connu, posé en clair : une caractéristique qui traverse zéro.
+    /// Ajustement par ajustement, MV 7 − 8 sature à 0 puis + 2 donne 2 ; en
+    /// somme, 7 − 6 donne 1. Le jeu ne descend pas une caractéristique de huit
+    /// crans — le test dit seulement que l'écart existe et où.
+    #[test]
+    fn le_plancher_ne_s_applique_qu_a_la_somme() {
+        let projection =
+            resolve_stats_from_deltas("BLITZER", [-6, 0, 0, 0, 0], &FakeSkillCatalog).unwrap();
+        assert_eq!(projection.ma, 1);
+        let au_plancher =
+            resolve_stats_from_deltas("BLITZER", [-9, 0, 0, 0, 0], &FakeSkillCatalog).unwrap();
+        assert_eq!(
+            au_plancher.ma, 0,
+            "la somme sature à zéro, jamais en dessous"
+        );
     }
 
     #[test]
