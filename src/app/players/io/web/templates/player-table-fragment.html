@@ -41,6 +41,7 @@
             <th class="player-col-stat" title="Armure">AR</th>
             <th class="player-col-skills">Compétences de base</th>
             <th class="player-col-skills">Compétences acquises</th>
+            <th class="player-col-bp" title="Blessures persistantes">BP</th>
             <th class="player-col-num">SPP</th>
             <th class="player-col-num">Valeur</th>
           </tr>
@@ -64,7 +65,7 @@
               </span>
               {# Le repère dit **pourquoi** la ligne est barrée (carte 489) : un
                  barré nu ne distingue pas une blessure d'un défaut d'affichage.
-                 Le libellé est masqué sous 768 px, où douze colonnes défilent
+                 Le libellé est masqué sous 768 px, où treize colonnes défilent
                  déjà — l'icône et son `title` restent. #}
               {% if let Some(a) = p.absence %}
               <span class="player-absence" title="{{ a.libelle() }}"><span class="player-absence-icone">{{ a.icone() }}</span><span class="player-absence-mot">{{ a.libelle() }}</span></span>
@@ -109,6 +110,13 @@
               </div>
               {% endif %}
             </td>
+            {# Les blessures persistantes (carte 568) — nées des seules blessures
+               sérieuses. Zéro rend un tiret, « aucune », comme partout ici. #}
+            {% if p.persistent_injuries > 0 %}
+            <td class="player-bp player-bp--some cell-readonly" title="{{ p.persistent_injuries }} blessure(s) persistante(s)">{{ p.persistent_injuries }}</td>
+            {% else %}
+            <td class="player-bp cell-readonly"><span class="player-none">—</span></td>
+            {% endif %}
             {# Le **solde**, pas le cumul gagné (carte 492) : un tiret quand
                l'agrégat manque, jamais le chiffre d'avant correction. #}
             <td class="player-spp cell-readonly">{% if let Some(s) = p.spp %}{{ s }}{% else %}—{% endif %}</td>
@@ -122,15 +130,16 @@
 
            **Le pied commence par une cellule de poignée, comme les lignes du
            corps.** Elle est vide, mais `drag-handle-cell` est `display: none`
-           hors mode édition et `table-cell` dedans : le tableau a douze
-           colonnes visibles en lecture et treize en édition. Un `colspan` fixe
+           hors mode édition et `table-cell` dedans : le tableau a treize
+           colonnes visibles en lecture et quatorze en édition. Un `colspan` fixe
            ne pouvait donc pas convenir aux deux — écrit à onze sans cette
            cellule, le total tombait une colonne trop à droite, hors du tableau.
 
-           Dix colonnes pour le libellé, puis SPP et Valeur, qui restent sous
-           les leurs. **La colonne SPP porte un tiret** : les SPP ne
-           s'additionnent pas entre joueurs — chacun dépense les siens — et une
-           somme y serait un nombre sans signification.
+           Dix colonnes pour le libellé, puis BP, SPP et Valeur, qui restent
+           sous les leurs. **BP et SPP portent un tiret** : ni les SPP ni les
+           blessures ne s'additionnent entre joueurs — chacun dépense ses SPP,
+           chacun porte ses blessures — et une somme y serait un nombre sans
+           signification.
 
            Le total ne vaut pas la valeur d'équipe de l'en-tête, et ne le
            prétend pas : celle-ci compte aussi le staff, les relances et les
@@ -143,6 +152,7 @@
               {{ available_count }} joueur{% if available_count > 1 %}s{% endif %} disponible{% if available_count > 1 %}s{% endif %}
               {%- if unavailable_count > 0 %}<span class="player-foot-note">{{ unavailable_count }} absent{% if unavailable_count > 1 %}s{% endif %}, hors du compte</span>{% endif %}
             </td>
+            <td class="player-bp player-foot-dash">—</td>
             <td class="player-spp player-foot-dash">—</td>
             <td class="player-value player-foot-total">{{ available_value_kpo }} kPo</td>
           </tr>

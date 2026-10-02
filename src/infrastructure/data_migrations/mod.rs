@@ -62,6 +62,7 @@ pub mod m002_recalcul_valeurs_equipe;
 pub mod m003_rapports_delies;
 pub mod m004_rapports_en_double;
 pub mod m005_gblr_j11;
+pub mod m006_blessures_persistantes;
 
 /// Le registre, dans son ordre d'exécution.
 ///
@@ -75,6 +76,7 @@ fn registre() -> Vec<Box<dyn DataMigration>> {
         Box::new(m003_rapports_delies::RapportsDelies),
         Box::new(m004_rapports_en_double::RapportsEnDouble),
         Box::new(m005_gblr_j11::GblrJ11),
+        Box::new(m006_blessures_persistantes::BlessuresPersistantes),
     ]
 }
 

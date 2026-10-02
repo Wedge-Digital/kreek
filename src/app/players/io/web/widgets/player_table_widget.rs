@@ -104,6 +104,9 @@ pub struct PlayerRowVm {
     /// La donnée existait déjà : `participation_status` vit dans la projection
     /// et le dépôt le lit — il s'arrêtait ici.
     pub absence: Option<Absence>,
+    /// Le nombre de blessures persistantes — nées de blessures sérieuses, et
+    /// d'elles seules (carte 568). Lu dans la projection ; zéro rend un tiret.
+    pub persistent_injuries: u16,
     /// « Elfe, Blitzer » — les mots-clefs du poste, déjà joints.
     ///
     /// Vide quand le poste n'en porte pas : le template n'affiche alors rien du
@@ -247,6 +250,9 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
                 stats: derive.and_then(|d| d.stats),
                 participation: PlayerParticipationStatus::from_str(&p.participation_status),
                 absence: Absence::depuis_le_statut(&p.participation_status),
+                // Un compteur négatif n'existe pas : la colonne est reposée
+                // depuis un `u16` de l'agrégat.
+                persistent_injuries: u16::try_from(p.persistent_injuries).unwrap_or(0),
                 keywords,
             }
         })
@@ -317,6 +323,7 @@ mod tests_sous_total {
                 PlayerParticipationStatus::Retired => "Retired",
                 PlayerParticipationStatus::Dead => "Dead",
             }),
+            persistent_injuries: 0,
             keywords: String::new(),
         }
     }
@@ -405,6 +412,38 @@ mod tests_sous_total {
             (0, 0),
             "mais il ne gonfle pas le total"
         );
+    }
+    // ── La colonne BP (carte 568) ─────────────────────────────────────────
+
+    fn ligne_bp(n: u16, statut: PlayerParticipationStatus) -> String {
+        let mut j = joueur(50, statut);
+        j.persistent_injuries = n;
+        let html = pied(vec![j]).render().unwrap();
+        let debut = html.find("<td class=\"player-bp").expect("cellule BP");
+        html[debut..debut + html[debut..].find("</td>").unwrap()].to_string()
+    }
+
+    #[test]
+    fn aucune_blessure_persistante_rend_un_tiret() {
+        let cellule = ligne_bp(0, PlayerParticipationStatus::Available);
+        assert!(cellule.contains('—'), "{cellule}");
+        assert!(!cellule.contains("player-bp--some"), "{cellule}");
+    }
+
+    #[test]
+    fn des_blessures_persistantes_rendent_leur_nombre() {
+        let cellule = ligne_bp(2, PlayerParticipationStatus::Available);
+        assert!(cellule.contains("player-bp--some"), "{cellule}");
+        assert!(cellule.trim_end().ends_with('2'), "{cellule}");
+    }
+
+    #[test]
+    fn l_en_tete_et_le_pied_portent_la_colonne() {
+        let html = pied(vec![joueur(50, PlayerParticipationStatus::Available)])
+            .render()
+            .unwrap();
+        assert!(html.contains("title=\"Blessures persistantes\">BP</th>"));
+        assert!(html.contains("<td class=\"player-bp player-foot-dash\">"));
     }
 }
 

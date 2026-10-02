@@ -68,6 +68,11 @@ pub struct PlayerProjection {
     pub ag_delta: i16,
     pub pa_delta: i16,
     pub av_delta: i16,
+
+    /// Le nombre de blessures persistantes — nées de blessures sérieuses, et
+    /// d'elles seules (carte 568). Recalculé depuis l'agrégat dans la
+    /// transaction de l'événement, comme les deltas.
+    pub persistent_injuries: i16,
 }
 
 #[async_trait]

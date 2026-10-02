@@ -261,7 +261,7 @@ def test_le_pied_totalise_les_seuls_disponibles(page, space_id, equipe_avec_un_b
     assert affichee == attendue, f"pied {affichee}, somme des lignes visibles {attendue}"
 
     # Les SPP ne s'additionnent pas entre joueurs : la colonne porte un tiret.
-    assert pied.locator(".player-foot-dash").inner_text().strip() == "—"
+    assert pied.locator(".player-spp.player-foot-dash").inner_text().strip() == "—"
 
     # **L'alignement se mesure, il ne se déduit pas du `colspan`.**
     #
@@ -275,8 +275,14 @@ def test_le_pied_totalise_les_seuls_disponibles(page, space_id, equipe_avec_un_b
              const t = document.querySelector('.player-table');
              const x = s => { const e = t.querySelector(s);
                               return e ? Math.round(e.getBoundingClientRect().x) : null; };
-             return { spp: x('thead th:nth-child(12)'), valeur: x('thead th:nth-child(13)'),
-                      dash: x('tfoot .player-foot-dash'),
+             // Par leur rang dans l'en-tête : SPP et Valeur sont les deux
+             // dernières colonnes. Un numéro fixe se décale à chaque colonne
+             // ajoutée avant elles — la colonne BP l'a fait (carte 568).
+             const th = t.querySelectorAll('thead th');
+             const rang = n => { const e = th[th.length - n];
+                                 return Math.round(e.getBoundingClientRect().x); };
+             return { spp: rang(2), valeur: rang(1),
+                      dash: x('tfoot .player-spp.player-foot-dash'),
                       total: x('tfoot .player-foot-total') };
            }"""
     )

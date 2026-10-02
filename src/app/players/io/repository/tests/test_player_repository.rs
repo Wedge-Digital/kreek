@@ -14,7 +14,7 @@ use crate::app::players::ports::{IPlayerProjectionRepository, IPlayerRepository}
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use sqlx::PgPool;
 
-fn sample_context() -> MatchContext {
+pub(crate) fn sample_context() -> MatchContext {
     MatchContext {
         match_report_id: MatchReportId("mr1".into()),
         round_id: RoundId("r1".into()),
@@ -24,7 +24,11 @@ fn sample_context() -> MatchContext {
     }
 }
 
-async fn seed_player(repo: &PgPlayerRepository, player_id: &PlayerId, team_id: &TeamId) -> Player {
+pub(crate) async fn seed_player(
+    repo: &PgPlayerRepository,
+    player_id: &PlayerId,
+    team_id: &TeamId,
+) -> Player {
     let created = PlayerDomainEvent::PlayerCreated {
         player_id: player_id.clone(),
         team_id: team_id.clone(),
@@ -1732,4 +1736,102 @@ async fn retirer(
         .unwrap();
     repo.append(joueur, team_id, &event, version).await.unwrap();
     undo
+}
+
+// ── Blessures persistantes (carte 568) ────────────────────────────────────────
+
+async fn blessures_persistantes(pool: &PgPool, player_id: &str) -> i16 {
+    sqlx::query_scalar("SELECT persistent_injuries FROM players_proj WHERE player_id = $1")
+        .bind(player_id)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+fn blessure(joueur: &PlayerId, team_id: &TeamId, injury_type: InjuryType) -> PlayerDomainEvent {
+    PlayerDomainEvent::InjurySustained {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        context: sample_context(),
+        injury_type,
+    }
+}
+
+/// Une blessure persistante naît d'une blessure sérieuse, et d'elle seule.
+#[sqlx::test]
+async fn seule_la_blessure_serieuse_compte_une_blessure_persistante(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-bp".into());
+    let cas = [
+        ("serieuse", InjuryType::BlessureSerieuse, 1),
+        ("amoche", InjuryType::Amoche, 0),
+        ("commotion", InjuryType::Commotion, 0),
+        ("sequelle", InjuryType::Sequel { stat: StatKind::Ag }, 0),
+    ];
+    for (id, injury_type, attendu) in cas {
+        let joueur = PlayerId(id.into());
+        seed_player(&repo, &joueur, &team_id).await;
+        repo.append(
+            &joueur,
+            &team_id,
+            &blessure(&joueur, &team_id, injury_type),
+            2,
+        )
+        .await
+        .unwrap();
+        assert_eq!(blessures_persistantes(&pool, id).await, attendu, "{id}");
+    }
+}
+
+#[sqlx::test]
+async fn deux_blessures_serieuses_font_deux_blessures_persistantes(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-bp2".into());
+    let joueur = PlayerId("p".into());
+    seed_player(&repo, &joueur, &team_id).await;
+    for version in [2, 3] {
+        let event = blessure(&joueur, &team_id, InjuryType::BlessureSerieuse);
+        repo.append(&joueur, &team_id, &event, version)
+            .await
+            .unwrap();
+    }
+    assert_eq!(blessures_persistantes(&pool, "p").await, 2);
+}
+
+/// La compensation de match ne dit pas combien de blessures elle défait : le
+/// compteur est recalculé, et revient à zéro.
+#[sqlx::test]
+async fn une_compensation_de_match_efface_la_blessure_persistante(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-bp-revert".into());
+    let joueur = PlayerId("p".into());
+    seed_player(&repo, &joueur, &team_id).await;
+    let event = blessure(&joueur, &team_id, InjuryType::BlessureSerieuse);
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+    assert_eq!(blessures_persistantes(&pool, "p").await, 1);
+
+    let event = PlayerDomainEvent::MatchImpactReverted {
+        player_id: joueur.clone(),
+        team_id: team_id.clone(),
+        match_report_id: MatchReportId("mr1".into()),
+    };
+    repo.append(&joueur, &team_id, &event, 3).await.unwrap();
+    assert_eq!(blessures_persistantes(&pool, "p").await, 0);
+}
+
+/// La lecture de l'effectif porte le compteur jusqu'à la feuille d'équipe.
+#[sqlx::test]
+async fn la_lecture_de_l_effectif_porte_les_blessures_persistantes(pool: PgPool) {
+    let repo = PgPlayerRepository::new(pool.clone());
+    let team_id = TeamId("t-bp-lecture".into());
+    let joueur = PlayerId("p".into());
+    seed_player(&repo, &joueur, &team_id).await;
+    let event = blessure(&joueur, &team_id, InjuryType::BlessureSerieuse);
+    repo.append(&joueur, &team_id, &event, 2).await.unwrap();
+
+    let effectif = PgPlayerProjectionRepository::new(pool.clone())
+        .find_alive_by_team_id(&team_id)
+        .await
+        .unwrap();
+    assert_eq!(effectif[0].persistent_injuries, 1);
 }

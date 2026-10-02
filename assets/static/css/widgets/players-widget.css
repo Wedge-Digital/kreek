@@ -103,6 +103,14 @@
 .players-widget .player-table th.player-col-stat,
 .players-widget .player-table td.player-stat { padding-left: 4px; padding-right: 4px; }
 .players-widget .player-col-stat   { text-align: center; width: 30px; }
+/* Blessures persistantes (carte 568) : le gabarit d'une caractéristique — un
+   chiffre court, centré — placé à côté de SPP. Un compteur non nul se voit
+   sans crier : la couleur des blessures, en gras. Zéro rend un tiret. */
+.players-widget .player-col-bp     { text-align: center; width: 30px; }
+.players-widget .player-table th.player-col-bp,
+.players-widget .player-table td.player-bp { padding-left: 4px; padding-right: 4px; }
+.players-widget .player-bp         { text-align: center; font-variant-numeric: tabular-nums; }
+.players-widget .player-bp--some   { color: var(--red); font-weight: 700; }
 
 .players-widget .player-jersey   { text-align: center; color: var(--dark-3); font-family: monospace; }
 .players-widget .player-position { color: var(--dark-2); }
@@ -117,13 +125,15 @@
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
   /* Le tableau défile déjà dans son conteneur ; on resserre les cellules pour
-     que douze colonnes n'imposent pas un défilement démesuré, et pour que les
+     que treize colonnes n'imposent pas un défilement démesuré, et pour que les
      noms de poste cessent de se replier sur trois lignes. */
   .players-widget { padding: 0; }
   .players-widget .player-table th { padding: 8px; }
   .players-widget .player-table td { padding: 8px; }
   .players-widget .player-table th.player-col-stat,
-.players-widget .player-table td.player-stat { padding-left: 3px; padding-right: 3px; }
+.players-widget .player-table td.player-stat,
+.players-widget .player-table th.player-col-bp,
+.players-widget .player-table td.player-bp { padding-left: 3px; padding-right: 3px; }
   .players-widget .player-col-skills { min-width: 140px; }
   /* Nom et poste tronqués plutôt que repliés : sur trois lignes chacun, quatre
      joueurs remplissaient un tiers de l'écran. Bornés en largeur et non
@@ -188,6 +198,7 @@
 .players-widget tr.player-absent .player-position,
 .players-widget tr.player-absent .player-keywords,
 .players-widget tr.player-absent .player-stat,
+.players-widget tr.player-absent .player-bp,
 .players-widget tr.player-absent .player-none { text-decoration: line-through; }
 
 /* **Les pastilles pâlissent au lieu d'être barrées.** Ce ne sont pas du texte

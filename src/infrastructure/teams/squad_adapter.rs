@@ -154,6 +154,7 @@ mod tests {
             ag_delta: deltas[2],
             pa_delta: deltas[3],
             av_delta: deltas[4],
+            persistent_injuries: 0,
         }
     }
 

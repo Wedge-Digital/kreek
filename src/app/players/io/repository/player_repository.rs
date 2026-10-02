@@ -682,6 +682,10 @@ pub async fn upsert_player_projection(
         let player_id = player_id.to_string();
         recompute_stat_deltas(tx, &player_id).await?;
     }
+    if event_touches_persistent_injuries(event) {
+        let (player_id, _) = player_and_team_id(event);
+        recompute_persistent_injuries(tx, &player_id.to_string()).await?;
+    }
 
     Ok(())
 }
@@ -781,6 +785,39 @@ fn event_touches_stats(event: &PlayerDomainEvent) -> bool {
                 ..
             }
     )
+}
+
+/// Les événements qui peuvent déplacer le compteur de blessures persistantes
+/// (carte 568) : une blessure, et sa compensation — qui défait une blessure
+/// sérieuse sans dire laquelle.
+fn event_touches_persistent_injuries(event: &PlayerDomainEvent) -> bool {
+    matches!(
+        event,
+        PlayerDomainEvent::InjurySustained { .. } | PlayerDomainEvent::MatchImpactReverted { .. }
+    )
+}
+
+/// Repose le nombre de blessures persistantes, **recalculé** depuis l'agrégat
+/// comme les `*_delta` : la compensation de match ne porte pas de montant, et
+/// `Player::from_events` sait déjà la défaire.
+///
+/// `pub(crate)` pour la migration de données `m006`, qui remplit les joueurs
+/// existants par ce même chemin plutôt qu'une copie du calcul.
+pub(crate) async fn recompute_persistent_injuries(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    player_id: &str,
+) -> Result<(), RepositoryError> {
+    let events = load_events_in_tx(tx, player_id).await?;
+    let Some(player) = Player::from_events(&events) else {
+        return Ok(());
+    };
+    sqlx::query("UPDATE players_proj SET persistent_injuries = $2 WHERE player_id = $1")
+        .bind(player_id)
+        .bind(player.career_persistent_injuries.0 as i16)
+        .execute(&mut **tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+    Ok(())
 }
 
 /// Repose le cumul des ajustements de caractéristiques, **recalculé** depuis
