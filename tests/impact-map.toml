@@ -392,6 +392,10 @@
                              "references", "team_creation", "spaces", "spp_calculator"]
 # Cartes 566-567 : chaque ligne charge le widget d'identité de `teams`.
 # Carte 568 : un match publié avec blessures, puis dépublié.
+# Carte 569 : témoin des caractéristiques et du solde SPP sur la feuille.
+"test_feuille_caracteristiques" = ["players", "match_report", "teams", "competitions",
+                                   "references", "team_creation", "spaces",
+                                   "spp_calculator"]
 "test_feuille_blessures_persistantes" = ["players", "match_report", "teams", "competitions",
                                          "references", "team_creation", "spaces",
                                          "spp_calculator"]
