@@ -1,6 +1,29 @@
 use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
+use crate::app::teams::domain::treasury::MovementDirection;
+use crate::app::teams::domain::value_objects::{AdjustmentAmount, AdjustmentNote};
+
+/// Un commissaire d'espace crédite ou débite la caisse d'une équipe.
+///
+/// **`admin_name` voyage avec la commande** et finira dans l'événement : c'est
+/// le nom au moment de l'acte, celui que le relevé affichera des mois plus
+/// tard. Le résoudre à la lecture demanderait un port et réécrirait l'histoire
+/// le jour où un coach se renomme.
+///
+/// Le `Debug` sert la journalisation — le use case est instrumenté
+/// `fields(cmd = ?cmd)` — et rien ici n'est un secret : un motif est fait pour
+/// être lu.
+#[derive(Debug)]
+pub struct AdjustTreasuryCommand {
+    pub team_id: TeamId,
+    pub direction: MovementDirection,
+    pub amount: AdjustmentAmount,
+    pub note: AdjustmentNote,
+    pub admin_id: UserId,
+    pub admin_name: CoachName,
+}
 
 #[derive(Debug)]
 pub struct DismissTeamCommand {

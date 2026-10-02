@@ -6,8 +6,16 @@
 
 ## Objectif
 
-Le use case qui écrit, et la ligne de relevé qui en sort lisible. Toujours aucun
-écran : la carte se prouve par un test d'intégration sur une vraie base.
+Le use case qui écrit. Toujours aucun écran : la carte se prouve par un test
+d'intégration sur une vraie base.
+
+> **La partie « se lit » a été livrée par la 557.** Ajouter le neuvième motif y
+> cassait trois `match` — `libelle()`, `emoji()` et `detail_de()` — qu'on ne
+> pouvait pas laisser incomplets pour compiler. Le bras `AdminAdjustment`, la
+> fonction `ajustement(payload)` et ses deux tests sont donc déjà en place.
+> `builders.rs` annonçait ce mécanisme en commentaire : « un `match`, pour que
+> le compilateur réclame le neuvième ». Il a joué son rôle ; c'est ce découpage
+> qui ne l'avait pas prévu.
 
 ## Conception
 
@@ -64,22 +72,10 @@ pub struct AdjustTreasuryCommand {
 Aucune primitive nue. `CoachName` vit dans `shared_kernel/identity/` : pas
 d'import inter-BC.
 
-### 3. La ligne lisible — `treasury_statement_service.rs`
+### 3. ~~La ligne lisible~~ — livrée par la 557
 
-Un bras dans `detail_de()` :
-
-```rust
-MovementReason::AdminAdjustment => ajustement(payload),
-```
-
-qui rend **« Par <admin_name> — <note> »**. Le `payload` est celui de
-l'événement, joint par `list_treasury_movements.sql` : aucune colonne à ajouter
-au grand livre, aucune migration.
-
-Si le payload manque — ligne dont l'événement a disparu — la fonction rend un
-libellé sobre plutôt que de faire échouer l'assemblage. Le `LEFT JOIN` existe
-pour cette raison, et le fichier SQL l'explique : « un relevé à trou se lit comme
-une erreur de calcul et se cherche du mauvais côté ».
+`detail_de()` rend déjà « Par \<auteur\> — \<motif\> » depuis la charge utile de
+l'événement, avec son repli sobre quand elle manque. Rien à faire ici.
 
 ### 4. Rien d'autre à toucher
 
@@ -96,11 +92,11 @@ une erreur de calcul et se cherche du mauvais côté ».
 
 - [ ] `AdjustTreasuryCommand`
 - [ ] `adjust_treasury_use_case.rs`, instrumenté `skip_all`
-- [ ] Bras `AdminAdjustment` dans `detail_de()`, avec son repli sans payload
+- [x] ~~Bras `AdminAdjustment` dans `detail_de()`~~ — livré par la 557
 - [ ] Test use case : équipe introuvable → `TeamNotFound`, **rien d'appendé**
 - [ ] Test use case : refus domaine remonté tel quel, **rien d'appendé**
 - [ ] Test use case : l'événement appendé porte le motif, le nom et le bon sens
 - [ ] Test d'intégration sur vraie base : après l'écriture,
       `teams__treasury_ledger` porte une ligne `AdminAdjustment` dont
       `balance_after_kpo` est le solde attendu
-- [ ] Test de `detail_de()` : « Par Bagouze — … », et le repli sans payload
+- [x] ~~Test de `detail_de()`~~ — livré par la 557

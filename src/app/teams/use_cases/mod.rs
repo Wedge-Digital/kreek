@@ -1,3 +1,4 @@
+pub mod adjust_treasury_use_case;
 pub mod apply_costly_mistakes_use_case;
 pub mod approve_enrollment;
 pub mod basket_hydration_service;

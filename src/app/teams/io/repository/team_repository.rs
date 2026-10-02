@@ -609,9 +609,12 @@ mod tests {
     use super::*;
     use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
+    use crate::app::shared_kernel::identity::coach_name::CoachName;
     use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+    use crate::app::teams::domain::treasury::MovementDirection;
     use crate::app::teams::domain::value_objects::{
-        DedicatedFans, IncidentType, Kpo, RosterName, StaffQuantity, StaffType, TeamName,
+        AdjustmentAmount, AdjustmentNote, DedicatedFans, IncidentType, Kpo, RosterName,
+        StaffQuantity, StaffType, TeamName,
     };
     use crate::common::services::event_bus::event_bus::new_bus;
     use sqlx::postgres::PgPoolOptions;
@@ -1278,6 +1281,66 @@ mod tests {
             Some("Apothecary"),
             "le détail vient du payload joint : {payload}"
         );
+    }
+
+    /// **L'ajustement d'un commissaire, de bout en bout sur une vraie base.**
+    ///
+    /// Les doublures ne prouvent rien de ce qui se passe ici : l'insertion au
+    /// grand livre n'est écrite nulle part dans le chemin de l'ajustement, elle
+    /// est pilotée par `treasury_movement()` dans la transaction d'`append`.
+    /// C'est du code que la carte 557 n'a pas touché et dont elle dépend
+    /// entièrement — ce test est le seul endroit où les deux se rencontrent.
+    #[tokio::test]
+    async fn un_ajustement_ecrit_sa_ligne_de_grand_livre() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool, new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+
+        let ajustement = TeamDomainEvent::TreasuryAdjusted {
+            direction: MovementDirection::Credit,
+            amount: AdjustmentAmount::try_new(120).unwrap(),
+            note: AdjustmentNote::try_new("Forfait des Griffons d'Argent".to_string()).unwrap(),
+            admin_id: CoachId::try_new("00000000000000000000000007").unwrap(),
+            admin_name: CoachName::try_new("Bagouze".to_string()).unwrap(),
+        };
+        repo.append(&team_id, &ajustement, 1).await.unwrap();
+
+        let lignes = repo.list_treasury_movements(&team_id).await.unwrap();
+
+        assert_eq!(lignes.len(), 2, "la dotation puis l'ajustement");
+        assert_eq!(lignes[1].reason, "AdminAdjustment");
+        assert_eq!(lignes[1].direction, "Credit");
+        assert_eq!(lignes[1].amount_kpo, 120);
+        assert_eq!(
+            lignes[1].balance_after_kpo, 1120,
+            "la dotation de 1000 plus l'ajustement"
+        );
+
+        // Le motif et l'auteur ne sont dans aucune colonne : ils ne survivent
+        // que par la charge utile jointe, et c'est elle que lit `detail_de()`.
+        let payload = lignes[1]
+            .payload
+            .as_ref()
+            .expect("l'événement doit être joint");
+        assert_eq!(
+            payload.get("admin_name").and_then(|v| v.as_str()),
+            Some("Bagouze"),
+            "l'auteur vient du payload : {payload}"
+        );
+        assert_eq!(
+            payload.get("note").and_then(|v| v.as_str()),
+            Some("Forfait des Griffons d'Argent"),
+            "le motif vient du payload : {payload}"
+        );
+
+        // Et l'agrégat relu porte le même solde que la dernière ligne.
+        let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
+        assert_eq!(team.treasury().0, 1120);
     }
 
     /// **Le `LEFT JOIN`, et pourquoi il n'est pas un `JOIN`.**
