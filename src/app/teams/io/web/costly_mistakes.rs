@@ -64,7 +64,7 @@ pub async fn get_costly_mistakes_page(
         return StatusCode::UNPROCESSABLE_ENTITY.into_response();
     }
 
-    let bands = BandVm::all_from_domain(team.treasury, None);
+    let bands = BandVm::all_from_domain(team.treasury(), None);
     let band_label = bands
         .iter()
         .find(|b| b.courante)
@@ -74,7 +74,7 @@ pub async fn get_costly_mistakes_page(
     let page = CostlyMistakesPageTemplate {
         app_routes: AppRoutes::default(),
         team_name: team.name.to_string(),
-        treasury: team.treasury.0,
+        treasury: team.treasury().0,
         band_label,
         bands,
         roll_url: routes.teams.costly_mistakes_roll(&space_id, &team_id),

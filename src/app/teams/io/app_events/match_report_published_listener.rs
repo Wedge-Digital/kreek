@@ -147,11 +147,11 @@ fn build_lot(
     // ne devrait pas se produire. S'il se produit, `treasury_movement` écrête à
     // zéro et l'équipe paie moins que dû : on le dit plutôt que de le laisser
     // passer sans trace.
-    if effect.inducement_spending_kpo > team.treasury.0 {
+    if effect.inducement_spending_kpo > team.treasury().0 {
         tracing::warn!(
             "match_report_published_listener: coups de pouce de {} kPo pour une trésorerie de {} kPo (équipe {}) — débit écrêté à zéro",
             effect.inducement_spending_kpo,
-            team.treasury.0,
+            team.treasury().0,
             effect.team_id,
         );
     }

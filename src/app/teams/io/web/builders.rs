@@ -214,7 +214,7 @@ fn nature(reason: MovementReason, direction: MovementDirection) -> RowKind {
     }
 }
 
-/// Les huit libellés. Un `match`, pour que le compilateur réclame le neuvième.
+/// Les neuf libellés. Un `match`, pour que le compilateur réclame le dixième.
 fn libelle(reason: MovementReason) -> &'static str {
     match reason {
         MovementReason::InitialEndowment => "Dotation de départ",
@@ -225,6 +225,7 @@ fn libelle(reason: MovementReason) -> &'static str {
         MovementReason::InducementRefunded => "Coups de pouce remboursés",
         MovementReason::PlayerRecruitment => "Recrutement",
         MovementReason::StaffPurchase => "Personnel",
+        MovementReason::AdminAdjustment => "Ajustement de trésorerie",
     }
 }
 
@@ -238,6 +239,7 @@ fn emoji(reason: MovementReason) -> &'static str {
         MovementReason::InducementRefunded => "↩️",
         MovementReason::PlayerRecruitment => "🧍",
         MovementReason::StaffPurchase => "🧢",
+        MovementReason::AdminAdjustment => "⚖️",
     }
 }
 
@@ -814,7 +816,7 @@ mod tests {
     /// directement : c'est le chemin réel, et il prouve du même coup que la
     /// nature de la ligne suit le motif.
     #[test]
-    fn les_huit_motifs_ont_leur_libelle_leur_emoji_et_leur_nature() {
+    fn les_neuf_motifs_ont_leur_libelle_leur_emoji_et_leur_nature() {
         let attendu = [
             (
                 MovementReason::InitialEndowment,
@@ -872,6 +874,22 @@ mod tests {
                 "🧢",
                 RowKind::Debit,
             ),
+            // Le seul motif qui se rend dans les deux sens : un commissaire
+            // crédite ou débite, et la nature de la ligne suit la direction.
+            (
+                MovementReason::AdminAdjustment,
+                MovementDirection::Credit,
+                "Ajustement de trésorerie",
+                "⚖️",
+                RowKind::Credit,
+            ),
+            (
+                MovementReason::AdminAdjustment,
+                MovementDirection::Debit,
+                "Ajustement de trésorerie",
+                "⚖️",
+                RowKind::Debit,
+            ),
         ];
 
         for (motif, direction, libelle_attendu, emoji_attendu, nature_attendue) in attendu {
@@ -909,6 +927,7 @@ mod tests {
             MovementReason::InducementRefunded => (),
             MovementReason::PlayerRecruitment => (),
             MovementReason::StaffPurchase => (),
+            MovementReason::AdminAdjustment => (),
         }
     }
 }

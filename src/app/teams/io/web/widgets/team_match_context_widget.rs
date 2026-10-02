@@ -79,7 +79,7 @@ pub async fn get_team_match_context_json(
         dedicated_fans: team.dedicated_fans.into_inner() as u32,
         available_player_count,
         ctv: team.team_value.0,
-        treasury: team.treasury.0,
+        treasury: team.treasury().0,
         journeyman_type,
     })
     .into_response()

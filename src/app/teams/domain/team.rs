@@ -5,14 +5,15 @@ use crate::app::shared_kernel::bloodbowl::staff_counts::{
     ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
 };
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::basket::RosterLineId;
 use crate::app::teams::domain::costly_mistakes::{incident_for, loss_for, SEUIL_ERREURS_COUTEUSES};
 use crate::app::teams::domain::error::DomainError;
-use crate::app::teams::domain::treasury::{MovementReason, TreasuryMovement};
+use crate::app::teams::domain::treasury::{MovementDirection, MovementReason, TreasuryMovement};
 use crate::app::teams::domain::value_objects::{
-    DedicatedFans, IncidentType, Kpo, MatchResult, RosterName, SppGain, StaffQuantity, StaffType,
-    TeamName,
+    AdjustmentAmount, AdjustmentNote, DedicatedFans, IncidentType, Kpo, MatchResult, RosterName,
+    SppGain, StaffQuantity, StaffType, TeamName,
 };
 use serde::{Deserialize, Serialize};
 
@@ -245,6 +246,25 @@ pub enum TeamDomainEvent {
     LogoChanged {
         logo_url: String,
     },
+
+    /// Ajustement de caisse décidé par un commissaire d'espace.
+    ///
+    /// **Le motif et le nom de l'auteur voyagent ici**, pas dans le grand
+    /// livre, qui n'a pas de colonne pour eux et n'en a pas besoin :
+    /// `list_treasury_movements.sql` joint la charge utile, et `detail_de()`
+    /// l'y relit. C'est aussi ce qui fige le nom **au moment de l'acte** — le
+    /// résoudre plus tard réécrirait l'histoire le jour où un coach se renomme.
+    ///
+    /// `admin_id` est un `CoachId`, comme celui de `GamePhaseOverridden`, l'autre
+    /// événement d'administration ; `CoachId` et `UserId` sont le même
+    /// `EntityId`, et chaque fichier garde le nom que son voisinage emploie.
+    TreasuryAdjusted {
+        direction: MovementDirection,
+        amount: AdjustmentAmount,
+        note: AdjustmentNote,
+        admin_id: CoachId,
+        admin_name: CoachName,
+    },
 }
 
 impl TeamDomainEvent {
@@ -283,6 +303,7 @@ impl TeamDomainEvent {
             Self::TeamRenamed { .. } => "TeamRenamed",
             Self::InitialsChanged { .. } => "InitialsChanged",
             Self::LogoChanged { .. } => "LogoChanged",
+            Self::TreasuryAdjusted { .. } => "TreasuryAdjusted",
         }
     }
 
@@ -311,7 +332,16 @@ pub struct Team {
     pub participation_status: ParticipationStatus,
     pub game_phase: Option<GamePhase>,
     pub dedicated_fans: DedicatedFans,
-    pub treasury: Kpo,
+    /// **Privé — premier champ de cet agrégat à l'être.**
+    ///
+    /// `adjust_treasury` refuse un retrait que la caisse ne couvre pas, et
+    /// `recruit_player` un joueur qu'elle ne peut pas payer. Tant que le champ
+    /// était `pub`, ces refus se contournaient par une affectation. Il se lit
+    /// désormais par `treasury()`, et ne s'écrit que par `apply()`.
+    ///
+    /// Les vingt-quatre autres champs restent ouverts : carte **556**, qui s'en
+    /// sert comme précédent pour trancher la forme d'accès sur 139 lectures.
+    treasury: Kpo,
     pub team_value: Kpo,
     pub rerolls: RerollCount,
     pub apothecaries: ApothecaryCount,
@@ -427,6 +457,21 @@ impl Team {
             TeamDomainEvent::CostlyMistakesApplied { gp_lost, .. } => Some(
                 TreasuryMovement::debit(solde, *gp_lost, MovementReason::CostlyMistake),
             ),
+            // Le seul mouvement dont le sens est porté par l'événement plutôt
+            // que par sa nature : un ajustement crédite ou débite.
+            TeamDomainEvent::TreasuryAdjusted {
+                direction, amount, ..
+            } => {
+                let montant = Kpo(amount.into_inner());
+                Some(match direction {
+                    MovementDirection::Credit => {
+                        TreasuryMovement::credit(solde, montant, MovementReason::AdminAdjustment)
+                    }
+                    MovementDirection::Debit => {
+                        TreasuryMovement::debit(solde, montant, MovementReason::AdminAdjustment)
+                    }
+                })
+            }
             TeamDomainEvent::PlayerRecruited { cost_kpo, .. } => Some(TreasuryMovement::debit(
                 solde,
                 *cost_kpo,
@@ -494,6 +539,11 @@ impl Team {
 }
 
 impl Team {
+    /// Le solde de caisse. Seul accès en lecture depuis l'extérieur du module.
+    pub fn treasury(&self) -> Kpo {
+        self.treasury
+    }
+
     /// Rejoue un événement sur l'agrégat — pure, sans effet de bord.
     pub fn apply(mut self, event: &TeamDomainEvent) -> Self {
         // La trésorerie est traitée une fois pour toutes, ici : `apply` et le
@@ -740,9 +790,15 @@ impl Team {
             TeamDomainEvent::LogoChanged { logo_url } => {
                 self.logo_url = Some(logo_url.clone());
             }
-            // Événements sans impact sur l'état de l'agrégat
+            // Événements sans impact sur l'état de l'agrégat.
+            //
+            // `TreasuryAdjusted` en fait partie **bien qu'il change le solde** :
+            // celui-ci est posé en tête d'`apply` par `treasury_movement()`, que
+            // le grand livre lit aussi. Le toucher ici créerait la divergence
+            // que ce mécanisme existe précisément pour empêcher.
             TeamDomainEvent::PlayerRetiredTemporarily { .. }
-            | TeamDomainEvent::PlayerReEngaged { .. } => {}
+            | TeamDomainEvent::PlayerReEngaged { .. }
+            | TeamDomainEvent::TreasuryAdjusted { .. } => {}
         }
         self.version += 1;
         self
@@ -1082,6 +1138,37 @@ impl Team {
         })
     }
 
+    /// Ajuste la caisse sur décision d'un commissaire d'espace.
+    ///
+    /// **Ni garde de phase, ni garde de statut de participation.** C'est la
+    /// seule méthode de commande du BC dans ce cas, et c'est délibéré : un
+    /// commissaire corrige souvent *parce que* l'équipe est bloquée, et une
+    /// équipe renvoyée garde un relevé qu'on peut vouloir solder. L'absence est
+    /// écrite ici pour qu'une relecture ne la prenne pas pour un oubli.
+    ///
+    /// Les bornes du montant ne sont pas revérifiées : `AdjustmentAmount` ne
+    /// peut pas exister hors d'elles. Reste la seule question qui dépende de
+    /// l'état — le solde couvre-t-il ce retrait.
+    pub fn adjust_treasury(
+        &self,
+        direction: MovementDirection,
+        amount: AdjustmentAmount,
+        note: AdjustmentNote,
+        admin_id: CoachId,
+        admin_name: CoachName,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        if direction == MovementDirection::Debit && amount.into_inner() > self.treasury.0 {
+            return Err(DomainError::InsufficientTreasury);
+        }
+        Ok(TeamDomainEvent::TreasuryAdjusted {
+            direction,
+            amount,
+            note,
+            admin_id,
+            admin_name,
+        })
+    }
+
     pub fn validate_retirement_phase(&self) -> Result<TeamDomainEvent, DomainError> {
         self.expect_phase(GamePhase::TemporaryRetirement)
             .map(|_| TeamDomainEvent::RetirementPhaseValidated)
@@ -1219,6 +1306,121 @@ mod tests {
         equipe.treasury = Kpo(tresorerie);
         equipe.game_phase = Some(GamePhase::Dismissals);
         equipe
+    }
+
+    // ── Ajustement de trésorerie (carte 557) ─────────────────────────────
+
+    fn commissaire() -> CoachName {
+        CoachName::try_new("Bagouze".to_string()).unwrap()
+    }
+    fn montant(kpo: u32) -> AdjustmentAmount {
+        AdjustmentAmount::try_new(kpo).unwrap()
+    }
+    fn motif() -> AdjustmentNote {
+        AdjustmentNote::try_new("Forfait des Griffons d'Argent — journée 3".to_string()).unwrap()
+    }
+    fn ajuster(
+        equipe: &Team,
+        sens: MovementDirection,
+        kpo: u32,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        equipe.adjust_treasury(sens, montant(kpo), motif(), coach_id(), commissaire())
+    }
+
+    #[test]
+    fn un_credit_monte_le_solde() {
+        let equipe = equipe_en_renvois(85);
+        let event = ajuster(&equipe, MovementDirection::Credit, 120).unwrap();
+        assert_eq!(equipe.apply(&event).treasury(), Kpo(205));
+    }
+
+    #[test]
+    fn un_debit_couvert_baisse_le_solde() {
+        let equipe = equipe_en_renvois(85);
+        let event = ajuster(&equipe, MovementDirection::Debit, 50).unwrap();
+        assert_eq!(equipe.apply(&event).treasury(), Kpo(35));
+    }
+
+    /// La borne : retirer exactement ce qu'il y a en caisse est permis, et la
+    /// vide. C'est `>` et non `>=` qui refuse.
+    #[test]
+    fn un_debit_egal_au_solde_passe_et_vide_la_caisse() {
+        let equipe = equipe_en_renvois(85);
+        let event = ajuster(&equipe, MovementDirection::Debit, 85).unwrap();
+        assert_eq!(equipe.apply(&event).treasury(), Kpo(0));
+    }
+
+    /// **La seule règle de la méthode.** Et elle ne produit rien : un événement
+    /// refusé ne doit pas exister, pas même pour être ignoré plus loin.
+    #[test]
+    fn un_debit_superieur_au_solde_est_refuse_et_ne_produit_rien() {
+        let equipe = equipe_en_renvois(85);
+        let refus = ajuster(&equipe, MovementDirection::Debit, 90);
+        assert!(matches!(refus, Err(DomainError::InsufficientTreasury)));
+    }
+
+    /// **Un test d'absence.** Toutes les autres méthodes de commande du BC
+    /// portent une garde de phase ; celle-ci n'en veut pas — un commissaire
+    /// corrige souvent *parce que* l'équipe est bloquée. Sans ce test, un
+    /// `expect_phase` ajouté par réflexe plus tard ne casserait rien.
+    #[test]
+    fn l_ajustement_ignore_la_phase_de_jeu() {
+        for phase in [
+            GamePhase::ReadyToPlay,
+            GamePhase::Dismissals,
+            GamePhase::CostlyMistakes,
+        ] {
+            let mut equipe = equipe_en_renvois(85);
+            equipe.game_phase = Some(phase.clone());
+            assert!(
+                ajuster(&equipe, MovementDirection::Credit, 50).is_ok(),
+                "refusé en phase {phase:?}"
+            );
+        }
+    }
+
+    /// L'autre absence : une équipe renvoyée garde un relevé, et un commissaire
+    /// peut vouloir y solder une affaire.
+    #[test]
+    fn l_ajustement_passe_sur_une_equipe_renvoyee() {
+        let mut equipe = equipe_en_renvois(85);
+        equipe.participation_status = ParticipationStatus::Dismissed;
+        assert!(ajuster(&equipe, MovementDirection::Credit, 50).is_ok());
+    }
+
+    /// Le grand livre et `apply` lisent le même `treasury_movement()` : ce test
+    /// vérifie la source unique, pas une copie.
+    #[test]
+    fn le_mouvement_porte_le_sens_et_le_motif_admin() {
+        let equipe = equipe_en_renvois(85);
+
+        let credit = ajuster(&equipe, MovementDirection::Credit, 120).unwrap();
+        let m = equipe.treasury_movement(&credit).unwrap();
+        assert_eq!(m.direction, MovementDirection::Credit);
+        assert_eq!(m.reason, MovementReason::AdminAdjustment);
+        assert_eq!(m.amount, Kpo(120));
+        assert_eq!(m.balance_after, Kpo(205));
+
+        let debit = ajuster(&equipe, MovementDirection::Debit, 50).unwrap();
+        let m = equipe.treasury_movement(&debit).unwrap();
+        assert_eq!(m.direction, MovementDirection::Debit);
+        assert_eq!(m.balance_after, Kpo(35));
+    }
+
+    /// Le motif et le nom survivent au rejeu : c'est d'eux que le relevé tirera
+    /// « Par Bagouze — … », et rien d'autre ne les porte.
+    #[test]
+    fn l_evenement_transporte_le_motif_et_son_auteur() {
+        let equipe = equipe_en_renvois(85);
+        let event = ajuster(&equipe, MovementDirection::Credit, 120).unwrap();
+        let TeamDomainEvent::TreasuryAdjusted {
+            note, admin_name, ..
+        } = &event
+        else {
+            panic!("adjust_treasury ne produit que cet événement")
+        };
+        assert_eq!(note, &motif());
+        assert_eq!(admin_name, &commissaire());
     }
 
     #[test]

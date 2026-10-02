@@ -65,7 +65,7 @@ pub async fn hydrate_recruitment_basket(
         catalogue,
         to_domain_squad(effectif)?,
         owned_staff_of(team),
-        team.treasury,
+        team.treasury(),
     ))
 }
 

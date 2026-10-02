@@ -87,7 +87,7 @@ impl ITeamDataPort for RefTeamDataAdapter {
 
     async fn find_team_treasury(&self, team_id: &str) -> Option<u32> {
         let team = self.team_repo.find_by_id(team_id).await.ok()??;
-        Some(team.treasury.0)
+        Some(team.treasury().0)
     }
 
     async fn find_journeyman_position(&self, team_id: &str) -> Option<JourneymanPositionDto> {

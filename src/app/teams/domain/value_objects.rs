@@ -46,6 +46,43 @@ pub enum MatchResult {
     Loss,
 }
 
+// ── Ajustement de trésorerie ──────────────────────────────────────────────────
+
+/// Le montant d'un ajustement de trésorerie par un commissaire.
+///
+/// **Les trois bornes vivent ici, et nulle part ailleurs.** L'agrégat ne les
+/// revérifie pas : un montant de 123 kPo ne peut pas exister, quel que soit
+/// l'état de l'équipe. Un second contrôle donnerait deux endroits à tenir
+/// d'accord, et le second finirait par diverger.
+///
+/// | Borne | Pourquoi |
+/// |---|---|
+/// | multiple de 5 | tous les prix du jeu le sont |
+/// | au moins 5 | un ajustement de zéro n'ajuste rien |
+/// | au plus 500 | garde-fou de frappe — 1200 au lieu de 120 |
+///
+/// Ce qui **ne** s'éprouve pas ici : qu'un retrait soit couvert par le solde.
+/// Cette question-là dépend de l'état, donc elle appartient à l'agrégat.
+#[nutype(
+    validate(greater_or_equal = 5, less_or_equal = 500, predicate = |n| n % 5 == 0),
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)
+)]
+pub struct AdjustmentAmount(u32);
+
+/// Le motif d'un ajustement de trésorerie.
+///
+/// **Obligatoire, donc jamais un `Option`.** Il se lira dans un relevé public,
+/// des mois plus tard, mêlé à des mouvements qui s'expliquent tout seuls — une
+/// ligne muette y serait la seule qu'on ne saurait pas relire.
+///
+/// 200 caractères et non 100 comme `TeamName` : c'est une phrase, pas un nom.
+#[nutype(
+    sanitize(trim),
+    validate(not_empty, len_char_max = 200, regex = TEXTE_SAISI),
+    derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, AsRef)
+)]
+pub struct AdjustmentNote(String);
+
 // ── Fans dévoués ──────────────────────────────────────────────────────────────
 
 #[nutype(
@@ -119,6 +156,68 @@ pub enum IncidentType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── Ajustement de trésorerie (carte 557) ─────────────────────────────
+
+    #[test]
+    fn un_montant_d_ajustement_accepte_ses_bornes() {
+        assert!(AdjustmentAmount::try_new(5).is_ok(), "le plancher");
+        assert!(AdjustmentAmount::try_new(500).is_ok(), "le plafond");
+        assert!(AdjustmentAmount::try_new(120).is_ok());
+    }
+
+    #[test]
+    fn un_montant_d_ajustement_refuse_hors_bornes() {
+        assert!(AdjustmentAmount::try_new(0).is_err(), "ajuster de zéro");
+        assert!(AdjustmentAmount::try_new(4).is_err(), "sous le plancher");
+        assert!(
+            AdjustmentAmount::try_new(505).is_err(),
+            "au-delà du plafond"
+        );
+    }
+
+    /// Le garde-fou de frappe : 1200 au lieu de 120.
+    #[test]
+    fn un_montant_d_ajustement_refuse_la_faute_de_frappe() {
+        assert!(AdjustmentAmount::try_new(1200).is_err());
+    }
+
+    #[test]
+    fn un_montant_d_ajustement_doit_etre_multiple_de_cinq() {
+        assert!(AdjustmentAmount::try_new(123).is_err());
+        assert!(AdjustmentAmount::try_new(121).is_err());
+        assert!(AdjustmentAmount::try_new(125).is_ok());
+    }
+
+    #[test]
+    fn un_motif_vide_est_refuse() {
+        assert!(AdjustmentNote::try_new("".to_string()).is_err());
+        assert!(
+            AdjustmentNote::try_new("   ".to_string()).is_err(),
+            "le trim s'applique avant la validation"
+        );
+    }
+
+    #[test]
+    fn un_motif_est_borne_a_deux_cents_caracteres() {
+        assert!(AdjustmentNote::try_new("A".repeat(200)).is_ok());
+        assert!(AdjustmentNote::try_new("A".repeat(201)).is_err());
+    }
+
+    /// Le cas que l'ancienne liste blanche faisait échouer — onze value objects
+    /// refusaient l'apostrophe, et « Capitaine d'équipe » n'était rejeté qu'à la
+    /// validation, sur un motif qui accusait le catalogue.
+    #[test]
+    fn un_motif_accepte_l_apostrophe_et_le_tiret_cadratin() {
+        let motif = "Forfait des Griffons d'Argent — journée 3".to_string();
+        assert!(AdjustmentNote::try_new(motif).is_ok());
+    }
+
+    /// Ce que `TEXTE_SAISI` refuse encore : un motif est **une ligne**.
+    #[test]
+    fn un_motif_refuse_un_saut_de_ligne() {
+        assert!(AdjustmentNote::try_new("Forfait\njournée 3".to_string()).is_err());
+    }
 
     #[test]
     fn team_name_valid() {

@@ -185,7 +185,7 @@ impl ContextVm {
     pub fn from_domain(team: &Team, basket: &RecruitmentBasket) -> Self {
         Self {
             roster_name: team.roster_name.to_string(),
-            treasury_kpo: team.treasury.0,
+            treasury_kpo: team.treasury().0,
             squad_count: basket.projected_squad_size() as u8,
             squad_max: SQUAD_MAX,
             team_value_kpo: team.team_value.0,

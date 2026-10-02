@@ -151,7 +151,7 @@ impl DismissalsContextVm {
         let eligible = basket.eligible_after_basket() as u8;
         Self {
             roster_name: team.roster_name.to_string(),
-            treasury_kpo: team.treasury.0,
+            treasury_kpo: team.treasury().0,
             squad_count: squad_after(basket),
             eligible_count: eligible,
             eligible_is_low: eligible < MIN_ELIGIBLE,

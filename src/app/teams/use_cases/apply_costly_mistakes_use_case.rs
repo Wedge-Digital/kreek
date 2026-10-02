@@ -83,7 +83,7 @@ async fn tenter(
     // écrit nulle part, et l'ordre inverse obligerait à dupliquer ici la garde
     // que le domaine porte déjà.
     let roll = dice.d6();
-    let damage_dice = lancer_les_degats(incident_for(team.treasury, roll), dice);
+    let damage_dice = lancer_les_degats(incident_for(team.treasury(), roll), dice);
 
     let event = team
         .apply_costly_mistakes(roll, damage_dice.clone())
@@ -102,7 +102,7 @@ async fn tenter(
         .await
         .map_err(ApplyCostlyMistakesError::Repository)?;
 
-    let treasury_after = Kpo(team.treasury.0.saturating_sub(gp_lost.0));
+    let treasury_after = Kpo(team.treasury().0.saturating_sub(gp_lost.0));
     // Sur cible `kreek::`, sinon la ligne n'existe pas en production : une
     // contestation doit être vérifiable sans ouvrir l'event store.
     tracing::info!(
@@ -111,7 +111,7 @@ async fn tenter(
         ?damage_dice,
         ?incident,
         gp_lost = gp_lost.0,
-        treasury_before = team.treasury.0,
+        treasury_before = team.treasury().0,
         treasury_after = treasury_after.0,
         "erreurs coûteuses appliquées"
     );
@@ -121,7 +121,7 @@ async fn tenter(
         damage_dice,
         incident,
         gp_lost,
-        treasury_before: team.treasury,
+        treasury_before: team.treasury(),
         treasury_after,
     })
 }

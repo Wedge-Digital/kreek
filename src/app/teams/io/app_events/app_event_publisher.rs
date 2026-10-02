@@ -163,7 +163,11 @@ async fn to_app_event(
         | TeamDomainEvent::GamePhaseOverridden { .. }
         | TeamDomainEvent::TeamRenamed { .. }
         | TeamDomainEvent::InitialsChanged { .. }
-        | TeamDomainEvent::LogoChanged { .. } => None,
+        | TeamDomainEvent::LogoChanged { .. }
+        // La caisse d'une équipe ne regarde qu'elle : aucun BC ne réagit à son
+        // ajustement, et aucune notification n'a été demandée. Décidé en
+        // conception (phase 3), pas subi faute d'idée.
+        | TeamDomainEvent::TreasuryAdjusted { .. } => None,
     }
 }
 

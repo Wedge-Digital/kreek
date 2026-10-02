@@ -1,6 +1,10 @@
 use crate::app::teams::domain::value_objects::Kpo;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// `Serialize`/`Deserialize` parce que `TreasuryAdjusted` porte le sens dans sa
+/// charge utile, persistée en JSON. Les autres événements financiers n'en ont
+/// pas besoin : leur sens est implicite dans leur nature.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MovementDirection {
     Credit,
     Debit,
@@ -45,6 +49,11 @@ pub enum MovementReason {
     InducementRefunded,
     PlayerRecruitment,
     StaffPurchase,
+    /// Ajustement décidé par un commissaire d'espace. Le montant, le motif et
+    /// le nom de l'auteur vivent dans l'événement — pas dans le grand livre,
+    /// qui n'a pas de colonne pour eux et n'en a pas besoin : `detail_de()` lit
+    /// la charge utile jointe.
+    AdminAdjustment,
 }
 
 impl MovementReason {
@@ -63,7 +72,7 @@ impl MovementReason {
     /// s'arrêtera sur un `UnknownReason` en production. Trois endroits à toucher
     /// pour un nouveau motif, et `tous_les_motifs_font_l_aller_retour` est **le
     /// seul** mécanisme qui les relie.
-    const ALL: [(MovementReason, &'static str); 8] = [
+    const ALL: [(MovementReason, &'static str); 9] = [
         (Self::InitialEndowment, "InitialEndowment"),
         (Self::MatchIncome, "MatchIncome"),
         (Self::MatchIncomeReverted, "MatchIncomeReverted"),
@@ -72,6 +81,7 @@ impl MovementReason {
         (Self::InducementRefunded, "InducementRefunded"),
         (Self::PlayerRecruitment, "PlayerRecruitment"),
         (Self::StaffPurchase, "StaffPurchase"),
+        (Self::AdminAdjustment, "AdminAdjustment"),
     ];
 
     /// L'inverse d'`as_str`, dérivé d'`ALL`.
@@ -96,6 +106,7 @@ impl MovementReason {
             Self::InducementRefunded => "InducementRefunded",
             Self::PlayerRecruitment => "PlayerRecruitment",
             Self::StaffPurchase => "StaffPurchase",
+            Self::AdminAdjustment => "AdminAdjustment",
         }
     }
 }
@@ -199,6 +210,7 @@ mod tests {
             MovementReason::InducementRefunded => (),
             MovementReason::PlayerRecruitment => (),
             MovementReason::StaffPurchase => (),
+            MovementReason::AdminAdjustment => (),
         }
     }
 
@@ -222,6 +234,7 @@ mod tests {
             MovementReason::InducementRefunded,
             MovementReason::PlayerRecruitment,
             MovementReason::StaffPurchase,
+            MovementReason::AdminAdjustment,
         ];
 
         for motif in tous {
@@ -234,7 +247,7 @@ mod tests {
         }
         // `garde_d_exhaustivite` ci-dessus est ce qui rend ce compte fiable :
         // sans elle, il resterait vrai en ignorant une variante neuve.
-        assert_eq!(tous.len(), 8, "une variante a été ajoutée sans venir ici");
+        assert_eq!(tous.len(), 9, "une variante a été ajoutée sans venir ici");
     }
 
     #[test]

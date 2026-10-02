@@ -214,6 +214,26 @@ fn detail_de(
         MovementReason::PlayerRecruitment => joueur_recrute(payload, effectif),
         MovementReason::StaffPurchase => staff_achete(payload),
         MovementReason::CostlyMistake => bourde(payload),
+        MovementReason::AdminAdjustment => ajustement(payload),
+    }
+}
+
+/// « Par Bagouze — compensation du forfait de la journée 3 ».
+///
+/// Le motif et l'auteur viennent de la charge utile de l'événement, jointe par
+/// `list_treasury_movements.sql` : le grand livre n'a pas de colonne pour eux.
+///
+/// **Le repli est sobre, pas faux.** Une ligne dont l'événement a disparu rend
+/// « Ajustement d'un commissaire » plutôt que d'inventer un nom ou de faire
+/// échouer l'assemblage — c'est la raison d'être du `LEFT JOIN`, dont le
+/// fichier SQL dit qu'« un relevé à trou se lit comme une erreur de calcul et
+/// se cherche du mauvais côté ».
+fn ajustement(payload: Option<&Value>) -> String {
+    let champ = |nom: &str| payload?.get(nom)?.as_str().map(str::to_string);
+    match (champ("admin_name"), champ("note")) {
+        (Some(auteur), Some(motif)) => format!("Par {auteur} — {motif}"),
+        (Some(auteur), None) => format!("Par {auteur}"),
+        _ => "Ajustement d'un commissaire".to_string(),
     }
 }
 
@@ -649,6 +669,50 @@ mod tests {
                 "Rapport de match corrigé",
             ]
         );
+    }
+
+    /// L'ajustement d'un commissaire : son détail n'existe que dans la charge
+    /// utile de l'événement, le grand livre n'ayant pas de colonne pour lui.
+    #[tokio::test]
+    async fn un_ajustement_nomme_son_auteur_et_son_motif() {
+        let lignes = vec![
+            dotation(),
+            ligne(
+                2,
+                "Credit",
+                120,
+                "AdminAdjustment",
+                1120,
+                Some(json!({
+                    "admin_name": "Bagouze",
+                    "note": "Forfait des Griffons d'Argent — journée 3"
+                })),
+            ),
+        ];
+
+        let r = releve(lignes).await.unwrap();
+
+        assert_eq!(
+            r.lines[1].detail,
+            "Par Bagouze — Forfait des Griffons d'Argent — journée 3"
+        );
+    }
+
+    /// **Le repli est sobre, pas faux.** Une ligne dont l'événement a disparu
+    /// n'invente pas de nom et n'arrête pas l'assemblage : c'est la raison
+    /// d'être du `LEFT JOIN`, dont le fichier SQL dit qu'« un relevé à trou se
+    /// lit comme une erreur de calcul et se cherche du mauvais côté ».
+    #[tokio::test]
+    async fn un_ajustement_sans_charge_utile_reste_lisible() {
+        let lignes = vec![
+            dotation(),
+            ligne(2, "Credit", 120, "AdminAdjustment", 1120, None),
+        ];
+
+        let r = releve(lignes).await.unwrap();
+
+        assert_eq!(r.lines[1].detail, "Ajustement d'un commissaire");
+        assert_eq!(r.balance, 1120, "le solde reste celui du grand livre");
     }
 
     /// **La recette de match n'a pas de contexte, et ce n'est pas un oubli.**

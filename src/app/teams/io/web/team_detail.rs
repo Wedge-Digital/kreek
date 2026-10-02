@@ -285,7 +285,7 @@ impl TeamDetailVm {
             roster_logo_url,
             coach_name: team.coach_name.clone(),
             dedicated_fans: team.dedicated_fans.into_inner(),
-            treasury_kpo: team.treasury.0,
+            treasury_kpo: team.treasury().0,
             team_value_kpo: team.team_value.0,
             competition_name: team.competition_name.clone(),
             season_name: team.season_name.clone(),

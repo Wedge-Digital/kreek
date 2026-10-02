@@ -779,7 +779,8 @@ mod tests {
         );
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
         assert_eq!(
-            team.treasury.0, 1000,
+            team.treasury().0,
+            1000,
             "le gain doit être retiré de l'agrégat"
         );
 
@@ -978,7 +979,8 @@ mod tests {
 
         let team = repo.find_by_id(&team_id).await.unwrap().unwrap();
         assert_eq!(
-            team.treasury.0, lignes[1].3 as u32,
+            team.treasury().0,
+            lignes[1].3 as u32,
             "le dernier solde du livre est celui de l'agrégat"
         );
     }
