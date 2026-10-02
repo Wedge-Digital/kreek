@@ -4,9 +4,14 @@
    `teams-team-detail.html` et ne sont pas re-rendus au changement d'onglet.
    Le même gabarit sert les deux chemins — le clic htmx et l'URL collée.
 
-   Aucun JS, aucun Alpine, aucun `hx-disinherit` : rien n'est interactif ici, et
-   la fiche équipe ne pose aucun `hx-vals` dont il faudrait se protéger. #}
-<div class="team-treasury">
+   **Pour un commissaire seulement**, il porte un panneau d'ajustement et son
+   Alpine (carte 559). Pour tout le monde d'autre, il reste ce qu'il était : du
+   markup inerte.
+
+   Toujours pas d'`hx-disinherit` : vérifié, ni `teams-team-detail.html` ni
+   `app-layout.html` ne posent de `hx-vals`, `hx-headers`, `hx-include` ou
+   `hx-params` dont il faudrait se protéger. #}
+<div class="team-treasury"{% match vm.adjust %}{% when Some with (adjust) %} x-data="ajustementTresorerie({ solde: {{ adjust.balance_kpo }}, pas: {{ adjust.step_kpo }}, max: {{ adjust.max_kpo }} })"{% when None %}{% endmatch %}>
 
   {# Le bandeau : l'équation qui explique le solde, lue de gauche à droite.
      Il s'affiche dans les deux états — une équipe neuve a une dotation. #}
@@ -36,7 +41,80 @@
         <div class="tr-term-value">{{ vm.summary.balance_kpo }} kPo</div>
       </div>
     </div>
+
+    {# Réservé aux commissaires : `is_space_admin`, qui exclut délibérément le
+       propriétaire de l'équipe. Le relevé, lui, se lit par tout le monde. #}
+    {% match vm.adjust %}
+      {% when Some with (adjust) %}
+    <div class="tr-admin-action">
+      <button type="button" class="tr-btn-adjust" :class="{ 'is-open': ouvert }"
+              @click="ouvert = !ouvert">
+        <span>⚖️</span> Modifier la trésorerie
+      </button>
+    </div>
+      {% when None %}
+    {% endmatch %}
   </div>
+
+  {% match vm.adjust %}
+    {% when Some with (adjust) %}
+  {# Panneau **en ligne**, jamais une modale : le solde et le relevé restent
+     sous les yeux pendant la saisie.
+
+     Le formulaire vise `#app-content` et non `#team-tab-zone` : la trésorerie
+     s'affiche deux fois sur cette page, et la seconde — l'en-tête de fiche —
+     est hors de la zone d'onglets. #}
+  <div class="tr-adm" x-show="ouvert" x-cloak>
+    <div class="tr-adm-head">
+      <div class="tr-adm-title"><span>⚖️</span> Modifier la trésorerie</div>
+      <button type="button" class="tr-adm-close" @click="ouvert = false" title="Fermer">✕</button>
+    </div>
+
+    <form hx-post="{{ adjust.post_url }}"
+          hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML">
+      <div class="tr-adm-form">
+        <div class="tr-adm-field">
+          <div class="tr-adm-label">Sens</div>
+          <div class="tr-adm-sign">
+            <button type="button" class="credit" :class="{ on: sens === 'Credit' }"
+                    @click="sens = 'Credit'">+ Créditer</button>
+            <button type="button" class="debit" :class="{ on: sens === 'Debit' }"
+                    @click="sens = 'Debit'">− Débiter</button>
+          </div>
+          {# Le sens voyage par un champ caché : les deux boutons ne sont pas des
+             `submit`, et `MovementDirection::parse` attend ces chaînes-là. #}
+          <input type="hidden" name="direction" :value="sens">
+        </div>
+
+        <div class="tr-adm-field">
+          <div class="tr-adm-label">Montant</div>
+          <input type="number" name="amount_kpo" class="tr-adm-input tr-adm-input--amount"
+                 min="{{ adjust.min_kpo }}" step="{{ adjust.step_kpo }}" max="{{ adjust.max_kpo }}"
+                 x-model="montant">
+          <div class="tr-adm-hint">multiple de {{ adjust.step_kpo }}, {{ adjust.max_kpo }} kPo au plus</div>
+        </div>
+
+        <div class="tr-adm-field tr-adm-field--grow">
+          <div class="tr-adm-label">Motif</div>
+          <input type="text" name="note" class="tr-adm-input" maxlength="200" x-model="motif">
+          <div class="tr-adm-hint">Obligatoire — il s'affiche dans le relevé, lu par tous les coachs.</div>
+        </div>
+      </div>
+
+      <div class="tr-adm-foot">
+        <div class="tr-adm-says">
+          <div class="tr-adm-outcome" :class="{ error: refus }" x-text="annonce"></div>
+          {# Le message du serveur vit **hors** de la portée d'Alpine : un
+             `x-text` réévalué au remontage l'effacerait aussitôt. C'est lui que
+             `HX-Retarget` remplace. #}
+          <div id="adm-msg"></div>
+        </div>
+        <button type="submit" class="tr-adm-apply" :disabled="refus !== ''">Appliquer</button>
+      </div>
+    </form>
+  </div>
+    {% when None %}
+  {% endmatch %}
 
   {% if vm.is_opening_only %}
   {# L'équipe vient d'être créée : elle a sa dotation et rien d'autre. Un
@@ -100,3 +178,48 @@
   {% endif %}
 
 </div>
+
+{% match vm.adjust %}
+  {% when Some with (adjust) %}
+{# Le comportement du panneau. Dans un `<script>` du fragment, comme les autres
+   fonctions Alpine du projet : htmx les ré-exécute à chaque navigation, et
+   charger Alpine depuis une page créerait une seconde instance — le piège
+   documenté par le `CLAUDE.md`.
+
+   **Ces garde-fous sont un confort, pas une garantie.** Le serveur revalide
+   tout : `AdjustmentAmount` et `AdjustmentNote` refusent les mêmes saisies, et
+   le domaine refuse le retrait non couvert. #}
+<script>
+function ajustementTresorerie(cfg) {
+  return {
+    ouvert: false,
+    sens: 'Credit',
+    montant: '',
+    motif: '',
+
+    /* Les refus, dans l'ordre où ils bloquent. Le plafond passe **avant** le
+       solde : 1200 au lieu de 120 est une faute de frappe, et le dire ainsi
+       vaut mieux que « le solde ne couvre pas ce retrait ». */
+    get refus() {
+      const m = parseInt(this.montant, 10);
+      if (!m || m <= 0) return 'Saisis un montant.';
+      if (m % cfg.pas !== 0) return 'Le montant doit être un multiple de ' + cfg.pas + ' kPo.';
+      if (m > cfg.max) return 'Le montant est plafonné à ' + cfg.max + ' kPo.';
+      if (this.sens === 'Debit' && m > cfg.solde) {
+        return 'Le solde ne couvre pas ce retrait : ' + cfg.solde + ' kPo disponibles.';
+      }
+      if (!this.motif.trim()) return 'Le motif est obligatoire.';
+      return '';
+    },
+
+    get annonce() {
+      if (this.refus) return this.refus;
+      const m = parseInt(this.montant, 10);
+      const apres = this.sens === 'Credit' ? cfg.solde + m : cfg.solde - m;
+      return 'Le solde passera de ' + cfg.solde + ' kPo à ' + apres + ' kPo.';
+    },
+  };
+}
+</script>
+  {% when None %}
+{% endmatch %}

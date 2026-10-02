@@ -1,5 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
 use crate::app::teams::io::web::treasury_tab;
 use crate::app::teams::ports::{
@@ -476,11 +477,13 @@ pub async fn team_page_treasury(
 async fn contenu_de_l_onglet(
     active_tab: &str,
     vm: &TeamDetailVm,
+    space_id: &str,
     team_id: &str,
+    est_admin: bool,
     state: &AppState,
 ) -> Result<String, StatusCode> {
     match active_tab {
-        "treasury" => treasury_tab::rendre_onglet(team_id, state).await,
+        "treasury" => treasury_tab::rendre_onglet(space_id, team_id, est_admin, state).await,
         "matches" => TeamMatchesTabTemplate { vm }.render().map_err(|e| {
             tracing::error!("teams matches tab render: {e}");
             StatusCode::INTERNAL_SERVER_ERROR
@@ -492,7 +495,7 @@ async fn contenu_de_l_onglet(
     }
 }
 
-async fn rendre_fiche(
+pub(crate) async fn rendre_fiche(
     space_id: &str,
     team_id: &str,
     auth_session: AuthSession,
@@ -529,12 +532,32 @@ async fn rendre_fiche(
     let back_url = AppRoutes::default().team_creation.my_teams(space_id);
     let roster_catalog_port = state.teams.roster_catalog_port.as_ref();
 
+    // **Le port, et pas l'extracteur `SpacePermissions`** : celui-ci répond 403
+    // à un non-membre, et fermerait un relevé qu'on veut lisible par tous. Seul
+    // le bouton dépend du droit, jamais la page.
+    //
+    // Le port est donc interrogé deux fois par rendu — `peut_modifier_effectif`
+    // le fait déjà pour le même couple. Les factoriser demanderait de séparer
+    // admin et propriétaire dans ce service, qui les mêle en un booléen : c'est
+    // un refactor, pas un détail de cette carte.
+    let est_admin = match (auth_session.user.as_ref(), SpaceId::try_new(space_id)) {
+        (Some(user), Ok(space)) => {
+            state
+                .teams
+                .access_port
+                .is_space_admin(&user.id, &space)
+                .await
+        }
+        _ => false,
+    };
+
     let vm = TeamDetailVm::from(&team, space_id, roster_catalog_port, peut_editer);
 
-    let content = match contenu_de_l_onglet(active_tab, &vm, team_id, state).await {
-        Ok(html) => html,
-        Err(code) => return code.into_response(),
-    };
+    let content =
+        match contenu_de_l_onglet(active_tab, &vm, space_id, team_id, est_admin, state).await {
+            Ok(html) => html,
+            Err(code) => return code.into_response(),
+        };
 
     let tab_zone = TeamTabZoneTemplate {
         app_routes: Default::default(),

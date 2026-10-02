@@ -1,3 +1,4 @@
+use crate::app::teams::io::web::adjust_treasury_controller::adjust_treasury;
 use crate::app::teams::io::web::dismiss_team::dismiss_team;
 use crate::app::teams::io::web::dismissals::dismissals_page;
 use crate::app::teams::io::web::garde_action_equipe::garde_action_equipe;
@@ -61,6 +62,10 @@ fn routes_ouvertes() -> Router<AppState> {
     Router::new()
         .route(path::TEAM_DETAIL, get(team_detail))
         .route(path::TEAM_TREASURY, get(team_page_treasury))
+        // **Hors du groupe gardé**, comme `DISMISS_TEAM` : `garde_action_equipe`
+        // porte la règle du coach, et un commissaire n'en est pas un. Le
+        // contrôleur se garde lui-même par `perms.is_admin()`.
+        .route(path::TEAM_TREASURY_ADJUST, post(adjust_treasury))
         .route(path::TEAM_MATCHES, get(team_page_matches))
         .route(path::DISMISS_TEAM, post(dismiss_team))
         .route(

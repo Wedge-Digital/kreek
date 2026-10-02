@@ -6,6 +6,8 @@ pub mod path {
     /// `teams` déclare déjà le résolveur.
     ///
     pub const TEAM_TREASURY: &str = "/app/{space_id}/teams/{team_id}/tresorerie";
+    /// Prolonge `TEAM_TREASURY`, donc en français comme lui.
+    pub const TEAM_TREASURY_ADJUST: &str = "/app/{space_id}/teams/{team_id}/tresorerie/ajuster";
     /// L'onglet « Matchs » (carte 477), sur le même moule.
     ///
     /// **Elle n'est pas la route du fragment** : celui-ci appartient à
@@ -95,6 +97,10 @@ impl Routes {
         path::TEAM_TREASURY
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
+    }
+
+    pub fn team_treasury_adjust(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::TEAM_TREASURY_ADJUST, space_id, team_id)
     }
 
     pub fn dismiss_team(&self, space_id: &str, team_id: &str) -> String {
@@ -279,6 +285,8 @@ mod tests {
             ("dismiss_enrollment", r.dismiss_enrollment(SPACE, TEAM)),
             ("dismiss_team", r.dismiss_team(SPACE, TEAM)),
             ("team_detail", r.team_detail(SPACE, TEAM)),
+            ("team_treasury", r.team_treasury(SPACE, TEAM)),
+            ("team_treasury_adjust", r.team_treasury_adjust(SPACE, TEAM)),
         ]
     }
 

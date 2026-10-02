@@ -6,7 +6,8 @@
 //! contenu de l'onglet, et le traduit en réponse HTTP quand il échoue.
 
 use crate::app::teams::io::web::builders::build_treasury_vm;
-use crate::app::teams::io::web::treasury_view_models::{RowKind, TreasuryVm};
+use crate::app::teams::io::web::treasury_view_models::{AdjustPanelVm, RowKind, TreasuryVm};
+use crate::app::teams::routes::Routes;
 use crate::app::teams::use_cases::treasury_statement_service::{
     self, TreasuryStatementError as Erreur,
 };
@@ -29,7 +30,12 @@ pub struct TreasuryTabTemplate {
 /// devrait pas exister, et la seule action utile est qu'ils apparaissent au
 /// journal avec leur `rid` — **le motif compris**, puisque c'est lui qu'on
 /// cherchera.
-pub async fn rendre_onglet(team_id: &str, state: &AppState) -> Result<String, StatusCode> {
+pub async fn rendre_onglet(
+    space_id: &str,
+    team_id: &str,
+    est_admin: bool,
+    state: &AppState,
+) -> Result<String, StatusCode> {
     let statement = treasury_statement_service::build_statement(
         team_id,
         state.teams.team_repository.as_ref(),
@@ -39,14 +45,31 @@ pub async fn rendre_onglet(team_id: &str, state: &AppState) -> Result<String, St
     .await
     .map_err(|e| journaliser(team_id, e))?;
 
-    TreasuryTabTemplate {
-        vm: build_treasury_vm(&statement),
+    let mut vm = build_treasury_vm(&statement);
+    if est_admin {
+        vm.adjust = Some(panneau(space_id, team_id, vm.summary.balance_kpo));
     }
-    .render()
-    .map_err(|e| {
+
+    TreasuryTabTemplate { vm }.render().map_err(|e| {
         tracing::error!("teams treasury tab render {team_id}: {e}");
         StatusCode::INTERNAL_SERVER_ERROR
     })
+}
+
+/// Le panneau d'ajustement, posé **ici et pas dans `build_treasury_vm`** : il
+/// descend de la route et du droit du visiteur, pas du relevé.
+///
+/// Les trois bornes viennent du value object `AdjustmentAmount` et sont
+/// répétées ici pour le front — c'est le seul endroit où elles franchissent la
+/// frontière. Les écrire dans le gabarit les mettrait à un second endroit.
+pub(crate) fn panneau(space_id: &str, team_id: &str, balance_kpo: u32) -> AdjustPanelVm {
+    AdjustPanelVm {
+        post_url: Routes.team_treasury_adjust(space_id, team_id),
+        balance_kpo,
+        min_kpo: 5,
+        step_kpo: 5,
+        max_kpo: 500,
+    }
 }
 
 fn journaliser(team_id: &str, e: Erreur) -> StatusCode {
@@ -95,6 +118,9 @@ mod tests {
                 groups,
                 is_opening_only,
                 movement_count,
+                // Ces tests rendent le relevé, pas le panneau : celui du
+                // commissaire a ses propres tests, qui montent le routeur.
+                adjust: None,
             },
         }
         .render()

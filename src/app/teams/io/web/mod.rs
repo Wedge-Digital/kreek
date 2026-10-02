@@ -1,3 +1,4 @@
+pub mod adjust_treasury_controller;
 pub mod builders;
 pub mod costly_mistakes;
 pub mod dismiss_team;

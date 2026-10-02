@@ -1,0 +1,9 @@
+{# Le message du panneau d'ajustement, rendu **seul** (carte 559).
+
+   Il ne porte que le message, et non le pied entier : le pied contient
+   l'annonce vivante d'Alpine, qui réévaluerait son `x-text` au remontage et
+   effacerait aussitôt ce que le serveur vient de dire.
+
+   `id="adm-msg"` doit concorder avec `HX-Retarget` et avec le conteneur vide du
+   gabarit de l'onglet. #}
+<div id="adm-msg" class="tr-adm-message">{{ vm.message }}</div>

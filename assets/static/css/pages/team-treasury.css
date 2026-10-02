@@ -267,3 +267,220 @@
   .team-treasury .tr-table th:nth-child(4),
   .team-treasury .tr-table td:nth-child(4) { display: none; }
 }
+
+/* ── Le panneau d'ajustement — commissaires seulement (carte 559) ────────────
+ *
+ * Le bouton se pose dans le bandeau de synthèse : c'est le solde qu'on vient
+ * modifier, l'action est là où se lit son effet.
+ */
+.team-treasury .tr-admin-action {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-end;
+}
+
+.team-treasury .tr-btn-adjust {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 10px var(--p1);
+  border-radius: 8px;
+  font-family: inherit;
+  border: 1.5px solid var(--main-blue);
+  background: var(--white);
+  color: var(--main-blue);
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  transition: background 0.12s, color 0.12s;
+}
+
+.team-treasury .tr-btn-adjust:hover,
+.team-treasury .tr-btn-adjust.is-open {
+  background: var(--main-blue);
+  color: var(--white);
+}
+
+/* Panneau **en ligne**, jamais une modale : le solde et le relevé restent sous
+ * les yeux pendant la saisie. Même choix que la confirmation de suppression de
+ * customisation. */
+.team-treasury .tr-adm {
+  border: 1px solid var(--dark-4);
+  border-radius: 10px;
+  background: var(--dark-7);
+  padding: var(--p1) var(--p2);
+  margin-bottom: var(--p2);
+}
+
+.team-treasury .tr-adm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p1);
+  margin-bottom: var(--p1);
+}
+
+.team-treasury .tr-adm-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--dark-1);
+}
+
+.team-treasury .tr-adm-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  line-height: 1;
+  font-size: 13px;
+  border: 1.5px solid var(--dark-4);
+  background: var(--white);
+  color: var(--dark-3);
+}
+
+.team-treasury .tr-adm-close:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.team-treasury .tr-adm-form {
+  display: flex;
+  gap: var(--p2);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.team-treasury .tr-adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.team-treasury .tr-adm-field--grow {
+  flex: 1;
+  min-width: 260px;
+}
+
+.team-treasury .tr-adm-label {
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Le sens porte le signe — c'est le `MovementDirection { Credit, Debit }` du
+ * domaine, tel quel. Le montant saisi reste positif. */
+.team-treasury .tr-adm-sign {
+  display: flex;
+}
+
+.team-treasury .tr-adm-sign button {
+  padding: 9px var(--p1);
+  font-family: inherit;
+  white-space: nowrap;
+  font-size: var(--text-tiny);
+  font-weight: 700;
+  border: 1.5px solid var(--dark-4);
+  background: var(--white);
+  color: var(--dark-3);
+}
+
+.team-treasury .tr-adm-sign button:first-child { border-radius: 8px 0 0 8px; }
+.team-treasury .tr-adm-sign button:last-child {
+  border-radius: 0 8px 8px 0;
+  border-left: none;
+}
+
+.team-treasury .tr-adm-sign button.on.credit {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--white);
+}
+
+.team-treasury .tr-adm-sign button.on.debit {
+  background: var(--main-blue);
+  border-color: var(--main-blue);
+  color: var(--white);
+}
+
+.team-treasury .tr-adm-input {
+  width: 100%;
+  padding: 9px var(--p1);
+  border-radius: 8px;
+  border: 1.5px solid var(--dark-4);
+  background: var(--white);
+  font-size: var(--text-small);
+  color: var(--dark-1);
+}
+
+.team-treasury .tr-adm-input:focus {
+  outline: none;
+  border-color: var(--main-blue);
+}
+
+.team-treasury .tr-adm-input--amount {
+  width: 120px;
+  text-align: right;
+}
+
+.team-treasury .tr-adm-hint {
+  font-size: 11px;
+  color: var(--dark-3);
+}
+
+.team-treasury .tr-adm-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p1);
+  flex-wrap: wrap;
+  margin-top: var(--p1);
+  padding-top: var(--p1);
+  border-top: 1px solid var(--dark-5);
+}
+
+.team-treasury .tr-adm-outcome {
+  font-size: var(--text-small);
+  color: var(--dark-2);
+}
+
+.team-treasury .tr-adm-outcome.error {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* Le message du serveur, hors de la portée d'Alpine : c'est lui que
+ * `HX-Retarget` remplace, et un `x-text` réévalué l'effacerait. */
+.team-treasury .tr-adm-message {
+  font-size: var(--text-small);
+  color: var(--red);
+  font-weight: 600;
+}
+
+.team-treasury .tr-adm-apply {
+  padding: 11px var(--p2);
+  border-radius: 8px;
+  background: var(--main-blue);
+  color: var(--white);
+  font-family: var(--font-title);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+
+.team-treasury .tr-adm-apply:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .team-treasury .tr-admin-action { margin-left: 0; }
+  .team-treasury .tr-btn-adjust { width: 100%; justify-content: center; }
+  .team-treasury .tr-adm { padding: var(--p1); }
+  .team-treasury .tr-adm-form { flex-direction: column; gap: var(--p1); }
+  .team-treasury .tr-adm-input--amount { width: 100%; }
+  .team-treasury .tr-adm-foot { flex-direction: column; align-items: stretch; }
+  .team-treasury .tr-adm-apply { width: 100%; }
+}

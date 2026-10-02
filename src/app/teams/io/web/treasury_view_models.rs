@@ -16,6 +16,38 @@ pub struct TreasuryVm {
     /// Le nombre de lignes du relevé, **dotation comprise** — c'est ce que
     /// compte l'indication « 11 mouvements » sous le titre.
     pub movement_count: u32,
+    /// Le panneau d'ajustement, **ou rien** (carte 559).
+    ///
+    /// `Option` et non un booléen : pour un visiteur qui n'est pas commissaire
+    /// il n'y a pas de panneau, pas un panneau vide. Le gabarit ne peut donc
+    /// pas rendre un formulaire sans son URL.
+    ///
+    /// Il ne vient pas du relevé — il vient de la route et du droit du
+    /// visiteur. C'est `rendre_onglet` qui le pose, pas `build_treasury_vm`.
+    pub adjust: Option<AdjustPanelVm>,
+}
+
+/// Le panneau « Modifier la trésorerie », réservé aux commissaires d'espace.
+///
+/// **Les bornes descendent ici plutôt que d'être écrites dans le gabarit.**
+/// Sans ça, 500 vivrait à deux endroits, et le jour où le plafond change l'un
+/// des deux serait oublié — c'est la règle « un gabarit n'invente aucune
+/// valeur ».
+pub struct AdjustPanelVm {
+    pub post_url: String,
+    /// Le solde courant, pour l'annonce vivante du nouveau solde et le refus
+    /// d'un retrait non couvert. Repris de `SummaryVm` **délibérément** : le
+    /// panneau s'en sert pour autre chose que l'affichage, et un gabarit qui
+    /// piocherait dans le VM du bandeau lierait deux choses sans rapport.
+    pub balance_kpo: u32,
+    pub min_kpo: u32,
+    pub step_kpo: u32,
+    pub max_kpo: u32,
+}
+
+/// Le pied du panneau, rendu **seul** quand le serveur refuse une saisie.
+pub struct AdjustErrorVm {
+    pub message: String,
 }
 
 /// Le bandeau : l'équation qui explique le solde, lue de gauche à droite.

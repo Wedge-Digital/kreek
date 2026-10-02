@@ -24,6 +24,11 @@ pub fn build_treasury_vm(statement: &TreasuryStatement) -> TreasuryVm {
         // passé. C'est l'état d'une équipe qui vient d'être créée.
         is_opening_only: statement.lines.len() <= 1,
         movement_count: statement.lines.len() as u32,
+        // Le panneau ne descend pas du relevé mais de la route et du droit du
+        // visiteur : `rendre_onglet` le pose. Le lui passer ici obligerait les
+        // dix-neuf tests de ce fichier à fournir un espace et une équipe dont
+        // ils n'ont que faire.
+        adjust: None,
     }
 }
 
