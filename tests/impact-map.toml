@@ -350,6 +350,13 @@
 "test_ouvrir_une_fiche_equipe" = ["teams", "team_creation", "players",
                                   "competitions", "references", "ranking",
                                   "spp_calculator", "spaces"]
+# Changer le logo d'une équipe depuis sa fiche (cartes 508 à 512, 581). `teams`
+# porte le widget et la projection ; `competitions` est vérifié, pas seulement
+# traversé — le calendrier doit montrer le nouveau logo (carte 581). La fixture
+# `build_full_competition` traverse les mêmes BCs que la fiche d'équipe.
+"test_logo_equipe" = ["teams", "team_creation", "players",
+                      "competitions", "references", "ranking",
+                      "spp_calculator", "spaces"]
 # `players` y est vérifié, pas seulement traversé : le scénario 8 contrôle que
 # le joueur acheté dans `teams` existe bien dans `players`, maillot compris.
 # `match_report` est une dépendance dure et non une fixture de confort — publier
