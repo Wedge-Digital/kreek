@@ -97,7 +97,12 @@ fn construire(form: TeamLogoForm) -> Result<Option<CloudinaryImage>, String> {
 /// Le widget, relu depuis la base — jamais reconstruit depuis le formulaire
 /// (même raison que `general_panel.rs` : un refus ne doit pas laisser croire
 /// qu'une saisie a été enregistrée).
-async fn rendre(state: &AppState, space_id: &str, team_id: &str, error: Option<String>) -> Response {
+async fn rendre(
+    state: &AppState,
+    space_id: &str,
+    team_id: &str,
+    error: Option<String>,
+) -> Response {
     let team = match state.teams.team_repository.find_by_id(team_id).await {
         Ok(Some(t)) => t,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
