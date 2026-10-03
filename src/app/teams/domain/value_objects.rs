@@ -83,6 +83,19 @@ pub struct AdjustmentAmount(u32);
 )]
 pub struct AdjustmentNote(String);
 
+/// Le motif d'une phase ouverte manuellement (carte 575).
+///
+/// **Facultatif** : l'appelant porte un `Option<OverrideReason>`, un champ vide
+/// donnant `None`. Le value object, lui, refuse le vide — c'est la commande,
+/// et non lui, qui permet l'absence. Même charset et même longueur que
+/// `AdjustmentNote` : c'est une phrase de commissaire.
+#[nutype(
+    sanitize(trim),
+    validate(not_empty, len_char_max = 200, regex = TEXTE_SAISI),
+    derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, AsRef)
+)]
+pub struct OverrideReason(String);
+
 // ── Fans dévoués ──────────────────────────────────────────────────────────────
 
 #[nutype(
@@ -187,6 +200,19 @@ mod tests {
         assert!(AdjustmentAmount::try_new(123).is_err());
         assert!(AdjustmentAmount::try_new(121).is_err());
         assert!(AdjustmentAmount::try_new(125).is_ok());
+    }
+
+    #[test]
+    fn override_reason_is_trimmed_and_capped_at_200_characters() {
+        assert!(OverrideReason::try_new("   ".to_string()).is_err());
+        assert_eq!(
+            OverrideReason::try_new("  Évolutions oubliées  ".to_string())
+                .unwrap()
+                .as_ref(),
+            "Évolutions oubliées"
+        );
+        assert!(OverrideReason::try_new("a".repeat(200)).is_ok());
+        assert!(OverrideReason::try_new("a".repeat(201)).is_err());
     }
 
     #[test]

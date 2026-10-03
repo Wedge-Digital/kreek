@@ -12,8 +12,8 @@ use crate::app::teams::domain::costly_mistakes::{incident_for, loss_for, SEUIL_E
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::treasury::{MovementDirection, MovementReason, TreasuryMovement};
 use crate::app::teams::domain::value_objects::{
-    AdjustmentAmount, AdjustmentNote, DedicatedFans, IncidentType, Kpo, MatchResult, RosterName,
-    SppGain, StaffQuantity, StaffType, TeamName,
+    AdjustmentAmount, AdjustmentNote, DedicatedFans, IncidentType, Kpo, MatchResult,
+    OverrideReason, RosterName, SppGain, StaffQuantity, StaffType, TeamName,
 };
 use serde::{Deserialize, Serialize};
 
@@ -39,6 +39,63 @@ pub enum GamePhase {
     CostlyMistakes,
     TemporaryRetirement,
     OffSeason,
+}
+
+/// Comment l'équipe est entrée dans sa phase (carte 575).
+///
+/// **Un champ à côté de `game_phase`, et non une phase de plus** : pendant la
+/// phase, rien ne change — gardes, paniers, dépense de SPP regardent
+/// `game_phase`. Seules les sorties consultent l'entrée : une phase ouverte à la
+/// main ramène à « prête à jouer », sans enchaîner ni passer par les erreurs
+/// coûteuses.
+///
+/// État **dérivé**, reconstruit au rejeu : `PostMatch` par défaut couvre tout
+/// l'historique existant, aucune migration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PhaseEntry {
+    #[default]
+    PostMatch,
+    Override,
+}
+
+/// Les trois phases qu'un admin peut ouvrir à la main. Une autre n'est pas
+/// exprimable : le type ferme ce que le formulaire pourrait envoyer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverridablePhase {
+    PlayerImprovement,
+    Recruitment,
+    Dismissals,
+}
+
+impl OverridablePhase {
+    /// Dans l'ordre du panneau : c'est d'ici que viennent ses cartes.
+    pub const ALL: [OverridablePhase; 3] = [
+        OverridablePhase::PlayerImprovement,
+        OverridablePhase::Recruitment,
+        OverridablePhase::Dismissals,
+    ];
+
+    /// La valeur du formulaire. `None` pour toute autre chaîne : elle ne vient
+    /// pas de l'écran.
+    pub fn parse(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|phase| phase.as_str() == value)
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            OverridablePhase::PlayerImprovement => "player_improvement",
+            OverridablePhase::Recruitment => "recruitment",
+            OverridablePhase::Dismissals => "dismissals",
+        }
+    }
+
+    pub fn game_phase(self) -> GamePhase {
+        match self {
+            OverridablePhase::PlayerImprovement => GamePhase::PlayerImprovement,
+            OverridablePhase::Recruitment => GamePhase::Recruitment,
+            OverridablePhase::Dismissals => GamePhase::Dismissals,
+        }
+    }
 }
 
 // ── Événements domaine ────────────────────────────────────────────────────────
@@ -236,6 +293,29 @@ pub enum TeamDomainEvent {
         reason: Option<String>,
     },
 
+    // Phases manuelles (carte 575) — un admin ouvre, depuis « prête à jouer »,
+    // l'une des trois phases d'après-match.
+    ManualImprovementPhaseOpened {
+        admin_id: CoachId,
+        admin_name: CoachName,
+        reason: Option<OverrideReason>,
+    },
+    ManualRecruitmentPhaseOpened {
+        admin_id: CoachId,
+        admin_name: CoachName,
+        reason: Option<OverrideReason>,
+    },
+    ManualDismissalsPhaseOpened {
+        admin_id: CoachId,
+        admin_name: CoachName,
+        reason: Option<OverrideReason>,
+    },
+    /// La sortie d'une phase ouverte à la main : retour à « prête à jouer ».
+    /// `phase` est celle qu'on quitte.
+    ManualPhaseClosed {
+        phase: GamePhase,
+    },
+
     // Modification d'identité
     TeamRenamed {
         name: TeamName,
@@ -300,10 +380,72 @@ impl TeamDomainEvent {
             Self::OffSeasonCompleted => "OffSeasonCompleted",
             Self::TeamValueRecomputed { .. } => "TeamValueRecomputed",
             Self::GamePhaseOverridden { .. } => "GamePhaseOverridden",
+            Self::ManualImprovementPhaseOpened { .. } => "ManualImprovementPhaseOpened",
+            Self::ManualRecruitmentPhaseOpened { .. } => "ManualRecruitmentPhaseOpened",
+            Self::ManualDismissalsPhaseOpened { .. } => "ManualDismissalsPhaseOpened",
+            Self::ManualPhaseClosed { .. } => "ManualPhaseClosed",
             Self::TeamRenamed { .. } => "TeamRenamed",
             Self::InitialsChanged { .. } => "InitialsChanged",
             Self::LogoChanged { .. } => "LogoChanged",
             Self::TreasuryAdjusted { .. } => "TreasuryAdjusted",
+        }
+    }
+
+    /// Vrai pour les événements dont `apply()` ramène l'équipe à « prête à
+    /// jouer » (carte 575).
+    ///
+    /// **Une seule liste, dans le domaine.** Les deux listeners qui réagissent
+    /// à ce retour — recalcul de la valeur d'équipe, purge des paniers — en
+    /// tenaient chacun une copie. La question est du domaine : `apply()` y
+    /// répond déjà en posant `ReadyToPlay`.
+    ///
+    /// **Sans joker** : un événement ajouté demain ne compile pas tant qu'il
+    /// n'est pas classé ici. En oublier un, c'est une valeur d'équipe non
+    /// recalculée et des paniers non purgés, sans un bruit.
+    pub fn returns_to_ready_to_play(&self) -> bool {
+        match self {
+            TeamDomainEvent::TeamEnrolled { .. }
+            | TeamDomainEvent::MatchReportingCancelled { .. }
+            | TeamDomainEvent::DismissalsPhaseValidated
+            | TeamDomainEvent::CostlyMistakesApplied { .. }
+            | TeamDomainEvent::ManualPhaseClosed { .. } => true,
+
+            // `GamePhaseOverridden` peut viser `ReadyToPlay`, mais il n'est
+            // émis par aucun use case (carte 46, annulée) : il reste pour
+            // relire l'historique, sans effet ici.
+            TeamDomainEvent::TeamCreated { .. }
+            | TeamDomainEvent::TeamDismissed
+            | TeamDomainEvent::TeamEnrollmentRejected { .. }
+            | TeamDomainEvent::MatchReportingStarted { .. }
+            | TeamDomainEvent::PostMatchSequenceStarted { .. }
+            | TeamDomainEvent::PostMatchSequenceReverted { .. }
+            | TeamDomainEvent::InducementsPaid { .. }
+            | TeamDomainEvent::InducementsRefunded { .. }
+            | TeamDomainEvent::PlayerImprovementPhaseValidated
+            | TeamDomainEvent::PlayerRecruited { .. }
+            | TeamDomainEvent::JourneymanRecruited { .. }
+            | TeamDomainEvent::JourneymanFielded { .. }
+            | TeamDomainEvent::JourneymanWithdrawn { .. }
+            | TeamDomainEvent::StaffBought { .. }
+            | TeamDomainEvent::StaffDismissed { .. }
+            | TeamDomainEvent::RecruitmentPhaseValidated
+            | TeamDomainEvent::PlayerDismissed { .. }
+            | TeamDomainEvent::PlayerRetiredTemporarily { .. }
+            | TeamDomainEvent::RetirementPhaseValidated
+            | TeamDomainEvent::CostlyMistakesPhaseStarted
+            | TeamDomainEvent::OffSeasonStarted { .. }
+            | TeamDomainEvent::PlayerReEngaged { .. }
+            | TeamDomainEvent::PlayerNotReEngaged { .. }
+            | TeamDomainEvent::OffSeasonCompleted
+            | TeamDomainEvent::TeamValueRecomputed { .. }
+            | TeamDomainEvent::GamePhaseOverridden { .. }
+            | TeamDomainEvent::ManualImprovementPhaseOpened { .. }
+            | TeamDomainEvent::ManualRecruitmentPhaseOpened { .. }
+            | TeamDomainEvent::ManualDismissalsPhaseOpened { .. }
+            | TeamDomainEvent::TeamRenamed { .. }
+            | TeamDomainEvent::InitialsChanged { .. }
+            | TeamDomainEvent::LogoChanged { .. }
+            | TeamDomainEvent::TreasuryAdjusted { .. } => false,
         }
     }
 
@@ -356,6 +498,9 @@ pub struct Team {
     /// deux informations qu'il capture sont encore lisibles au moment précis où
     /// `apply(PostMatchSequenceStarted)` s'exécute, et perdues juste après.
     pub last_post_match: Option<LastPostMatch>,
+    /// Comment l'équipe est entrée dans sa phase — cf. `PhaseEntry`. Dérivé,
+    /// reconstruit au rejeu.
+    pub phase_entry: PhaseEntry,
     pub version: u64,
 }
 
@@ -400,6 +545,7 @@ impl Default for Team {
             cheerleaders: CheerleaderCount::default(),
             current_match_report_id: None,
             last_post_match: None,
+            phase_entry: PhaseEntry::PostMatch,
             version: 0,
         }
     }
@@ -531,6 +677,10 @@ impl Team {
             | TeamDomainEvent::OffSeasonCompleted
             | TeamDomainEvent::TeamValueRecomputed { .. }
             | TeamDomainEvent::GamePhaseOverridden { .. }
+            | TeamDomainEvent::ManualImprovementPhaseOpened { .. }
+            | TeamDomainEvent::ManualRecruitmentPhaseOpened { .. }
+            | TeamDomainEvent::ManualDismissalsPhaseOpened { .. }
+            | TeamDomainEvent::ManualPhaseClosed { .. }
             | TeamDomainEvent::TeamRenamed { .. }
             | TeamDomainEvent::InitialsChanged { .. }
             | TeamDomainEvent::LogoChanged { .. } => None,
@@ -646,6 +796,10 @@ impl Team {
                 self.dedicated_fans = *dedicated_fans;
                 self.game_phase = Some(GamePhase::PlayerImprovement);
                 self.current_match_report_id = None;
+                // Un vrai après-match : sans cette remise à zéro, une équipe
+                // passée par une phase manuelle verrait celle-ci traitée comme
+                // telle (carte 575).
+                self.phase_entry = PhaseEntry::PostMatch;
             }
             // Suit `PostMatchSequenceStarted` dans le même lot, et enrichit
             // l'instantané qu'il vient de poser. L'identifiant est vérifié :
@@ -779,6 +933,19 @@ impl Team {
             }
             TeamDomainEvent::GamePhaseOverridden { to_phase, .. } => {
                 self.game_phase = Some(to_phase.clone());
+            }
+            TeamDomainEvent::ManualImprovementPhaseOpened { .. } => {
+                self.open_manually(GamePhase::PlayerImprovement);
+            }
+            TeamDomainEvent::ManualRecruitmentPhaseOpened { .. } => {
+                self.open_manually(GamePhase::Recruitment);
+            }
+            TeamDomainEvent::ManualDismissalsPhaseOpened { .. } => {
+                self.open_manually(GamePhase::Dismissals);
+            }
+            TeamDomainEvent::ManualPhaseClosed { .. } => {
+                self.game_phase = Some(GamePhase::ReadyToPlay);
+                self.phase_entry = PhaseEntry::PostMatch;
             }
             TeamDomainEvent::TeamRenamed { name } => {
                 self.name = name.clone();
@@ -942,6 +1109,13 @@ impl Team {
         match_report_id: MatchReportId,
     ) -> Result<Vec<TeamDomainEvent>, DomainError> {
         self.expect_phase(GamePhase::PlayerImprovement)?;
+        // Une phase ouverte à la main ne prolonge aucun match : il n'y a rien à
+        // défaire. Sans cette garde, `last_post_match` — jamais effacé en fin de
+        // cycle — laisserait annuler le dernier match par-dessus tout ce qui
+        // s'est passé depuis (carte 575).
+        if self.phase_entry == PhaseEntry::Override {
+            return Err(DomainError::NoPostMatchToRevert);
+        }
         let last = self
             .last_post_match
             .as_ref()
@@ -1081,14 +1255,64 @@ impl Team {
         })
     }
 
+    /// Une phase ouverte à la main ramène à « prête à jouer » ; l'après-match
+    /// enchaîne sur le recrutement.
     pub fn validate_improvement_phase(&self) -> Result<TeamDomainEvent, DomainError> {
-        self.expect_phase(GamePhase::PlayerImprovement)
-            .map(|_| TeamDomainEvent::PlayerImprovementPhaseValidated)
+        self.expect_phase(GamePhase::PlayerImprovement)?;
+        Ok(self
+            .manual_exit(GamePhase::PlayerImprovement)
+            .unwrap_or(TeamDomainEvent::PlayerImprovementPhaseValidated))
     }
 
+    /// Une phase ouverte à la main ramène à « prête à jouer » ; l'après-match
+    /// enchaîne sur les renvois.
     pub fn validate_recruitment_phase(&self) -> Result<TeamDomainEvent, DomainError> {
-        self.expect_phase(GamePhase::Recruitment)
-            .map(|_| TeamDomainEvent::RecruitmentPhaseValidated)
+        self.expect_phase(GamePhase::Recruitment)?;
+        Ok(self
+            .manual_exit(GamePhase::Recruitment)
+            .unwrap_or(TeamDomainEvent::RecruitmentPhaseValidated))
+    }
+
+    /// `ManualPhaseClosed` si l'équipe est entrée dans `phase` à la main ;
+    /// `None` pour un après-match, que l'appelant traite comme avant.
+    fn manual_exit(&self, phase: GamePhase) -> Option<TeamDomainEvent> {
+        (self.phase_entry == PhaseEntry::Override)
+            .then_some(TeamDomainEvent::ManualPhaseClosed { phase })
+    }
+
+    /// Ouvre à la main l'une des trois phases d'après-match (carte 575), depuis
+    /// « prête à jouer » seulement. Une équipe dans son vrai après-match n'est
+    /// pas prête à jouer : elle est refusée par cette même garde.
+    pub fn open_phase_override(
+        &self,
+        phase: OverridablePhase,
+        admin_id: CoachId,
+        admin_name: CoachName,
+        reason: Option<OverrideReason>,
+    ) -> Result<TeamDomainEvent, DomainError> {
+        self.expect_phase(GamePhase::ReadyToPlay)?;
+        Ok(match phase {
+            OverridablePhase::PlayerImprovement => TeamDomainEvent::ManualImprovementPhaseOpened {
+                admin_id,
+                admin_name,
+                reason,
+            },
+            OverridablePhase::Recruitment => TeamDomainEvent::ManualRecruitmentPhaseOpened {
+                admin_id,
+                admin_name,
+                reason,
+            },
+            OverridablePhase::Dismissals => TeamDomainEvent::ManualDismissalsPhaseOpened {
+                admin_id,
+                admin_name,
+                reason,
+            },
+        })
+    }
+
+    fn open_manually(&mut self, phase: GamePhase) {
+        self.game_phase = Some(phase);
+        self.phase_entry = PhaseEntry::Override;
     }
 
     /// Deux sorties : au-dessus du seuil, l'équipe doit son jet ; en dessous,
@@ -1105,6 +1329,11 @@ impl Team {
     /// trésorerie d'après-lot au lieu de la lire dans `self`.
     pub fn validate_dismissals_phase(&self) -> Result<TeamDomainEvent, DomainError> {
         self.expect_phase(GamePhase::Dismissals)?;
+        // Une phase ouverte à la main ne passe jamais par les erreurs coûteuses,
+        // quelle que soit la trésorerie (décision du 2026-10-03).
+        if let Some(sortie) = self.manual_exit(GamePhase::Dismissals) {
+            return Ok(sortie);
+        }
         Ok(if self.treasury.0 >= SEUIL_ERREURS_COUTEUSES {
             TeamDomainEvent::CostlyMistakesPhaseStarted
         } else {
@@ -2573,5 +2802,169 @@ mod tests {
             .dismiss_staff(StaffType::Assistant, StaffQuantity::try_new(1).unwrap())
             .unwrap();
         assert!(team.treasury_movement(&event).is_none());
+    }
+
+    // ── Phases manuelles (carte 575) ──────────────────────────────────────
+
+    fn ready_team() -> Team {
+        Team::hydrate(&[created_event(), enrolled_event()]).unwrap()
+    }
+
+    fn admin_name() -> CoachName {
+        CoachName::try_new("Commissaire".to_string()).unwrap()
+    }
+
+    fn open(team: &Team, phase: OverridablePhase) -> TeamDomainEvent {
+        team.open_phase_override(phase, coach_id(), admin_name(), None)
+            .unwrap()
+    }
+
+    /// L'équipe prête à jouer, puis la phase ouverte à la main.
+    fn manually_opened(phase: OverridablePhase) -> Team {
+        let team = ready_team();
+        let event = open(&team, phase);
+        team.apply(&event)
+    }
+
+    #[test]
+    fn each_phase_opens_from_ready_to_play_with_an_override_entry() {
+        for phase in OverridablePhase::ALL {
+            let team = manually_opened(phase);
+            assert_eq!(team.game_phase, Some(phase.game_phase()), "{phase:?}");
+            assert_eq!(team.phase_entry, PhaseEntry::Override, "{phase:?}");
+        }
+    }
+
+    #[test]
+    fn opening_is_refused_outside_ready_to_play() {
+        let team = team_after_post_match(0, Kpo(10));
+        assert!(matches!(
+            team.open_phase_override(
+                OverridablePhase::Recruitment,
+                coach_id(),
+                admin_name(),
+                None
+            ),
+            Err(DomainError::WrongGamePhase(Some(
+                GamePhase::PlayerImprovement
+            )))
+        ));
+    }
+
+    #[test]
+    fn each_manual_exit_returns_to_ready_to_play_and_resets_the_entry() {
+        let exits: [(
+            OverridablePhase,
+            fn(&Team) -> Result<TeamDomainEvent, DomainError>,
+        ); 3] = [
+            (
+                OverridablePhase::PlayerImprovement,
+                Team::validate_improvement_phase,
+            ),
+            (
+                OverridablePhase::Recruitment,
+                Team::validate_recruitment_phase,
+            ),
+            (
+                OverridablePhase::Dismissals,
+                Team::validate_dismissals_phase,
+            ),
+        ];
+        for (phase, exit) in exits {
+            let team = manually_opened(phase);
+            let event = exit(&team).unwrap();
+            assert!(
+                matches!(&event, TeamDomainEvent::ManualPhaseClosed { phase: quitted } if *quitted == phase.game_phase()),
+                "{phase:?}"
+            );
+            let team = team.apply(&event);
+            assert_eq!(team.game_phase, Some(GamePhase::ReadyToPlay), "{phase:?}");
+            assert_eq!(team.phase_entry, PhaseEntry::PostMatch, "{phase:?}");
+        }
+    }
+
+    /// Décision du 2026-10-03 : pas d'erreurs coûteuses en sortie d'une phase
+    /// manuelle, quelle que soit la trésorerie.
+    #[test]
+    fn manual_dismissals_exit_skips_costly_mistakes_above_the_threshold() {
+        let team = manually_opened(OverridablePhase::Dismissals);
+        assert!(
+            team.treasury().0 >= SEUIL_ERREURS_COUTEUSES,
+            "le montage suppose une caisse au-dessus du seuil"
+        );
+        assert!(matches!(
+            team.validate_dismissals_phase(),
+            Ok(TeamDomainEvent::ManualPhaseClosed { .. })
+        ));
+    }
+
+    /// Un vrai après-match qui suit une phase manuelle enchaîne de nouveau.
+    #[test]
+    fn a_real_post_match_after_a_manual_phase_chains_again() {
+        let team = manually_opened(OverridablePhase::PlayerImprovement);
+        let closed = team.validate_improvement_phase().unwrap();
+        let team = team
+            .apply(&closed)
+            .apply(&TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            });
+        let started = team
+            .start_post_match_sequence(MatchResult::Win, 0, Kpo(10), vec![])
+            .unwrap();
+        let team = team.apply(&started);
+        assert_eq!(team.phase_entry, PhaseEntry::PostMatch);
+        assert!(matches!(
+            team.validate_improvement_phase(),
+            Ok(TeamDomainEvent::PlayerImprovementPhaseValidated)
+        ));
+    }
+
+    /// `last_post_match` n'est jamais effacé en fin de cycle : sans la garde, une
+    /// phase de dépense ouverte à la main laisserait annuler le dernier match.
+    #[test]
+    fn reverting_a_post_match_is_refused_during_a_manual_phase() {
+        let team = team_after_post_match(0, Kpo(10));
+        let validated = team.validate_improvement_phase().unwrap();
+        let team = team.apply(&validated);
+        let mut team = team;
+        team.game_phase = Some(GamePhase::ReadyToPlay);
+        let event = open(&team, OverridablePhase::PlayerImprovement);
+        let team = team.apply(&event);
+        assert!(
+            team.last_post_match.is_some(),
+            "le montage garde un après-match"
+        );
+        assert!(matches!(
+            team.revert_post_match_sequence(match_report_id()),
+            Err(DomainError::NoPostMatchToRevert)
+        ));
+    }
+
+    #[test]
+    fn replay_rebuilds_the_phase_entry() {
+        let event = open(&ready_team(), OverridablePhase::Recruitment);
+        let team = Team::hydrate(&[created_event(), enrolled_event(), event]).unwrap();
+        assert_eq!(team.phase_entry, PhaseEntry::Override);
+        assert_eq!(team.game_phase, Some(GamePhase::Recruitment));
+    }
+
+    #[test]
+    fn overridable_phase_round_trips_through_its_form_value() {
+        for phase in OverridablePhase::ALL {
+            assert_eq!(OverridablePhase::parse(phase.as_str()), Some(phase));
+        }
+        assert_eq!(OverridablePhase::parse("off_season"), None);
+    }
+
+    #[test]
+    fn exactly_five_events_return_to_ready_to_play() {
+        let closed = TeamDomainEvent::ManualPhaseClosed {
+            phase: GamePhase::Recruitment,
+        };
+        assert!(closed.returns_to_ready_to_play());
+        assert!(enrolled_event().returns_to_ready_to_play());
+        assert!(TeamDomainEvent::DismissalsPhaseValidated.returns_to_ready_to_play());
+        assert!(!TeamDomainEvent::RecruitmentPhaseValidated.returns_to_ready_to_play());
+        assert!(!open(&ready_team(), OverridablePhase::Dismissals).returns_to_ready_to_play());
     }
 }

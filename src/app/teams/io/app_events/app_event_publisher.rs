@@ -167,7 +167,15 @@ async fn to_app_event(
         // La caisse d'une équipe ne regarde qu'elle : aucun BC ne réagit à son
         // ajustement, et aucune notification n'a été demandée. Décidé en
         // conception (phase 3), pas subi faute d'idée.
-        | TeamDomainEvent::TreasuryAdjusted { .. } => None,
+        | TeamDomainEvent::TreasuryAdjusted { .. }
+        // Les phases manuelles (carte 575) ne sortent pas du BC : `players` lit
+        // la phase en direct dans l'agrégat (`team_roster_adapter`), et aucun
+        // journalier n'existe pendant une phase ouverte à la main — ils ne
+        // vivent qu'entre un match et la fin de son recrutement.
+        | TeamDomainEvent::ManualImprovementPhaseOpened { .. }
+        | TeamDomainEvent::ManualRecruitmentPhaseOpened { .. }
+        | TeamDomainEvent::ManualDismissalsPhaseOpened { .. }
+        | TeamDomainEvent::ManualPhaseClosed { .. } => None,
     }
 }
 
