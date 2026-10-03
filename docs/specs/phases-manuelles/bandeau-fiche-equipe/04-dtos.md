@@ -99,7 +99,7 @@ Détaillés en phase 6.
 | `OverrideReason` | le contrôleur (smart constructor) | la commande, puis l'événement |
 | `OpenPhaseOverrideError` | le use case | le contrôleur, qui choisit la réponse HTTP |
 | `BannerCtaVm::OpenPhaseOverride`, `PhaseChoiceVm` | `BannerVm::from_domain` | `teams-team-detail.html` |
-| `PhaseOverrideErrorVm` | le contrôleur, sur un refus | `phase-override-foot.html` |
+| `PhaseOverrideErrorVm` | le contrôleur, sur un refus | `phase-override-error.html` |
 | les quatre événements | l'agrégat `Team` | `apply()`, la projection `team_proj`, `returns_to_ready_to_play()`, le publisher (groupe muet) |
 
 ## Règles métier

@@ -7,7 +7,7 @@
 **Spec :** `02-front.md`, `03-back.md`, `04-dtos.md`, `07-integration.md` (point 6)
 **Fichiers :** `src/app/teams/routes.rs`, `src/app/teams/router.rs`,
 `src/app/teams/io/web/phase_override_controller.rs` *(nouveau)*,
-`src/app/teams/io/web/templates/phase-override-foot.html` *(nouveau)*,
+`src/app/teams/io/web/templates/phase-override-error.html` *(nouveau)*,
 `src/app/teams/io/web/team_detail.rs`,
 `src/app/teams/io/web/templates/teams-team-detail.html`,
 `assets/static/css/pages/team-page.css`,
@@ -26,9 +26,9 @@ prête à jouer, l'une des trois phases — telle que la maquette la montre.
   prête à jouer et `is_team_admin` ; `PhaseChoiceVm` construit depuis
   `OverridablePhase::ALL`.
 - Le panneau sous le bandeau, `x-data` Alpine (ouverture, choix, libellé du
-  bouton) ; le pied d'erreur `phase-override-foot.html`.
+  bouton) ; le message d'erreur `phase-override-error.html` — le message seul, pas le pied (décision du 2026-10-03).
 - Succès `HX-Refresh` ; refus en 200 avec `HX-Retarget` / `HX-Reselect` /
-  `HX-Reswap` vers `#phase-override-foot` ; phase inconnue 400.
+  `HX-Reswap` vers `#phase-override-error` ; phase inconnue 400.
 - CSS dans `pages/team-page.css`, sous `.team-page`.
 
 ## Tests

@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
+use crate::app::teams::domain::team::{GamePhase, OverridablePhase, ParticipationStatus, Team};
 use crate::app::teams::io::web::status_view_models::status_display;
 use crate::app::teams::io::web::treasury_tab;
 use crate::app::teams::ports::{
@@ -77,6 +77,68 @@ pub enum BannerCtaVm {
     /// événements DOM sur `body`, le widget s'y abonne — c'est la règle 2 des
     /// widgets, et c'est ce qui permet aux deux BCs de s'ignorer.
     RosterEdit,
+    /// Ouvrir à la main une phase d'après-match (carte 578) — un commissaire,
+    /// une équipe prête à jouer. Les cartes du panneau viennent d'ici et non
+    /// du gabarit : la valeur envoyée et ce que le serveur sait ouvrir sortent
+    /// de la même liste.
+    OpenPhaseOverride {
+        post_url: String,
+        choices: Vec<PhaseChoiceVm>,
+    },
+}
+
+/// Une carte du panneau d'ouverture, construite depuis `OverridablePhase::ALL`.
+pub struct PhaseChoiceVm {
+    /// La valeur du formulaire, celle que `OverridablePhase::parse` relit.
+    pub value: &'static str,
+    pub label: &'static str,
+    pub description: &'static str,
+    pub icon: &'static str,
+    pub open_label: &'static str,
+}
+
+impl PhaseChoiceVm {
+    pub fn all_from_domain() -> Vec<Self> {
+        OverridablePhase::ALL
+            .into_iter()
+            .map(Self::from_domain)
+            .collect()
+    }
+
+    fn from_domain(phase: OverridablePhase) -> Self {
+        let (icon, label, description, open_label) = match phase {
+            OverridablePhase::PlayerImprovement => (
+                "🎓",
+                "Dépense des SPP",
+                "Les joueurs dépensent leurs SPP : compétences et caractéristiques.",
+                "Ouvrir la dépense des SPP",
+            ),
+            OverridablePhase::Recruitment => (
+                "🛒",
+                "Recrutement",
+                "Achat de joueurs et de personnel avec la trésorerie.",
+                "Ouvrir le recrutement",
+            ),
+            OverridablePhase::Dismissals => (
+                "✂️",
+                "Renvois",
+                "Renvoi de joueurs et de personnel.",
+                "Ouvrir les renvois",
+            ),
+        };
+        Self {
+            value: phase.as_str(),
+            label,
+            description,
+            icon,
+            open_label,
+        }
+    }
+}
+
+/// Le message du panneau d'ouverture, rendu **seul** quand le serveur refuse.
+pub struct PhaseOverrideErrorVm {
+    pub message: String,
 }
 
 pub struct BannerVm {
@@ -109,6 +171,33 @@ impl BannerVm {
             banner.ctas.retain(|cta| matches!(cta, BannerCtaVm::Print));
         }
         Some(banner)
+    }
+
+    /// Ajoute le bouton d'ouverture d'une phase manuelle — admin seulement,
+    /// équipe prête à jouer seulement (carte 578).
+    ///
+    /// **Après le filtre de `from_domain`, et non dans `pour_etat`** : ce droit
+    /// n'est pas celui d'éditer l'effectif. Le confier au filtre `peut_editer`
+    /// le ferait dépendre d'un couplage — un admin peut éditer — que rien ne
+    /// garantit demain. Le serveur revérifie les deux conditions.
+    fn with_phase_override(
+        mut self,
+        team: &Team,
+        space_id: &str,
+        app_routes: &AppRoutes,
+        is_admin: bool,
+    ) -> Self {
+        let ready = team.participation_status == ParticipationStatus::Enrolled
+            && team.game_phase == Some(GamePhase::ReadyToPlay);
+        if is_admin && ready {
+            self.ctas.push(BannerCtaVm::OpenPhaseOverride {
+                post_url: app_routes
+                    .teams
+                    .phase_override(space_id, &team.id.to_string()),
+                choices: PhaseChoiceVm::all_from_domain(),
+            });
+        }
+        self
     }
 
     /// Le bandeau de l'état courant, **avec tous ses CTA** — le droit du
@@ -241,6 +330,7 @@ impl TeamDetailVm {
         space_id: &str,
         roster_catalog_port: &dyn IRosterCatalogPort,
         peut_editer: bool,
+        is_admin: bool,
     ) -> Self {
         let (status_label, status_css_class) = status_display(team);
         let roster_initials = team
@@ -274,7 +364,8 @@ impl TeamDetailVm {
         });
 
         let app_routes = AppRoutes::default();
-        let banner = BannerVm::from_domain(team, space_id, &app_routes, peut_editer);
+        let banner = BannerVm::from_domain(team, space_id, &app_routes, peut_editer)
+            .map(|b| b.with_phase_override(team, space_id, &app_routes, is_admin));
 
         Self {
             id: team.id.to_string(),
@@ -526,7 +617,7 @@ pub(crate) async fn rendre_fiche(
         None => false,
     };
 
-    let vm = TeamDetailVm::from(&team, space_id, roster_catalog_port, peut_editer);
+    let vm = TeamDetailVm::from(&team, space_id, roster_catalog_port, peut_editer, is_admin);
 
     let content =
         match contenu_de_l_onglet(active_tab, &vm, space_id, team_id, is_admin, state).await {
@@ -712,6 +803,70 @@ mod tests {
         let sans = BannerVm::from_domain(&team, "space", &routes, false).unwrap();
         assert_eq!(sans.ctas.len(), 0);
         assert!(sans.title.contains("attente d'inscription"));
+    }
+
+    // ── Ouverture d'une phase manuelle (carte 578) ─────────────────────────
+
+    fn enrolled_event() -> TeamDomainEvent {
+        TeamDomainEvent::TeamEnrolled {
+            competition_id: CompetitionId::try_new("00000000000000000000000003").unwrap(),
+            competition_name: "Ligue de Condate".to_string(),
+            season_id: SeasonId::try_new("00000000000000000000000004").unwrap(),
+            season_name: "Saison 2025".to_string(),
+        }
+    }
+
+    fn banner_of(team: &Team, is_admin: bool) -> BannerVm {
+        let routes = AppRoutes::default();
+        BannerVm::from_domain(team, "space", &routes, is_admin)
+            .unwrap()
+            .with_phase_override(team, "space", &routes, is_admin)
+    }
+
+    fn offers_phase_override(banner: &BannerVm) -> bool {
+        banner
+            .ctas
+            .iter()
+            .any(|c| matches!(c, BannerCtaVm::OpenPhaseOverride { .. }))
+    }
+
+    #[test]
+    fn an_admin_is_offered_to_open_a_phase_on_a_ready_team() {
+        let team = Team::hydrate(&[created_event(), enrolled_event()]).unwrap();
+        assert!(offers_phase_override(&banner_of(&team, true)));
+    }
+
+    #[test]
+    fn a_non_admin_is_not_offered_to_open_a_phase() {
+        let team = Team::hydrate(&[created_event(), enrolled_event()]).unwrap();
+        assert!(!offers_phase_override(&banner_of(&team, false)));
+    }
+
+    #[test]
+    fn a_team_not_ready_to_play_offers_no_phase_override() {
+        let team = Team::hydrate(&[
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: crate::app::shared_kernel::bloodbowl::ids::MatchReportId::new(),
+            },
+        ])
+        .unwrap();
+        assert!(!offers_phase_override(&banner_of(&team, true)));
+    }
+
+    /// La valeur de chaque carte est celle que le contrôleur relit : une faute
+    /// ici ne se verrait qu'en 400, sans explication à l'écran.
+    #[test]
+    fn phase_choices_follow_the_domain_list() {
+        let values: Vec<_> = PhaseChoiceVm::all_from_domain()
+            .iter()
+            .map(|c| c.value)
+            .collect();
+        assert_eq!(values, ["player_improvement", "recruitment", "dismissals"]);
+        for value in values {
+            assert!(OverridablePhase::parse(value).is_some(), "{value}");
+        }
     }
 
     fn created_event() -> TeamDomainEvent {

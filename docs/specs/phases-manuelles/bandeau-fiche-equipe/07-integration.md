@@ -50,7 +50,7 @@ recalculée dans l'adapter (décision du 2026-10-03, carte 576).
 | Cas | Réponse |
 |---|---|
 | succès | `HX-Refresh: true` |
-| refus du domaine (plus prête à jouer), motif refusé | **200**, `HX-Retarget` / `HX-Reselect` / `HX-Reswap` vers `#phase-override-foot`, le pied du panneau portant le message |
+| refus du domaine (plus prête à jouer), motif refusé | **200**, `HX-Retarget` / `HX-Reselect` / `HX-Reswap` vers `#phase-override-error`, le message seul au pied du panneau |
 | phase inconnue | 400 |
 | sans session, équipe introuvable, visiteur non admin | 401, 404, 403 — posés par `require_team_admin` |
 

@@ -77,6 +77,10 @@
   </div>
 
   {% if let Some(banner) = vm.banner %}
+  {# Le conteneur porte l'état Alpine du panneau d'ouverture d'une phase
+     (carte 578), partagé par son bouton dans le bandeau et le panneau
+     dessous. `display: contents` : il ne change rien à la mise en page. #}
+  <div class="team-banner" x-data="{ phaseOverrideOpen: false, phaseOverrideLabel: '' }">
   <div class="state-banner state-banner--{{ banner.css_variant }}">
     <span class="state-banner-icon">{{ banner.icon }}</span>
     <span class="state-banner-text"><strong>{{ banner.title }}</strong> {{ banner.detail }}</span>
@@ -94,6 +98,9 @@
           <button type="button" class="state-banner-cta state-banner-cta--outline roster-edit-trigger-btn">✎ Modifier l'effectif</button>
           <button type="button" class="state-banner-cta state-banner-cta--outline roster-edit-cancel-btn">Annuler</button>
           <button type="button" class="state-banner-cta roster-edit-save-btn">Enregistrer</button>
+        {% when BannerCtaVm::OpenPhaseOverride { post_url, choices } %}
+          <button type="button" class="state-banner-cta state-banner-cta--outline phase-override-btn"
+                  @click="phaseOverrideOpen = !phaseOverrideOpen">⚙ Ouvrir une phase…</button>
       {% endmatch %}
     {% endfor %}
   </div>
@@ -139,6 +146,58 @@
     afficherBoutons(false);
   })();
   </script>
+  {% for cta in banner.ctas %}
+    {% match cta %}
+      {% when BannerCtaVm::OpenPhaseOverride { post_url, choices } %}
+        {# Ni `hx-target` ni `hx-select` : le succès recharge la page
+           (`HX-Refresh`), le refus est redirigé par les en-têtes vers
+           `#phase-override-error`. #}
+        <form class="phase-override" x-show="phaseOverrideOpen" x-cloak hx-post="{{ post_url }}">
+          <div>
+            <div class="phase-override-title">Ouvrir une phase manuellement</div>
+            <div class="phase-override-intro">Réservé aux commissaires. L'ouverture est enregistrée avec votre nom et le motif.</div>
+          </div>
+
+          <div class="phase-override-choices">
+            {% for choice in choices %}
+            {# Le libellé passe par `data-label` et non dans l'expression
+               Alpine : un apostrophe échappé y casserait le JavaScript. #}
+            <label class="phase-choice">
+              <input type="radio" name="phase" value="{{ choice.value }}" data-label="{{ choice.open_label }}"
+                     @change="phaseOverrideLabel = $el.dataset.label">
+              <span class="phase-choice-icon">{{ choice.icon }}</span>
+              <span class="phase-choice-name">{{ choice.label }}</span>
+              <span class="phase-choice-desc">{{ choice.description }}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          <div class="phase-override-reason">
+            <label for="phase-override-reason">Motif <span>— facultatif, visible dans l'historique</span></label>
+            <textarea id="phase-override-reason" name="reason" maxlength="200"
+                      placeholder="Ex. : le coach a validé l'évolution par erreur avant d'avoir dépensé ses SPP."></textarea>
+          </div>
+
+          <div class="phase-override-warning">
+            <span>⚠️</span>
+            <span>Tant que la phase est ouverte, l'équipe ne peut pas être sélectionnée pour un match. Le coach ou un commissaire la ferme avec le bouton habituel de la phase ; l'équipe redevient alors prête à jouer, <strong>sans enchaîner sur les phases suivantes ni sur les erreurs coûteuses</strong>.</span>
+          </div>
+
+          {# Vide tant que le serveur n'a rien refusé — cf. `phase-override-error.html`. #}
+          <div id="phase-override-error" class="phase-override-error"></div>
+
+          <div class="phase-override-actions">
+            <button type="button" class="state-banner-cta state-banner-cta--outline"
+                    @click="phaseOverrideOpen = false">Annuler</button>
+            <button type="submit" class="state-banner-cta phase-override-submit" disabled
+                    :disabled="!phaseOverrideLabel"
+                    x-text="phaseOverrideLabel || 'Ouvrir la phase'">Ouvrir la phase</button>
+          </div>
+        </form>
+      {% when _ %}
+    {% endmatch %}
+  {% endfor %}
+  </div>
   {% endif %}
 
   {# ── Onglets et contenu ─────────────────────────────────────────────────

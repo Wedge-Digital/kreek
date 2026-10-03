@@ -239,3 +239,75 @@
   .team-page .players-panel { padding: var(--p1); }
   .team-page .staff-panel   { padding: var(--p1); }
 }
+
+/* ── Ouvrir une phase manuellement (carte 578) ─────────────────────────────
+   Copié de la maquette `app-team-phase-override.html` ; seul le sélecteur
+   d'adjacence passe de `+` à `~`, un `<script>` s'intercalant entre le bandeau
+   et le panneau. */
+/* ── Le panneau d'ouverture — le seul ajout ─────────────────────────────
+   Il se déplie sous le bandeau, dans la même carte : l'action naît de l'état
+   « prête à jouer », elle reste à côté de lui. */
+.team-page .phase-override {
+  background: var(--white); border-radius: 0 0 10px 10px;
+  border-top: 1px solid var(--dark-6);
+  padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2);
+}
+.team-page .state-banner ~ .phase-override { margin-top: calc(-1 * var(--p1)); }
+.team-page .phase-override-title {
+  font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0);
+}
+.team-page .phase-override-intro { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+
+/* Trois cartes-choix : une seule à la fois, comme des boutons radio. */
+.team-page .phase-override-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--p1); }
+.team-page .phase-choice {
+  position: relative; display: flex; flex-direction: column; gap: 6px;
+  padding: var(--p1) var(--p1) var(--p1) 44px;
+  border: 2px solid var(--dark-5); border-radius: 10px; cursor: pointer;
+  background: var(--white); transition: border-color .15s, background .15s;
+}
+.team-page .phase-choice:hover { border-color: var(--dark-4); }
+.team-page .phase-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.team-page .phase-choice-icon { position: absolute; left: 12px; top: 12px; font-size: 20px; }
+.team-page .phase-choice-name { font-weight: 700; color: var(--dark-1); font-size: var(--text-small); }
+.team-page .phase-choice-desc { font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.4; }
+.team-page .phase-choice:has(input:checked) {
+  border-color: var(--main-blue); background: rgba(0,48,73,0.04);
+}
+
+.team-page .phase-override-reason { display: flex; flex-direction: column; gap: 6px; }
+.team-page .phase-override-reason label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); }
+.team-page .phase-override-reason label span { font-weight: 400; color: var(--dark-3); }
+.team-page .phase-override-reason textarea {
+  font-family: inherit; font-size: var(--text-small); padding: 10px var(--p1);
+  border: 1px solid var(--dark-5); border-radius: 8px; resize: vertical; min-height: 60px;
+}
+
+/* Ce que l'ouverture implique, dit avant le clic — pas après. */
+.team-page .phase-override-warning {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px var(--p1); border-radius: 8px;
+  background: rgba(255,107,53,0.08); color: #A8552A; font-size: var(--text-tiny); line-height: 1.5;
+}
+.team-page .phase-override-error {
+  padding: 10px var(--p1); border-radius: 8px;
+  background: #fdf0ee; border: 1px solid #f5c6c0; color: #c0392b; font-size: var(--text-tiny);
+}
+
+.team-page .phase-override-actions { display: flex; justify-content: flex-end; gap: var(--p1); }
+.team-page .phase-override-actions .state-banner-cta[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* Le bandeau, son script et le panneau partagent le `x-data` de ce conteneur,
+   qui ne change rien à la mise en page (carte 578). */
+.team-page .team-banner { display: contents; }
+
+/* Le conteneur du message existe toujours — c'est la cible de `HX-Retarget` —
+   et ne se montre que lorsqu'il a quelque chose à dire. */
+.team-page .phase-override-error:empty { display: none; }
+
+@media (max-width: 768px) {
+  .team-page .phase-override { padding: var(--p1); }
+  .team-page .phase-override-choices { grid-template-columns: 1fr; }
+  .team-page .phase-override-actions { flex-direction: column-reverse; }
+  .team-page .phase-override-actions .state-banner-cta { text-align: center; justify-content: center; }
+}

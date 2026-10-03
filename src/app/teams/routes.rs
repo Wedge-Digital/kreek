@@ -8,6 +8,8 @@ pub mod path {
     pub const TEAM_TREASURY: &str = "/app/{space_id}/teams/{team_id}/tresorerie";
     /// Prolonge `TEAM_TREASURY`, donc en français comme lui.
     pub const TEAM_TREASURY_ADJUST: &str = "/app/{space_id}/teams/{team_id}/tresorerie/ajuster";
+    /// Un admin ouvre à la main une phase d'après-match (carte 578).
+    pub const PHASE_OVERRIDE: &str = "/app/{space_id}/teams/{team_id}/phases/override";
     /// L'onglet « Matchs » (carte 477), sur le même moule.
     ///
     /// **Elle n'est pas la route du fragment** : celui-ci appartient à
@@ -104,6 +106,10 @@ impl Routes {
 
     pub fn team_treasury_adjust(&self, space_id: &str, team_id: &str) -> String {
         pour(path::TEAM_TREASURY_ADJUST, space_id, team_id)
+    }
+
+    pub fn phase_override(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::PHASE_OVERRIDE, space_id, team_id)
     }
 
     pub fn team_identity_widget(&self, space_id: &str, team_id: &str) -> String {

@@ -2,6 +2,7 @@ use crate::app::teams::io::web::adjust_treasury_controller::adjust_treasury;
 use crate::app::teams::io::web::dismiss_team::dismiss_team;
 use crate::app::teams::io::web::dismissals::dismissals_page;
 use crate::app::teams::io::web::garde_action_equipe::garde_action_equipe;
+use crate::app::teams::io::web::phase_override_controller::post_phase_override;
 use crate::app::teams::io::web::recruitment::recruitment_page;
 use crate::app::teams::io::web::team_detail::{team_detail, team_page_matches, team_page_treasury};
 use crate::app::teams::io::web::validate_phase_actions::{
@@ -68,6 +69,9 @@ fn routes_ouvertes() -> Router<AppState> {
         // porte la règle du coach, et un commissaire n'en est pas un. Le
         // contrôleur se garde lui-même par `perms.is_admin()`.
         .route(path::TEAM_TREASURY_ADJUST, post(adjust_treasury))
+        // Même raison : une action de commissaire, gardée dans le contrôleur
+        // par `require_team_admin` — le propriétaire n'y a pas droit.
+        .route(path::PHASE_OVERRIDE, post(post_phase_override))
         .route(path::TEAM_MATCHES, get(team_page_matches))
         .route(path::DISMISS_TEAM, post(dismiss_team))
         .route(path::TEAM_IDENTITY_WIDGET, get(team_identity_widget))

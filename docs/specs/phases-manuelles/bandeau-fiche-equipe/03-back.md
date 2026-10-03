@@ -13,7 +13,7 @@ déjà dans son contexte (`TeamsContext.admin_access`).
 | Fichier | Rôle |
 |---|---|
 | `teams/io/web/phase_override_controller.rs` | `post_phase_override` : lit le formulaire, exige le droit, appelle le use case, répond `HX-Refresh` ou le pied d'erreur |
-| `teams/io/web/templates/phase-override-foot.html` | le pied du panneau — inclus par le gabarit de la page, rendu seul en cas d'erreur |
+| `teams/io/web/templates/phase-override-error.html` | le message du panneau, rendu seul en cas de refus — pas le pied entier (carte 578) |
 | `teams/use_cases/open_phase_override_use_case.rs` | charge l'agrégat, lui demande d'ouvrir la phase, persiste l'événement |
 
 ## Les fichiers modifiés
@@ -60,7 +60,7 @@ En anglais (règle 18) : `PhaseEntry::{PostMatch, Override}`,
 `ManualImprovementPhaseOpened`, `ManualRecruitmentPhaseOpened`,
 `ManualDismissalsPhaseOpened`, `ManualPhaseClosed`, `returns_to_ready_to_play`,
 `phase_override_controller`, `open_phase_override_use_case`,
-`phase-override-foot`, `BannerCtaVm::OpenPhaseOverride`.
+`phase-override-error`, `BannerCtaVm::OpenPhaseOverride`.
 
 ## Règles métier
 

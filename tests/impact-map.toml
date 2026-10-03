@@ -320,6 +320,10 @@
 # `competitions` l'est aussi, et pour une raison propre à cet écran — le titre de
 # journée vient de `competition_match_display_proj`, via le port de contexte de
 # match. `players` résout le nom du joueur recruté affiché en détail de ligne.
+# Les phases manuelles (cartes 578 et 579). `build_full_competition` traverse
+# les BCs de la fixture ; le scénario n'assert que `teams`.
+"test_manual_phase_override" = ["teams", "competitions", "references", "ranking",
+                                "team_creation", "players", "spaces"]
 "test_team_treasury_tab" = ["teams", "match_report", "players", "spp_calculator",
                             "competitions", "references", "ranking",
                             "team_creation", "spaces"]
