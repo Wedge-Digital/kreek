@@ -185,6 +185,19 @@ Directives de travail pour Claude Code sur ce projet.
     Les deux commandes ci-dessus répondent en une seconde et disent si la règle
     tient — la première pour maintenant, la seconde pour tout l'historique.
 
+17. **On communique en français.** Toute réponse, compte rendu, plan, question
+    et analyse adressés à l'utilisateur est rédigé en français — comme les
+    cartes, les specs, les commentaires et les messages de commit du projet.
+
+    Les identifiants restent tels qu'ils sont écrits dans le code (`est_admin`,
+    `GamePhase::ReadyToPlay`, `HX-Refresh`) : on ne les traduit pas, on les
+    cite.
+
+    **Pourquoi c'est écrit** : une analyse rendue en anglais a déjà dû être
+    redemandée en français, deux fois dans la même session. La règle vaut aussi
+    pour ce qu'on produit en fin de tâche, quand l'attention est sur le
+    contenu plutôt que sur la langue — c'est là qu'elle a lâché.
+
 
 ---
 
