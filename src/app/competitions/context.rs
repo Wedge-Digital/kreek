@@ -8,6 +8,7 @@ use crate::app::competitions::io::app_events::match_report_cancelled_listener;
 use crate::app::competitions::io::app_events::match_report_confirmed_listener;
 use crate::app::competitions::io::app_events::match_report_published_listener;
 use crate::app::competitions::io::app_events::match_report_unpublished_listener;
+use crate::app::competitions::io::app_events::team_logo_changed_listener;
 use crate::app::competitions::io::app_events::user_unsubscribed_listener;
 use crate::app::competitions::io::repository::competition_repository::CompetitionRepository;
 use crate::app::competitions::io::repository::group_repository::GroupRepository;
@@ -70,6 +71,7 @@ pub fn init_listeners(
         match_day_repository.clone(),
     );
     user_unsubscribed_listener::init(&app_event_bus, pool.clone());
+    team_logo_changed_listener::init(&app_event_bus, pool.clone());
     match_report_unpublished_listener::init(&app_event_bus, pool.clone());
     match_report_published_listener::init(
         &app_event_bus,

@@ -85,6 +85,17 @@ pub enum TeamsAppEvent {
         space_id: SpaceId,
         player_id: PlayerId,
     },
+    /// Le coach a changé le logo de l'équipe, ou l'a retiré (`None`).
+    ///
+    /// `competitions` en garde une copie dans sa projection d'affichage des
+    /// matchs, faite à l'appariement : sans cet événement, calendrier et
+    /// résultats montreraient l'ancien logo — ou un logo retiré.
+    LogoChanged {
+        event_id: EventId,
+        team_id: TeamId,
+        space_id: SpaceId,
+        logo_url: Option<String>,
+    },
 }
 
 impl TeamsAppEvent {
@@ -94,6 +105,7 @@ impl TeamsAppEvent {
     pub const JOURNEYMAN_WITHDRAWN: &'static str = "TeamsJourneymanWithdrawn";
     pub const RECRUITMENT_PHASE_VALIDATED: &'static str = "TeamsRecruitmentPhaseValidated";
     pub const JOURNEYMAN_RECRUITED: &'static str = "TeamsJourneymanRecruited";
+    pub const LOGO_CHANGED: &'static str = "TeamsLogoChanged";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -103,6 +115,7 @@ impl TeamsAppEvent {
             Self::RecruitmentPhaseValidated { .. } => Self::RECRUITMENT_PHASE_VALIDATED,
             Self::JourneymanRecruited { .. } => Self::JOURNEYMAN_RECRUITED,
             Self::PlayerDismissed { .. } => Self::PLAYER_DISMISSED,
+            Self::LogoChanged { .. } => Self::LOGO_CHANGED,
         }
     }
 
@@ -115,7 +128,8 @@ impl TeamsAppEvent {
             | Self::JourneymanFielded { team_id, .. }
             | Self::JourneymanWithdrawn { team_id, .. }
             | Self::RecruitmentPhaseValidated { team_id, .. }
-            | Self::JourneymanRecruited { team_id, .. } => team_id.to_string(),
+            | Self::JourneymanRecruited { team_id, .. }
+            | Self::LogoChanged { team_id, .. } => team_id.to_string(),
         };
         EventEnvelope {
             event_id: EventId::new().to_string(),
