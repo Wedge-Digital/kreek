@@ -52,7 +52,8 @@ impl Routes {
     ///
     /// `action_url` porte le gabarit du POST : `players` ne connaît ainsi
     /// aucune route de `teams`. Les identifiants recrutables et le motif
-    /// unique des autres viennent du panier, qui seul les décide.
+    /// unique des autres viennent du panier, qui seul les décide — comme ceux
+    /// qui y sont déjà (carte 574).
     pub fn journeymen_widget(
         &self,
         space_id: &str,
@@ -60,15 +61,17 @@ impl Routes {
         action_url: &str,
         recrutables: &[String],
         motif: &str,
+        au_panier: &[String],
     ) -> String {
         let base = path::JOURNEYMEN_WIDGET
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id);
         format!(
-            "{base}?action_url={}&recrutables={}&motif={}",
+            "{base}?action_url={}&recrutables={}&motif={}&au_panier={}",
             urlencoding::encode(action_url),
             recrutables.join(","),
             urlencoding::encode(motif),
+            au_panier.join(","),
         )
     }
 

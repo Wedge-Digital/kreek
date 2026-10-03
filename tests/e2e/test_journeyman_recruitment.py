@@ -330,8 +330,20 @@ def test_le_journalier_recrute_reste_dans_l_effectif(page: Page, en_recrutement)
     _ouvrir_recrutement(page, ctx["space_id"], equipe)
 
     cliquer_quand_cable_locator(page, page.locator(".panel--jm .act-btn").first)
-    # Le panneau se recharge avec le catalogue : le journalier en sort.
-    expect(page.locator(".panel--jm")).to_have_count(0, timeout=10000)
+    # **Carte 574.** Ce point attendait que le panneau disparaisse. Or le
+    # journalier reste `Journeyman` jusqu'à la validation : le panneau reste,
+    # et l'attente ne passait qu'en tombant, par chance, dans les quelques
+    # millisecondes où le catalogue rechargé n'avait pas encore remonté le
+    # panneau.
+    #
+    # Il faut pourtant attendre quelque chose avant de valider : sans quoi la
+    # validation peut partir avant l'ajout, sur un panier vide, et le ménage
+    # emporte le journalier — l'assertion finale accuserait alors le produit.
+    # On attend donc ce qui est vrai : il est au panier, et sa ligne le dit.
+    expect(page.locator(".rec-cart")).to_contain_text("Panier · 1", timeout=10000)
+    bouton = page.locator(f".panel--jm tr[data-player-id='{journalier}'] .act-btn")
+    expect(bouton).to_have_text("Au panier")
+    expect(bouton).to_be_disabled()
 
     cliquer_quand_cable_locator(page, page.locator(".rec-cart .cta-primary"))
     _attendre(

@@ -90,6 +90,31 @@ pub struct EtatInjecte {
     pub recrutables: String,
     #[serde(default)]
     pub motif: String,
+    /// Les journaliers **déjà au panier**, séparés par des virgules (carte
+    /// 574). Leur cause n'est pas celle des autres bloqués — ils ne sont pas
+    /// refusés, ils sont pris —, d'où un paramètre à part plutôt que le motif
+    /// unique.
+    #[serde(default)]
+    pub au_panier: String,
+}
+
+/// Le libellé d'un journalier déjà au panier, celui de la maquette.
+const AU_PANIER: &str = "Au panier";
+
+/// Pourquoi le bouton de ce journalier est fermé — `None` s'il est ouvert.
+///
+/// **Au panier d'abord** : sans ce cas, un journalier qu'on vient de prendre
+/// tombait dans « non recrutable » avec un motif vide, et l'écran montrait un
+/// bouton grisé sans un mot (carte 574).
+fn blocage(etat: &EtatInjecte, player_id: &str) -> Option<String> {
+    let dans = |liste: &str| liste.split(',').any(|id| id == player_id);
+    if dans(&etat.au_panier) {
+        return Some(AU_PANIER.to_string());
+    }
+    match dans(&etat.recrutables) {
+        true => None,
+        false => Some(etat.motif.clone()),
+    }
 }
 
 pub async fn journeymen_widget(
@@ -136,16 +161,9 @@ fn ligne(
     etat: &EtatInjecte,
     catalog: &dyn crate::app::players::ports::ISkillCatalogPort,
 ) -> JourneymanRowVm {
-    let recrutable = etat
-        .recrutables
-        .split(',')
-        .any(|id| id == p.player_id.as_str());
     JourneymanRowVm {
         action_url: etat.action_url.replace("{player_id}", &p.player_id),
-        blocage: match recrutable {
-            true => None,
-            false => Some(etat.motif.clone()),
-        },
+        blocage: blocage(etat, &p.player_id),
         base_price_kpo: base_position_kpo(&p.roster_line_id, catalog),
         improvement: amelioration(&p),
         name: match p.personal_name.is_empty() {
@@ -229,19 +247,20 @@ mod tests {
         }
     }
 
-    fn ligne_vm(p: PlayerProjection, base: u32, recrutables: &str) -> JourneymanRowVm {
-        let etat = EtatInjecte {
+    fn etat(recrutables: &str, au_panier: &str) -> EtatInjecte {
+        EtatInjecte {
             action_url: "/app/s/teams/t/recruitment/journeyman/{player_id}".into(),
             recrutables: recrutables.into(),
             motif: "effectif complet : 16 joueurs maximum".into(),
-        };
-        let recrutable = etat.recrutables.split(',').any(|id| id == p.player_id);
+            au_panier: au_panier.into(),
+        }
+    }
+
+    fn ligne_vm(p: PlayerProjection, base: u32, recrutables: &str) -> JourneymanRowVm {
+        let etat = etat(recrutables, "");
         JourneymanRowVm {
             action_url: etat.action_url.replace("{player_id}", &p.player_id),
-            blocage: match recrutable {
-                true => None,
-                false => Some(etat.motif.clone()),
-            },
+            blocage: blocage(&etat, &p.player_id),
             base_price_kpo: base,
             improvement: amelioration(&p),
             name: p.position_name.clone(),
@@ -302,6 +321,19 @@ mod tests {
         let bloque = ligne_vm(projection(vec![], [0; 5], 65), 65, "autre");
         assert_eq!(
             bloque.blocage.as_deref(),
+            Some("effectif complet : 16 joueurs maximum")
+        );
+    }
+
+    /// Carte 574 : un journalier qu'on vient de prendre dit « Au panier », et
+    /// non un bouton grisé sans un mot. Le motif des autres bloqués ne le
+    /// recouvre pas.
+    #[test]
+    fn a_journeyman_in_the_basket_says_so() {
+        let etat = etat("", "j1");
+        assert_eq!(blocage(&etat, "j1").as_deref(), Some("Au panier"));
+        assert_eq!(
+            blocage(&etat, "j2").as_deref(),
             Some("effectif complet : 16 joueurs maximum")
         );
     }

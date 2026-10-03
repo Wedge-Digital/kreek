@@ -525,6 +525,14 @@ fn url_du_panneau_journaliers(basket: &RecruitmentBasket, space_id: &str, team_i
             }
         }
     }
+    // Ceux du panier ne sont pas des refus : ils sont pris. Sans eux,
+    // `hireable_journeymen` les écartant, leur ligne restait sans motif et
+    // l'écran montrait un bouton grisé muet (carte 574).
+    let au_panier: Vec<String> = basket
+        .journeymen_in_basket()
+        .iter()
+        .map(|j| j.player_id.to_string())
+        .collect();
     routes.players.journeymen_widget(
         space_id,
         team_id,
@@ -533,6 +541,7 @@ fn url_du_panneau_journaliers(basket: &RecruitmentBasket, space_id: &str, team_i
             .recruitment_add_journeyman_template(space_id, team_id),
         &recrutables,
         &motif,
+        &au_panier,
     )
 }
 
@@ -694,6 +703,46 @@ mod tests {
             OwnedStaff::default(),
             Kpo(tresorerie),
         )
+    }
+
+    /// Carte 574 : le journalier déjà au panier part dans `au_panier`, et non
+    /// dans les recrutables — sans quoi le widget de `players` le rendait
+    /// bloqué sans motif.
+    #[test]
+    fn a_journeyman_in_the_basket_is_passed_as_such_to_the_panel() {
+        let journalier = PlayerId::try_new(&format!("{:0>26}", 7)).unwrap();
+        let mut basket = panier(&["P"; 11], vec![], 500);
+        let squad = Squad {
+            members: vec![Player {
+                player_id: journalier.clone(),
+                roster_line: RosterLineId("P".into()),
+                jersey: Some(12),
+                personal_name: String::new(),
+                position_name: String::new(),
+                spp: 0,
+                value_kpo: Kpo(50),
+                presence: SquadPresence::Alignable,
+                engagement: crate::app::teams::domain::basket::SquadEngagement::Journalier,
+            }],
+        };
+        basket = RecruitmentBasket::hydrate(
+            "team-1".into(),
+            BasketVersion(3),
+            vec![BasketLine::Journeyman {
+                id: BasketLineId("l-j".into()),
+                player_id: journalier.clone(),
+                price: Kpo(50),
+            }],
+            catalogue(),
+            squad,
+            OwnedStaff::default(),
+            basket.remaining_treasury(),
+        );
+
+        let url = url_du_panneau_journaliers(&basket, "space", "team-1");
+
+        assert!(url.contains(&format!("au_panier={journalier}")), "{url}");
+        assert!(url.contains("recrutables=&"), "{url}");
     }
 
     fn ligne_joueur(uid: &str, prix: u32) -> BasketLine {
