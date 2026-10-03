@@ -9,6 +9,21 @@ use crate::common::services::event_bus::event_bus::EventBus;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 
+/// Pose la phase projetée. `None` l'efface — une équipe hors saison n'en a pas.
+async fn set_game_phase(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    team_id: &str,
+    phase: Option<&str>,
+) -> Result<(), RepositoryError> {
+    sqlx::query("UPDATE team_proj SET game_phase = $2, updated_at = now() WHERE team_id = $1")
+        .bind(team_id)
+        .bind(phase)
+        .execute(&mut **tx)
+        .await
+        .map(|_| ())
+        .map_err(RepositoryError::Database)
+}
+
 pub struct TeamRepository {
     pool: PgPool,
     /// Bus interne du BC. Le passer au constructeur plutôt qu'à l'append rend
@@ -213,11 +228,80 @@ impl TeamRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
-            // Autres événements (retraite temporaire, off-season, override admin) : pas encore
-            // produits par aucun use case (cartes 39/40/43/46 à faire) — quand l'un d'eux sera
-            // implémenté, ajouter ici l'arm correspondant, sous peine de reproduire le bug de
-            // désynchronisation de team_proj.game_phase déjà rencontré (cf. carte 175).
-            _ => {}
+            // Phases manuelles (carte 576) : la projection suit l'ouverture et
+            // la fermeture, sans quoi « Mes équipes » contredirait la fiche.
+            TeamDomainEvent::ManualImprovementPhaseOpened { .. } => {
+                set_game_phase(tx, team_id, Some("PlayerImprovement")).await?;
+            }
+            TeamDomainEvent::ManualRecruitmentPhaseOpened { .. } => {
+                set_game_phase(tx, team_id, Some("Recruitment")).await?;
+            }
+            TeamDomainEvent::ManualDismissalsPhaseOpened { .. } => {
+                set_game_phase(tx, team_id, Some("Dismissals")).await?;
+            }
+            TeamDomainEvent::ManualPhaseClosed { .. } => {
+                set_game_phase(tx, team_id, Some("ReadyToPlay")).await?;
+            }
+
+            // Écrits d'avance (décision du 2026-10-03) : aucun use case ne les
+            // émet encore, mais le jour où l'un le fera, la projection suivra
+            // `apply()` sans qu'on ait à s'en souvenir.
+            TeamDomainEvent::TeamRenamed { name } => {
+                sqlx::query(
+                    "UPDATE team_proj SET team_name = $2, updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .bind(name.as_ref())
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            TeamDomainEvent::OffSeasonStarted { .. }
+            | TeamDomainEvent::RetirementPhaseValidated => {
+                set_game_phase(tx, team_id, Some("OffSeason")).await?;
+            }
+            // Reprend `apply()` en entier : l'équipe quitte sa saison.
+            TeamDomainEvent::OffSeasonCompleted => {
+                sqlx::query(
+                    "UPDATE team_proj SET status = 'PendingEnrollment', competition_id = NULL, \
+                     season_id = NULL, game_phase = NULL, updated_at = now() WHERE team_id = $1",
+                )
+                .bind(team_id)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+
+            // ── Sans effet sur `team_proj` ──────────────────────────────────
+            // Nommés un à un, sans joker : un événement ajouté demain ne
+            // compile pas tant qu'il n'est pas classé. Le `_ => {}` qui était
+            // ici a coûté les cartes 175 et 408 — chaque fois un bras oublié,
+            // une phase projetée qui restait en arrière.
+            //
+            // La caisse et l'effectif ne vivent pas dans `team_proj` : la
+            // trésorerie a son relevé, la valeur d'équipe ne bouge que par
+            // `TeamValueRecomputed`, appendu au retour à « prête à jouer ».
+            TeamDomainEvent::InducementsPaid { .. }
+            | TeamDomainEvent::InducementsRefunded { .. }
+            | TeamDomainEvent::TreasuryAdjusted { .. }
+            | TeamDomainEvent::StaffBought { .. }
+            | TeamDomainEvent::StaffDismissed { .. }
+            | TeamDomainEvent::PlayerRecruited { .. }
+            | TeamDomainEvent::JourneymanRecruited { .. }
+            | TeamDomainEvent::JourneymanFielded { .. }
+            | TeamDomainEvent::JourneymanWithdrawn { .. }
+            | TeamDomainEvent::PlayerDismissed { .. }
+            | TeamDomainEvent::PlayerRetiredTemporarily { .. }
+            | TeamDomainEvent::PlayerReEngaged { .. }
+            | TeamDomainEvent::PlayerNotReEngaged { .. }
+            // `team_proj` n'a pas de colonne d'initiales.
+            | TeamDomainEvent::InitialsChanged { .. }
+            // Jamais émis (carte 46, annulée) : il reste pour relire
+            // l'historique.
+            | TeamDomainEvent::GamePhaseOverridden { .. }
+            // Le bras qui écrira `logo_url` est l'objet de la PR #11 : ne pas
+            // l'écrire ici une seconde fois.
+            | TeamDomainEvent::LogoChanged { .. } => {}
         }
         Ok(())
     }
@@ -933,6 +1017,120 @@ mod tests {
             phase(team_id).await.as_deref(),
             Some("ReadyToPlay"),
             "le jet referme la phase et rend l'équipe au jeu"
+        );
+    }
+
+    async fn projected(pool: &PgPool, team_id: &str, column: &str) -> Option<String> {
+        sqlx::query_scalar::<_, Option<String>>(&format!(
+            "SELECT {column} FROM team_proj WHERE team_id = $1"
+        ))
+        .bind(team_id)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    fn manual_opening(phase: crate::app::teams::domain::team::OverridablePhase) -> TeamDomainEvent {
+        use crate::app::teams::domain::team::OverridablePhase;
+        let admin_id = crate::app::shared_kernel::identity::ids::CoachId::new();
+        let admin_name = crate::app::shared_kernel::identity::coach_name::CoachName::try_new(
+            "Commissaire".to_string(),
+        )
+        .unwrap();
+        match phase {
+            OverridablePhase::PlayerImprovement => TeamDomainEvent::ManualImprovementPhaseOpened {
+                admin_id,
+                admin_name,
+                reason: None,
+            },
+            OverridablePhase::Recruitment => TeamDomainEvent::ManualRecruitmentPhaseOpened {
+                admin_id,
+                admin_name,
+                reason: None,
+            },
+            OverridablePhase::Dismissals => TeamDomainEvent::ManualDismissalsPhaseOpened {
+                admin_id,
+                admin_name,
+                reason: None,
+            },
+        }
+    }
+
+    /// Une phase ouverte à la main doit se lire en projection, sinon « Mes
+    /// équipes » contredit la fiche — le défaut des cartes 175 et 408 (carte
+    /// 576).
+    #[tokio::test]
+    async fn manual_phases_reach_the_projection() {
+        use crate::app::teams::domain::team::OverridablePhase;
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        for phase in OverridablePhase::ALL {
+            let team_id = ulid::Ulid::new().to_string();
+            repo.append(&team_id, &created_event(&team_id), 0)
+                .await
+                .unwrap();
+            repo.append(&team_id, &manual_opening(phase), 1)
+                .await
+                .unwrap();
+            assert_eq!(
+                projected(&pool, &team_id, "game_phase").await,
+                Some(format!("{:?}", phase.game_phase())),
+                "{phase:?}"
+            );
+            let closed = TeamDomainEvent::ManualPhaseClosed {
+                phase: phase.game_phase(),
+            };
+            repo.append(&team_id, &closed, 2).await.unwrap();
+            assert_eq!(
+                projected(&pool, &team_id, "game_phase").await.as_deref(),
+                Some("ReadyToPlay"),
+                "{phase:?}"
+            );
+        }
+    }
+
+    /// Les bras écrits d'avance (décision du 2026-10-03) reprennent `apply()`.
+    #[tokio::test]
+    async fn events_not_emitted_yet_already_write_their_columns() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = TeamRepository::new(pool.clone(), new_bus());
+        let team_id = ulid::Ulid::new().to_string();
+        repo.append(&team_id, &created_event(&team_id), 0)
+            .await
+            .unwrap();
+
+        let name =
+            crate::app::teams::domain::value_objects::TeamName::try_new("Les Renommés".to_string())
+                .unwrap();
+        repo.append(&team_id, &TeamDomainEvent::TeamRenamed { name }, 1)
+            .await
+            .unwrap();
+        assert_eq!(
+            projected(&pool, &team_id, "team_name").await.as_deref(),
+            Some("Les Renommés")
+        );
+
+        repo.append(&team_id, &TeamDomainEvent::RetirementPhaseValidated, 2)
+            .await
+            .unwrap();
+        assert_eq!(
+            projected(&pool, &team_id, "game_phase").await.as_deref(),
+            Some("OffSeason")
+        );
+
+        repo.append(&team_id, &TeamDomainEvent::OffSeasonCompleted, 3)
+            .await
+            .unwrap();
+        assert_eq!(projected(&pool, &team_id, "game_phase").await, None);
+        assert_eq!(projected(&pool, &team_id, "season_id").await, None);
+        assert_eq!(projected(&pool, &team_id, "competition_id").await, None);
+        assert_eq!(
+            projected(&pool, &team_id, "status").await.as_deref(),
+            Some("PendingEnrollment")
         );
     }
 

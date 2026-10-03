@@ -1310,6 +1310,15 @@ impl Team {
         })
     }
 
+    /// L'équipe est-elle dans l'amélioration **qui suit un match** ? C'est la
+    /// question du garde-fou de correction d'un rapport (carte 576) : une phase
+    /// de dépense ouverte à la main ne prolonge aucun match, et ne doit pas
+    /// rendre le dernier rapport corrigeable.
+    pub fn is_in_post_match_improvement(&self) -> bool {
+        self.game_phase == Some(GamePhase::PlayerImprovement)
+            && self.phase_entry == PhaseEntry::PostMatch
+    }
+
     fn open_manually(&mut self, phase: GamePhase) {
         self.game_phase = Some(phase);
         self.phase_entry = PhaseEntry::Override;
@@ -2966,5 +2975,14 @@ mod tests {
         assert!(TeamDomainEvent::DismissalsPhaseValidated.returns_to_ready_to_play());
         assert!(!TeamDomainEvent::RecruitmentPhaseValidated.returns_to_ready_to_play());
         assert!(!open(&ready_team(), OverridablePhase::Dismissals).returns_to_ready_to_play());
+    }
+
+    #[test]
+    fn post_match_improvement_excludes_a_manually_opened_one() {
+        assert!(team_after_post_match(0, Kpo(10)).is_in_post_match_improvement());
+        assert!(
+            !manually_opened(OverridablePhase::PlayerImprovement).is_in_post_match_improvement()
+        );
+        assert!(!ready_team().is_in_post_match_improvement());
     }
 }

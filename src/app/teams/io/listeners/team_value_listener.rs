@@ -23,19 +23,6 @@ use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
-/// Les quatre événements dont `apply()` pose `game_phase = ReadyToPlay`.
-/// L'équipe est alors dans l'état où sa valeur doit refléter son effectif réel —
-/// c'est le seul moment où la TV bouge.
-fn ends_in_ready_to_play(event: &TeamDomainEvent) -> bool {
-    matches!(
-        event,
-        TeamDomainEvent::TeamEnrolled { .. }
-            | TeamDomainEvent::DismissalsPhaseValidated
-            | TeamDomainEvent::MatchReportingCancelled { .. }
-            | TeamDomainEvent::CostlyMistakesApplied { .. }
-    )
-}
-
 /// Les faits que `players` annonce et qui changent l'effectif **une fois écrits**.
 ///
 /// Ce sont les seuls moments où un recalcul lit un effectif à jour. Les deux
@@ -98,7 +85,7 @@ pub fn init(event_bus: &EventBus, deps: TeamValueDeps) {
                     // `TeamValueRecomputed` n'est surtout pas un déclencheur :
                     // le recalcul appende, l'append publie, et le listener
                     // recevrait son propre événement — boucle infinie.
-                    if !ends_in_ready_to_play(&event) {
+                    if !event.returns_to_ready_to_play() {
                         continue;
                     }
                     let span = tracing::info_span!(
@@ -168,21 +155,23 @@ mod tests {
 
     #[test]
     fn les_quatre_entrees_en_ready_to_play_declenchent_le_recalcul() {
-        assert!(ends_in_ready_to_play(&TeamDomainEvent::TeamEnrolled {
-            competition_id: CompetitionId::new(),
-            competition_name: "C".into(),
-            season_id: SeasonId::new(),
-            season_name: "S".into(),
-        }));
-        assert!(ends_in_ready_to_play(
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
+            &TeamDomainEvent::TeamEnrolled {
+                competition_id: CompetitionId::new(),
+                competition_name: "C".into(),
+                season_id: SeasonId::new(),
+                season_name: "S".into(),
+            }
+        ));
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::DismissalsPhaseValidated
         ));
-        assert!(ends_in_ready_to_play(
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::MatchReportingCancelled {
                 match_report_id: MatchReportId::new(),
             }
         ));
-        assert!(ends_in_ready_to_play(
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::CostlyMistakesApplied {
                 roll: 3,
                 incident: IncidentType::None,
@@ -192,21 +181,34 @@ mod tests {
         ));
     }
 
+    /// La sortie d'une phase ouverte à la main recalcule la valeur : un achat de
+    /// compétence ou un recrutement manuel doit y apparaître (carte 576).
+    #[test]
+    fn closing_a_manual_phase_recomputes() {
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
+            &TeamDomainEvent::ManualPhaseClosed {
+                phase: crate::app::teams::domain::team::GamePhase::PlayerImprovement,
+            }
+        ));
+    }
+
     /// Sans cette exclusion, le recalcul appende, l'append publie, et le
     /// listener se rappelle lui-même sans fin.
     #[test]
     fn team_value_recomputed_ne_se_declenche_pas_lui_meme() {
-        assert!(!ends_in_ready_to_play(
+        assert!(!TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::TeamValueRecomputed { value: Kpo(550) }
         ));
     }
 
     #[test]
     fn les_autres_evenements_ne_declenchent_rien() {
-        assert!(!ends_in_ready_to_play(
+        assert!(!TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::RecruitmentPhaseValidated
         ));
-        assert!(!ends_in_ready_to_play(&TeamDomainEvent::TeamDismissed));
+        assert!(!TeamDomainEvent::returns_to_ready_to_play(
+            &TeamDomainEvent::TeamDismissed
+        ));
     }
 
     /// Les annonces de `players` recalculent, et nomment l'équipe — pas le

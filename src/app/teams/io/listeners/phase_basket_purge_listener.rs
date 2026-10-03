@@ -5,22 +5,6 @@ use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
-/// Les quatre événements dont `apply()` pose `game_phase = ReadyToPlay`.
-///
-/// Volontairement dupliqué avec `team_value_listener` : les deux réagissent aux
-/// mêmes événements mais pour des raisons sans rapport — recalculer une valeur
-/// d'un côté, oublier un panier de l'autre. Les fusionner ferait un listener à
-/// deux responsabilités, qu'on n'oserait plus toucher.
-fn ends_in_ready_to_play(event: &TeamDomainEvent) -> bool {
-    matches!(
-        event,
-        TeamDomainEvent::TeamEnrolled { .. }
-            | TeamDomainEvent::DismissalsPhaseValidated
-            | TeamDomainEvent::MatchReportingCancelled { .. }
-            | TeamDomainEvent::CostlyMistakesApplied { .. }
-    )
-}
-
 /// Purge les deux paniers dès que l'équipe repasse « prête à jouer ».
 ///
 /// Un panier ne survit donc jamais à un tour de séquence : le coach qui
@@ -40,7 +24,7 @@ pub fn init(event_bus: &EventBus, baskets: Arc<dyn IPhaseBasketRepository>) {
                     else {
                         continue;
                     };
-                    if !ends_in_ready_to_play(&event) {
+                    if !event.returns_to_ready_to_play() {
                         continue;
                     }
                     let span = tracing::info_span!(
@@ -79,21 +63,23 @@ mod tests {
 
     #[test]
     fn les_quatre_entrees_en_ready_to_play_purgent() {
-        assert!(ends_in_ready_to_play(&TeamDomainEvent::TeamEnrolled {
-            competition_id: CompetitionId::new(),
-            competition_name: "C".into(),
-            season_id: SeasonId::new(),
-            season_name: "S".into(),
-        }));
-        assert!(ends_in_ready_to_play(
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
+            &TeamDomainEvent::TeamEnrolled {
+                competition_id: CompetitionId::new(),
+                competition_name: "C".into(),
+                season_id: SeasonId::new(),
+                season_name: "S".into(),
+            }
+        ));
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::DismissalsPhaseValidated
         ));
-        assert!(ends_in_ready_to_play(
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::MatchReportingCancelled {
                 match_report_id: MatchReportId::new(),
             }
         ));
-        assert!(ends_in_ready_to_play(
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::CostlyMistakesApplied {
                 roll: 3,
                 incident: IncidentType::None,
@@ -103,12 +89,23 @@ mod tests {
         ));
     }
 
+    /// La sortie d'une phase ouverte à la main ramène à « prête à jouer » : les
+    /// paniers sont purgés comme après un après-match (carte 576).
+    #[test]
+    fn closing_a_manual_phase_purges() {
+        assert!(TeamDomainEvent::returns_to_ready_to_play(
+            &TeamDomainEvent::ManualPhaseClosed {
+                phase: GamePhase::Recruitment,
+            }
+        ));
+    }
+
     /// Valider le recrutement fait passer en phase de renvois, pas en
     /// « prête à jouer » : le panier de renvois qui vient d'être ouvert ne
     /// doit surtout pas être purgé.
     #[test]
     fn valider_le_recrutement_ne_purge_pas() {
-        assert!(!ends_in_ready_to_play(
+        assert!(!TeamDomainEvent::returns_to_ready_to_play(
             &TeamDomainEvent::RecruitmentPhaseValidated
         ));
     }

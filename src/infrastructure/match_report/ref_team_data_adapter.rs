@@ -49,10 +49,10 @@ impl ITeamDataPort for RefTeamDataAdapter {
             .await
             .map_err(|e| e.to_string())?;
 
+        // Une phase de dépense ouverte à la main ne rend aucun rapport
+        // corrigeable : la question est posée au domaine (carte 576).
         Ok(team
-            .map(|t| {
-                t.game_phase == Some(crate::app::teams::domain::team::GamePhase::PlayerImprovement)
-            })
+            .map(|t| t.is_in_post_match_improvement())
             .unwrap_or(false))
     }
 

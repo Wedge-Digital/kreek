@@ -15,7 +15,7 @@ Le `_ => {}` de fin de `match` disparaît (`team_repository.rs`). Les 34
 |---|---|---|
 | **les neufs** | les trois ouvertures | `game_phase` = la phase ouverte |
 | | `ManualPhaseClosed` | `game_phase = 'ReadyToPlay'` |
-| **jamais émis, mais ils touchent une colonne** | `TeamRenamed` → `team_name` ; `OffSeasonStarted`, `RetirementPhaseValidated` → `game_phase = 'OffSeason'` ; `OffSeasonCompleted` → `game_phase = NULL` | **leur bras est écrit dès maintenant** (décision du 2026-10-03) : le jour où ils seront émis, la projection suivra |
+| **jamais émis, mais ils touchent une colonne** | `TeamRenamed` → `team_name` ; `OffSeasonStarted`, `RetirementPhaseValidated` → `game_phase = 'OffSeason'` ; `OffSeasonCompleted` → comme `apply()` : `status = 'PendingEnrollment'`, `competition_id`, `season_id` et `game_phase` à `NULL` | **leur bras est écrit dès maintenant** (décision du 2026-10-03) : le jour où ils seront émis, la projection suivra |
 | | `LogoChanged` → `logo_url` | **pas de bras ici** : c'est l'objet de la PR #11. Rangé dans le groupe sans effet, commentaire renvoyant à la PR — ne pas écrire deux fois le même bras |
 | **sans effet sur `team_proj`** | `InducementsPaid`, `InducementsRefunded`, `InitialsChanged`, `JourneymanFielded`, `JourneymanRecruited`, `JourneymanWithdrawn`, `PlayerDismissed`, `PlayerNotReEngaged`, `PlayerReEngaged`, `PlayerRecruited`, `PlayerRetiredTemporarily`, `StaffDismissed`, `GamePhaseOverridden` | groupés, nommés un par un, commentaire disant pourquoi |
 
@@ -41,6 +41,9 @@ du BC — sans joker.
 phase `PlayerImprovement` **d'entrée `PostMatch`** : une phase de dépense
 ouverte à la main ne rend aucun rapport corrigeable. Le pendant, côté écran, de
 la garde du domaine (phase 6, point 7).
+
+La question est posée au domaine, `Team::is_in_post_match_improvement()`, et non
+recalculée dans l'adapter (décision du 2026-10-03, carte 576).
 
 ## 6. Les réponses HTTP
 
@@ -80,3 +83,5 @@ Question posée le 2026-10-03 — deux décisions à cette étape :
     `OffSeasonCompleted` et `RetirementPhaseValidated` sont écrits maintenant,
     bien qu'ils ne soient pas encore émis.
 12. `LogoChanged` reste à la PR #11.
+13. Le bras de `OffSeasonCompleted` reprend `apply()` en entier, et non la seule
+    phase (carte 576).
