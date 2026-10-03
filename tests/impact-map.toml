@@ -322,6 +322,8 @@
 # match. `players` résout le nom du joueur recruté affiché en détail de ligne.
 # Les phases manuelles (cartes 578 et 579). `build_full_competition` traverse
 # les BCs de la fixture ; le scénario n'assert que `teams`.
+# Les gardes des routes d'administration (carte 573).
+"test_admin_route_guards" = ["competitions", "auth", "spaces", "references"]
 "test_manual_phase_override" = ["teams", "competitions", "references", "ranking",
                                 "team_creation", "players", "spaces"]
 "test_team_treasury_tab" = ["teams", "match_report", "players", "spp_calculator",

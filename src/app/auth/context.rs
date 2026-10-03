@@ -3,7 +3,7 @@ use crate::app::auth::io::repository::reset_token_repository::{
     IResetTokenRepository, ResetTokenRepository,
 };
 use crate::app::auth::io::repository::user_repository::UserRepository;
-use crate::app::auth::ports::IUserRepository;
+use crate::app::auth::ports::{IAccountCreationPolicy, IUserRepository};
 use crate::common::services::email::IEmailService;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -30,6 +30,8 @@ pub struct AuthContext {
     /// `auth` ne connaît pas la page d'accueil de celui qui l'héberge — c'est
     /// son seul lien sortant, et la condition pour qu'il soit extractible.
     pub authenticated_home: String,
+    /// Qui peut créer un compte coach — décidé par l'hôte (carte 573).
+    pub account_creation_policy: Arc<dyn IAccountCreationPolicy>,
 }
 
 pub fn init_app_event_listeners(_app_event_bus: &EventBus, _event_bus: &EventBus, _pool: PgPool) {}
@@ -45,6 +47,7 @@ impl AuthContext {
         email_service: Arc<dyn IEmailService>,
         app_url: String,
         authenticated_home: String,
+        account_creation_policy: Arc<dyn IAccountCreationPolicy>,
     ) -> Self {
         Self {
             user_repository: Arc::new(UserRepository::new(pool.clone())),
@@ -53,6 +56,7 @@ impl AuthContext {
             email_service,
             app_url,
             authenticated_home,
+            account_creation_policy,
         }
     }
 }

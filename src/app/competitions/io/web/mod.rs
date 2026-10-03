@@ -15,3 +15,4 @@ pub mod rules_labels;
 pub mod tests;
 pub mod widget_tester_controller;
 pub mod widgets;
+pub mod wizard_guard;

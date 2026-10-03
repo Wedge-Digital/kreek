@@ -21,7 +21,7 @@ import json
 import pytest
 from playwright.sync_api import Page, expect
 
-from competition_lifecycle import BASE_URL, build_full_competition
+from competition_lifecycle import create_full_competition, BASE_URL, build_full_competition
 from db_helpers import query_db
 
 
@@ -44,13 +44,21 @@ def _url_etape_3(ctx: dict) -> str:
     )
 
 
-def test_l_etape_3_n_a_plus_de_section_phase_finale(page: Page, competition, console_errors):
+def test_l_etape_3_n_a_plus_de_section_phase_finale(
+    page: Page, space_id, competition_create_url, console_errors
+):
     """L'écran, et sa renumérotation.
 
     Retirer la section sans renuméroter aurait laissé « 1, 3, 4 » — un saut que
     le lecteur attribue à un défaut d'affichage plutôt qu'à un choix.
+
+    **Sur un brouillon** : depuis la carte 573, le magicien est fermé à une
+    compétition publiée, et l'étape 3 de la fixture `competition` renverrait
+    vers son administration.
     """
-    page.goto(_url_etape_3(competition), wait_until="load")
+    brouillon = create_full_competition(page, competition_create_url, stop_at_step=3)
+    brouillon["space_id"] = space_id
+    page.goto(_url_etape_3(brouillon), wait_until="load")
     expect(page.locator(".section-title").first).to_be_visible(timeout=10000)
 
     sections = [t.strip() for t in page.locator(".section-title").all_inner_texts()]

@@ -14,6 +14,45 @@ use async_trait::async_trait;
 /// `status` qui change de nom, et une garde qui laisse tout passer sans un mot.
 pub const STATUT_SAISON_PRETE: &str = "ready";
 
+/// Les statuts d'une saison **en cours de création** : ceux que pose
+/// l'assistant, étape après étape.
+const DRAFT_STATUSES: [&str; 4] = [
+    "draft",
+    "rules_selected",
+    "structure_selected",
+    "invitations_configured",
+];
+
+/// L'assistant ne s'ouvre qu'à une saison en brouillon (décision du
+/// 2026-10-03, carte 573). À partir de `STATUT_SAISON_PRETE`, elle se modifie
+/// par ses panneaux d'administration.
+///
+/// **Une liste blanche, et non « tout sauf `ready` »** : `upcoming` et
+/// `completed` existent aussi, et un statut qu'on ajouterait demain doit
+/// fermer l'assistant plutôt que l'ouvrir — un contrôle d'accès échoue fermé.
+pub fn is_draft_status(status: &str) -> bool {
+    DRAFT_STATUSES.contains(&status)
+}
+
+#[cfg(test)]
+mod draft_status_tests {
+    use super::*;
+
+    #[test]
+    fn the_four_wizard_statuses_are_drafts() {
+        for status in DRAFT_STATUSES {
+            assert!(is_draft_status(status), "{status}");
+        }
+    }
+
+    #[test]
+    fn a_ready_or_later_season_is_not_a_draft() {
+        for status in [STATUT_SAISON_PRETE, "upcoming", "completed", "unknown"] {
+            assert!(!is_draft_status(status), "{status}");
+        }
+    }
+}
+
 pub struct SeasonBaseInfo {
     pub name: String,
 }

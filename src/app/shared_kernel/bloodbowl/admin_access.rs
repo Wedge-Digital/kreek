@@ -41,6 +41,11 @@ pub trait IAdminAccessPort: Send + Sync {
 
     async fn is_competition_admin(&self, user_id: &CoachId, competition_id: &CompetitionId)
         -> bool;
+
+    /// Admin d'**au moins un** espace — le compte exploitant compris (carte
+    /// 573). La question d'une route qui n'a pas d'espace dans son chemin : la
+    /// création d'un compte coach, ouverte à ceux qui voient le panneau.
+    async fn is_admin_of_any_space(&self, user_id: &CoachId) -> bool;
 }
 
 /// La règle : admin de l'espace, ou admin de la compétition.
@@ -127,6 +132,11 @@ impl IAdminAccessPort for FakeAdminAccess {
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let cle = (user_id.to_string(), competition_id.to_string());
         self.competition_admins.contains(&cle)
+    }
+
+    async fn is_admin_of_any_space(&self, user_id: &CoachId) -> bool {
+        let coach = user_id.to_string();
+        self.space_admins.iter().any(|(c, _)| *c == coach)
     }
 }
 

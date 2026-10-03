@@ -439,6 +439,11 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             email_service.clone(),
             app_url.clone(),
             crate::web::routes::path::APP_LAYOUT.to_string(),
+            // Qui peut créer un compte coach : la règle de kreek, injectée
+            // dans `auth` qui ne connaît pas les espaces (carte 573).
+            Arc::new(crate::infrastructure::auth::account_creation_policy_adapter::AccountCreationPolicyAdapter::new(
+                admin_access.clone(),
+            )),
         ),
         spaces: SpacesContext::new(
             &pool,

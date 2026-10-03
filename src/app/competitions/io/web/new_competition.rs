@@ -3,6 +3,9 @@ use crate::app::competitions::domain::competition_rules::CompetitionRules;
 use crate::app::competitions::domain::season_repository_port::{
     SeasonBaseInfo, SeasonRepositoryError,
 };
+use crate::app::competitions::io::web::wizard_guard::{
+    require_wizard_access, require_wizard_access_without_season, WizardIntent,
+};
 use crate::app::competitions::ports::ITiebreakCatalogPort;
 use crate::app::competitions::use_cases::create_draft_competition::{
     execute, CreateDraftCompetitionCommand, CreateDraftCompetitionError,
@@ -14,7 +17,6 @@ use crate::app::competitions::use_cases::update_draft_competition::{
     execute as execute_update, UpdateDraftCompetitionCommand, UpdateDraftCompetitionError,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::bloodbowl::admin_access::is_admin;
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
@@ -22,6 +24,7 @@ use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
@@ -53,9 +56,22 @@ impl IntoResponse for NewCompetitionPhase2Template {
 }
 
 pub async fn get_new_competition_phase_2(
+    auth_session: AuthSession,
+    headers: HeaderMap,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    if let Err(refus) = require_wizard_access(
+        &auth_session,
+        &headers,
+        (&space_id, &competition_id, &season_id),
+        WizardIntent::Display,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -182,9 +198,22 @@ pub async fn get_new_competition_phase_1(Path(space_id): Path<String>) -> impl I
 }
 
 pub async fn get_new_competition_phase_1_edit(
+    auth_session: AuthSession,
+    headers: HeaderMap,
     Path((space_id, competition_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    if let Err(refus) = require_wizard_access_without_season(
+        &auth_session,
+        &headers,
+        (&space_id, &competition_id),
+        WizardIntent::Display,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let cid = match CompetitionId::try_new(&competition_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -332,10 +361,22 @@ pub async fn post_new_competition(
 
 pub async fn post_update_competition(
     auth_session: AuthSession,
+    headers: HeaderMap,
     Path((space_id, competition_id)): Path<(String, String)>,
     State(state): State<AppState>,
     Json(payload): Json<CreateCompetitionFormPayload>,
 ) -> impl IntoResponse {
+    if let Err(refus) = require_wizard_access_without_season(
+        &auth_session,
+        &headers,
+        (&space_id, &competition_id),
+        WizardIntent::Submit,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let initial_admin_ids_json =
         serde_json::to_string(&payload.admin_ids).unwrap_or_else(|_| "[]".to_string());
     let mut tmpl = NewCompetitionTemplate {
@@ -401,21 +442,6 @@ pub async fn post_update_competition(
     let Some(user) = auth_session.user.as_ref() else {
         return hx_redirect(crate::app::auth::routes::path::AUTH_LAYOUT);
     };
-    // Carte 573 : cette route réécrit la liste des admins. Sans garde,
-    // n'importe quel membre de l'espace pouvait s'y déclarer admin de toute
-    // compétition. Elle exige désormais un admin de l'espace ou de la
-    // compétition visée — la règle de tout kreek.
-    if !is_admin(
-        state.competitions.admin_access.as_ref(),
-        &user.id,
-        &sid,
-        Some(&cid),
-    )
-    .await
-    {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
     let admin_ids: Vec<CoachId> = payload
         .admin_ids
         .iter()
@@ -428,6 +454,7 @@ pub async fn post_update_competition(
         name,
         logo,
         admin_ids,
+        editor_id: user.id.clone(),
     };
 
     match execute_update(cmd, state.competitions.competition_repository.as_ref()).await {
@@ -465,10 +492,23 @@ pub struct SaveRulesPayload {
 }
 
 pub async fn post_competition_rules(
+    auth_session: AuthSession,
+    headers: HeaderMap,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     Json(payload): Json<SaveRulesPayload>,
 ) -> impl IntoResponse {
+    if let Err(refus) = require_wizard_access(
+        &auth_session,
+        &headers,
+        (&space_id, &competition_id, &season_id),
+        WizardIntent::Submit,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let Ok(sid) = SeasonId::try_new(&season_id) else {
         return (StatusCode::BAD_REQUEST, "Identifiant de saison invalide.").into_response();
     };

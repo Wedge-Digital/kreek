@@ -73,6 +73,30 @@ création.
 **Reste** : les décisions 1 à 3, les tests unitaires des gardes sur
 `FakeAdminAccess`, les tests e2e par requête forgée.
 
+## Livré ensuite — 2026-10-03
+
+- **Le créateur est admin** : `Competition::new` reçoit `created_by` et
+  l'ajoute à la liste. **Un admin de la compétition qui modifie la liste y
+  reste** (`admins_after_edit`) — décision du 2026-10-03 : le créateur ne peut
+  pas s'en retirer, il se fermerait l'assistant en pleine création. Un admin
+  d'espace absent de la liste n'y est pas ajouté.
+- **`is_draft_status`**, à côté de `STATUT_SAISON_PRETE` : une liste blanche des
+  quatre statuts de l'assistant — `upcoming`, `completed` et tout statut futur
+  ferment l'assistant.
+- **`wizard_guard`** sur les neuf contrôleurs de l'assistant : admin exigé, et
+  hors brouillon un GET renvoie vers l'administration, un POST répond 409.
+- **Notifications** : `require_admin_access` sur le GET et le POST, sans
+  brouillon exigé — le widget sert aussi au résumé d'une compétition publiée.
+- **Création de compte** : `IAccountCreationPolicy` dans `auth`, injectée par
+  l'hôte (`infrastructure/auth/`), qui pose la question au service commun —
+  `IAdminAccessPort::is_admin_of_any_space`, compte exploitant compris.
+
+**Ce que la garde a changé à deux tests existants.** L'étape 3 était observée
+sur une compétition publiée ; elle l'est sur un brouillon
+(`create_full_competition(stop_at_step=3)`). La republication par l'étape 5
+n'existe plus : le test vérifie qu'elle est refusée et que le journal des
+annonces ne bouge pas — l'index d'idempotence reste éprouvé sur vraie base.
+
 ## Tests
 
 Unitaires : chaque garde refuse un simple membre et laisse passer un admin, sur

@@ -13,11 +13,13 @@
 //! Re-rendre le widget après chaque clic ferait clignoter les cases et perdrait
 //! le focus clavier, pour réafficher exactement ce qui est déjà à l'écran.
 
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_notifications::{
     applicability, CompetitionNotifications, Inapplicable, NotificationApplicability,
     NotifyRegistrationDeadline, NotifyRegistrationOpen, NotifyRoundClosing, NotifyRoundEve,
 };
 use crate::app::competitions::domain::season_repository_port::ISeasonRepository;
+use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
 use crate::app::competitions::use_cases::save_competition_notifications::{
     self, SaveCompetitionNotificationsCommand,
 };
@@ -201,10 +203,25 @@ fn mode_connu(brut: &str) -> Option<&'static str> {
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
 pub async fn get_notification_settings_widget(
+    auth_session: AuthSession,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     Query(q): Query<WidgetModeQuery>,
     State(state): State<AppState>,
 ) -> Response {
+    // Carte 573 : les réglages d'une compétition ne regardent que ses admins.
+    // Sans brouillon exigé : le même widget sert au résumé de l'administration
+    // d'une compétition publiée.
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let (Some(mode), Ok(sid)) = (mode_connu(&q.mode), SeasonId::try_new(&season_id)) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
@@ -247,10 +264,22 @@ async fn charger(
 }
 
 pub async fn post_notification_settings(
-    Path((_space_id, _competition_id, season_id)): Path<(String, String, String)>,
+    auth_session: AuthSession,
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
     Form(payload): Form<NotificationSettingsPayload>,
 ) -> Response {
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let Ok(sid) = SeasonId::try_new(&season_id) else {
         return StatusCode::BAD_REQUEST.into_response();
     };

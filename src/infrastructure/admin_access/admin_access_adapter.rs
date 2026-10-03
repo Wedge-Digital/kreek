@@ -106,6 +106,27 @@ impl IAdminAccessPort for AdminAccessAdapter {
             _ => false,
         }
     }
+
+    /// Les espaces du coach, puis son profil dans chacun : deux lectures que le
+    /// dépôt sait déjà faire, pas de SQL nouveau. Un coach n'appartient qu'à
+    /// quelques espaces.
+    async fn is_admin_of_any_space(&self, user_id: &CoachId) -> bool {
+        if self.is_operator(user_id).await {
+            return true;
+        }
+        let Ok(spaces) = self.space_repo.find_by_coach_id(user_id).await else {
+            return false;
+        };
+        for space in spaces {
+            let Ok(space_id) = SpaceId::try_new(&space.id) else {
+                continue;
+            };
+            if self.is_space_admin(user_id, &space_id).await {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 #[cfg(test)]
@@ -244,6 +265,42 @@ mod tests {
         assert!(!a.is_space_admin(&operator, &space).await);
         account(&pool, &operator, OPERATOR_ACCOUNT).await;
         assert!(a.is_space_admin(&operator, &space).await);
+    }
+
+    async fn space(pool: &PgPool, name: &str) -> SpaceId {
+        let space: SpaceId = EntityId::new();
+        sqlx::query("INSERT INTO spaces (id, space_name, space_icon_path) VALUES ($1, $2, $3)")
+            .bind(space.to_string())
+            .bind(name)
+            .bind("https://res.cloudinary.com/demo/image/upload/sample.jpg")
+            .execute(pool)
+            .await
+            .unwrap();
+        space
+    }
+
+    /// Carte 573 : la création de compte n'a pas d'espace dans son chemin. Il
+    /// suffit d'administrer **un** des espaces dont on est membre — être membre
+    /// de plusieurs sans en administrer aucun ne suffit pas.
+    #[sqlx::test]
+    async fn admin_of_one_space_among_several_is_admin_of_any_space(pool: PgPool) {
+        let (one, other) = (space(&pool, "Ligue A").await, space(&pool, "Ligue B").await);
+        let (admin, member_only): (CoachId, CoachId) = (EntityId::new(), EntityId::new());
+        member(&pool, &one, &admin, "SpaceUser").await;
+        member(&pool, &other, &admin, "SpaceAdmin").await;
+        member(&pool, &one, &member_only, "SpaceUser").await;
+        member(&pool, &other, &member_only, "SpaceUser").await;
+        let a = adapter(&pool);
+        assert!(a.is_admin_of_any_space(&admin).await);
+        assert!(!a.is_admin_of_any_space(&member_only).await);
+    }
+
+    /// Le compte exploitant, membre de rien, crée des comptes.
+    #[sqlx::test]
+    async fn operator_account_is_admin_of_any_space(pool: PgPool) {
+        let operator: CoachId = EntityId::new();
+        account(&pool, &operator, OPERATOR_ACCOUNT).await;
+        assert!(adapter(&pool).is_admin_of_any_space(&operator).await);
     }
 
     /// Une compétition introuvable refuse : échec fermé.

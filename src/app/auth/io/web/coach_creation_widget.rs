@@ -26,6 +26,7 @@
 //! Aucun sélecteur de profil : le rôle dans un espace est un concept de l'hôte,
 //! que ce BC ne connaît pas.
 
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::auth::context::AuthContext;
 use crate::app::auth::use_cases::create_account_without_password::{
     execute, CreateAccountError, CreateAccountWithoutPasswordCommand,
@@ -70,7 +71,14 @@ pub struct CoachPrefill {
     pub email: String,
 }
 
-pub async fn get_coach_creation_widget(Query(prefill): Query<CoachPrefill>) -> Response {
+pub async fn get_coach_creation_widget(
+    auth_session: AuthSession,
+    State(ctx): State<AuthContext>,
+    Query(prefill): Query<CoachPrefill>,
+) -> Response {
+    if let Err(refus) = may_create_accounts(&auth_session, &ctx).await {
+        return refus;
+    }
     CoachCreationWidget {
         pseudo: prefill.pseudo,
         email: prefill.email,
@@ -86,9 +94,13 @@ pub struct CreateCoachForm {
 }
 
 pub async fn post_coach_creation_widget(
+    auth_session: AuthSession,
     State(ctx): State<AuthContext>,
     Form(form): Form<CreateCoachForm>,
 ) -> Response {
+    if let Err(refus) = may_create_accounts(&auth_session, &ctx).await {
+        return refus;
+    }
     let cmd = CreateAccountWithoutPasswordCommand {
         coach_name: form.coach_name.clone(),
         email: form.email.clone(),
@@ -111,6 +123,28 @@ pub async fn post_coach_creation_widget(
             erreur: Some(libelle(&e)),
         }
         .into_response(),
+    }
+}
+
+/// La garde des deux routes du widget (carte 573).
+///
+/// Le panneau qui l'affiche était gardé, la route ne l'était pas : n'importe
+/// quel connecté pouvait créer un compte par une requête forgée. La règle
+/// appartient à l'hôte — `auth` ne connaît pas les espaces.
+async fn may_create_accounts(
+    auth_session: &AuthSession,
+    ctx: &AuthContext,
+) -> Result<(), Response> {
+    let Some(user) = auth_session.user.as_ref() else {
+        return Err(StatusCode::UNAUTHORIZED.into_response());
+    };
+    match ctx
+        .account_creation_policy
+        .may_create_accounts(&user.id)
+        .await
+    {
+        true => Ok(()),
+        false => Err(StatusCode::FORBIDDEN.into_response()),
     }
 }
 

@@ -94,23 +94,29 @@ def test_publier_une_competition_annonce_l_ouverture_aux_membres(
 
 
 def test_republier_n_annonce_pas_une_seconde_fois(page: Page, space_id, competition_create_url):
-    """R3 de bout en bout. La clé d'idempotence ne porte pas de journée pour
-    l'ouverture — c'est le cas que l'index protège par `COALESCE(round_id, '')`,
-    et celui qu'une contrainte `UNIQUE` ordinaire laisserait passer."""
+    """R3 de bout en bout : une compétition publiée n'annonce pas deux fois.
+
+    **Depuis la carte 573, la republication est refusée en amont** : le
+    magicien est fermé à une compétition publiée. L'étape 5 renvoie vers
+    l'administration, et un nouvel envoi de la validation répond 409. La clé
+    d'idempotence — `COALESCE(round_id, '')` — reste éprouvée sur vraie base par
+    `test_notification_delivery_repository` ; ce test garde le bout de la
+    chaîne : quoi qu'on tente à l'écran, le journal ne bouge pas."""
     comp = create_full_competition(
         page, competition_create_url, num_rounds=1, access_mode="open"
     )
     avant = _attendre_le_journal(comp["season_id"])
     assert avant, "sans première annonce, ce test ne prouverait rien"
 
-    # Repasser par l'étape 5 et republier.
-    page.goto(
+    validation = (
         f"http://localhost:3210/app/{space_id}/competitions/create/"
-        f"{comp['competition_id']}/{comp['season_id']}/validation",
-        wait_until="load",
+        f"{comp['competition_id']}/{comp['season_id']}/validation"
     )
-    page.click(".btn-cta")
-    page.wait_for_timeout(2000)
+    page.goto(validation, wait_until="load")
+    assert "/admin" in page.url, f"l'étape 5 doit renvoyer vers l'administration : {page.url}"
+
+    resp = page.request.post(validation, headers={"HX-Request": "true"})
+    assert resp.status == 409, f"republier doit être refusé : {resp.status}"
 
     apres = _lignes_du_journal(comp["season_id"])
     assert len(apres) == len(avant), (

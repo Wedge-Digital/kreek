@@ -45,6 +45,19 @@ pub async fn login_submit(
 
 #[cfg(test)]
 mod tests {
+
+    /// La connexion ne pose pas la question : une doublure qui refuse suffit.
+    struct NobodyCreatesAccounts;
+
+    #[async_trait::async_trait]
+    impl crate::app::auth::ports::IAccountCreationPolicy for NobodyCreatesAccounts {
+        async fn may_create_accounts(
+            &self,
+            _: &crate::app::shared_kernel::identity::ids::UserId,
+        ) -> bool {
+            false
+        }
+    }
     use crate::app::auth::auth_backend::AuthBackend;
     use crate::app::auth::context::AuthContext;
     use crate::app::auth::io::repository::tests::fake_reset_token_repository::FakeResetTokenRepository;
@@ -98,6 +111,7 @@ mod tests {
             email_service: Arc::new(ConsoleEmailService),
             app_url: "http://localhost".to_string(),
             authenticated_home: "/app".to_string(),
+            account_creation_policy: Arc::new(NobodyCreatesAccounts),
         };
 
         Router::new()

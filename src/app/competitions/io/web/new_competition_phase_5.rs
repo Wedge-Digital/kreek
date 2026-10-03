@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_invitations::AccessMode;
 use crate::app::competitions::io::web::rules_labels::format_bonus_label;
+use crate::app::competitions::io::web::wizard_guard::{require_wizard_access, WizardIntent};
 use crate::app::competitions::use_cases::finalize_competition::{
     execute as execute_finalize, FinalizeCompetitionCommand, FinalizeCompetitionError,
 };
@@ -11,6 +12,7 @@ use crate::state::AppState;
 use askama::Template;
 use axum::body::Body;
 use axum::extract::{Path, State};
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 
@@ -61,9 +63,22 @@ impl IntoResponse for NewCompetitionPhase5Template {
 }
 
 pub async fn get_new_competition_phase_5(
+    auth_session: AuthSession,
+    headers: HeaderMap,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    if let Err(refus) = require_wizard_access(
+        &auth_session,
+        &headers,
+        (&space_id, &competition_id, &season_id),
+        WizardIntent::Display,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let cid = match CompetitionId::try_new(&competition_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -289,9 +304,21 @@ pub async fn get_new_competition_phase_5(
 
 pub async fn post_finalize_competition(
     auth_session: AuthSession,
+    headers: HeaderMap,
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    if let Err(refus) = require_wizard_access(
+        &auth_session,
+        &headers,
+        (&space_id, &competition_id, &season_id),
+        WizardIntent::Submit,
+        &state,
+    )
+    .await
+    {
+        return refus;
+    }
     let Some(user) = auth_session.user else {
         return (StatusCode::UNAUTHORIZED, "Non authentifié.").into_response();
     };

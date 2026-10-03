@@ -65,6 +65,7 @@ pub async fn execute(
         cmd.name.clone(),
         cmd.logo.clone(),
         cmd.admin_ids.clone(),
+        cmd.created_by.clone(),
     );
     let competition_id = competition.id;
 

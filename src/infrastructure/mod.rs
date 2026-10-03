@@ -1,4 +1,5 @@
 pub mod admin_access;
+pub mod auth;
 pub mod competitions;
 pub mod data_migrations;
 pub mod match_report;

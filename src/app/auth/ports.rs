@@ -35,3 +35,17 @@ pub trait IUserRepository: Send + Sync {
         new_hash: &str,
     ) -> Result<(), RepositoryError>;
 }
+
+/// Qui peut créer un compte coach depuis le widget (carte 573).
+///
+/// **Décidé par l'hôte, pas par `auth`** : la règle — admin d'au moins un
+/// espace, ou le compte exploitant — parle d'espaces, et ce BC extractible n'en
+/// connaît aucun. Il décrit son besoin ; `infrastructure/auth/` y répond, et
+/// `main.rs` l'injecte dans `AuthContext`, sur le modèle d'`ISpacesHostLayout`.
+#[async_trait]
+pub trait IAccountCreationPolicy: Send + Sync {
+    async fn may_create_accounts(
+        &self,
+        user_id: &crate::app::shared_kernel::identity::ids::UserId,
+    ) -> bool;
+}

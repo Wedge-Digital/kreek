@@ -81,6 +81,7 @@ def create_full_competition(
     deactivated_tiebreaks: list[str] | None = None,
     requires_validation: bool = False,
     access_mode: str = "invitation",
+    stop_at_step: int | None = None,
 ) -> dict:
     """Phases 1 à 5 : crée une compétition publiée, avec `num_rounds` journées
     programmées et acceptation automatique des inscriptions
@@ -103,7 +104,12 @@ def create_full_competition(
     `with_default_bonuses=False` décoche les bonus offensif et défensif, cochés
     par défaut dans le formulaire. Nécessaire dès qu'un test veut des équipes à
     **égalité de points** : avec les bonus, un vainqueur 3-0 et un vainqueur 1-0
-    ne totalisent pas la même chose, et toute égalité recherchée est illusoire."""
+    ne totalisent pas la même chose, et toute égalité recherchée est illusoire.
+
+    `stop_at_step=N` s'arrête **en arrivant** sur l'étape N du magicien, sans la
+    remplir : la compétition reste un brouillon. Depuis la carte 573, le
+    magicien est fermé à une compétition publiée ; un test qui veut observer
+    une étape doit donc s'y arrêter avant la publication."""
     competition_name = f"Ligue E2E Lifecycle {time.time_ns()}"
 
     # ── Phase 1 : infos + admin ──────────────────────────────────────────
@@ -128,6 +134,9 @@ def create_full_competition(
     match = re.search(r"/competitions/create/([0-9A-Za-z]+)/([0-9A-Za-z]+)/rules", page.url)
     assert match, f"competition_id/season_id introuvables dans {page.url}"
     competition_id, season_id = match.group(1), match.group(2)
+    brouillon = {"competition_id": competition_id, "season_id": season_id, "name": competition_name}
+    if stop_at_step == 2:
+        return brouillon
 
     # ── Phase 2 : règles + tiers (SPP > 0 pour exercer finalize-team.html) ─
     page.wait_for_selector(".tier-block [data-slot='star'] .roster-chip", timeout=5000)
@@ -143,6 +152,8 @@ def create_full_competition(
         row.locator(".tiebreak-check").uncheck()
     page.click("button[onclick='submitRules()']")
     page.wait_for_selector("#groups-config", timeout=10000)
+    if stop_at_step == 3:
+        return brouillon
 
     # ── Phase 3 : structure — num_rounds journées à date fixe ────────────
     for i in range(num_rounds):
@@ -151,6 +162,8 @@ def create_full_competition(
         date_inputs.nth(i).fill(f"2026-0{(i % 9) + 1}-01")
     page.click("button[onclick='submitStructure()']")
     page.wait_for_selector("#access-mode-btns", timeout=10000)
+    if stop_at_step == 4:
+        return brouillon
 
     # ── Phase 4 : invitations — acceptation automatique, sauf demande explicite
     # de garder la validation manuelle (défaut du formulaire) ────────────────
@@ -163,6 +176,8 @@ def create_full_competition(
         page.click(f"#access-mode-btns .choice-btn[data-val='{access_mode}']")
     page.click("button[onclick='submitInvitations()']")
     page.wait_for_selector(".recap-row", timeout=10000)
+    if stop_at_step == 5:
+        return brouillon
 
     # ── Phase 5 : publication ─────────────────────────────────────────────
     # `cliquer_quand_cable` et non `click` : c'est **ce bouton** que `CLAUDE.md`

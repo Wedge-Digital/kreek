@@ -1,3 +1,4 @@
+use crate::app::competitions::domain::competition::admins_after_edit;
 use crate::app::competitions::domain::competition_repository_port::{
     CompetitionRepositoryError, ICompetitionRepository,
 };
@@ -12,6 +13,9 @@ pub struct UpdateDraftCompetitionCommand {
     pub name: CompetitionName,
     pub logo: CloudinaryImage,
     pub admin_ids: Vec<CoachId>,
+    /// Celui qui modifie : un admin de la compétition reste dans la liste
+    /// (carte 573).
+    pub editor_id: CoachId,
 }
 
 #[derive(Debug)]
@@ -51,7 +55,14 @@ pub async fn execute(
         return Err(UpdateDraftCompetitionError::CompetitionNameAlreadyTaken);
     }
 
-    repo.update_base_info(&cmd.competition_id, &cmd.name, &cmd.logo, &cmd.admin_ids)
+    let current_admins: Vec<CoachId> = current
+        .admin_ids
+        .iter()
+        .filter_map(|id| CoachId::try_new(id).ok())
+        .collect();
+    let admin_ids = admins_after_edit(&current_admins, cmd.admin_ids, &cmd.editor_id);
+
+    repo.update_base_info(&cmd.competition_id, &cmd.name, &cmd.logo, &admin_ids)
         .await?;
 
     Ok(())
