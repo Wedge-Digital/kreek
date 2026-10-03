@@ -49,6 +49,10 @@ assets/articles.json
 /dumps/*
 !/dumps/.gitkeep
 
+# Sorties locales de la suite e2e — journaux et relevés de passes, propres à une
+# machine et à une exécution. Un `git add -A` les avait embarqués (7b279b59).
+/.e2e-out/
+
 # Données de règles fournies par l'exploitant (cf. docs/reference-data-schema.md).
 # Le slash final est nécessaire : il ne faut pas attraper assets/references.example/,
 # le jeu de démonstration, lui versionné.
