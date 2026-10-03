@@ -83,6 +83,7 @@ pub async fn hydrate(
             .collect(),
         player.value,
         player.spp,
+        player.spp_remaining(),
     );
 
     Ok((basket, player))

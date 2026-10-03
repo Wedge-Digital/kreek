@@ -16,7 +16,7 @@ use crate::app::players::domain::customisation_basket::CustomisationLine;
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::PlayerId;
 use crate::app::players::domain::value_objects::{
-    BasketLineId, CustomisationId, KpoDelta, SkillId, SppAmount, StatCrans,
+    BasketLineId, CustomisationId, KpoDelta, SkillId, SppDelta, StatCrans,
 };
 use crate::app::players::io::web::customisation_access::garde;
 use crate::app::players::io::web::widgets::player_customisation_widget::{
@@ -77,7 +77,8 @@ pub struct AdjustPriceForm {
 
 #[derive(Deserialize)]
 pub struct AddSppForm {
-    pub amount: u8,
+    /// Signé (carte 582) : un négatif retire des SPP.
+    pub amount: i16,
     pub expected_version: u32,
 }
 
@@ -225,7 +226,7 @@ pub async fn post_add_spp(
     if let Err(refus) = garde(&state, auth_session.user.as_ref(), &space_id, &player_id).await {
         return refus;
     }
-    let Ok(amount) = SppAmount::try_new(form.amount) else {
+    let Ok(amount) = SppDelta::try_new(form.amount) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
     let (repo, panier, catalogue) = depots(&state);

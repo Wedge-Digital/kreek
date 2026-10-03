@@ -8,7 +8,7 @@ use crate::app::players::domain::match_impact::{
 };
 use crate::app::players::domain::value_objects::{
     CustomisationId, DisplayOrder, JerseyVo, KpoDelta, PersonalName, PositionNameVo, RosterLineId,
-    SkillId, SkillName, SppAmount, SppCost, StatCrans,
+    SkillId, SkillName, SppCost, SppDelta, StatCrans,
 };
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
@@ -753,7 +753,7 @@ impl Player {
             }
             PlayerDomainEvent::PlayerSppCustomised { amount, .. } => {
                 let mut player = current?;
-                player.spp = Spp(player.spp.0 + amount.into_inner() as u32);
+                player.spp = Spp(add_signed(player.spp.0, amount.into_inner()));
                 player.version += 1;
                 Some(player)
             }
@@ -803,8 +803,9 @@ impl Player {
             // `saturating_sub` par prudence seule : le domaine refuse le retrait
             // quand la réserve est insuffisante, et la soustraction ne peut donc
             // pas passer sous zéro.
+            // Défaire un ajout retire, défaire un retrait rend (carte 582).
             UndoEffect::Spp { amount } => {
-                player.spp = Spp(player.spp.0.saturating_sub(amount.into_inner() as u32));
+                player.spp = Spp(add_signed(player.spp.0, -amount.into_inner()));
             }
         }
     }
@@ -1258,12 +1259,16 @@ impl Player {
         })
     }
 
+    /// Ajoute ou retire des SPP (carte 582). **Un retrait ne dépasse pas ce
+    /// qui n'est pas encore dépensé** : on ne retire pas des SPP convertis en
+    /// compétence ou en caractéristique.
     pub fn customise_spp(
         &self,
         customisation_id: CustomisationId,
-        amount: SppAmount,
+        amount: SppDelta,
         author: String,
     ) -> Result<PlayerDomainEvent, DomainError> {
+        check_spp_withdrawal(self.spp_remaining(), amount.into_inner())?;
         Ok(PlayerDomainEvent::PlayerSppCustomised {
             player_id: self.id.clone(),
             team_id: self.team_id.clone(),
@@ -1294,11 +1299,11 @@ impl Player {
         undo: UndoEffect,
         author: String,
     ) -> Result<PlayerDomainEvent, DomainError> {
+        // Seul le retrait d'un **ajout** se refuse : défaire un retrait rend
+        // des SPP, et ne peut mettre le joueur dans aucun état impossible.
         if let UndoEffect::Spp { amount } = &undo {
-            let offerts = amount.into_inner() as u32;
-            let restants = self.spp_remaining();
-            if restants < offerts {
-                return Err(DomainError::CustomisationSppSpent { restants, offerts });
+            if let Some(motif) = spent_offer(self.spp_remaining(), amount.into_inner()) {
+                return Err(motif);
             }
         }
         Ok(PlayerDomainEvent::PlayerCustomisationReverted {
@@ -1309,6 +1314,31 @@ impl Player {
             author,
         })
     }
+}
+
+/// `total + delta`, avec un plancher à zéro. Le domaine refuse déjà de passer
+/// sous zéro ; le plancher protège un rejeu d'historique incohérent.
+fn add_signed(total: u32, delta: i16) -> u32 {
+    (total as i64 + delta as i64).max(0) as u32
+}
+
+/// Le refus d'un retrait de SPP qui dépasse le disponible (carte 582).
+pub(crate) fn check_spp_withdrawal(available: u32, delta: i16) -> Result<(), DomainError> {
+    let requested = (-(delta as i32)).max(0) as u32;
+    match requested <= available {
+        true => Ok(()),
+        false => Err(DomainError::SppWithdrawalExceedsAvailable {
+            available,
+            requested,
+        }),
+    }
+}
+
+/// Le refus de défaire une offre de SPP déjà dépensée. `None` pour un retrait :
+/// le défaire rend des SPP.
+pub(crate) fn spent_offer(restants: u32, delta: i16) -> Option<DomainError> {
+    let offerts = delta.max(0) as u32;
+    (restants < offerts).then_some(DomainError::CustomisationSppSpent { restants, offerts })
 }
 
 #[cfg(test)]
@@ -2914,7 +2944,7 @@ mod customisation_tests {
     fn les_spp_customises_s_ajoutent_au_total() {
         let j = joueur();
         let event = j
-            .customise_spp(id(), SppAmount::try_new(10).unwrap(), "Bagouze".into())
+            .customise_spp(id(), SppDelta::try_new(10).unwrap(), "Bagouze".into())
             .unwrap();
         let j = Player::apply(Some(j), &event).unwrap();
         assert_eq!(j.spp.0, 14);
@@ -2941,7 +2971,7 @@ mod customisation_tests {
             .customise_value(id(), KpoDelta::try_new(10).unwrap(), "B".into())
             .is_ok());
         assert!(j
-            .customise_spp(id(), SppAmount::try_new(5).unwrap(), "B".into())
+            .customise_spp(id(), SppDelta::try_new(5).unwrap(), "B".into())
             .is_ok());
 
         // Le contraste : renommer reste interdit.
@@ -2952,9 +2982,9 @@ mod customisation_tests {
     fn les_value_objects_bornent_ce_qu_ils_doivent() {
         assert!(StatCrans::try_new(0).is_err());
         assert!(KpoDelta::try_new(0).is_err());
-        assert!(SppAmount::try_new(0).is_err());
-        assert!(SppAmount::try_new(100).is_ok());
-        assert!(SppAmount::try_new(101).is_err());
+        assert!(SppDelta::try_new(0).is_err());
+        assert!(SppDelta::try_new(100).is_ok());
+        assert!(SppDelta::try_new(101).is_err());
         assert!(CustomisationId::try_new(String::new()).is_err());
         assert!(BasketLineId::try_new(String::new()).is_err());
     }
@@ -2998,12 +3028,12 @@ mod revert_customisation_tests {
         }
     }
 
-    fn spp_offerts(id: &str, montant: u8) -> PlayerDomainEvent {
+    fn spp_offerts(id: &str, montant: i16) -> PlayerDomainEvent {
         PlayerDomainEvent::PlayerSppCustomised {
             player_id: PlayerId("p1".into()),
             team_id: TeamId("t1".into()),
             customisation_id: cid(id),
-            amount: SppAmount::try_new(montant).unwrap(),
+            amount: SppDelta::try_new(montant).unwrap(),
             author: "BigBoss".into(),
         }
     }
@@ -3084,6 +3114,53 @@ mod revert_customisation_tests {
 
         assert!(j.stat_customisations.is_empty());
         assert_eq!(j.value, ValueKpo(100));
+    }
+
+    // ── Retirer des SPP (carte 582) ───────────────────────────────────────
+
+    #[test]
+    fn a_withdrawal_lowers_the_spp() {
+        let flux = vec![cree(100, 10), spp_offerts("c1", -4)];
+        assert_eq!(Player::from_events(&flux).unwrap().spp.0, 6);
+    }
+
+    #[test]
+    fn a_withdrawal_beyond_the_unspent_spp_is_refused() {
+        let joueur = Player::from_events(&[cree(100, 3)]).unwrap();
+        assert!(matches!(
+            joueur.customise_spp(cid("c1"), SppDelta::try_new(-5).unwrap(), "BigBoss".into()),
+            Err(DomainError::SppWithdrawalExceedsAvailable {
+                available: 3,
+                requested: 5
+            })
+        ));
+        assert!(joueur
+            .customise_spp(cid("c1"), SppDelta::try_new(-3).unwrap(), "BigBoss".into())
+            .is_ok());
+    }
+
+    /// Défaire un retrait rend les SPP, même quand il n'en reste plus aucun :
+    /// la garde de `SppDepenses` ne vise que le retrait d'un ajout.
+    #[test]
+    fn reverting_a_withdrawal_gives_the_spp_back() {
+        let flux = vec![cree(100, 5), spp_offerts("c1", -5)];
+        assert_eq!(Player::from_events(&flux).unwrap().spp.0, 0);
+
+        assert_eq!(apres_retrait(&flux, "c1").spp.0, 5);
+    }
+
+    /// Avant la carte 582, `amount` était un `u8` de 1 à 100 : les événements
+    /// persistés se relisent tels quels.
+    #[test]
+    fn a_persisted_positive_amount_still_reads() {
+        let mut json = serde_json::to_value(spp_offerts("c1", 10)).unwrap();
+        // Étiquette externe : `{"PlayerSppCustomised": {…, "amount": 10}}`.
+        json["PlayerSppCustomised"]["amount"] = serde_json::json!(100);
+        let relu: PlayerDomainEvent = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            relu,
+            PlayerDomainEvent::PlayerSppCustomised { amount, .. } if amount.into_inner() == 100
+        ));
     }
 
     /// **Le cas que la valeur absolue existe pour couvrir.**

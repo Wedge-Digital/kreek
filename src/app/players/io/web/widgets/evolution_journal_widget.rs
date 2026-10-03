@@ -130,8 +130,11 @@ fn evolution_log_row(event: &PlayerDomainEvent) -> Option<EvolutionLogRowVm> {
             ..ligne_customisee(String::new(), author)
         }),
         PlayerDomainEvent::PlayerSppCustomised { amount, author, .. } => Some(EvolutionLogRowVm {
-            label: "SPP crédités".to_string(),
-            cost: format!("+{} SPP", amount.into_inner()),
+            label: match amount.into_inner() > 0 {
+                true => "SPP crédités".to_string(),
+                false => "SPP retirés".to_string(),
+            },
+            cost: format!("{} SPP", signe(amount.into_inner() as i32)),
             ..ligne_customisee(String::new(), author)
         }),
         _ => None,
@@ -420,7 +423,7 @@ mod tests {
                 player_id,
                 team_id,
                 customisation_id,
-                amount: crate::app::players::domain::value_objects::SppAmount::try_new(5).unwrap(),
+                amount: crate::app::players::domain::value_objects::SppDelta::try_new(5).unwrap(),
                 author: "Bagouze".into(),
             },
         ]);

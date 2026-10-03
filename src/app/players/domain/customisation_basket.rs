@@ -11,9 +11,10 @@
 
 use crate::app::players::domain::error::DomainError;
 use crate::app::players::domain::match_impact::StatKind;
+use crate::app::players::domain::player::check_spp_withdrawal;
 use crate::app::players::domain::player::{PlayerId, Spp, ValueKpo};
 use crate::app::players::domain::value_objects::{
-    BasketLineId, KpoDelta, SkillId, SppAmount, StatCrans,
+    BasketLineId, KpoDelta, SkillId, SppDelta, StatCrans,
 };
 
 /// Version du panier persisté, pour la garde d'écriture concurrente.
@@ -100,7 +101,7 @@ pub enum CustomisationLine {
     },
     Spp {
         id: BasketLineId,
-        amount: SppAmount,
+        amount: SppDelta,
     },
 }
 
@@ -134,6 +135,8 @@ pub struct CustomisationBasket {
     catalog_skills: Vec<SkillId>,
     current_value: ValueKpo,
     current_spp: Spp,
+    /// Les SPP **non dépensés** du joueur : la borne d'un retrait (carte 582).
+    available_spp: u32,
 }
 
 impl CustomisationBasket {
@@ -147,6 +150,7 @@ impl CustomisationBasket {
         catalog_skills: Vec<SkillId>,
         current_value: ValueKpo,
         current_spp: Spp,
+        available_spp: u32,
     ) -> Self {
         Self {
             player_id,
@@ -157,6 +161,7 @@ impl CustomisationBasket {
             catalog_skills,
             current_value,
             current_spp,
+            available_spp,
         }
     }
 
@@ -210,9 +215,12 @@ impl CustomisationBasket {
         Ok(id)
     }
 
-    /// Le plafond de 100 est porté par `SppAmount` : il est par opération, donc
-    /// entièrement dans le value object. Rien à revérifier ici.
-    pub fn add_spp(&mut self, amount: SppAmount) -> Result<BasketLineId, DomainError> {
+    /// Le plafond de 100 est porté par `SppDelta`. Le plancher se juge ici :
+    /// un retrait ne dépasse pas les SPP non dépensés, **augmentés ou diminués
+    /// des lignes déjà au panier** — deux retraits de 6 sur 10 disponibles ne
+    /// passent pas tous les deux (carte 582).
+    pub fn add_spp(&mut self, amount: SppDelta) -> Result<BasketLineId, DomainError> {
+        check_spp_withdrawal(self.pending_available_spp(), amount.into_inner())?;
         let id = self.next_line_id();
         self.lines.push(CustomisationLine::Spp {
             id: id.clone(),
@@ -302,15 +310,22 @@ impl CustomisationBasket {
     }
 
     pub fn effective_spp(&self) -> Spp {
-        let cumul: u32 = self
-            .lines
+        Spp((self.current_spp.0 as i64 + self.pending_spp()).max(0) as u32)
+    }
+
+    /// Les SPP non dépensés, une fois le panier appliqué.
+    fn pending_available_spp(&self) -> u32 {
+        (self.available_spp as i64 + self.pending_spp()).max(0) as u32
+    }
+
+    fn pending_spp(&self) -> i64 {
+        self.lines
             .iter()
             .filter_map(|l| match l {
-                CustomisationLine::Spp { amount, .. } => Some(amount.into_inner() as u32),
+                CustomisationLine::Spp { amount, .. } => Some(amount.into_inner() as i64),
                 _ => None,
             })
-            .sum();
-        Spp(self.current_spp.0 + cumul)
+            .sum()
     }
 
     /// Les compétences déjà possédées **ou** déjà au panier.
@@ -445,7 +460,34 @@ mod tests {
             ],
             ValueKpo(100),
             Spp(4),
+            4,
         )
+    }
+
+    // ── SPP (carte 582) ───────────────────────────────────────────────────────
+
+    /// Le panier de test a 4 SPP non dépensés : un retrait de 3 passe, le
+    /// second ne trouve plus qu'un SPP.
+    #[test]
+    fn withdrawals_are_judged_against_the_lines_already_in_the_basket() {
+        let mut p = panier(vec![]);
+        assert!(p.add_spp(SppDelta::try_new(-3).unwrap()).is_ok());
+        assert!(matches!(
+            p.add_spp(SppDelta::try_new(-3).unwrap()),
+            Err(DomainError::SppWithdrawalExceedsAvailable {
+                available: 1,
+                requested: 3
+            })
+        ));
+        assert_eq!(p.effective_spp(), Spp(1));
+    }
+
+    #[test]
+    fn an_addition_widens_the_room_for_a_withdrawal() {
+        let mut p = panier(vec![]);
+        p.add_spp(SppDelta::try_new(5).unwrap()).unwrap();
+        assert!(p.add_spp(SppDelta::try_new(-9).unwrap()).is_ok());
+        assert_eq!(p.effective_spp(), Spp(0));
     }
 
     // ── Caractéristiques ──────────────────────────────────────────────────────
@@ -597,8 +639,8 @@ mod tests {
     #[test]
     fn les_spp_s_accumulent_sans_plafond_de_total() {
         let mut p = panier(vec![]);
-        p.add_spp(SppAmount::try_new(100).unwrap()).unwrap();
-        p.add_spp(SppAmount::try_new(100).unwrap()).unwrap();
+        p.add_spp(SppDelta::try_new(100).unwrap()).unwrap();
+        p.add_spp(SppDelta::try_new(100).unwrap()).unwrap();
         // Le plafond de 100 est **par opération** : le total n'est pas borné.
         assert_eq!(p.effective_spp().0, 204);
     }
@@ -621,7 +663,7 @@ mod tests {
         p.add_skill(competence("BLOCK")).unwrap();
         p.add_stat(StatKind::Ma, crans(1)).unwrap();
         p.adjust_price(KpoDelta::try_new(-10).unwrap()).unwrap();
-        p.add_spp(SppAmount::try_new(5).unwrap()).unwrap();
+        p.add_spp(SppDelta::try_new(5).unwrap()).unwrap();
 
         assert_eq!(p.validate_all().unwrap().len(), 4);
     }
@@ -650,6 +692,7 @@ mod tests {
             vec![competence("BLOCK"), competence("DODGE")],
             ValueKpo(100),
             Spp(4),
+            4,
         );
 
         let refusees = devenu_invalide.validate_all().unwrap_err();

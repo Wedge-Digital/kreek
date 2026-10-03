@@ -6,7 +6,7 @@ use crate::app::players::domain::player::{
 };
 use crate::app::players::domain::value_objects::{
     CustomisationId, DisplayOrder, JerseyVo, KpoDelta, PersonalName, PositionNameVo, RosterLineId,
-    SkillId, SkillName, SppAmount, SppCost,
+    SkillId, SkillName, SppCost, SppDelta,
 };
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use serde::{Deserialize, Serialize};
@@ -337,7 +337,7 @@ pub enum PlayerDomainEvent {
         player_id: PlayerId,
         team_id: TeamId,
         customisation_id: CustomisationId,
-        amount: SppAmount,
+        amount: SppDelta,
         author: String, // arch:ok
     },
     /// Une customisation appliquée a été retirée par un commissaire.
@@ -381,7 +381,7 @@ pub enum UndoEffect {
         value_after: ValueKpo,
     },
     Spp {
-        amount: SppAmount,
+        amount: SppDelta,
     },
 }
 
@@ -598,7 +598,7 @@ mod tests {
             player_id,
             team_id,
             customisation_id,
-            amount: SppAmount::try_new(5).unwrap(),
+            amount: SppDelta::try_new(5).unwrap(),
             author: "Bagouze".into(),
         };
         assert!(spp.to_app_event().is_none());

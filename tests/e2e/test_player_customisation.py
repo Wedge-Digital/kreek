@@ -424,6 +424,61 @@ def test_une_saisie_en_cours_est_retrouvee_apres_rechargement(custo_ctx):
     requests.post(_url(custo_ctx, joueur, "customisation/cancel"), headers=HX, timeout=10)
 
 
+# ── Retirer des SPP (carte 582) ───────────────────────────────────────────────
+
+
+def _spp(player_id: str) -> int:
+    return int(query_db(f"SELECT spp FROM players_proj WHERE player_id = '{player_id}'")[0])
+
+
+def _valider(ctx, player_id: str) -> None:
+    resp = requests.post(
+        _url(ctx, player_id, "customisation/validate"),
+        data={"expected_version": _version(_panneau(ctx, player_id).text)},
+        headers=HX, timeout=10,
+    )
+    assert resp.status_code == 200, resp.text[:200]
+
+
+def test_retirer_des_spp_non_depenses_puis_defaire_le_retrait(custo_ctx):
+    """Un commissaire retire des SPP — jamais plus que ceux qui ne sont pas
+    dépensés —, et défaire le retrait les rend."""
+    assert len(custo_ctx["joueurs"]) >= 11, "la fixture doit fournir un onzième joueur"
+    joueur = custo_ctx["joueurs"][10]
+    depart = _spp(joueur)
+
+    _muter(custo_ctx, joueur, "spp/add", {"amount": 10})
+    _valider(custo_ctx, joueur)
+    assert _spp(joueur) == depart + 10
+    offre = set(_customisations_appliquees(_panneau(custo_ctx, joueur).text))
+
+    _muter(custo_ctx, joueur, "spp/add", {"amount": -4})
+    assert "SPP -4" in _panneau(custo_ctx, joueur).text, "le panier montre le retrait signé"
+    _valider(custo_ctx, joueur)
+    assert _spp(joueur) == depart + 6
+
+    # Au-delà du disponible : refusé à la saisie, motif sous le champ, rien au panier.
+    refus = _muter(custo_ctx, joueur, "spp/add", {"amount": -(depart + 7)})
+    assert refus.status_code == 200
+    assert f"seuls {depart + 6} SPP ne sont pas encore dépensés" in refus.text, refus.text[:300]
+    assert _lignes_du_panier(joueur) in ("", "[]") or "-" not in _lignes_du_panier(joueur)
+
+    # Défaire le retrait rend les SPP.
+    retrait = (set(_customisations_appliquees(_panneau(custo_ctx, joueur).text)) - offre).pop()
+    requests.post(_url(custo_ctx, joueur, "customisation/cancel"), headers=HX, timeout=10)
+    resp = requests.post(
+        _url(custo_ctx, joueur, "customisation/applied/remove"),
+        data={"customisation_id": retrait},
+        headers=HX, timeout=10,
+    )
+    assert resp.status_code == 200, resp.text[:200]
+    assert _spp(joueur) == depart + 10, "défaire le retrait rend les 4 SPP"
+
+    journal = requests.get(_url(custo_ctx, joueur, "widgets/evolution-journal"), timeout=10).text
+    assert "SPP retirés" not in journal, "le retrait défait quitte le journal"
+    assert "SPP crédités" in journal
+
+
 # ── Scénario 9 — plancher de prix ────────────────────────────────────────────
 
 

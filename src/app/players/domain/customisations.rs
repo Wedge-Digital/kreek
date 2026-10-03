@@ -12,7 +12,7 @@ use crate::app::players::domain::events::{PlayerDomainEvent, UndoEffect};
 use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::Player;
 use crate::app::players::domain::value_objects::{
-    CustomisationId, KpoDelta, SkillId, SkillName, SppAmount,
+    CustomisationId, KpoDelta, SkillId, SkillName, SppDelta,
 };
 
 /// Une customisation encore appliquée, dans les termes du domaine.
@@ -31,7 +31,7 @@ pub enum FamilleCustomisation {
     Skill { skill_id: SkillId, nom: SkillName },
     Stat { stat: StatKind, offset: i8 }, // arch:ok offset brut, celui de l'événement
     Value { delta: KpoDelta },
-    Spp { amount: SppAmount },
+    Spp { amount: SppDelta },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -222,7 +222,8 @@ fn blocage_pour(famille: &FamilleCustomisation, player: &Player) -> Option<Motif
     let FamilleCustomisation::Spp { amount } = famille else {
         return None;
     };
-    let offerts = amount.into_inner() as u32;
+    // Un retrait se défait toujours : il rend des SPP (carte 582).
+    let offerts = amount.into_inner().max(0) as u32;
     let restants = player.spp_remaining();
     (restants < offerts).then_some(MotifBlocage::SppDepenses { restants, offerts })
 }

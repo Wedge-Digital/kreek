@@ -188,7 +188,10 @@
       </div>
     </div>
 
-    {# ── SPP : ajout seul, plafonné à 100 par opération. #}
+    {# ── SPP : ajout ou retrait, de −100 à +100 par opération (carte 582).
+         Un retrait ne dépasse pas les SPP non dépensés — le domaine le refuse,
+         et le motif s'affiche sous le champ. Pas de `min="1"` : zéro est refusé
+         par le serveur, et un `min` natif interdirait les négatifs. #}
     <div x-show="activeTab === 'spp'" class="custo-action-panel">
       <div class="custo-action-card">
         <div class="custo-action-info">
@@ -200,9 +203,9 @@
               hx-target="#pd-right-panel"
               hx-swap="outerHTML">
           <input type="hidden" name="expected_version" value="{{ vm.version }}">
-          <input class="custo-action-input" type="number" min="1" max="100" name="amount"
-                 placeholder="Ex. 5" required>
-          <button class="custo-action-btn" type="submit">Ajouter</button>
+          <input class="custo-action-input" type="number" min="-100" max="100" name="amount"
+                 placeholder="Ex. 5 ou -3" required>
+          <button class="custo-action-btn" type="submit">Appliquer</button>
         </form>
         {% if let Some(motif) = vm.refusal_spp %}
         <div class="custo-refusal">{{ motif }}</div>

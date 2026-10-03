@@ -1293,7 +1293,7 @@ async fn un_joueur_ordonne_passe_avant_un_joueur_sans_ordre(pool: PgPool) {
 // ── Deltas de caractéristiques en projection (carte 303) ─────────────────────
 
 use crate::app::players::domain::value_objects::{
-    CustomisationId, KpoDelta, SppAmount, SppCost, StatCrans,
+    CustomisationId, KpoDelta, SppCost, SppDelta, StatCrans,
 };
 
 async fn deltas(pool: &PgPool, player_id: &str) -> (i16, i16, i16, i16, i16) {
@@ -1535,7 +1535,7 @@ async fn les_spp_customises_s_ajoutent_en_projection(pool: PgPool) {
     let p = seed_player(&repo, &joueur, &team_id).await;
 
     let event = p
-        .customise_spp(custo_id("c6"), SppAmount::try_new(15).unwrap(), "B".into())
+        .customise_spp(custo_id("c6"), SppDelta::try_new(15).unwrap(), "B".into())
         .unwrap();
     repo.append(&joueur, &team_id, &event, 2).await.unwrap();
 
@@ -1671,7 +1671,7 @@ async fn le_retrait_de_spp_les_soustrait_en_projection(pool: PgPool) {
     let p = seed_player(&repo, &joueur, &team_id).await;
 
     let pose = p
-        .customise_spp(custo_id("c1"), SppAmount::try_new(15).unwrap(), "B".into())
+        .customise_spp(custo_id("c1"), SppDelta::try_new(15).unwrap(), "B".into())
         .unwrap();
     repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
     assert_eq!(proj.find_by_id(&joueur.0).await.unwrap().unwrap().spp, 15);
@@ -1855,7 +1855,7 @@ async fn le_solde_suit_les_gains_et_les_depenses(pool: PgPool) {
     let p = seed_player(&repo, &joueur, &team_id).await;
 
     let pose = p
-        .customise_spp(custo_id("c1"), SppAmount::try_new(15).unwrap(), "B".into())
+        .customise_spp(custo_id("c1"), SppDelta::try_new(15).unwrap(), "B".into())
         .unwrap();
     repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
     assert_eq!(solde(&pool, "p").await, 15);
@@ -1916,7 +1916,7 @@ async fn le_retrait_de_spp_customises_les_retire_du_solde(pool: PgPool) {
     let p = seed_player(&repo, &joueur, &team_id).await;
 
     let pose = p
-        .customise_spp(custo_id("c1"), SppAmount::try_new(4).unwrap(), "B".into())
+        .customise_spp(custo_id("c1"), SppDelta::try_new(4).unwrap(), "B".into())
         .unwrap();
     repo.append(&joueur, &team_id, &pose, 2).await.unwrap();
     assert_eq!(solde(&pool, "p").await, 4);

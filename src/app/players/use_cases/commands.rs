@@ -2,7 +2,7 @@ use crate::app::players::domain::match_impact::StatKind;
 use crate::app::players::domain::player::{AcquisitionMode, PlayerId, TeamId};
 use crate::app::players::domain::value_objects::{
     BasketLineId, CustomisationId, DisplayOrder, JerseyVo, KpoDelta, PersonalName, SkillId,
-    SppAmount, StatCrans,
+    SppDelta, StatCrans,
 };
 
 #[derive(Debug)]
@@ -77,7 +77,7 @@ pub struct AdjustCustomisationPriceCommand {
 #[derive(Debug)]
 pub struct AddCustomisationSppCommand {
     pub player_id: PlayerId,
-    pub amount: SppAmount,
+    pub amount: SppDelta,
     pub expected_version: u32,
 }
 

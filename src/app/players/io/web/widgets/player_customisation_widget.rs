@@ -313,7 +313,7 @@ fn pending_label(line: &CustomisationLine, catalog: &dyn ISkillCatalogPort) -> S
             format!("Prix {} kPo", signe(delta.into_inner() as i16))
         }
         CustomisationLine::Spp { amount, .. } => {
-            format!("SPP +{}", amount.into_inner())
+            format!("SPP {}", signe(amount.into_inner()))
         }
     }
 }
@@ -406,11 +406,19 @@ fn description(
         }
         FamilleCustomisation::Spp { amount } => {
             let n = amount.into_inner();
-            (
-                "SPP offerts".to_string(),
-                format!("+{n} SPP"),
-                format!("Le joueur perdra ces {n} SPP."),
-            )
+            match n > 0 {
+                true => (
+                    "SPP offerts".to_string(),
+                    format!("{} SPP", signe(n)),
+                    format!("Le joueur perdra ces {n} SPP."),
+                ),
+                // Défaire un retrait rend les SPP (carte 582).
+                false => (
+                    "SPP retirés".to_string(),
+                    format!("{} SPP", signe(n)),
+                    format!("Le joueur retrouvera ces {} SPP.", -n),
+                ),
+            }
         }
     }
 }
@@ -665,8 +673,8 @@ mod tests {
     use crate::app::players::domain::events::PlayerDomainEvent;
     use crate::app::players::domain::player::{AcquisitionMode, Spp, TeamId, ValueKpo};
     use crate::app::players::domain::value_objects::{
-        CustomisationId, KpoDelta, PositionNameVo, RosterLineId, SkillId, SkillName, SppAmount,
-        SppCost, StatCrans,
+        CustomisationId, KpoDelta, PositionNameVo, RosterLineId, SkillId, SkillName, SppCost,
+        SppDelta, StatCrans,
     };
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
     use crate::infrastructure::players::skill_catalog_adapter::SkillCatalogAdapter;
@@ -718,6 +726,7 @@ mod tests {
                 .collect(),
             ValueKpo(50),
             Spp(30),
+            30,
         )
     }
 
@@ -743,7 +752,7 @@ mod tests {
         let catalog = catalogue();
         let mut p = panier(&catalog, vec![]);
         p.adjust_price(KpoDelta::try_new(-15).unwrap()).unwrap();
-        p.add_spp(SppAmount::try_new(5).unwrap()).unwrap();
+        p.add_spp(SppDelta::try_new(5).unwrap()).unwrap();
 
         let lignes = build_pending(&p, &catalog);
         assert_eq!(lignes[0].label, "Prix -15 kPo");
@@ -864,7 +873,7 @@ mod tests {
         let mut p = panier(&catalog, vec![]);
         assert_eq!(reserve_effective(&joueur, &p), 30);
 
-        p.add_spp(SppAmount::try_new(7).unwrap()).unwrap();
+        p.add_spp(SppDelta::try_new(7).unwrap()).unwrap();
         assert_eq!(reserve_effective(&joueur, &p), 37);
     }
 
@@ -970,7 +979,7 @@ mod tests {
         // Volontairement 7 et non 5 : à 5, le prix effectif et les SPP
         // effectifs valaient tous deux 35, et le test ne pouvait plus
         // distinguer les deux champs.
-        p.add_spp(SppAmount::try_new(7).unwrap()).unwrap();
+        p.add_spp(SppDelta::try_new(7).unwrap()).unwrap();
         p
     }
 
@@ -1080,7 +1089,7 @@ mod tests {
             player_id: PlayerId("p1".into()),
             team_id: TeamId("t1".into()),
             customisation_id: CustomisationId::try_new("c1".to_string()).unwrap(),
-            amount: SppAmount::try_new(10).unwrap(),
+            amount: SppDelta::try_new(10).unwrap(),
             author: "BigBoss".into(),
         };
         // Le joueur part à 30 SPP ; l'offre le mène à 40, dont 38 dépensés.

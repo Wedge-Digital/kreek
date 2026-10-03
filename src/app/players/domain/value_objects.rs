@@ -76,13 +76,19 @@ pub struct StatCrans(i8);
 )]
 pub struct KpoDelta(i32);
 
-// SPP ajoutés en une opération. Le plafond de 100 est celui de l'opération, pas
-// du total du joueur — il tient donc entièrement dans le value object.
+// SPP ajoutés ou retirés en une opération (carte 582). Signé, non nul, de −100
+// à +100 : le plafond est celui de l'opération, pas du total du joueur — il
+// tient donc entièrement dans le value object. Le plancher, lui, porte sur le
+// **résultat** — on ne retire pas des SPP déjà dépensés — et se juge contre le
+// joueur, comme celui du prix.
+//
+// Les événements persistés avant la carte 582 portaient un `u8` de 1 à 100 : un
+// nombre positif, que ce type relit tel quel.
 #[nutype(
-    validate(greater_or_equal = 1, less_or_equal = 100),
+    validate(predicate = |d| *d != 0 && (-100..=100).contains(d)),
     derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)
 )]
-pub struct SppAmount(u8);
+pub struct SppDelta(i16);
 
 // Identifiant d'une ligne du panier. Il meurt avec le panier.
 #[nutype(
@@ -190,5 +196,20 @@ mod tests {
         assert!(SkillName::try_new("   ".to_string()).is_err());
         assert!(SkillName::try_new("a".repeat(51)).is_err());
         assert!(SkillName::try_new("Block|Dodge".to_string()).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod spp_delta_tests {
+    use super::SppDelta;
+
+    #[test]
+    fn spp_delta_is_signed_non_zero_and_capped_at_100() {
+        for ok in [-100, -1, 1, 100] {
+            assert!(SppDelta::try_new(ok).is_ok(), "{ok}");
+        }
+        for ko in [-101, 0, 101] {
+            assert!(SppDelta::try_new(ko).is_err(), "{ko}");
+        }
     }
 }

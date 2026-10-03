@@ -24,6 +24,13 @@ pub enum DomainError {
         restants: u32,
         offerts: u32,
     },
+    /// Un retrait de SPP dépasserait ceux qui ne sont pas encore dépensés
+    /// (carte 582) : on ne retire pas des SPP convertis en compétence ou en
+    /// caractéristique. Les deux nombres sont dans l'erreur pour le message.
+    SppWithdrawalExceedsAvailable {
+        available: u32,
+        requested: u32,
+    },
 }
 
 impl fmt::Display for DomainError {
@@ -41,6 +48,13 @@ impl fmt::Display for DomainError {
             Self::CustomisationSppSpent { restants, offerts } => write!(
                 f,
                 "ces SPP ont été dépensés — il n'en reste que {restants} sur {offerts}"
+            ),
+            Self::SppWithdrawalExceedsAvailable {
+                available,
+                requested,
+            } => write!(
+                f,
+                "seuls {available} SPP ne sont pas encore dépensés — impossible d'en retirer {requested}"
             ),
         }
     }
