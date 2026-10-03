@@ -189,7 +189,7 @@ Directives de travail pour Claude Code sur ce projet.
     et analyse adressés à l'utilisateur est rédigé en français — comme les
     cartes, les specs, les commentaires et les messages de commit du projet.
 
-    Les identifiants restent tels qu'ils sont écrits dans le code (`est_admin`,
+    Les identifiants restent tels qu'ils sont écrits dans le code (`is_admin`,
     `GamePhase::ReadyToPlay`, `HX-Refresh`) : on ne les traduit pas, on les
     cite.
 
@@ -197,6 +197,28 @@ Directives de travail pour Claude Code sur ce projet.
     redemandée en français, deux fois dans la même session. La règle vaut aussi
     pour ce qu'on produit en fin de tâche, quand l'attention est sur le
     contenu plutôt que sur la langue — c'est là qu'elle a lâché.
+
+18. **Le code est en anglais.** Identifiants — fonctions, méthodes, types,
+    variants, champs, variables, constantes, modules, noms de fichiers, routes,
+    classes CSS, noms de tests —, tout ce que le compilateur ou le navigateur
+    lit, s'écrit en anglais.
+
+    Restent en français : les **commentaires** et la documentation de code, les
+    **messages** affichés à l'utilisateur, les cartes, les specs et les messages
+    de commit (règle 17).
+
+    ```rust
+    // INTERDIT
+    pub fn ramene_a_pret_a_jouer(&self) -> bool
+    // OBLIGATOIRE — le commentaire, lui, reste en français
+    /// Vrai pour les événements dont `apply()` pose `ReadyToPlay`.
+    pub fn returns_to_ready_to_play(&self) -> bool
+    ```
+
+    **Appliquée au fil de l'eau**, comme les conventions de nommage de fichiers :
+    tout identifiant **nouveau** est en anglais ; un identifiant français
+    existant n'est pas renommé en masse, mais on le renomme quand on réécrit le
+    code qui le porte.
 
 
 ---
@@ -895,7 +917,7 @@ src/
 ## Qui est admin — un seul service
 
 « Admin d'espace ou de compétition » se demande **uniquement** à
-`shared_kernel::bloodbowl::admin_access::est_admin`, par le port
+`shared_kernel::bloodbowl::admin_access::is_admin`, par le port
 `IAdminAccessPort`. Aucun BC ne réécrit cette règle, ni ne déclare son propre
 port pour la poser.
 
@@ -904,11 +926,11 @@ port pour la poser.
 pub trait IRankingAdminPort { async fn is_space_admin(…) -> bool; … }
 
 // OBLIGATOIRE — le service commun, reçu dans le contexte du BC
-est_admin(ctx.admin_access.as_ref(), &user.id, &space_id, Some(&competition_id)).await
+is_admin(ctx.admin_access.as_ref(), &user.id, &space_id, Some(&competition_id)).await
 ```
 
 - **Le propriétaire reste l'affaire de chaque BC.** Inclus pour l'effectif,
-  exclu pour la customisation : la condition s'ajoute **devant** `est_admin`,
+  exclu pour la customisation : la condition s'ajoute **devant** `is_admin`,
   elle n'y entre pas.
 - **Un admin de compétition se reconnaît par son identifiant seul.** Les admins
   ne s'enregistrent que par identifiant ; `admin_names` n'est que leur
