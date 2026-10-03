@@ -26,7 +26,7 @@ dépenser ses SPP, un recrutement oublié, un renvoi décidé hors match.
 
 Phase 3 reprise après la livraison de la carte 570 : le droit passe par
 `team_admin_guard::require_team_admin` et `is_team_admin`, sans fonction neuve.
-Conception terminée — cartes 575 à 579 en réalisation.
+Conception terminée ; les cinq cartes 575 à 579 sont livrées (2026-10-03).
 
 ## Les décisions de conception déjà prises
 
