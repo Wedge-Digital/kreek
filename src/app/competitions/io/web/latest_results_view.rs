@@ -1,6 +1,6 @@
 use crate::app::auth::domain::user::User;
 use crate::app::competitions::domain::match_day_repository_port::LatestResultDto;
-use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
+use crate::app::shared_kernel::bloodbowl::admin_access::is_admin;
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
@@ -43,10 +43,10 @@ pub async fn compute_authorization(
     space_id: &SpaceId,
     rows: &[LatestResultDto],
 ) -> LatestResultsAuthorization {
-    // La règle de tout kreek (carte 572) : sans compétition, `est_admin` ne
+    // La règle de tout kreek (carte 572) : sans compétition, `is_admin` ne
     // répond que pour l'espace.
     let access = state.competitions.admin_access.as_ref();
-    let is_space_admin = est_admin(access, &user.id, space_id, None).await;
+    let is_space_admin = is_admin(access, &user.id, space_id, None).await;
     if is_space_admin {
         return LatestResultsAuthorization {
             is_space_admin: true,
@@ -80,7 +80,7 @@ async fn admin_competition_ids(
         let Ok(competition_id) = CompetitionId::try_new(cid) else {
             continue;
         };
-        if est_admin(access, &user.id, space_id, Some(&competition_id)).await {
+        if is_admin(access, &user.id, space_id, Some(&competition_id)).await {
             admin_ids.insert(cid.to_string());
         }
     }

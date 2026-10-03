@@ -13,12 +13,12 @@
 //! couple saison/compétition (carte 416), qui ne relève pas du droit mais du
 //! chemin.
 
-use crate::app::shared_kernel::bloodbowl::admin_access::{est_admin, IAdminAccessPort};
+use crate::app::shared_kernel::bloodbowl::admin_access::{is_admin, IAdminAccessPort};
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
 /// Admin de la compétition, ou admin de l'espace — la règle de tout kreek,
-/// `est_admin` (carte 572).
+/// `is_admin` (carte 572).
 ///
 /// Elle lisait les admins de la compétition dans une liste déjà en mémoire, et
 /// comparait aussi le nom du coach : une compétition était censée pouvoir
@@ -34,7 +34,7 @@ pub async fn peut_administrer(
     space_id: &SpaceId,
     competition_id: &CompetitionId,
 ) -> bool {
-    est_admin(access, coach_id, space_id, Some(competition_id)).await
+    is_admin(access, coach_id, space_id, Some(competition_id)).await
 }
 
 #[cfg(test)]
@@ -54,43 +54,43 @@ mod tests {
     // ── Les quatre combinaisons ──────────────────────────────────────────────
 
     #[tokio::test]
-    async fn admin_de_la_competition_seulement() {
-        let (coach, espace, competition) = ids();
-        let port = FakeAdminAccess::new().admin_competition(&coach, &competition);
-        assert!(peut_administrer(&port, &coach, &espace, &competition).await);
+    async fn competition_admin_only() {
+        let (coach, space, competition) = ids();
+        let port = FakeAdminAccess::new().competition_admin(&coach, &competition);
+        assert!(peut_administrer(&port, &coach, &space, &competition).await);
     }
 
     /// Le cas de la carte 544 : aucun droit sur la compétition, mais le
     /// gouvernail de l'espace.
     #[tokio::test]
-    async fn admin_de_l_espace_seulement() {
-        let (coach, espace, competition) = ids();
-        let port = FakeAdminAccess::new().admin_espace(&coach, &espace);
-        assert!(peut_administrer(&port, &coach, &espace, &competition).await);
+    async fn space_admin_only() {
+        let (coach, space, competition) = ids();
+        let port = FakeAdminAccess::new().space_admin(&coach, &space);
+        assert!(peut_administrer(&port, &coach, &space, &competition).await);
     }
 
     #[tokio::test]
-    async fn admin_des_deux() {
-        let (coach, espace, competition) = ids();
+    async fn admin_of_both() {
+        let (coach, space, competition) = ids();
         let port = FakeAdminAccess::new()
-            .admin_espace(&coach, &espace)
-            .admin_competition(&coach, &competition);
-        assert!(peut_administrer(&port, &coach, &espace, &competition).await);
+            .space_admin(&coach, &space)
+            .competition_admin(&coach, &competition);
+        assert!(peut_administrer(&port, &coach, &space, &competition).await);
     }
 
     #[tokio::test]
-    async fn ni_l_un_ni_l_autre() {
-        let (coach, espace, competition) = ids();
+    async fn neither() {
+        let (coach, space, competition) = ids();
         let port = FakeAdminAccess::new();
-        assert!(!peut_administrer(&port, &coach, &espace, &competition).await);
+        assert!(!peut_administrer(&port, &coach, &space, &competition).await);
     }
 
     /// L'admin d'une autre compétition n'administre pas celle-ci.
     #[tokio::test]
-    async fn admin_d_une_autre_competition() {
-        let (coach, espace, competition) = ids();
-        let autre: CompetitionId = EntityId::new();
-        let port = FakeAdminAccess::new().admin_competition(&coach, &autre);
-        assert!(!peut_administrer(&port, &coach, &espace, &competition).await);
+    async fn admin_of_another_competition() {
+        let (coach, space, competition) = ids();
+        let other: CompetitionId = EntityId::new();
+        let port = FakeAdminAccess::new().competition_admin(&coach, &other);
+        assert!(!peut_administrer(&port, &coach, &space, &competition).await);
     }
 }

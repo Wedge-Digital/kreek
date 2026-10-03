@@ -458,11 +458,11 @@ async fn contenu_de_l_onglet(
     vm: &TeamDetailVm,
     space_id: &str,
     team_id: &str,
-    est_admin: bool,
+    is_admin: bool,
     state: &AppState,
 ) -> Result<String, StatusCode> {
     match active_tab {
-        "treasury" => treasury_tab::rendre_onglet(space_id, team_id, est_admin, state).await,
+        "treasury" => treasury_tab::rendre_onglet(space_id, team_id, is_admin, state).await,
         "matches" => TeamMatchesTabTemplate { vm }.render().map_err(|e| {
             tracing::error!("teams matches tab render: {e}");
             StatusCode::INTERNAL_SERVER_ERROR
@@ -514,9 +514,9 @@ pub(crate) async fn rendre_fiche(
     // répond 403 à un non-membre, et fermerait un relevé qu'on veut lisible par
     // tous. Seul le bouton dépend du droit, jamais la page. L'admin de la
     // compétition de l'équipe y a droit comme l'admin d'espace (carte 570).
-    let est_admin = match auth_session.user.as_ref() {
+    let is_admin = match auth_session.user.as_ref() {
         Some(user) => {
-            roster_edit_access_service::est_admin_de_l_equipe(
+            roster_edit_access_service::is_team_admin(
                 &team,
                 &user.id,
                 state.teams.admin_access.as_ref(),
@@ -529,7 +529,7 @@ pub(crate) async fn rendre_fiche(
     let vm = TeamDetailVm::from(&team, space_id, roster_catalog_port, peut_editer);
 
     let content =
-        match contenu_de_l_onglet(active_tab, &vm, space_id, team_id, est_admin, state).await {
+        match contenu_de_l_onglet(active_tab, &vm, space_id, team_id, is_admin, state).await {
             Ok(html) => html,
             Err(code) => return code.into_response(),
         };

@@ -20,7 +20,7 @@ use crate::app::shared_kernel::identity::ids::UserId;
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::treasury::MovementDirection;
 use crate::app::teams::domain::value_objects::{AdjustmentAmount, AdjustmentNote};
-use crate::app::teams::io::web::garde_commissaire::exiger_commissaire;
+use crate::app::teams::io::web::team_admin_guard::require_team_admin;
 use crate::app::teams::io::web::team_detail::rendre_fiche;
 use crate::app::teams::io::web::treasury_view_models::AdjustErrorVm;
 use crate::app::teams::use_cases::adjust_treasury_use_case::{self as uc, AdjustTreasuryError};
@@ -56,7 +56,7 @@ pub async fn adjust_treasury(
     // **En dernier, et axum l'exige** : il consomme le corps de la requête.
     Form(form): Form<AdjustTreasuryForm>,
 ) -> Response {
-    let user = match exiger_commissaire(&state, &auth_session, &team_id).await {
+    let user = match require_team_admin(&state, &auth_session, &team_id).await {
         Ok(user) => user,
         Err(refus) => return refus,
     };

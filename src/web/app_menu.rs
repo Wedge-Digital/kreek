@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
+use crate::app::shared_kernel::bloodbowl::admin_access::is_admin;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
@@ -144,7 +144,7 @@ async fn contexte_espace(
     // ici (carte 572).
     let space_id_vo = SpaceId::try_new(&sid).ok()?;
     let peut_administrer =
-        est_admin(state.admin_access.as_ref(), &user.id, &space_id_vo, None).await;
+        is_admin(state.admin_access.as_ref(), &user.id, &space_id_vo, None).await;
 
     let hors_calendrier_interdit = state.hors_calendrier.un_espace_interdit(&sid).await;
 

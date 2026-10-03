@@ -33,7 +33,7 @@ pub struct TreasuryTabTemplate {
 pub async fn rendre_onglet(
     space_id: &str,
     team_id: &str,
-    est_admin: bool,
+    is_admin: bool,
     state: &AppState,
 ) -> Result<String, StatusCode> {
     let statement = treasury_statement_service::build_statement(
@@ -46,7 +46,7 @@ pub async fn rendre_onglet(
     .map_err(|e| journaliser(team_id, e))?;
 
     let mut vm = build_treasury_vm(&statement);
-    if est_admin {
+    if is_admin {
         vm.adjust = Some(panneau(space_id, team_id, vm.summary.balance_kpo));
     }
 

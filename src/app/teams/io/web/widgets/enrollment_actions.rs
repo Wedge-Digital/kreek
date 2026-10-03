@@ -4,15 +4,15 @@
 //! ne s'affichaient qu'aux admins, mais n'importe quel connecté pouvait
 //! décider des inscriptions d'une compétition par une requête forgée. Elles
 //! exigent désormais un admin de l'espace ou de la compétition de l'équipe —
-//! `garde_commissaire`, la règle de tout kreek.
+//! `team_admin_guard`, la règle de tout kreek.
 
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::ids::EntityId;
-use crate::app::teams::io::web::garde_commissaire::exiger_commissaire;
+use crate::app::teams::io::web::team_admin_guard::require_team_admin;
 use crate::app::teams::use_cases::approve_enrollment::{self, ApproveEnrollmentError};
 use crate::app::teams::use_cases::commands::RejectEnrollmentCommand;
 use crate::app::teams::use_cases::reject_enrollment::{self, RejectEnrollmentError};
-use crate::app::teams::use_cases::roster_edit_access_service::est_admin_de_l_equipe;
+use crate::app::teams::use_cases::roster_edit_access_service::is_team_admin;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -36,7 +36,7 @@ pub async fn approve_enrollment(
     State(state): State<AppState>,
     auth_session: AuthSession,
 ) -> impl IntoResponse {
-    if let Err(refus) = exiger_commissaire(&state, &auth_session, &team_id).await {
+    if let Err(refus) = require_team_admin(&state, &auth_session, &team_id).await {
         return refus;
     }
     let team_entity_id = match EntityId::try_new(&team_id) {
@@ -60,7 +60,7 @@ pub async fn reject_enrollment(
     State(state): State<AppState>,
     auth_session: AuthSession,
 ) -> impl IntoResponse {
-    if let Err(refus) = exiger_commissaire(&state, &auth_session, &team_id).await {
+    if let Err(refus) = require_team_admin(&state, &auth_session, &team_id).await {
         return refus;
     }
     let team_entity_id = match EntityId::try_new(&team_id) {
@@ -88,7 +88,7 @@ pub async fn dismiss_enrollment(
     State(state): State<AppState>,
     auth_session: AuthSession,
 ) -> impl IntoResponse {
-    if let Err(refus) = exiger_commissaire(&state, &auth_session, &team_id).await {
+    if let Err(refus) = require_team_admin(&state, &auth_session, &team_id).await {
         return refus;
     }
     let team_entity_id = match EntityId::try_new(&team_id) {
@@ -184,9 +184,7 @@ async fn administre(
     team_id: &str,
 ) -> bool {
     match state.teams.team_repository.find_by_id(team_id).await {
-        Ok(Some(team)) => {
-            est_admin_de_l_equipe(&team, user_id, state.teams.admin_access.as_ref()).await
-        }
+        Ok(Some(team)) => is_team_admin(&team, user_id, state.teams.admin_access.as_ref()).await,
         _ => false,
     }
 }

@@ -163,21 +163,21 @@ mod tests {
         }
     }
 
-    const UTILISATEUR: &str = "00000000000000000000000011";
+    const USER: &str = "00000000000000000000000011";
     const COMPETITION: &str = "00000000000000000000000012";
     const ESPACE: &str = "00000000000000000000000013";
 
     /// Chaque porte se répond séparément — c'est ce qui permet aux tests de
     /// dire **laquelle** a ouvert. La doublure partagée de la carte 570,
     /// configurée pour l'utilisateur de la commande.
-    fn faux_admin(competition: bool, espace: bool) -> FakeAdminAccess {
-        let utilisateur = EntityId::try_new(UTILISATEUR).unwrap();
+    fn fake_admin(competition: bool, espace: bool) -> FakeAdminAccess {
+        let utilisateur = EntityId::try_new(USER).unwrap();
         let mut port = FakeAdminAccess::new();
         if competition {
-            port = port.admin_competition(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
+            port = port.competition_admin(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
         }
         if espace {
-            port = port.admin_espace(&utilisateur, &EntityId::try_new(ESPACE).unwrap());
+            port = port.space_admin(&utilisateur, &EntityId::try_new(ESPACE).unwrap());
         }
         port
     }
@@ -211,7 +211,7 @@ mod tests {
             competition_id: COMPETITION.into(),
             space_id: ESPACE.into(),
             team_id: team.into(),
-            user_id: UTILISATEUR.into(),
+            user_id: USER.into(),
             points: ManualPoints::try_new(3).unwrap(),
             reason: Some(ManualPointsReason::try_new("forfait de l'adverse").unwrap()),
         }
@@ -222,7 +222,7 @@ mod tests {
     #[tokio::test]
     async fn un_non_admin_est_refuse() {
         let repo = FakeRepo::default();
-        let admin = faux_admin(false, false);
+        let admin = fake_admin(false, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -242,7 +242,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_de_competition_seul_suffit() {
         let repo = FakeRepo::default();
-        let admin = faux_admin(true, false);
+        let admin = fake_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -253,7 +253,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_d_espace_seul_suffit() {
         let repo = FakeRepo::default();
-        let admin = faux_admin(false, true);
+        let admin = fake_admin(false, true);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -267,7 +267,7 @@ mod tests {
     #[tokio::test]
     async fn une_equipe_non_inscrite_est_refusee() {
         let repo = FakeRepo::default();
-        let admin = faux_admin(true, false);
+        let admin = fake_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -283,7 +283,7 @@ mod tests {
     #[tokio::test]
     async fn le_refus_d_autorisation_precede_celui_d_inscription() {
         let repo = FakeRepo::default();
-        let admin = faux_admin(false, false);
+        let admin = fake_admin(false, false);
         let teams = FakeTeams { inscrites: vec![] };
 
         assert_eq!(
@@ -297,7 +297,7 @@ mod tests {
     #[tokio::test]
     async fn deux_lignes_identiques_sont_acceptees() {
         let repo = FakeRepo::default();
-        let admin = faux_admin(true, false);
+        let admin = fake_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -317,7 +317,7 @@ mod tests {
     #[tokio::test]
     async fn le_motif_et_l_auteur_sont_transmis() {
         let repo = FakeRepo::default();
-        let admin = faux_admin(true, false);
+        let admin = fake_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -334,7 +334,7 @@ mod tests {
                 "T1".into(),
                 3,
                 Some("forfait de l'adverse".to_string()),
-                UTILISATEUR.to_string()
+                USER.to_string()
             )
         );
     }

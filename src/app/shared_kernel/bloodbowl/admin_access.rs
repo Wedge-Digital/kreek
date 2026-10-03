@@ -21,7 +21,7 @@
 //! # Ce que le service ne décide pas
 //!
 //! **Le propriétaire.** Inclus pour l'effectif, exclu pour la customisation :
-//! chaque BC pose sa propre condition devant `est_admin`, qui n'en sait rien.
+//! chaque BC pose sa propre condition devant `is_admin`, qui n'en sait rien.
 
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
@@ -49,7 +49,7 @@ pub trait IAdminAccessPort: Send + Sync {
 /// court-circuitant la seconde. Sans compétition — une page d'espace, un menu —
 /// la seconde question n'est pas posée.
 // arch:no-instrument — service de lecture : une question de droit, aucune intention métier
-pub async fn est_admin(
+pub async fn is_admin(
     port: &dyn IAdminAccessPort,
     user_id: &CoachId,
     space_id: &SpaceId,
@@ -74,10 +74,10 @@ pub async fn est_admin(
 #[cfg(test)]
 #[derive(Default)]
 pub struct FakeAdminAccess {
-    admins_d_espace: Vec<(String, String)>,
-    admins_de_competition: Vec<(String, String)>,
-    appels_espace: std::sync::atomic::AtomicUsize,
-    appels_competition: std::sync::atomic::AtomicUsize,
+    space_admins: Vec<(String, String)>,
+    competition_admins: Vec<(String, String)>,
+    space_calls: std::sync::atomic::AtomicUsize,
+    competition_calls: std::sync::atomic::AtomicUsize,
 }
 
 #[cfg(test)]
@@ -86,24 +86,24 @@ impl FakeAdminAccess {
         Self::default()
     }
 
-    pub fn admin_espace(mut self, coach: &CoachId, espace: &SpaceId) -> Self {
-        self.admins_d_espace
-            .push((coach.to_string(), espace.to_string()));
+    pub fn space_admin(mut self, coach: &CoachId, space: &SpaceId) -> Self {
+        self.space_admins
+            .push((coach.to_string(), space.to_string()));
         self
     }
 
-    pub fn admin_competition(mut self, coach: &CoachId, competition: &CompetitionId) -> Self {
-        self.admins_de_competition
+    pub fn competition_admin(mut self, coach: &CoachId, competition: &CompetitionId) -> Self {
+        self.competition_admins
             .push((coach.to_string(), competition.to_string()));
         self
     }
 
-    pub fn appels_espace(&self) -> usize {
-        self.appels_espace.load(std::sync::atomic::Ordering::SeqCst)
+    pub fn space_calls(&self) -> usize {
+        self.space_calls.load(std::sync::atomic::Ordering::SeqCst)
     }
 
-    pub fn appels_competition(&self) -> usize {
-        self.appels_competition
+    pub fn competition_calls(&self) -> usize {
+        self.competition_calls
             .load(std::sync::atomic::Ordering::SeqCst)
     }
 }
@@ -112,10 +112,10 @@ impl FakeAdminAccess {
 #[async_trait]
 impl IAdminAccessPort for FakeAdminAccess {
     async fn is_space_admin(&self, user_id: &CoachId, space_id: &SpaceId) -> bool {
-        self.appels_espace
+        self.space_calls
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let cle = (user_id.to_string(), space_id.to_string());
-        self.admins_d_espace.contains(&cle)
+        self.space_admins.contains(&cle)
     }
 
     async fn is_competition_admin(
@@ -123,10 +123,10 @@ impl IAdminAccessPort for FakeAdminAccess {
         user_id: &CoachId,
         competition_id: &CompetitionId,
     ) -> bool {
-        self.appels_competition
+        self.competition_calls
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let cle = (user_id.to_string(), competition_id.to_string());
-        self.admins_de_competition.contains(&cle)
+        self.competition_admins.contains(&cle)
     }
 }
 
@@ -139,65 +139,65 @@ mod tests {
         (EntityId::new(), EntityId::new(), EntityId::new())
     }
 
-    async fn demande(
+    async fn ask(
         port: &FakeAdminAccess,
         coach: &CoachId,
-        espace: &SpaceId,
+        space: &SpaceId,
         competition: Option<&CompetitionId>,
     ) -> bool {
-        est_admin(port, coach, espace, competition).await
+        is_admin(port, coach, space, competition).await
     }
 
     #[tokio::test]
-    async fn un_admin_d_espace_est_admin_avec_ou_sans_competition() {
-        let (coach, espace, competition) = ids();
-        let port = FakeAdminAccess::new().admin_espace(&coach, &espace);
-        assert!(demande(&port, &coach, &espace, None).await);
-        assert!(demande(&port, &coach, &espace, Some(&competition)).await);
+    async fn space_admin_is_admin_with_or_without_competition() {
+        let (coach, space, competition) = ids();
+        let port = FakeAdminAccess::new().space_admin(&coach, &space);
+        assert!(ask(&port, &coach, &space, None).await);
+        assert!(ask(&port, &coach, &space, Some(&competition)).await);
     }
 
     /// L'espace suffit : la compétition n'est pas interrogée.
     #[tokio::test]
-    async fn l_espace_court_circuite_la_competition() {
-        let (coach, espace, competition) = ids();
-        let port = FakeAdminAccess::new().admin_espace(&coach, &espace);
-        assert!(demande(&port, &coach, &espace, Some(&competition)).await);
-        assert_eq!(port.appels_competition(), 0);
+    async fn space_short_circuits_competition() {
+        let (coach, space, competition) = ids();
+        let port = FakeAdminAccess::new().space_admin(&coach, &space);
+        assert!(ask(&port, &coach, &space, Some(&competition)).await);
+        assert_eq!(port.competition_calls(), 0);
     }
 
     #[tokio::test]
-    async fn un_admin_de_competition_est_admin_de_sa_competition() {
-        let (coach, espace, competition) = ids();
-        let port = FakeAdminAccess::new().admin_competition(&coach, &competition);
-        assert!(demande(&port, &coach, &espace, Some(&competition)).await);
+    async fn competition_admin_is_admin_of_their_competition() {
+        let (coach, space, competition) = ids();
+        let port = FakeAdminAccess::new().competition_admin(&coach, &competition);
+        assert!(ask(&port, &coach, &space, Some(&competition)).await);
     }
 
     /// Sans compétition, la seconde question n'est pas posée : un admin de
     /// compétition n'administre pas l'espace.
     #[tokio::test]
-    async fn sans_competition_un_admin_de_competition_n_est_pas_admin() {
-        let (coach, espace, competition) = ids();
-        let port = FakeAdminAccess::new().admin_competition(&coach, &competition);
-        assert!(!demande(&port, &coach, &espace, None).await);
+    async fn without_competition_a_competition_admin_is_not_admin() {
+        let (coach, space, competition) = ids();
+        let port = FakeAdminAccess::new().competition_admin(&coach, &competition);
+        assert!(!ask(&port, &coach, &space, None).await);
         assert_eq!(
-            port.appels_competition(),
+            port.competition_calls(),
             0,
             "la seconde question n'est pas posée"
         );
     }
 
     #[tokio::test]
-    async fn l_admin_d_une_autre_competition_ne_l_est_pas_de_celle_ci() {
-        let (coach, espace, competition) = ids();
-        let autre: CompetitionId = EntityId::new();
-        let port = FakeAdminAccess::new().admin_competition(&coach, &autre);
-        assert!(!demande(&port, &coach, &espace, Some(&competition)).await);
+    async fn admin_of_another_competition_is_not_admin_here() {
+        let (coach, space, competition) = ids();
+        let other: CompetitionId = EntityId::new();
+        let port = FakeAdminAccess::new().competition_admin(&coach, &other);
+        assert!(!ask(&port, &coach, &space, Some(&competition)).await);
     }
 
     #[tokio::test]
-    async fn personne_n_est_admin_par_defaut() {
-        let (coach, espace, competition) = ids();
+    async fn nobody_is_admin_by_default() {
+        let (coach, space, competition) = ids();
         let port = FakeAdminAccess::new();
-        assert!(!demande(&port, &coach, &espace, Some(&competition)).await);
+        assert!(!ask(&port, &coach, &space, Some(&competition)).await);
     }
 }

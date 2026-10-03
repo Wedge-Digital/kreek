@@ -6,7 +6,7 @@
 //! porte aucune ne doit pas s'en réclamer.
 
 use crate::app::ranking::ports::RankingRepositoryError;
-use crate::app::shared_kernel::bloodbowl::admin_access::{est_admin, IAdminAccessPort};
+use crate::app::shared_kernel::bloodbowl::admin_access::{is_admin, IAdminAccessPort};
 use crate::app::shared_kernel::identity::ids::EntityId;
 
 /// **Pas de variante `Invalid`.** Les value objects de la carte 449 valident à
@@ -31,7 +31,7 @@ impl From<RankingRepositoryError> for ManualPointsError {
 /// de la compétition — la règle commune à tout kreek (carte 570).
 ///
 /// Les deux portes restaient évaluées séparément, pour que la trace dise
-/// laquelle avait ouvert. `est_admin` court-circuite : l'espace répond d'abord,
+/// laquelle avait ouvert. `is_admin` court-circuite : l'espace répond d'abord,
 /// et la compétition n'est interrogée qu'à défaut. Ce que la carte 426 avait
 /// payé — une branche supprimée sans qu'aucun test ne rougisse — est désormais
 /// tenu par les tests du service commun, qui exercent chaque porte seule.
@@ -54,5 +54,5 @@ pub async fn autorise(
     ) else {
         return false;
     };
-    est_admin(admin, &user, &space, Some(&competition)).await
+    is_admin(admin, &user, &space, Some(&competition)).await
 }

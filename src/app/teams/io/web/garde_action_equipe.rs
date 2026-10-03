@@ -22,7 +22,7 @@
 //! La fiche d'équipe, sa trésorerie et ses matchs se lisent par tout le monde —
 //! la carte 500 y retire les boutons, pas la page. Le renvoi d'équipe et
 //! l'ajustement de trésorerie relèvent d'une **autre** règle, celle du
-//! commissaire (`garde_commissaire::exiger_commissaire`), qui exclut
+//! commissaire (`team_admin_guard::require_team_admin`), qui exclut
 //! délibérément le propriétaire.
 //!
 //! Les actions d'inscription, elles, ne sont gardées par **rien** : ce

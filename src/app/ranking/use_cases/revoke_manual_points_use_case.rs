@@ -133,21 +133,21 @@ mod tests {
         }
     }
 
-    const UTILISATEUR: &str = "00000000000000000000000011";
+    const USER: &str = "00000000000000000000000011";
     const COMPETITION: &str = "00000000000000000000000012";
     const ESPACE: &str = "00000000000000000000000013";
 
     /// Chaque porte se répond séparément — c'est ce qui permet aux tests de
     /// dire **laquelle** a ouvert. La doublure partagée de la carte 570,
     /// configurée pour l'utilisateur de la commande.
-    fn faux_admin(competition: bool, espace: bool) -> FakeAdminAccess {
-        let utilisateur = EntityId::try_new(UTILISATEUR).unwrap();
+    fn fake_admin(competition: bool, espace: bool) -> FakeAdminAccess {
+        let utilisateur = EntityId::try_new(USER).unwrap();
         let mut port = FakeAdminAccess::new();
         if competition {
-            port = port.admin_competition(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
+            port = port.competition_admin(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
         }
         if espace {
-            port = port.admin_espace(&utilisateur, &EntityId::try_new(ESPACE).unwrap());
+            port = port.space_admin(&utilisateur, &EntityId::try_new(ESPACE).unwrap());
         }
         port
     }
@@ -158,14 +158,14 @@ mod tests {
             season_id: "S1".into(),
             competition_id: COMPETITION.into(),
             space_id: ESPACE.into(),
-            user_id: UTILISATEUR.into(),
+            user_id: USER.into(),
         }
     }
 
     #[tokio::test]
     async fn un_non_admin_est_refuse() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = faux_admin(false, false);
+        let admin = fake_admin(false, false);
 
         assert_eq!(
             execute(commande(), &repo, &admin).await,
@@ -180,7 +180,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_de_competition_seul_suffit() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = faux_admin(true, false);
+        let admin = fake_admin(true, false);
 
         assert!(execute(commande(), &repo, &admin).await.is_ok());
     }
@@ -188,7 +188,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_d_espace_seul_suffit() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = faux_admin(false, true);
+        let admin = fake_admin(false, true);
 
         assert!(execute(commande(), &repo, &admin).await.is_ok());
     }
@@ -199,7 +199,7 @@ mod tests {
     #[tokio::test]
     async fn zero_ligne_supprimee_vaut_introuvable() {
         let repo = FakeRepo::qui_supprime(0);
-        let admin = faux_admin(true, false);
+        let admin = fake_admin(true, false);
 
         assert_eq!(
             execute(commande(), &repo, &admin).await,
@@ -213,7 +213,7 @@ mod tests {
     #[tokio::test]
     async fn la_saison_accompagne_l_identifiant_jusqu_au_depot() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = faux_admin(true, false);
+        let admin = fake_admin(true, false);
 
         execute(commande(), &repo, &admin).await.unwrap();
 

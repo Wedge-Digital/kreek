@@ -1,7 +1,7 @@
 use crate::app::auth::domain::user::User;
 use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
+use crate::app::shared_kernel::bloodbowl::admin_access::is_admin;
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
@@ -86,7 +86,7 @@ impl ResultAuthorization {
 }
 
 /// Calcule l'autorisation de l'utilisateur courant pour la page publique des
-/// résultats : admin de l'espace ou de la compétition (`est_admin`, la règle
+/// résultats : admin de l'espace ou de la compétition (`is_admin`, la règle
 /// de tout kreek), ou coach d'une des équipes inscrites cette saison.
 pub async fn compute_authorization(
     state: &AppState,
@@ -97,7 +97,7 @@ pub async fn compute_authorization(
 ) -> ResultAuthorization {
     // La règle de tout kreek (carte 572) : admin de l'espace ou de la
     // compétition, par identifiant.
-    let is_admin = est_admin(
+    let is_admin = is_admin(
         state.competitions.admin_access.as_ref(),
         &user.id,
         space_id,

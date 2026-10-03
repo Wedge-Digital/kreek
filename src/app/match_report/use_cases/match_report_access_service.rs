@@ -10,7 +10,7 @@
 
 use crate::app::auth::domain::user::User;
 use crate::app::match_report::ports::ITeamDataPort;
-use crate::app::shared_kernel::bloodbowl::admin_access::{est_admin, IAdminAccessPort};
+use crate::app::shared_kernel::bloodbowl::admin_access::{is_admin, IAdminAccessPort};
 use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::state::AppState;
 
@@ -51,7 +51,7 @@ pub async fn is_authorized(
 }
 
 /// Admin d'espace ou de compétition — **sans** les coachs des deux équipes.
-/// La règle est celle de tout kreek, `est_admin` (carte 570) ; un identifiant
+/// La règle est celle de tout kreek, `is_admin` (carte 570) ; un identifiant
 /// illisible refuse.
 ///
 /// `is_authorized` répond « a le droit d'agir sur ce rapport », ce qui inclut
@@ -75,7 +75,7 @@ pub async fn est_administrateur(
     ) else {
         return false;
     };
-    est_admin(deps.admin_access, &user.id, &space, Some(&competition)).await
+    is_admin(deps.admin_access, &user.id, &space, Some(&competition)).await
 }
 
 /// Une erreur de port vaut « pas coach » : un contrôle d'accès échoue fermé.

@@ -14,7 +14,7 @@ use crate::app::competitions::use_cases::update_draft_competition::{
     execute as execute_update, UpdateDraftCompetitionCommand, UpdateDraftCompetitionError,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
+use crate::app::shared_kernel::bloodbowl::admin_access::is_admin;
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
@@ -405,7 +405,7 @@ pub async fn post_update_competition(
     // n'importe quel membre de l'espace pouvait s'y déclarer admin de toute
     // compétition. Elle exige désormais un admin de l'espace ou de la
     // compétition visée — la règle de tout kreek.
-    if !est_admin(
+    if !is_admin(
         state.competitions.admin_access.as_ref(),
         &user.id,
         &sid,

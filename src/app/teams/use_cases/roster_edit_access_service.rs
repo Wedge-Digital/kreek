@@ -11,13 +11,13 @@
 //! # La règle d'admin n'est plus écrite ici (carte 570)
 //!
 //! « Administrateur d'espace ou de compétition » se demande au service commun,
-//! `shared_kernel::bloodbowl::admin_access::est_admin`. Ce fichier n'ajoute que
+//! `shared_kernel::bloodbowl::admin_access::is_admin`. Ce fichier n'ajoute que
 //! ce qui appartient à `teams` : **le propriétaire**, inclus pour l'effectif
 //! (`peut_modifier_effectif`), exclu pour les gestes de commissaire
-//! (`est_admin_de_l_equipe`). Les deux ne sont pas interchangeables, et les
+//! (`is_team_admin`). Les deux ne sont pas interchangeables, et les
 //! fondre serait une erreur.
 
-use crate::app::shared_kernel::bloodbowl::admin_access::{est_admin, IAdminAccessPort};
+use crate::app::shared_kernel::bloodbowl::admin_access::{is_admin, IAdminAccessPort};
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::team::Team;
 
@@ -36,7 +36,7 @@ pub async fn peut_modifier_effectif(
     if team.coach_id.to_string() == viewer_id.to_string() {
         return true;
     }
-    est_admin_de_l_equipe(team, viewer_id, access).await
+    is_team_admin(team, viewer_id, access).await
 }
 
 /// Admin de l'espace ou de la compétition de l'équipe — **sans** son
@@ -46,7 +46,7 @@ pub async fn peut_modifier_effectif(
 /// L'espace et la compétition sont lus dans l'agrégat, pas dans le chemin : ce
 /// sont ceux de l'équipe, quelle que soit l'URL par laquelle on la regarde.
 // arch:no-instrument — service de lecture : une question de droit, aucune intention métier
-pub async fn est_admin_de_l_equipe(
+pub async fn is_team_admin(
     team: &Team,
     viewer_id: &CoachId,
     access: &dyn IAdminAccessPort,
@@ -54,7 +54,7 @@ pub async fn est_admin_de_l_equipe(
     let Ok(space_id) = SpaceId::try_new(&team.space_id.to_string()) else {
         return false;
     };
-    est_admin(access, viewer_id, &space_id, team.competition_id.as_ref()).await
+    is_admin(access, viewer_id, &space_id, team.competition_id.as_ref()).await
 }
 
 #[cfg(test)]
@@ -128,21 +128,21 @@ mod tests {
     async fn le_proprietaire_peut_et_n_interroge_aucun_port() {
         let port = FakeAdminAccess::new();
         assert!(peut(PROPRIETAIRE, &port, true).await);
-        assert_eq!(port.appels_espace(), 0);
-        assert_eq!(port.appels_competition(), 0);
+        assert_eq!(port.space_calls(), 0);
+        assert_eq!(port.competition_calls(), 0);
     }
 
     #[tokio::test]
     async fn un_admin_d_espace_non_proprietaire_peut() {
-        let port = FakeAdminAccess::new().admin_espace(&tiers(), &espace());
+        let port = FakeAdminAccess::new().space_admin(&tiers(), &espace());
         assert!(peut(TIERS, &port, true).await);
         // L'espace suffit : la compétition n'est pas interrogée.
-        assert_eq!(port.appels_competition(), 0);
+        assert_eq!(port.competition_calls(), 0);
     }
 
     #[tokio::test]
     async fn un_admin_de_competition_par_identifiant_peut() {
-        let port = FakeAdminAccess::new().admin_competition(&tiers(), &competition());
+        let port = FakeAdminAccess::new().competition_admin(&tiers(), &competition());
         assert!(peut(TIERS, &port, true).await);
     }
 
@@ -150,8 +150,8 @@ mod tests {
     async fn un_coach_tiers_ne_peut_pas() {
         let port = FakeAdminAccess::new();
         assert!(!peut(TIERS, &port, true).await);
-        assert_eq!(port.appels_espace(), 1);
-        assert_eq!(port.appels_competition(), 1);
+        assert_eq!(port.space_calls(), 1);
+        assert_eq!(port.competition_calls(), 1);
     }
 
     /// Une équipe hors compétition n'a pas d'administrateur de compétition :
@@ -160,24 +160,24 @@ mod tests {
     async fn une_equipe_sans_competition_n_interroge_pas_le_port_competition() {
         let port = FakeAdminAccess::new();
         assert!(!peut(TIERS, &port, false).await);
-        assert_eq!(port.appels_competition(), 0);
+        assert_eq!(port.competition_calls(), 0);
     }
 
     // ── Les gestes de commissaire ─────────────────────────────────────────
 
     /// Le propriétaire n'est pas commissaire de sa propre équipe.
     #[tokio::test]
-    async fn le_proprietaire_n_est_pas_admin_de_son_equipe() {
+    async fn owner_is_not_admin_of_their_team() {
         let port = FakeAdminAccess::new();
         let proprietaire = CoachId::try_new(PROPRIETAIRE).unwrap();
-        assert!(!est_admin_de_l_equipe(&equipe(true), &proprietaire, &port).await);
+        assert!(!is_team_admin(&equipe(true), &proprietaire, &port).await);
     }
 
     /// Décision du 2026-10-03 : l'admin de la compétition de l'équipe ajuste sa
     /// trésorerie et la renvoie, comme l'admin d'espace.
     #[tokio::test]
-    async fn l_admin_de_la_competition_de_l_equipe_est_admin_de_l_equipe() {
-        let port = FakeAdminAccess::new().admin_competition(&tiers(), &competition());
-        assert!(est_admin_de_l_equipe(&equipe(true), &tiers(), &port).await);
+    async fn competition_admin_is_team_admin() {
+        let port = FakeAdminAccess::new().competition_admin(&tiers(), &competition());
+        assert!(is_team_admin(&equipe(true), &tiers(), &port).await);
     }
 }

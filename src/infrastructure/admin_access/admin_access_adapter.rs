@@ -1,4 +1,4 @@
-//! L'adapter unique du service `est_admin` (carte 570).
+//! L'adapter unique du service `is_admin` (carte 570).
 //!
 //! Il est le seul endroit qui sache où vivent les admins : le profil d'espace
 //! dans `spaces`, les admins de compétition dans `competitions`. Il vit dans
@@ -28,7 +28,7 @@ use tokio::sync::OnceCell;
 /// faisait qu'une entrée de menu ; il donne désormais **les droits** (décision
 /// du 2026-10-03). Si la valeur devait varier d'un environnement à l'autre,
 /// elle passerait en configuration — pas avant.
-pub const COMPTE_EXPLOITANT: &str = "Bagouze";
+pub const OPERATOR_ACCOUNT: &str = "Bagouze";
 
 pub struct AdminAccessAdapter {
     space_repo: Arc<dyn ISpaceRepository>,
@@ -39,7 +39,7 @@ pub struct AdminAccessAdapter {
     /// **Une absence n'est pas retenue** : tant que le compte n'existe pas —
     /// une base neuve, un environnement de test —, la question se repose. Le
     /// compte créé ensuite est reconnu sans redémarrage.
-    exploitant: OnceCell<String>,
+    operator: OnceCell<String>,
 }
 
 impl AdminAccessAdapter {
@@ -52,15 +52,15 @@ impl AdminAccessAdapter {
             space_repo,
             competition_repo,
             user_repo,
-            exploitant: OnceCell::new(),
+            operator: OnceCell::new(),
         }
     }
 
-    async fn est_l_exploitant(&self, user_id: &CoachId) -> bool {
+    async fn is_operator(&self, user_id: &CoachId) -> bool {
         let resolu = self
-            .exploitant
+            .operator
             .get_or_try_init(|| async {
-                match self.user_repo.find_by_coach_name(COMPTE_EXPLOITANT).await {
+                match self.user_repo.find_by_coach_name(OPERATOR_ACCOUNT).await {
                     Ok(Some(user)) => Ok(user.id.to_string()),
                     _ => Err(()),
                 }
@@ -73,7 +73,7 @@ impl AdminAccessAdapter {
 #[async_trait]
 impl IAdminAccessPort for AdminAccessAdapter {
     async fn is_space_admin(&self, user_id: &CoachId, space_id: &SpaceId) -> bool {
-        if self.est_l_exploitant(user_id).await {
+        if self.is_operator(user_id).await {
             return true;
         }
         matches!(
@@ -97,7 +97,7 @@ impl IAdminAccessPort for AdminAccessAdapter {
         user_id: &CoachId,
         competition_id: &CompetitionId,
     ) -> bool {
-        if self.est_l_exploitant(user_id).await {
+        if self.is_operator(user_id).await {
             return true;
         }
         let coach_id = user_id.to_string();
@@ -125,43 +125,43 @@ mod tests {
         )
     }
 
-    async fn compte(pool: &PgPool, id: &CoachId, nom: &str) {
+    async fn account(pool: &PgPool, id: &CoachId, name: &str) {
         sqlx::query(
             "INSERT INTO auth__users (id, coach_name, email, password_hash) VALUES ($1, $2, $3, 'x')",
         )
         .bind(id.to_string())
-        .bind(nom)
-        .bind(format!("{nom}@kreek.test"))
+        .bind(name)
+        .bind(format!("{name}@kreek.test"))
         .execute(pool)
         .await
         .unwrap();
     }
 
-    async fn membre(pool: &PgPool, espace: &SpaceId, coach: &CoachId, profil: &str) {
+    async fn member(pool: &PgPool, space: &SpaceId, coach: &CoachId, profile: &str) {
         sqlx::query(
             "INSERT INTO spaces__user_space (space_id, coach_id, profile) VALUES ($1, $2, $3)",
         )
-        .bind(espace.to_string())
+        .bind(space.to_string())
         .bind(coach.to_string())
-        .bind(profil)
+        .bind(profile)
         .execute(pool)
         .await
         .unwrap();
     }
 
-    /// Une compétition dont `admin` est l'admin, sous le pseudonyme `nom`.
+    /// Une compétition dont `admin` est l'admin, sous le pseudonyme `name`.
     async fn competition(
         pool: &PgPool,
-        espace: &SpaceId,
+        space: &SpaceId,
         admin: &CoachId,
-        nom: &str,
+        name: &str,
     ) -> CompetitionId {
         let competition: CompetitionId = EntityId::new();
         sqlx::query(
             "INSERT INTO competitions (id, space_id, name, logo) VALUES ($1, $2, 'Ligue', '')",
         )
         .bind(competition.to_string())
-        .bind(espace.to_string())
+        .bind(space.to_string())
         .execute(pool)
         .await
         .unwrap();
@@ -176,8 +176,8 @@ mod tests {
         .unwrap();
         sqlx::query("INSERT INTO spaces__user_cache (id, coach_name, email) VALUES ($1, $2, $3)")
             .bind(admin.to_string())
-            .bind(nom)
-            .bind(format!("{nom}@kreek.test"))
+            .bind(name)
+            .bind(format!("{name}@kreek.test"))
             .execute(pool)
             .await
             .unwrap();
@@ -185,21 +185,21 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn l_admin_d_espace_l_est_et_le_simple_membre_non(pool: PgPool) {
-        let espace: SpaceId = EntityId::new();
-        let (admin, simple): (CoachId, CoachId) = (EntityId::new(), EntityId::new());
-        membre(&pool, &espace, &admin, "SpaceAdmin").await;
-        membre(&pool, &espace, &simple, "SpaceUser").await;
+    async fn space_admin_is_admin_and_plain_member_is_not(pool: PgPool) {
+        let space: SpaceId = EntityId::new();
+        let (admin, member_only): (CoachId, CoachId) = (EntityId::new(), EntityId::new());
+        member(&pool, &space, &admin, "SpaceAdmin").await;
+        member(&pool, &space, &member_only, "SpaceUser").await;
         let a = adapter(&pool);
-        assert!(a.is_space_admin(&admin, &espace).await);
-        assert!(!a.is_space_admin(&simple, &espace).await);
+        assert!(a.is_space_admin(&admin, &space).await);
+        assert!(!a.is_space_admin(&member_only, &space).await);
     }
 
     #[sqlx::test]
-    async fn l_admin_de_competition_est_reconnu_par_son_identifiant(pool: PgPool) {
-        let espace: SpaceId = EntityId::new();
+    async fn competition_admin_is_recognised_by_id(pool: PgPool) {
+        let space: SpaceId = EntityId::new();
         let admin: CoachId = EntityId::new();
-        let competition = competition(&pool, &espace, &admin, "Grumbak").await;
+        let competition = competition(&pool, &space, &admin, "Grumbak").await;
         assert!(
             adapter(&pool)
                 .is_competition_admin(&admin, &competition)
@@ -211,46 +211,46 @@ mod tests {
     /// porterait le pseudonyme de l'admin — cache désynchronisé, base importée —
     /// n'hérite pas de ses droits.
     #[sqlx::test]
-    async fn le_pseudonyme_de_l_admin_ne_suffit_pas(pool: PgPool) {
-        let espace: SpaceId = EntityId::new();
-        let (admin, homonyme): (CoachId, CoachId) = (EntityId::new(), EntityId::new());
-        let competition = competition(&pool, &espace, &admin, "Grumbak").await;
+    async fn admin_pseudonym_alone_is_not_enough(pool: PgPool) {
+        let space: SpaceId = EntityId::new();
+        let (admin, namesake): (CoachId, CoachId) = (EntityId::new(), EntityId::new());
+        let competition = competition(&pool, &space, &admin, "Grumbak").await;
         assert!(
             !adapter(&pool)
-                .is_competition_admin(&homonyme, &competition)
+                .is_competition_admin(&namesake, &competition)
                 .await
         );
     }
 
     /// Le compte exploitant a tous les droits, sans être membre de rien.
     #[sqlx::test]
-    async fn le_compte_exploitant_est_admin_partout(pool: PgPool) {
-        let espace: SpaceId = EntityId::new();
-        let (exploitant, admin): (CoachId, CoachId) = (EntityId::new(), EntityId::new());
-        compte(&pool, &exploitant, COMPTE_EXPLOITANT).await;
-        let competition = competition(&pool, &espace, &admin, "Grumbak").await;
+    async fn operator_account_is_admin_everywhere(pool: PgPool) {
+        let space: SpaceId = EntityId::new();
+        let (operator, admin): (CoachId, CoachId) = (EntityId::new(), EntityId::new());
+        account(&pool, &operator, OPERATOR_ACCOUNT).await;
+        let competition = competition(&pool, &space, &admin, "Grumbak").await;
         let a = adapter(&pool);
-        assert!(a.is_space_admin(&exploitant, &espace).await);
-        assert!(a.is_competition_admin(&exploitant, &competition).await);
+        assert!(a.is_space_admin(&operator, &space).await);
+        assert!(a.is_competition_admin(&operator, &competition).await);
     }
 
     /// Une base sans compte exploitant : l'absence n'est pas retenue, et le
     /// compte créé ensuite est reconnu par le même adapter.
     #[sqlx::test]
-    async fn le_compte_exploitant_cree_apres_coup_est_reconnu(pool: PgPool) {
-        let espace: SpaceId = EntityId::new();
-        let exploitant: CoachId = EntityId::new();
+    async fn operator_account_created_later_is_recognised(pool: PgPool) {
+        let space: SpaceId = EntityId::new();
+        let operator: CoachId = EntityId::new();
         let a = adapter(&pool);
-        assert!(!a.is_space_admin(&exploitant, &espace).await);
-        compte(&pool, &exploitant, COMPTE_EXPLOITANT).await;
-        assert!(a.is_space_admin(&exploitant, &espace).await);
+        assert!(!a.is_space_admin(&operator, &space).await);
+        account(&pool, &operator, OPERATOR_ACCOUNT).await;
+        assert!(a.is_space_admin(&operator, &space).await);
     }
 
     /// Une compétition introuvable refuse : échec fermé.
     #[sqlx::test]
-    async fn une_competition_introuvable_refuse(pool: PgPool) {
+    async fn unknown_competition_is_refused(pool: PgPool) {
         let coach: CoachId = EntityId::new();
-        let inconnue: CompetitionId = EntityId::new();
-        assert!(!adapter(&pool).is_competition_admin(&coach, &inconnue).await);
+        let unknown: CompetitionId = EntityId::new();
+        assert!(!adapter(&pool).is_competition_admin(&coach, &unknown).await);
     }
 }

@@ -119,7 +119,7 @@ pub async fn can_customise(
     space_id: &SpaceId,
     team: &TeamRosterInfoDto,
 ) -> bool {
-    player_access_service::peut_customiser(
+    player_access_service::can_customise(
         state.players.admin_access.as_ref(),
         coach_id,
         space_id,

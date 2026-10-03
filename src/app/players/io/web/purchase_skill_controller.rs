@@ -108,7 +108,7 @@ pub async fn can_spend_spp(
     space_id: &SpaceId,
     team: &TeamRosterInfoDto,
 ) -> bool {
-    player_access_service::peut_depenser_des_spp(
+    player_access_service::can_spend_spp(
         state.players.admin_access.as_ref(),
         &user.id,
         space_id,

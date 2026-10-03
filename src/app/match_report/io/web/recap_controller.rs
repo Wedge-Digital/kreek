@@ -638,20 +638,20 @@ mod authorization_tests {
     }
 
     /// La doublure partagée de la carte 570, configurée pour l'utilisateur.
-    fn admins(space_admin: bool, comp_admin: bool) -> FakeAdminAccess {
+    fn admins_for(space_admin: bool, comp_admin: bool) -> FakeAdminAccess {
         let utilisateur = EntityId::try_new(UTILISATEUR).unwrap();
         let mut port = FakeAdminAccess::new();
         if space_admin {
-            port = port.admin_espace(&utilisateur, &EntityId::try_new(SPACE).unwrap());
+            port = port.space_admin(&utilisateur, &EntityId::try_new(SPACE).unwrap());
         }
         if comp_admin {
-            port = port.admin_competition(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
+            port = port.competition_admin(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
         }
         port
     }
 
     async fn authorize(space_admin: bool, comp_admin: bool, team_data: FakeTeamData) -> bool {
-        let admin_access = admins(space_admin, comp_admin);
+        let admin_access = admins_for(space_admin, comp_admin);
         let deps = AccesRapportDeps {
             admin_access: &admin_access,
             team_data: &team_data,
@@ -697,24 +697,24 @@ mod authorization_tests {
     /// contrôle échoue fermé. L'erreur de lecture du dépôt, elle, est couverte
     /// par les tests de l'adapter commun (carte 570).
     #[tokio::test]
-    async fn une_competition_illisible_ne_donne_pas_l_acces() {
-        let admin_access = admins(false, true);
+    async fn unreadable_competition_grants_no_access() {
+        let admin_access = admins_for(false, true);
         let team_data = coaching(vec![]);
         let deps = AccesRapportDeps {
             admin_access: &admin_access,
             team_data: &team_data,
         };
-        let illisible = PorteeRapport {
-            competition_id: "comp-illisible".to_string(),
+        let unreadable = PorteeRapport {
+            competition_id: "comp-unreadable".to_string(),
             ..scope()
         };
-        assert!(!is_authorized(&deps, &user(), SPACE, &illisible).await);
+        assert!(!is_authorized(&deps, &user(), SPACE, &unreadable).await);
     }
 
     // ── `est_administrateur` : sans les coachs (carte 550) ────────────────
 
-    async fn administre(space_admin: bool, comp_admin: bool, team_data: FakeTeamData) -> bool {
-        let admin_access = admins(space_admin, comp_admin);
+    async fn administers(space_admin: bool, comp_admin: bool, team_data: FakeTeamData) -> bool {
+        let admin_access = admins_for(space_admin, comp_admin);
         let deps = AccesRapportDeps {
             admin_access: &admin_access,
             team_data: &team_data,
@@ -723,21 +723,21 @@ mod authorization_tests {
     }
 
     #[tokio::test]
-    async fn l_admin_d_espace_administre() {
-        assert!(administre(true, false, coaching(vec![])).await);
+    async fn space_admin_administers() {
+        assert!(administers(true, false, coaching(vec![])).await);
     }
 
     #[tokio::test]
-    async fn l_admin_de_competition_administre() {
-        assert!(administre(false, true, coaching(vec![])).await);
+    async fn competition_admin_administers() {
+        assert!(administers(false, true, coaching(vec![])).await);
     }
 
     /// La différence avec `is_authorized` : le coach d'une équipe du match agit
     /// sur son rapport, mais ne change pas la sélection quand la compétition
     /// interdit le hors-calendrier.
     #[tokio::test]
-    async fn le_coach_du_match_n_administre_pas() {
-        assert!(!administre(false, false, coaching(vec![HOME, AWAY])).await);
+    async fn match_coach_does_not_administer() {
+        assert!(!administers(false, false, coaching(vec![HOME, AWAY])).await);
     }
 
     #[tokio::test]

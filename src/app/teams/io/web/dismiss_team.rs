@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::ids::{EntityId, SpaceId, UserId};
-use crate::app::teams::io::web::garde_commissaire::exiger_commissaire;
+use crate::app::teams::io::web::team_admin_guard::require_team_admin;
 use crate::app::teams::use_cases::commands::DismissTeamCommand;
 use crate::app::teams::use_cases::dismiss_team as dismiss_uc;
 use crate::state::AppState;
@@ -16,7 +16,7 @@ pub async fn dismiss_team(
 ) -> impl IntoResponse {
     // Admin de l'espace ou de la compétition de l'équipe, propriétaire exclu
     // (carte 570) — l'admin d'espace seul, avant.
-    let user = match exiger_commissaire(&state, &auth_session, &team_id).await {
+    let user = match require_team_admin(&state, &auth_session, &team_id).await {
         Ok(user) => user,
         Err(refus) => return refus,
     };
