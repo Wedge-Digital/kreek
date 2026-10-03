@@ -13,74 +13,13 @@
 //! pas. Chaque garde est donc éprouvée des deux côtés : le membre simple est
 //! refusé, et l'administrateur **traverse et écrit vraiment**.
 
-use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RosterId, SeasonId};
-use crate::app::shared_kernel::bloodbowl::staff_counts::{
-    ApothecaryCount, AssistantCount, CheerleaderCount, RerollCount,
-};
-use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
-use crate::app::shared_kernel::identity::sulid::SUlid;
-use crate::app::teams::domain::team::TeamDomainEvent;
-use crate::app::teams::domain::value_objects::{DedicatedFans, Kpo, RosterName, TeamName};
-use crate::app::teams::ports::ITeamRepository;
+use super::fixtures::equipe_semee;
 use crate::app::teams::routes::Routes;
 use crate::web::test_harness::Harnais;
 use axum::http::StatusCode;
 
 const MEMBRE_SIMPLE: &str = crate::cli::seed_e2e::SIMPLE_COACH_NAME;
 const COMMISSAIRE: &str = crate::cli::seed_e2e::DEV_COACH_NAME;
-
-/// Une équipe à 1000 kPo dans l'espace E2E, semée **par le dépôt** : une équipe
-/// posée en projection seule rendrait `404`, et les refus se liraient alors
-/// pour une raison étrangère.
-async fn equipe(pool: &sqlx::PgPool) -> (String, String) {
-    crate::cli::seed_e2e::execute(pool).await.expect("seed e2e");
-
-    let (space_id,): (String,) =
-        sqlx::query_as("SELECT id FROM spaces WHERE space_name = 'Espace E2E'")
-            .fetch_one(pool)
-            .await
-            .expect("espace E2E semé");
-    let (proprietaire,): (String,) =
-        sqlx::query_as("SELECT id FROM auth__users WHERE coach_name = 'E2E Coach 02'")
-            .fetch_one(pool)
-            .await
-            .expect("coach propriétaire semé");
-
-    let team_id = SUlid::new().to_string();
-    let repo = crate::app::teams::io::repository::team_repository::TeamRepository::new(
-        pool.clone(),
-        crate::common::services::event_bus::event_bus::new_bus(),
-    );
-    repo.append(
-        &team_id,
-        &TeamDomainEvent::TeamCreated {
-            team_id: TeamId::try_new(&team_id).unwrap(),
-            space_id: SpaceId::try_new(&space_id).unwrap(),
-            competition_id: CompetitionId::try_new(&SUlid::new().to_string()).unwrap(),
-            competition_name: "Ligue de Condate".to_string(),
-            season_id: SeasonId::try_new(&SUlid::new().to_string()).unwrap(),
-            season_name: "Saison 2025".to_string(),
-            name: TeamName::try_new("Les Korrigans FC".to_string()).unwrap(),
-            logo_url: None,
-            roster_id: RosterId::try_new(&SUlid::new().to_string()).unwrap(),
-            roster_name: RosterName::try_new("Elfes Sylvestres".to_string()).unwrap(),
-            coach_id: CoachId::try_new(&proprietaire).unwrap(),
-            coach_name: "E2E Coach 02".to_string(),
-            treasury: Kpo(1000),
-            dedicated_fans: DedicatedFans::try_new(2).unwrap(),
-            rerolls: RerollCount(3),
-            apothecaries: ApothecaryCount(1),
-            assistants: AssistantCount(2),
-            cheerleaders: CheerleaderCount(3),
-        },
-        0,
-    )
-    .await
-    .expect("équipe semée par le dépôt");
-
-    (space_id, team_id)
-}
 
 fn formulaire(sens: &str, montant: u32, motif: &str) -> String {
     format!(
@@ -93,7 +32,7 @@ fn formulaire(sens: &str, montant: u32, motif: &str) -> String {
 /// c'est le panneau qui disparaît.
 #[sqlx::test]
 async fn un_membre_simple_lit_le_releve_sans_son_panneau(pool: sqlx::PgPool) {
-    let (space, team) = equipe(&pool).await;
+    let (space, team) = equipe_semee(&pool).await;
     let membre = Harnais::connecte_en_tant_que(pool, MEMBRE_SIMPLE).await;
 
     let r = membre.get(&Routes.team_treasury(&space, &team)).await;
@@ -117,7 +56,7 @@ async fn un_membre_simple_lit_le_releve_sans_son_panneau(pool: sqlx::PgPool) {
 /// panneau n'était rendu pour personne.
 #[sqlx::test]
 async fn un_commissaire_voit_le_panneau_et_sa_route(pool: sqlx::PgPool) {
-    let (space, team) = equipe(&pool).await;
+    let (space, team) = equipe_semee(&pool).await;
     let admin = Harnais::connecte_en_tant_que(pool, COMMISSAIRE).await;
 
     let r = admin.get(&Routes.team_treasury(&space, &team)).await;
@@ -133,7 +72,7 @@ async fn un_commissaire_voit_le_panneau_et_sa_route(pool: sqlx::PgPool) {
 
 #[sqlx::test]
 async fn un_membre_simple_ne_peut_pas_ajuster(pool: sqlx::PgPool) {
-    let (space, team) = equipe(&pool).await;
+    let (space, team) = equipe_semee(&pool).await;
     let membre = Harnais::connecte_en_tant_que(pool, MEMBRE_SIMPLE).await;
 
     let r = membre
@@ -151,7 +90,7 @@ async fn un_membre_simple_ne_peut_pas_ajuster(pool: sqlx::PgPool) {
 /// paraîtrait sans effet.
 #[sqlx::test]
 async fn un_montant_invalide_rend_un_message_et_non_une_erreur_http(pool: sqlx::PgPool) {
-    let (space, team) = equipe(&pool).await;
+    let (space, team) = equipe_semee(&pool).await;
     let admin = Harnais::connecte_en_tant_que(pool, COMMISSAIRE).await;
 
     let r = admin
@@ -174,7 +113,7 @@ async fn un_montant_invalide_rend_un_message_et_non_une_erreur_http(pool: sqlx::
 /// Le motif vide est refusé **par le serveur**, pas seulement par Alpine.
 #[sqlx::test]
 async fn un_motif_vide_est_refuse_par_le_serveur(pool: sqlx::PgPool) {
-    let (space, team) = equipe(&pool).await;
+    let (space, team) = equipe_semee(&pool).await;
     let admin = Harnais::connecte_en_tant_que(pool, COMMISSAIRE).await;
 
     let r = admin
@@ -196,7 +135,7 @@ async fn un_motif_vide_est_refuse_par_le_serveur(pool: sqlx::PgPool) {
 /// arrive au panneau plutôt qu'en code HTTP.
 #[sqlx::test]
 async fn un_retrait_non_couvert_rend_le_refus_du_domaine(pool: sqlx::PgPool) {
-    let (space, team) = equipe(&pool).await;
+    let (space, team) = equipe_semee(&pool).await;
     let admin = Harnais::connecte_en_tant_que(pool, COMMISSAIRE).await;
 
     let r = admin
@@ -239,7 +178,7 @@ async fn un_retrait_non_couvert_rend_le_refus_du_domaine(pool: sqlx::PgPool) {
 /// vise `#app-content` et non `#team-tab-zone`.
 #[sqlx::test]
 async fn un_credit_monte_le_solde_aux_deux_endroits_qui_l_affichent(pool: sqlx::PgPool) {
-    let (space, team) = equipe(&pool).await;
+    let (space, team) = equipe_semee(&pool).await;
     let admin = Harnais::connecte_en_tant_que(pool, COMMISSAIRE).await;
 
     let r = admin
