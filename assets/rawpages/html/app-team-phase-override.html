@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche équipe — ouvrir une phase manuellement</title>
+  <link rel="stylesheet" href="../../static/css/common.css">
+  <link rel="stylesheet" href="../../static/css/pages/team-page.css">
+  <style>
+    /* Maquette : depuis le bandeau d'une équipe prête à jouer, un admin d'espace
+       ou de compétition ouvre manuellement l'une des trois phases — dépense des
+       SPP, recrutement, renvois.
+
+       L'en-tête et le bandeau sont ceux de `teams-team-detail.html`, avec les
+       feuilles réelles. Seul le bloc `.phase-override` est nouveau. */
+
+    body { background: var(--dark-7); padding: var(--p2); font-family: var(--font-body); }
+    .mq-page   { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p3); }
+    .mq-titre  { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--dark-0); }
+    .mq-note   { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 4px; }
+    .mq-etat   {
+      font-size: var(--text-tiny); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--dark-2); margin-bottom: var(--p05);
+    }
+    .mq-etat em { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--dark-3); }
+
+    /* ── Le panneau d'ouverture — le seul ajout ─────────────────────────────
+       Il se déplie sous le bandeau, dans la même carte : l'action naît de l'état
+       « prête à jouer », elle reste à côté de lui. */
+    .team-page .phase-override {
+      background: var(--white); border-radius: 0 0 10px 10px;
+      border-top: 1px solid var(--dark-6);
+      padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2);
+    }
+    .team-page .state-banner + .phase-override { margin-top: calc(-1 * var(--p1)); }
+    .team-page .phase-override-title {
+      font-family: var(--font-title); font-size: var(--h5); font-weight: 700; color: var(--dark-0);
+    }
+    .team-page .phase-override-intro { font-size: var(--text-tiny); color: var(--dark-3); margin-top: 2px; }
+
+    /* Trois cartes-choix : une seule à la fois, comme des boutons radio. */
+    .team-page .phase-override-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--p1); }
+    .team-page .phase-choice {
+      position: relative; display: flex; flex-direction: column; gap: 6px;
+      padding: var(--p1) var(--p1) var(--p1) 44px;
+      border: 2px solid var(--dark-5); border-radius: 10px; cursor: pointer;
+      background: var(--white); transition: border-color .15s, background .15s;
+    }
+    .team-page .phase-choice:hover { border-color: var(--dark-4); }
+    .team-page .phase-choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .team-page .phase-choice-icon { position: absolute; left: 12px; top: 12px; font-size: 20px; }
+    .team-page .phase-choice-name { font-weight: 700; color: var(--dark-1); font-size: var(--text-small); }
+    .team-page .phase-choice-desc { font-size: var(--text-tiny); color: var(--dark-3); line-height: 1.4; }
+    .team-page .phase-choice:has(input:checked) {
+      border-color: var(--main-blue); background: rgba(0,48,73,0.04);
+    }
+
+    .team-page .phase-override-reason { display: flex; flex-direction: column; gap: 6px; }
+    .team-page .phase-override-reason label { font-size: var(--text-tiny); font-weight: 700; color: var(--dark-2); }
+    .team-page .phase-override-reason label span { font-weight: 400; color: var(--dark-3); }
+    .team-page .phase-override-reason textarea {
+      font-family: inherit; font-size: var(--text-small); padding: 10px var(--p1);
+      border: 1px solid var(--dark-5); border-radius: 8px; resize: vertical; min-height: 60px;
+    }
+
+    /* Ce que l'ouverture implique, dit avant le clic — pas après. */
+    .team-page .phase-override-warning {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px var(--p1); border-radius: 8px;
+      background: rgba(255,107,53,0.08); color: #A8552A; font-size: var(--text-tiny); line-height: 1.5;
+    }
+    .team-page .phase-override-error {
+      padding: 10px var(--p1); border-radius: 8px;
+      background: #fdf0ee; border: 1px solid #f5c6c0; color: #c0392b; font-size: var(--text-tiny);
+    }
+
+    .team-page .phase-override-actions { display: flex; justify-content: flex-end; gap: var(--p1); }
+    .team-page .phase-override-actions .state-banner-cta[disabled] { opacity: .45; cursor: not-allowed; }
+
+    @media (max-width: 768px) {
+      body { padding: var(--p1); }
+      .team-page .phase-override { padding: var(--p1); }
+      .team-page .phase-override-choices { grid-template-columns: 1fr; }
+      .team-page .phase-override-actions { flex-direction: column-reverse; }
+      .team-page .phase-override-actions .state-banner-cta { text-align: center; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="mq-page">
+
+  <div>
+    <div class="mq-titre">Ouvrir une phase manuellement</div>
+    <p class="mq-note">Maquette — un admin d'espace ou de compétition ouvre, depuis une équipe prête à jouer, la dépense des SPP, le recrutement ou les renvois. À la fermeture, l'équipe redevient prête à jouer, sans erreurs coûteuses. Réduire la fenêtre sous 768px pour la version mobile.</p>
+  </div>
+
+  <!-- ═══ État 1 — vue admin, panneau fermé ═══════════════════════════════ -->
+  <section>
+    <div class="mq-etat">1 · Admin — équipe prête à jouer <em>(un bouton de plus dans le bandeau)</em></div>
+    <div class="team-page">
+      <div class="state-banner state-banner--ready">
+        <span class="state-banner-icon">✅</span>
+        <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
+        <button type="button" class="state-banner-cta state-banner-cta--outline">✎ Modifier l'effectif</button>
+        <button type="button" class="state-banner-cta state-banner-cta--outline">Imprimer en PDF</button>
+        <button type="button" class="state-banner-cta state-banner-cta--outline">⚙ Ouvrir une phase…</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ État 2 — panneau ouvert (interactif) ════════════════════════════ -->
+  <section>
+    <div class="mq-etat">2 · Admin — panneau ouvert <em>(cliquer une phase : le bouton d'ouverture se nomme d'après elle)</em></div>
+    <div class="team-page">
+      <div class="state-banner state-banner--ready">
+        <span class="state-banner-icon">✅</span>
+        <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
+        <button type="button" class="state-banner-cta state-banner-cta--outline">✎ Modifier l'effectif</button>
+        <button type="button" class="state-banner-cta state-banner-cta--outline">Imprimer en PDF</button>
+      </div>
+      <form class="phase-override" id="mq-form">
+        <div>
+          <div class="phase-override-title">Ouvrir une phase manuellement</div>
+          <div class="phase-override-intro">Réservé aux commissaires. L'ouverture est enregistrée avec votre nom et le motif.</div>
+        </div>
+
+        <div class="phase-override-choices">
+          <label class="phase-choice">
+            <input type="radio" name="phase" value="spp" data-libelle="la dépense des SPP">
+            <span class="phase-choice-icon">🎓</span>
+            <span class="phase-choice-name">Dépense des SPP</span>
+            <span class="phase-choice-desc">Les joueurs dépensent leurs SPP : compétences et caractéristiques.</span>
+          </label>
+          <label class="phase-choice">
+            <input type="radio" name="phase" value="recrutement" data-libelle="le recrutement">
+            <span class="phase-choice-icon">🛒</span>
+            <span class="phase-choice-name">Recrutement</span>
+            <span class="phase-choice-desc">Achat de joueurs et de personnel avec la trésorerie.</span>
+          </label>
+          <label class="phase-choice">
+            <input type="radio" name="phase" value="renvois" data-libelle="les renvois">
+            <span class="phase-choice-icon">✂️</span>
+            <span class="phase-choice-name">Renvois</span>
+            <span class="phase-choice-desc">Renvoi de joueurs et de personnel.</span>
+          </label>
+        </div>
+
+        <div class="phase-override-reason">
+          <label for="mq-motif">Motif <span>— facultatif, visible dans l'historique</span></label>
+          <textarea id="mq-motif" placeholder="Ex. : le coach a validé l'évolution par erreur avant d'avoir dépensé ses SPP."></textarea>
+        </div>
+
+        <div class="phase-override-warning">
+          <span>⚠️</span>
+          <span>Tant que la phase est ouverte, l'équipe ne peut pas être sélectionnée pour un match. Le coach ou un commissaire la ferme avec le bouton habituel de la phase ; l'équipe redevient alors prête à jouer, <strong>sans enchaîner sur les phases suivantes ni sur les erreurs coûteuses</strong>.</span>
+        </div>
+
+        <div class="phase-override-actions">
+          <button type="button" class="state-banner-cta state-banner-cta--outline">Annuler</button>
+          <button type="submit" class="state-banner-cta" id="mq-ouvrir" disabled>Ouvrir la phase</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ═══ État 3 — refus ═══════════════════════════════════════════════════ -->
+  <section>
+    <div class="mq-etat">3 · Refus <em>(l'équipe n'est plus prête à jouer — un rapport de match s'est ouvert entre-temps)</em></div>
+    <div class="team-page">
+      <div class="state-banner state-banner--ready">
+        <span class="state-banner-icon">✅</span>
+        <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
+      </div>
+      <div class="phase-override">
+        <div class="phase-override-title">Ouvrir une phase manuellement</div>
+        <div class="phase-override-error">Impossible d'ouvrir le recrutement : l'équipe n'est plus prête à jouer. Rechargez la fiche pour voir son état.</div>
+        <div class="phase-override-actions">
+          <button type="button" class="state-banner-cta state-banner-cta--outline">Fermer</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ État 4 — après l'ouverture ═══════════════════════════════════════ -->
+  <section>
+    <div class="mq-etat">4 · Après l'ouverture du recrutement <em>(bandeau et badge habituels de la phase — rien ne change à l'écran)</em></div>
+    <div class="team-page">
+      <div class="state-banner state-banner--phase">
+        <span class="state-banner-icon">🛒</span>
+        <span class="state-banner-text"><strong>Phase de recrutement.</strong> Achetez des joueurs ou du staff avant de terminer les achats.</span>
+        <button type="button" class="state-banner-cta">Recruter →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ État 5 — vue coach (non admin) ═══════════════════════════════════ -->
+  <section>
+    <div class="mq-etat">5 · Coach propriétaire, non admin <em>(aucun bouton d'ouverture)</em></div>
+    <div class="team-page">
+      <div class="state-banner state-banner--ready">
+        <span class="state-banner-icon">✅</span>
+        <span class="state-banner-text"><strong>Équipe prête à jouer.</strong> Aucune action requise avant le prochain match.</span>
+        <button type="button" class="state-banner-cta state-banner-cta--outline">✎ Modifier l'effectif</button>
+        <button type="button" class="state-banner-cta state-banner-cta--outline">Imprimer en PDF</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script>
+(function () {
+  // Maquette seulement : le bouton prend le nom de la phase choisie.
+  const form = document.getElementById('mq-form');
+  const bouton = document.getElementById('mq-ouvrir');
+  form.addEventListener('change', function (e) {
+    if (e.target.name !== 'phase') return;
+    bouton.disabled = false;
+    bouton.textContent = 'Ouvrir ' + e.target.dataset.libelle;
+  });
+  form.addEventListener('submit', function (e) { e.preventDefault(); });
+})();
+</script>
+</body>
+</html>
