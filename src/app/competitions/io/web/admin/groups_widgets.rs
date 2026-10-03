@@ -1,3 +1,5 @@
+use crate::app::auth::auth_backend::AuthSession;
+use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
 use crate::state::AppState;
@@ -48,7 +50,21 @@ impl IntoResponse for UnassignedPoolTemplate {
 pub async fn unassigned_pool_widget(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
 ) -> impl IntoResponse {
+    // Carte 573 : widget d'administration, gardé comme le reste de
+    // l'administration de compétition — il ne l'était pas.
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus.into_response();
+    }
     let enrolled = match state
         .competitions
         .team_info_port
@@ -141,7 +157,21 @@ impl IntoResponse for GroupCardsTemplate {
 pub async fn group_cards_widget(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
 ) -> impl IntoResponse {
+    // Carte 573 : widget d'administration, gardé comme le reste de
+    // l'administration de compétition — il ne l'était pas.
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus.into_response();
+    }
     let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),

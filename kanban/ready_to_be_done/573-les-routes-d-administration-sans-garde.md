@@ -44,6 +44,35 @@ création.
   la carte qui touche au statut extractible.
 - Le commentaire de `garde_action_equipe.rs` est corrigé.
 
+## État — 2026-10-03
+
+**Fait, et passé par la suite e2e complète** :
+- inscriptions : approuver, rejeter, renvoyer exigent `exiger_commissaire` ;
+  « tout approuver » vérifie le droit **équipe par équipe**, sur l'espace et la
+  compétition de chacune — `teams` ne sait pas vérifier que la saison de la
+  requête appartient à la compétition de la requête ;
+- `post_update_competition` exige `est_admin` sur la compétition visée ;
+- les widgets d'administration des poules et du calendrier passent par
+  `require_admin_access`.
+
+**Décisions du 2026-10-03, à appliquer** :
+1. **Tout membre peut créer une compétition, et son créateur en devient
+   automatiquement admin**, même sans l'avoir demandé. Toutes les étapes de
+   l'assistant — et le widget de notifications de l'étape 4 — exigent ensuite
+   `est_admin` sur la compétition.
+2. **L'assistant est refusé une fois la compétition publiée** : les statuts
+   `draft`, `rules_selected`, `structure_selected` et `invitations_configured`
+   sont des brouillons ; à partir de `STATUT_SAISON_PRETE` (`ready`) et après,
+   la compétition se modifie par ses panneaux d'administration. Le prédicat
+   vit à côté de `STATUT_SAISON_PRETE`, pas dans les contrôleurs.
+3. **Création de compte** : l'hôte injecte dans le contexte d'`auth` une
+   fonction de droit, sur le modèle d'`ISpacesHostLayout`. La route n'a pas
+   d'espace dans son chemin : le droit est « admin d'au moins un espace, ou le
+   compte exploitant » — ceux qui voient le panneau aujourd'hui.
+
+**Reste** : les décisions 1 à 3, les tests unitaires des gardes sur
+`FakeAdminAccess`, les tests e2e par requête forgée.
+
 ## Tests
 
 Unitaires : chaque garde refuse un simple membre et laisse passer un admin, sur

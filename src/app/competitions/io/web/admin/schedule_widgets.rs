@@ -1,5 +1,7 @@
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::competitions::domain::competition_structure::ScheduledDate;
 use crate::app::competitions::domain::match_day::{MatchDay, MatchDayType};
+use crate::app::competitions::io::web::admin::admin_page::require_admin_access;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::SeasonId;
@@ -72,7 +74,21 @@ fn date_label_for(
 pub async fn schedule_sidebar_widget(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
 ) -> impl IntoResponse {
+    // Carte 573 : widget d'administration, gardé comme le reste de
+    // l'administration de compétition — il ne l'était pas.
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus.into_response();
+    }
     let sid = match SeasonId::try_new(&season_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -270,8 +286,22 @@ pub struct RoundDetailQuery {
 pub async fn schedule_round_detail_widget(
     Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
     Query(query): Query<RoundDetailQuery>,
 ) -> impl IntoResponse {
+    // Carte 573 : widget d'administration, gardé comme le reste de
+    // l'administration de compétition — il ne l'était pas.
+    if let Err(refus) = require_admin_access(
+        &auth_session,
+        &space_id,
+        &competition_id,
+        &season_id,
+        &state,
+    )
+    .await
+    {
+        return refus.into_response();
+    }
     let round_id = match query.round_id {
         Some(ref id) if !id.is_empty() => id.clone(),
         _ => {

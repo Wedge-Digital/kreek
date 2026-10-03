@@ -14,6 +14,7 @@ use crate::app::competitions::use_cases::update_draft_competition::{
     execute as execute_update, UpdateDraftCompetitionCommand, UpdateDraftCompetitionError,
 };
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
 use crate::app::shared_kernel::bloodbowl::competition_name::CompetitionName;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::ids::{CloudinaryImage, CoachId, SpaceId};
@@ -397,8 +398,22 @@ pub async fn post_update_competition(
         return tmpl.into_response();
     };
 
-    if auth_session.user.is_none() {
+    let Some(user) = auth_session.user.as_ref() else {
         return hx_redirect(crate::app::auth::routes::path::AUTH_LAYOUT);
+    };
+    // Carte 573 : cette route réécrit la liste des admins. Sans garde,
+    // n'importe quel membre de l'espace pouvait s'y déclarer admin de toute
+    // compétition. Elle exige désormais un admin de l'espace ou de la
+    // compétition visée — la règle de tout kreek.
+    if !est_admin(
+        state.competitions.admin_access.as_ref(),
+        &user.id,
+        &sid,
+        Some(&cid),
+    )
+    .await
+    {
+        return StatusCode::FORBIDDEN.into_response();
     }
 
     let admin_ids: Vec<CoachId> = payload

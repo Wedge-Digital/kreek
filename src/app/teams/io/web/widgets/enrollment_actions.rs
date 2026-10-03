@@ -1,7 +1,18 @@
+//! Les décisions d'inscription — approuver, rejeter, renvoyer, tout approuver.
+//!
+//! **Gardées depuis la carte 573.** Elles ne l'étaient par rien : leurs boutons
+//! ne s'affichaient qu'aux admins, mais n'importe quel connecté pouvait
+//! décider des inscriptions d'une compétition par une requête forgée. Elles
+//! exigent désormais un admin de l'espace ou de la compétition de l'équipe —
+//! `garde_commissaire`, la règle de tout kreek.
+
+use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::ids::EntityId;
+use crate::app::teams::io::web::garde_commissaire::exiger_commissaire;
 use crate::app::teams::use_cases::approve_enrollment::{self, ApproveEnrollmentError};
 use crate::app::teams::use_cases::commands::RejectEnrollmentCommand;
 use crate::app::teams::use_cases::reject_enrollment::{self, RejectEnrollmentError};
+use crate::app::teams::use_cases::roster_edit_access_service::est_admin_de_l_equipe;
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -23,7 +34,11 @@ fn error_response(status: StatusCode) -> Response {
 pub async fn approve_enrollment(
     Path((_space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
 ) -> impl IntoResponse {
+    if let Err(refus) = exiger_commissaire(&state, &auth_session, &team_id).await {
+        return refus;
+    }
     let team_entity_id = match EntityId::try_new(&team_id) {
         Ok(id) => id,
         Err(_) => return error_response(StatusCode::BAD_REQUEST),
@@ -43,7 +58,11 @@ pub async fn approve_enrollment(
 pub async fn reject_enrollment(
     Path((_space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
 ) -> impl IntoResponse {
+    if let Err(refus) = exiger_commissaire(&state, &auth_session, &team_id).await {
+        return refus;
+    }
     let team_entity_id = match EntityId::try_new(&team_id) {
         Ok(id) => id,
         Err(_) => return error_response(StatusCode::BAD_REQUEST),
@@ -67,7 +86,11 @@ pub async fn reject_enrollment(
 pub async fn dismiss_enrollment(
     Path((_space_id, team_id)): Path<(String, String)>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
 ) -> impl IntoResponse {
+    if let Err(refus) = exiger_commissaire(&state, &auth_session, &team_id).await {
+        return refus;
+    }
     let team_entity_id = match EntityId::try_new(&team_id) {
         Ok(id) => id,
         Err(_) => return error_response(StatusCode::BAD_REQUEST),
@@ -101,10 +124,22 @@ pub struct ApproveAllParams {
     pub season_id: String,
 }
 
+/// **Le droit se vérifie équipe par équipe**, sur l'espace et la compétition
+/// de chacune — pas sur la `competition_id` de la requête : `teams` ne sait pas
+/// vérifier que la saison demandée lui appartient, et une URL forgée pourrait
+/// associer une compétition qu'on administre à la saison d'une autre.
+///
+/// Un visiteur qui n'administre aucune des équipes en attente reçoit `403` ;
+/// une équipe qu'il n'administre pas, au milieu d'autres, est laissée en
+/// attente.
 pub async fn approve_all_enrollments(
     Query(params): Query<ApproveAllParams>,
     State(state): State<AppState>,
+    auth_session: AuthSession,
 ) -> impl IntoResponse {
+    let Some(user) = auth_session.user.clone() else {
+        return error_response(StatusCode::UNAUTHORIZED);
+    };
     let pending = match state
         .teams
         .team_repository
@@ -118,7 +153,12 @@ pub async fn approve_all_enrollments(
         }
     };
 
-    for row in pending {
+    let mut autorisees = 0usize;
+    for row in &pending {
+        if !administre(&state, &user.id, &row.team_id).await {
+            continue;
+        }
+        autorisees += 1;
         let team_id = match EntityId::try_new(&row.team_id) {
             Ok(id) => id,
             Err(_) => continue,
@@ -130,5 +170,23 @@ pub async fn approve_all_enrollments(
         }
     }
 
+    if !pending.is_empty() && autorisees == 0 {
+        return error_response(StatusCode::FORBIDDEN);
+    }
     enrollment_changed()
+}
+
+/// Admin de l'espace ou de la compétition de cette équipe. Une équipe
+/// introuvable ou illisible n'est administrée par personne.
+async fn administre(
+    state: &AppState,
+    user_id: &crate::app::shared_kernel::identity::ids::CoachId,
+    team_id: &str,
+) -> bool {
+    match state.teams.team_repository.find_by_id(team_id).await {
+        Ok(Some(team)) => {
+            est_admin_de_l_equipe(&team, user_id, state.teams.admin_access.as_ref()).await
+        }
+        _ => false,
+    }
 }
