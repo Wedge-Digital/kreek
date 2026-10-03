@@ -2,8 +2,9 @@ use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::ids::{SpaceId, UserId};
+use crate::app::teams::domain::team::OverridablePhase;
 use crate::app::teams::domain::treasury::MovementDirection;
-use crate::app::teams::domain::value_objects::{AdjustmentAmount, AdjustmentNote};
+use crate::app::teams::domain::value_objects::{AdjustmentAmount, AdjustmentNote, OverrideReason};
 
 /// Un commissaire d'espace crédite ou débite la caisse d'une équipe.
 ///
@@ -21,6 +22,20 @@ pub struct AdjustTreasuryCommand {
     pub direction: MovementDirection,
     pub amount: AdjustmentAmount,
     pub note: AdjustmentNote,
+    pub admin_id: UserId,
+    pub admin_name: CoachName,
+}
+
+/// Un admin ouvre à la main l'une des trois phases d'après-match (carte 577).
+///
+/// Comme pour l'ajustement de trésorerie, `admin_name` voyage avec la commande :
+/// c'est le nom au moment de l'acte. Le motif est facultatif — un champ vide
+/// donne `None`. Rien ici n'est un secret.
+#[derive(Debug)]
+pub struct OpenPhaseOverrideCommand {
+    pub team_id: TeamId,
+    pub phase: OverridablePhase,
+    pub reason: Option<OverrideReason>,
     pub admin_id: UserId,
     pub admin_name: CoachName,
 }
