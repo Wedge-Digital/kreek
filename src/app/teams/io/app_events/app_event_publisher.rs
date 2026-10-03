@@ -126,6 +126,14 @@ async fn to_app_event(
                 space_id: space_id_de(team_id, pool).await?,
             })
         }
+        // `competitions` copie le logo dans sa projection d'affichage des
+        // matchs : il doit apprendre qu'il a changé, ou qu'il a été retiré.
+        TeamDomainEvent::LogoChanged { logo_url } => Some(TeamsAppEvent::LogoChanged {
+            event_id: EventId::new(),
+            team_id: TeamId::try_new(team_id).ok()?,
+            space_id: space_id_de(team_id, pool).await?,
+            logo_url: logo_url.clone(),
+        }),
         // C'était « le seul `match` de la série où le compilateur ne protège
         // de rien ». Il protège maintenant.
         //
@@ -163,7 +171,6 @@ async fn to_app_event(
         | TeamDomainEvent::GamePhaseOverridden { .. }
         | TeamDomainEvent::TeamRenamed { .. }
         | TeamDomainEvent::InitialsChanged { .. }
-        | TeamDomainEvent::LogoChanged { .. }
         // La caisse d'une équipe ne regarde qu'elle : aucun BC ne réagit à son
         // ajustement, et aucune notification n'a été demandée. Décidé en
         // conception (phase 3), pas subi faute d'idée.
