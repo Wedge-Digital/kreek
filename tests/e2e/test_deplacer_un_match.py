@@ -55,6 +55,47 @@ def match_publie(space_id, ctx):
     return _publier_un_match(space_id, ctx, ctx["round_ids"][0], ctx["teams"][0], ctx["teams"][1])
 
 
+def _face_a_face(round_id: str, home: str, away: str) -> bool:
+    return bool(query_db(
+        "SELECT id FROM competition_match_day_pairings "
+        f"WHERE match_day_id = '{round_id}' "
+        f"AND ((home_team_id = '{home}' AND away_team_id = '{away}') "
+        f"  OR (home_team_id = '{away}' AND away_team_id = '{home}'))"
+    ))
+
+
+def _journee_sans_le_couple(ctx, home: str, away: str, exclues: set[str]) -> str:
+    """Une journée où les deux équipes ne sont **pas** déjà face à face.
+
+    **Carte 580.** Le tirage ne les fait se rencontrer qu'une fois, sur une
+    journée au hasard. Si c'est la cible, `liberer_les_equipes` y laisse leur
+    rencontre — elle croit que c'est le match qu'on veut ouvrir —, la journée
+    n'est plus une cible possible, et les deux équipes sont prises partout
+    ailleurs : le sélecteur reste vide. Une fois sur sept, avec `round_ids[1]`
+    en dur.
+    """
+    for round_id in ctx["round_ids"]:
+        if round_id not in exclues and not _face_a_face(round_id, home, away):
+            return round_id
+    raise AssertionError("aucune journée sans le couple — le tirage a changé de forme")
+
+
+def _journee_ou_le_couple_est_engage(ctx, home: str, away: str, exclues: set[str]) -> str:
+    """Une journée où l'une des deux équipes a déjà un match — la cible d'un
+    refus."""
+    for round_id in ctx["round_ids"]:
+        if round_id in exclues:
+            continue
+        engages = query_db(
+            "SELECT count(*) FROM competition_match_day_pairings "
+            f"WHERE match_day_id = '{round_id}' "
+            f"AND (home_team_id IN ('{home}', '{away}') OR away_team_id IN ('{home}', '{away}'))"
+        )
+        if int(engages[0]) > 0:
+            return round_id
+    raise AssertionError("aucune journée où le couple est engagé")
+
+
 def _nom_de_la_journee(round_id: str) -> str:
     return query_db(f"SELECT name FROM competition_match_days WHERE id = '{round_id}'")[0]
 
@@ -86,7 +127,9 @@ def _attendre_le_widget(page: Page) -> None:
 
 
 def test_un_administrateur_deplace_un_match_publie(page: Page, space_id, ctx, match_publie):
-    cible = ctx["round_ids"][1]
+    cible = _journee_sans_le_couple(
+        ctx, match_publie["home"], match_publie["away"], exclues={ctx["round_ids"][0]}
+    )
     # Le tirage a déjà donné un adversaire à chaque équipe sur chaque journée :
     # on libère les deux nôtres sur la cible, sinon le refus de la carte 551
     # est la seule réponse possible.
@@ -149,16 +192,19 @@ def test_un_administrateur_deplace_un_match_publie(page: Page, space_id, ctx, ma
 # ── Le refus ──────────────────────────────────────────────────────────────────
 
 def test_une_journee_ou_une_equipe_joue_deja_est_refusee(space_id, ctx, match_publie):
-    """Sur la troisième journée, le tirage a laissé aux deux équipes leur
-    adversaire : le déplacement y est refusé, et le refus nomme le match."""
-    cible = ctx["round_ids"][2]
-    engages = query_db(
-        "SELECT count(*) FROM competition_match_day_pairings "
-        f"WHERE match_day_id = '{cible}' "
-        f"AND (home_team_id IN ('{match_publie['home']}', '{match_publie['away']}') "
-        f"  OR away_team_id IN ('{match_publie['home']}', '{match_publie['away']}'))"
+    """Sur une journée où le tirage a laissé aux deux équipes un adversaire, le
+    déplacement est refusé, et le refus nomme le match.
+
+    La journée d'origine et la journée actuelle du match sont exclues : le
+    déplacement du test précédent y a libéré nos équipes, et la cible y serait
+    soit vide, soit le match lui-même (carte 580)."""
+    actuelle = query_db(
+        f"SELECT match_day_id FROM competition_match_day_pairings WHERE id = '{match_publie['pairing_id']}'"
+    )[0]
+    cible = _journee_ou_le_couple_est_engage(
+        ctx, match_publie["home"], match_publie["away"],
+        exclues={ctx["round_ids"][0], actuelle},
     )
-    assert int(engages[0]) > 0, "le tirage doit avoir engagé nos équipes sur la cible"
 
     resp = requests.post(
         _url_move(space_id, ctx),
