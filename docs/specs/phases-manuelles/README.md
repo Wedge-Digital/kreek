@@ -20,13 +20,13 @@ dépenser ses SPP, un recrutement oublié, un renvoi décidé hors match.
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| `bandeau-fiche-equipe/` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| `bandeau-fiche-equipe/` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ cartes 575 à 579 |
 
 ## État du workflow — 2026-10-03
 
 Phase 3 reprise après la livraison de la carte 570 : le droit passe par
 `team_admin_guard::require_team_admin` et `is_team_admin`, sans fonction neuve.
-Phase 8 en cours.
+Conception terminée — cartes 575 à 579 en réalisation.
 
 ## Les décisions de conception déjà prises
 

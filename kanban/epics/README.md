@@ -73,7 +73,7 @@ vérification : rien dans le code ne les implémente.
 | Carte | État |
 |---|---|
 | `45-team-modification` | à raffiner |
-| `46-team-customisation-admin` | à raffiner |
+| `46-team-customisation-admin` | annulée le 2026-10-03 — remplacée par les phases manuelles, cartes 575 à 579 |
 
 **Dette technique diffuse** — sept cartes courtes et indépendantes, chacune une
 session brève : `06` (groupement O(n²)), `09` (`Entity::eq` shadowe
@@ -85,6 +85,8 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 
 | Carte | Note |
 |---|---|
+| `575` à `579` — les phases manuelles | Un commissaire ouvre, depuis une équipe prête à jouer, la dépense des SPP, le recrutement ou les renvois ; la fermeture la ramène à « prête à jouer » sans erreurs coûteuses. Cinq cartes issues du workflow feature, spécifiées dans `docs/specs/phases-manuelles/`. Remplacent la 46 |
+| `570` à `573` — un seul service pour savoir qui est admin | `is_admin` dans le noyau partagé, à la place de six copies divergentes ; la 573 garde les routes d'administration qui ne l'étaient par rien |
 | `497-le-menu-du-selecteur-etait-rogne-par-son-panneau` | Le menu du `kreek-select` était coupé par l'`overflow: hidden` du panneau, posé pour ses coins arrondis — un `z-index` ne franchit pas un `overflow`. Et `getBoundingClientRect` ne voit pas ce défaut : le rectangle est le même, coupé ou non ; seul `elementFromPoint` dit ce qui est peint |
 | `490-les-coachs-sont-deconnectes-trop-souvent` | Le cookie de session n'avait ni `Max-Age` ni `Expires` — le navigateur le jetait à sa fermeture, alors que le serveur gardait la session deux semaines. Et `SameSite: Strict` ne l'envoyait pas quand on arrivait par un lien externe. Deux lignes, plus la décision d'écarter Redis pour de bon |
 | `491-les-sessions-ne-survivent-pas-a-un-redeploiement` | Le magasin est un `DashMap` que son propre en-tête réserve au dev : chaque redéploiement déconnecte tout le monde. En attente de mesure — on regarde d'abord ce que la 490 a réglé |

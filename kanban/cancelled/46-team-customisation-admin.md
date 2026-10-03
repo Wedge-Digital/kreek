@@ -93,3 +93,17 @@ posant cette phase : `TeamEnrolled`, `DismissalsPhaseValidated`,
 `ReadyToPlay` la laisserait donc avec une TV périmée. Ajouter l'événement à
 `ends_in_ready_to_play()` en implémentant cette carte — en filtrant sur
 `to_phase == ReadyToPlay`, l'override pouvant viser n'importe quelle phase.
+
+---
+
+## Annulée — 2026-10-03
+
+Remplacée par la fonction **« phases manuelles »**, cartes **575 à 579**
+(`docs/specs/phases-manuelles/`), plus étroite et plus simple :
+
+- trois phases ouvrables — dépense des SPP, recrutement, renvois — et non toute
+  transition ;
+- uniquement depuis « prête à jouer », avec un retour garanti à « prête à
+  jouer » à la sortie, sans erreurs coûteuses ;
+- un événement d'ouverture par phase plutôt qu'un `GamePhaseOverridden`
+  générique, qui reste dans le domaine sans être émis.
