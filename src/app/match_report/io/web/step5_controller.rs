@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
+use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
 use crate::app::match_report::use_cases::record_post_match_use_case;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -34,6 +35,12 @@ pub struct Step5Template {
     pub away_cas: u8,
     pub home_gain: u32,
     pub away_gain: u32,
+    /// Les cases du bonus pour non temporisation, cochées au retour si elles
+    /// l'étaient (carte 481). Le champ du gain, lui, reste la base saisie.
+    pub home_no_stalling_bonus: bool,
+    pub away_no_stalling_bonus: bool,
+    /// Le montant du bonus, lu dans le domaine : le gabarit n'écrit pas « 10 ».
+    pub no_stalling_bonus_kpo: u32,
     pub home_fan_mod: i8,
     pub away_fan_mod: i8,
     pub summary_title: Option<String>,
@@ -126,6 +133,7 @@ pub async fn get_step5(
         away_cas,
         home_gain_sug,
         away_gain_sug,
+        NoStallingBonuses::default(),
         0,
         0,
         None,
@@ -167,6 +175,10 @@ async fn build_step5_from_rtp(
         away_cas,
         rtp.home_gain.into_inner(),
         rtp.away_gain.into_inner(),
+        NoStallingBonuses {
+            home: rtp.home_no_stalling_bonus,
+            away: rtp.away_no_stalling_bonus,
+        },
         rtp.home_fan_mod.into_inner(),
         rtp.away_fan_mod.into_inner(),
         rtp.summary_title,
@@ -223,6 +235,7 @@ fn build_template(
     away_cas: u8,
     home_gain: u32,
     away_gain: u32,
+    bonuses: NoStallingBonuses,
     home_fan_mod: i8,
     away_fan_mod: i8,
     summary_title: Option<String>,
@@ -249,6 +262,9 @@ fn build_template(
         away_cas,
         home_gain,
         away_gain,
+        home_no_stalling_bonus: bonuses.home.into_inner(),
+        away_no_stalling_bonus: bonuses.away.into_inner(),
+        no_stalling_bonus_kpo: NoStallingBonus::AMOUNT_KPO,
         home_fan_mod,
         away_fan_mod,
         summary_title,
@@ -263,10 +279,24 @@ fn build_template(
 pub struct RecordPostMatchForm {
     pub home_gain: u32,
     pub away_gain: u32,
+    /// Une case décochée **n'est pas envoyée du tout** : sans `default`, le cas
+    /// le plus courant — personne ne prend le bonus — rendrait un 422 (carte 481).
+    #[serde(default, deserialize_with = "checkbox")]
+    pub home_no_stalling_bonus: bool,
+    #[serde(default, deserialize_with = "checkbox")]
+    pub away_no_stalling_bonus: bool,
     pub home_fan_mod: i8,
     pub away_fan_mod: i8,
     pub summary_title: Option<String>,
     pub summary_body: Option<String>,
+}
+
+/// Une case cochée envoie `on` — ou la valeur de son attribut `value`. N'importe
+/// quelle valeur présente vaut « coché » ; l'absence, elle, est gérée par
+/// `#[serde(default)]`.
+fn checkbox<'de, D: serde::Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
+    let _ = <String as serde::Deserialize>::deserialize(d)?;
+    Ok(true)
 }
 
 pub async fn post_step5(
@@ -307,6 +337,10 @@ pub async fn post_step5(
         match_report_id: mr_id,
         home_gain,
         away_gain,
+        no_stalling_bonuses: NoStallingBonuses {
+            home: NoStallingBonus::new(form.home_no_stalling_bonus),
+            away: NoStallingBonus::new(form.away_no_stalling_bonus),
+        },
         home_fan_mod,
         away_fan_mod,
         summary_title,

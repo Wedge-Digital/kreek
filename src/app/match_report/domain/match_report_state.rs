@@ -5,6 +5,7 @@ use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatc
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::CorrectionEligibility;
+use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchReportId, RoundId};
 use crate::app::shared_kernel::identity::ids::SpaceId;
 
@@ -242,6 +243,8 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 MatchReportDomainEvent::PostMatchRecorded {
                     home_gain,
                     away_gain,
+                    home_no_stalling_bonus,
+                    away_no_stalling_bonus,
                     home_fan_mod,
                     away_fan_mod,
                     summary_title,
@@ -252,6 +255,10 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 &pm,
                 *home_gain,
                 *away_gain,
+                NoStallingBonuses {
+                    home: *home_no_stalling_bonus,
+                    away: *away_no_stalling_bonus,
+                },
                 *home_fan_mod,
                 *away_fan_mod,
                 summary_title.clone(),
@@ -399,6 +406,8 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 MatchReportDomainEvent::PostMatchRecorded {
                     home_gain,
                     away_gain,
+                    home_no_stalling_bonus,
+                    away_no_stalling_bonus,
                     home_fan_mod,
                     away_fan_mod,
                     summary_title,
@@ -409,6 +418,8 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 let mut updated = rtp;
                 updated.home_gain = *home_gain;
                 updated.away_gain = *away_gain;
+                updated.home_no_stalling_bonus = *home_no_stalling_bonus;
+                updated.away_no_stalling_bonus = *away_no_stalling_bonus;
                 updated.home_fan_mod = *home_fan_mod;
                 updated.away_fan_mod = *away_fan_mod;
                 updated.summary_title = summary_title.clone();
@@ -892,6 +903,8 @@ mod tests {
                     5_000,
                 )
                 .unwrap(),
+                home_no_stalling_bonus: Default::default(),
+                away_no_stalling_bonus: Default::default(),
                 home_fan_mod:
                     crate::app::match_report::domain::value_objects::FanFactorMod::try_new(1)
                         .unwrap(),
@@ -924,6 +937,8 @@ mod tests {
         MatchReportDomainEvent::PostMatchRecorded {
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_no_stalling_bonus: Default::default(),
+            away_no_stalling_bonus: Default::default(),
             home_fan_mod: FanFactorMod::try_new(1).unwrap(),
             away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
             summary_title: None,
@@ -1280,6 +1295,8 @@ mod tests {
                     5_000,
                 )
                 .unwrap(),
+                home_no_stalling_bonus: Default::default(),
+                away_no_stalling_bonus: Default::default(),
                 home_fan_mod:
                     crate::app::match_report::domain::value_objects::FanFactorMod::try_new(1)
                         .unwrap(),

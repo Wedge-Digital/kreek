@@ -35,8 +35,16 @@ fn count_touchdowns(actions: &[MatchAction]) -> u8 {
 }
 
 pub struct GainsFanVm {
+    /// Le total crédité, bonus compris : le chiffre reste un seul nombre.
     pub home_gain_kpo: u32,
     pub away_gain_kpo: u32,
+    /// Pris ou non — une note sous le montant dit d'où viennent les 10 kPo
+    /// (carte 481). Un montant qu'on ne sait pas refaire est un montant qu'on
+    /// vient contester.
+    pub home_no_stalling_bonus: bool,
+    pub away_no_stalling_bonus: bool,
+    /// Lu dans le domaine : le gabarit n'écrit pas « 10 ».
+    pub no_stalling_bonus_kpo: u32,
     pub home_fan_mod: i8,
     pub away_fan_mod: i8,
 }

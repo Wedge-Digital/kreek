@@ -280,6 +280,9 @@
             </div>
             <span class="ms-stat-value ms-stat-value--gain">+{{ gains_fan.home_gain_kpo }} kPo</span>
           </div>
+          {% if gains_fan.home_no_stalling_bonus %}
+          <div class="ms-stat-note">dont {{ gains_fan.no_stalling_bonus_kpo }} kPo de bonus pour non temporisation</div>
+          {% endif %}
           <div class="ms-stat-row">
             <div class="ms-stat-team">
               <div class="ms-stat-logo ms-stat-logo--away">{{ away_banner.team_initials }}</div>
@@ -287,6 +290,9 @@
             </div>
             <span class="ms-stat-value ms-stat-value--gain">+{{ gains_fan.away_gain_kpo }} kPo</span>
           </div>
+          {% if gains_fan.away_no_stalling_bonus %}
+          <div class="ms-stat-note">dont {{ gains_fan.no_stalling_bonus_kpo }} kPo de bonus pour non temporisation</div>
+          {% endif %}
 
           <div class="ms-divider"></div>
 

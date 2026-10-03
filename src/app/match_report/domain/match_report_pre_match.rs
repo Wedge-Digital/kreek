@@ -2,6 +2,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, FanFactorMod,
@@ -418,6 +419,7 @@ impl MatchReportPreMatch {
         &self,
         home_gain: MatchGain,
         away_gain: MatchGain,
+        bonuses: NoStallingBonuses,
         home_fan_mod: FanFactorMod,
         away_fan_mod: FanFactorMod,
         summary_title: Option<String>,
@@ -427,6 +429,8 @@ impl MatchReportPreMatch {
         let event = MatchReportDomainEvent::PostMatchRecorded {
             home_gain,
             away_gain,
+            home_no_stalling_bonus: bonuses.home,
+            away_no_stalling_bonus: bonuses.away,
             home_fan_mod,
             away_fan_mod,
             summary_title: summary_title.clone(),
@@ -437,6 +441,7 @@ impl MatchReportPreMatch {
             self,
             home_gain,
             away_gain,
+            bonuses,
             home_fan_mod,
             away_fan_mod,
             summary_title,
@@ -1638,6 +1643,7 @@ mod tests {
         let (ready, event) = pm.record_post_match(
             home_gain,
             away_gain,
+            crate::app::match_report::domain::value_objects::NoStallingBonuses::default(),
             home_mod,
             away_mod,
             Some("Titre".into()),
@@ -1651,6 +1657,75 @@ mod tests {
         assert!(matches!(
             event,
             MatchReportDomainEvent::PostMatchRecorded { .. }
+        ));
+    }
+
+    // ── Bonus pour non temporisation (carte 481) ─────────────────────────────
+
+    fn record_with(home: bool, away: bool) -> (MatchReportReadyToPublish, MatchReportDomainEvent) {
+        use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
+        pm_with_fans(10, 10, 2, 1).record_post_match(
+            MatchGain::try_new(130).unwrap(),
+            MatchGain::try_new(110).unwrap(),
+            NoStallingBonuses {
+                home: NoStallingBonus::new(home),
+                away: NoStallingBonus::new(away),
+            },
+            FanFactorMod::try_new(0).unwrap(),
+            FanFactorMod::try_new(0).unwrap(),
+            None,
+            None,
+            CoachId::new(),
+        )
+    }
+
+    /// **Le test qui compte** : le gain enregistré reste la base saisie. Un
+    /// montant déjà augmenté se relirait comme une base à l'étape 5, et chaque
+    /// correction ajouterait 10 kPo de plus.
+    #[test]
+    fn the_recorded_gain_stays_the_entered_amount() {
+        let (ready, _) = record_with(true, true);
+        assert_eq!(ready.home_gain.into_inner(), 130);
+        assert_eq!(ready.total_home_gain_kpo(), 140);
+    }
+
+    #[test]
+    fn both_teams_have_independent_bonuses() {
+        let (ready, _) = record_with(true, false);
+        assert_eq!(ready.total_home_gain_kpo(), 140);
+        assert_eq!(ready.total_away_gain_kpo(), 110);
+    }
+
+    #[test]
+    fn the_post_match_event_carries_both_flags() {
+        let (_, event) = record_with(false, true);
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::PostMatchRecorded {
+                home_no_stalling_bonus,
+                away_no_stalling_bonus,
+                ..
+            } if !home_no_stalling_bonus.into_inner() && away_no_stalling_bonus.into_inner()
+        ));
+    }
+
+    /// Avant la carte 481, l'événement ne portait pas les drapeaux : il se
+    /// relit sans bonus — c'est la décision, aucun match déjà joué ne l'a pris.
+    #[test]
+    fn an_event_without_the_fields_reads_without_bonus() {
+        let (_, event) = record_with(true, true);
+        let mut json = serde_json::to_value(&event).unwrap();
+        let champs = json.as_object_mut().unwrap();
+        champs.remove("home_no_stalling_bonus");
+        champs.remove("away_no_stalling_bonus");
+        let relu: MatchReportDomainEvent = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            relu,
+            MatchReportDomainEvent::PostMatchRecorded {
+                home_no_stalling_bonus,
+                away_no_stalling_bonus,
+                ..
+            } if !home_no_stalling_bonus.into_inner() && !away_no_stalling_bonus.into_inner()
         ));
     }
 }

@@ -1,6 +1,7 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{
     CorrectionEligibility, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
     InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
@@ -41,6 +42,8 @@ pub struct MatchReportPublished {
     pub version: u64,
     pub home_gain: MatchGain,
     pub away_gain: MatchGain,
+    pub home_no_stalling_bonus: NoStallingBonus,
+    pub away_no_stalling_bonus: NoStallingBonus,
     pub home_fan_mod: FanFactorMod,
     pub away_fan_mod: FanFactorMod,
     pub summary_title: Option<String>,
@@ -50,6 +53,17 @@ pub struct MatchReportPublished {
 }
 
 impl MatchReportPublished {
+    /// Ce que l'équipe à domicile touche : le gain saisi, plus le bonus s'il a
+    /// été pris (carte 481). « Que se passe-t-il quand ? » : le domaine, pas le
+    /// contrôleur.
+    pub fn total_home_gain_kpo(&self) -> u32 {
+        self.home_no_stalling_bonus.added_to(self.home_gain)
+    }
+
+    pub fn total_away_gain_kpo(&self) -> u32 {
+        self.away_no_stalling_bonus.added_to(self.away_gain)
+    }
+
     /// Ramène le rapport en état corrigeable.
     ///
     /// L'éligibilité est calculée hors du domaine — elle dépend de l'état
@@ -99,6 +113,10 @@ impl MatchReportPublished {
             version: self.version + 1,
             home_gain: self.home_gain,
             away_gain: self.away_gain,
+            // Sans eux, un rapport corrigé perdrait son bonus à la
+            // republication, en silence (carte 481).
+            home_no_stalling_bonus: self.home_no_stalling_bonus,
+            away_no_stalling_bonus: self.away_no_stalling_bonus,
             home_fan_mod: self.home_fan_mod,
             away_fan_mod: self.away_fan_mod,
             summary_title: self.summary_title.clone(),
@@ -139,6 +157,8 @@ impl MatchReportPublished {
             version: rtp.version + 1,
             home_gain: rtp.home_gain,
             away_gain: rtp.away_gain,
+            home_no_stalling_bonus: rtp.home_no_stalling_bonus,
+            away_no_stalling_bonus: rtp.away_no_stalling_bonus,
             home_fan_mod: rtp.home_fan_mod,
             away_fan_mod: rtp.away_fan_mod,
             summary_title: rtp.summary_title.clone(),
@@ -184,6 +204,8 @@ mod unpublish_tests {
             version: 7,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_no_stalling_bonus: Default::default(),
+            away_no_stalling_bonus: Default::default(),
             home_fan_mod: FanFactorMod::try_new(1).unwrap(),
             away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
             summary_title: Some("Titre".to_string()),
@@ -228,6 +250,21 @@ mod unpublish_tests {
             err,
             DomainError::CorrectionNotAllowed(CorrectionBlocker::EligibilityUnknown)
         );
+    }
+
+    /// Carte 481 : un rapport corrigé garde son bonus. Sans le report dans
+    /// `to_ready_to_publish`, il le perdrait à la republication, en silence.
+    #[test]
+    fn unpublishing_keeps_the_no_stalling_bonuses() {
+        use crate::app::match_report::domain::value_objects::NoStallingBonus;
+        let mut p = published();
+        p.home_no_stalling_bonus = NoStallingBonus::new(true);
+        let (rtp, _) = p
+            .unpublish(CoachId::new(), CorrectionEligibility::Eligible)
+            .unwrap();
+        assert!(rtp.home_no_stalling_bonus.into_inner());
+        assert!(!rtp.away_no_stalling_bonus.into_inner());
+        assert_eq!(rtp.total_home_gain_kpo(), p.total_home_gain_kpo());
     }
 
     #[test]

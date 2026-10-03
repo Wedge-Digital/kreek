@@ -1,3 +1,4 @@
+use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
@@ -141,6 +142,14 @@ pub enum MatchReportDomainEvent {
     PostMatchRecorded {
         home_gain: MatchGain,
         away_gain: MatchGain,
+        /// Carte 481. `#[serde(default)]` est indispensable : sans lui, tout
+        /// rapport enregistré avant la carte devient illisible — pas « sans
+        /// bonus », illisible. Avec, il se relit sans bonus, ce qui **est** la
+        /// décision : aucun match déjà joué n'a pris le bonus.
+        #[serde(default)]
+        home_no_stalling_bonus: NoStallingBonus,
+        #[serde(default)]
+        away_no_stalling_bonus: NoStallingBonus,
         home_fan_mod: FanFactorMod,
         away_fan_mod: FanFactorMod,
         summary_title: Option<String>,

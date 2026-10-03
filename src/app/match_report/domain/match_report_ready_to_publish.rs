@@ -5,6 +5,7 @@ use crate::app::match_report::domain::value_objects::{
     D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, InducementSpending, MatchAction,
     MatchGain, MatchReportOrigin, TempPlayer, TempPlayerKind,
 };
+use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
@@ -43,6 +44,9 @@ pub struct MatchReportReadyToPublish {
     // champs post-match
     pub home_gain: MatchGain,
     pub away_gain: MatchGain,
+    /// Carte 481 : le gain saisi reste la base, le bonus est un drapeau.
+    pub home_no_stalling_bonus: NoStallingBonus,
+    pub away_no_stalling_bonus: NoStallingBonus,
     pub home_fan_mod: FanFactorMod,
     pub away_fan_mod: FanFactorMod,
     pub summary_title: Option<String>,
@@ -84,10 +88,21 @@ impl MatchReportReadyToPublish {
         }
     }
 
+    /// Le total de l'équipe à domicile, bonus compris (carte 481) — celui que
+    /// le récapitulatif affiche avant la publication.
+    pub fn total_home_gain_kpo(&self) -> u32 {
+        self.home_no_stalling_bonus.added_to(self.home_gain)
+    }
+
+    pub fn total_away_gain_kpo(&self) -> u32 {
+        self.away_no_stalling_bonus.added_to(self.away_gain)
+    }
+
     pub fn from_pre_match(
         pm: &MatchReportPreMatch,
         home_gain: MatchGain,
         away_gain: MatchGain,
+        bonuses: NoStallingBonuses,
         home_fan_mod: FanFactorMod,
         away_fan_mod: FanFactorMod,
         summary_title: Option<String>,
@@ -124,6 +139,8 @@ impl MatchReportReadyToPublish {
             version: pm.version + 1,
             home_gain,
             away_gain,
+            home_no_stalling_bonus: bonuses.home,
+            away_no_stalling_bonus: bonuses.away,
             home_fan_mod,
             away_fan_mod,
             summary_title,
@@ -167,6 +184,7 @@ impl MatchReportReadyToPublish {
         &self,
         home_gain: MatchGain,
         away_gain: MatchGain,
+        bonuses: NoStallingBonuses,
         home_fan_mod: FanFactorMod,
         away_fan_mod: FanFactorMod,
         summary_title: Option<String>,
@@ -176,6 +194,8 @@ impl MatchReportReadyToPublish {
         let event = MatchReportDomainEvent::PostMatchRecorded {
             home_gain,
             away_gain,
+            home_no_stalling_bonus: bonuses.home,
+            away_no_stalling_bonus: bonuses.away,
             home_fan_mod,
             away_fan_mod,
             summary_title: summary_title.clone(),
@@ -185,6 +205,8 @@ impl MatchReportReadyToPublish {
         let mut updated = self.clone();
         updated.home_gain = home_gain;
         updated.away_gain = away_gain;
+        updated.home_no_stalling_bonus = bonuses.home;
+        updated.away_no_stalling_bonus = bonuses.away;
         updated.home_fan_mod = home_fan_mod;
         updated.away_fan_mod = away_fan_mod;
         updated.summary_title = summary_title;
@@ -243,6 +265,8 @@ mod tests {
             version: 5,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_no_stalling_bonus: Default::default(),
+            away_no_stalling_bonus: Default::default(),
             home_fan_mod: FanFactorMod::try_new(1).unwrap(),
             away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
             summary_title,

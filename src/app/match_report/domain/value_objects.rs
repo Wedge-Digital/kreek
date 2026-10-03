@@ -162,6 +162,46 @@ pub struct AllowedInducementSpec {
 )]
 pub struct MatchGain(u32);
 
+/// Le bonus pour non temporisation d'une équipe (carte 481) : l'arbitre le
+/// coche, l'équipe gagne 10 kPo de plus sur ce match.
+///
+/// **Un drapeau et non un montant déjà additionné.** L'étape 5 se relit avec
+/// ses valeurs enregistrées : un gain déjà augmenté s'y relirait comme une base,
+/// et chaque correction ajouterait 10 kPo de plus.
+///
+/// **Le montant vit avec le drapeau** — ni dans le contrôleur, ni dans le
+/// gabarit. `Default` (faux) est ce qui rend relisibles les rapports enregistrés
+/// avant la carte : aucun match déjà joué n'a pris le bonus.
+#[nutype(
+    default = false,
+    derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)
+)]
+pub struct NoStallingBonus(bool);
+
+impl NoStallingBonus {
+    pub const AMOUNT_KPO: u32 = 10;
+
+    pub fn amount_kpo(&self) -> u32 {
+        match self.into_inner() {
+            true => Self::AMOUNT_KPO,
+            false => 0,
+        }
+    }
+
+    /// Ce que l'équipe touche : le gain saisi, plus le bonus s'il est pris.
+    pub fn added_to(&self, gain: MatchGain) -> u32 {
+        gain.into_inner() + self.amount_kpo()
+    }
+}
+
+/// Les bonus des deux équipes, passés ensemble : les fonctions de l'après-match
+/// portent déjà sept paramètres.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct NoStallingBonuses {
+    pub home: NoStallingBonus,
+    pub away: NoStallingBonus,
+}
+
 /// Ce que les coups de pouce retirent réellement à la trésorerie d'une équipe.
 ///
 /// Zéro est un cas courant — et même le plus courant côté underdog, dont la
@@ -470,5 +510,23 @@ mod tests {
             TurnNumber::try_new(17).unwrap_err(),
             DomainError::InvalidTurn(17)
         );
+    }
+}
+
+#[cfg(test)]
+mod no_stalling_bonus_tests {
+    use super::{MatchGain, NoStallingBonus};
+
+    #[test]
+    fn an_active_bonus_adds_ten_kpo_to_the_total() {
+        let gain = MatchGain::try_new(120).unwrap();
+        assert_eq!(NoStallingBonus::new(true).added_to(gain), 130);
+    }
+
+    #[test]
+    fn an_inactive_bonus_adds_nothing() {
+        let gain = MatchGain::try_new(120).unwrap();
+        assert_eq!(NoStallingBonus::new(false).added_to(gain), 120);
+        assert_eq!(NoStallingBonus::default(), NoStallingBonus::new(false));
     }
 }

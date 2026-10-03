@@ -640,8 +640,10 @@ fn build_published_payload(p: &MatchReportPublished) -> MatchReportPublishedPayl
         away_team_id: p.away_team_id.to_string(),
         home_score: count_touchdowns(&p.home_actions),
         away_score: count_touchdowns(&p.away_actions),
-        home_gain_kpo: p.home_gain.into_inner(),
-        away_gain_kpo: p.away_gain.into_inner(),
+        // Le total, bonus compris (carte 481) : `teams` crédite ce qu'on lui
+        // dit, il n'a pas à connaître la règle du bonus.
+        home_gain_kpo: p.total_home_gain_kpo(),
+        away_gain_kpo: p.total_away_gain_kpo(),
         home_inducement_spending_kpo: p.home_inducement_spending.into_inner(),
         away_inducement_spending_kpo: p.away_inducement_spending.into_inner(),
         home_fan_mod: p.home_fan_mod.into_inner(),
@@ -793,12 +795,27 @@ mod unpublished_events_tests {
             version: 8,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_no_stalling_bonus: Default::default(),
+            away_no_stalling_bonus: Default::default(),
             home_fan_mod: FanFactorMod::try_new(1).unwrap(),
             away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
             summary_title: None,
             summary_body: None,
             was_published_before: true,
         }
+    }
+
+    /// `teams` crédite ce que l'app event lui dit : le total, bonus compris
+    /// (carte 481), et non la base saisie.
+    #[test]
+    fn the_app_event_carries_the_total_not_the_base() {
+        use crate::app::match_report::domain::value_objects::NoStallingBonus;
+        let mut rtp = rtp();
+        rtp.away_no_stalling_bonus = NoStallingBonus::new(true);
+        let (published, _) = rtp.publish(CoachId::new());
+        let payload = build_published_payload(&published);
+        assert_eq!(payload.home_gain_kpo, rtp.home_gain.into_inner());
+        assert_eq!(payload.away_gain_kpo, rtp.away_gain.into_inner() + 10);
     }
 
     #[test]

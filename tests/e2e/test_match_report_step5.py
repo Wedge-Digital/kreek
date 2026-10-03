@@ -274,3 +274,103 @@ def test_s6_draft_redirects_to_edit(space_id, step5_ctx):
     location = resp.headers.get("Location", "")
     assert "/match-report/" in location, f"Redirect inattendu: {location!r}"
     assert "/step5" not in location, f"Ne doit pas rediriger vers step5: {location!r}"
+
+
+# ── Bonus pour non temporisation (carte 481) ──────────────────────────────────
+
+
+def _recap(space_id: str, mr_id: str) -> str:
+    return requests.get(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap", timeout=20
+    ).text
+
+
+NOTE_BONUS = "dont 10 kPo de bonus pour non temporisation"
+
+
+def test_s7_the_bonus_reaches_the_recap_and_survives_a_return(page: Page, space_id, step5_ctx):
+    """L'aller-retour : cochée à l'étape 5, la case se retrouve cochée au
+    retour, le champ garde la base saisie, et le récapitulatif montre le total
+    avec sa note."""
+    mr_id = _advance_to_step5_ready(space_id, step5_ctx)
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5", wait_until="load")
+    page.locator("input[name='home_gain']").fill("120")
+    page.locator("input[name='away_gain']").fill("100")
+    page.locator("input[name='home_no_stalling_bonus']").check()
+    with page.expect_navigation(wait_until="load"):
+        page.locator("button[type='submit']").click()
+
+    assert "/recap" in page.url, page.url
+    expect(page.locator(".ms-stat-value--gain").first).to_have_text("+130 kPo")
+    expect(page.locator(".ms-stat-note")).to_have_count(1)
+    expect(page.locator(".ms-stat-note")).to_have_text(NOTE_BONUS)
+    # Le récapitulatif charge encore ses widgets (le sélecteur de journée du
+    # déplacement, pour un admin) : le quitter tout de suite interromprait leur
+    # `fetch`, que `kreek-select` journalise comme une erreur — et la fixture
+    # `console_errors` accuserait la page d'un défaut qu'elle n'a pas.
+    #
+    # Pas `networkidle` : en dev, la connexion du rechargement à chaud reste
+    # ouverte et l'état n'est jamais atteint. Le signal est celui du composant —
+    # son `fetch` revenu, il a écrit au moins une `.ks-option` (une option, ou
+    # « Aucun résultat »).
+    page.locator("kreek-select .ks-option").first.wait_for(state="attached", timeout=10_000)
+
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5", wait_until="load")
+    expect(page.locator("input[name='home_no_stalling_bonus']")).to_be_checked()
+    expect(page.locator("input[name='away_no_stalling_bonus']")).not_to_be_checked()
+    assert page.locator("input[name='home_gain']").input_value() == "120", (
+        "le champ reste la base saisie — sinon chaque correction ajouterait 10 kPo"
+    )
+
+
+def test_s8_saving_twice_does_not_stack_the_bonus(space_id, step5_ctx):
+    mr_id = _advance_to_step5_ready(space_id, step5_ctx)
+    for _ in range(2):
+        resp = _post_step5(
+            space_id, mr_id, home_gain="120", away_gain="100", home_no_stalling_bonus="on"
+        )
+        assert resp.status_code in (302, 303), resp.status_code
+        assert "+130 kPo" in _recap(space_id, mr_id), "le total reste 120 + 10"
+
+
+def test_s9_an_unchecked_box_does_not_break_the_save(space_id, step5_ctx):
+    """Une case décochée n'envoie rien : sans `#[serde(default)]`, le cas le
+    plus courant échouerait à la désérialisation."""
+    mr_id = _advance_to_step5_ready(space_id, step5_ctx)
+    resp = _post_step5(space_id, mr_id, home_gain="120", away_gain="100")
+    assert resp.status_code in (302, 303), resp.status_code
+    recap = _recap(space_id, mr_id)
+    assert "+120 kPo" in recap
+    assert NOTE_BONUS not in recap
+
+
+def test_s10_publishing_credits_the_total_to_the_treasury(space_id, step5_ctx):
+    """De bout en bout : `teams` crédite le total que l'app event lui porte.
+
+    **Dernier du fichier** : publier fait sortir les deux équipes de « prête à
+    jouer », et aucun brouillon ne pourrait plus être ouvert après lui."""
+    import time
+
+    mr_id = _advance_to_step5_ready(space_id, step5_ctx)
+    resp = _post_step5(
+        space_id, mr_id, home_gain="60", away_gain="50", home_no_stalling_bonus="on"
+    )
+    assert resp.status_code in (302, 303), resp.status_code
+    requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap/publish",
+        allow_redirects=False, timeout=20,
+    )
+
+    def gain(team_id: str) -> list[str]:
+        return _query_db(
+            "SELECT amount_kpo FROM teams__treasury_ledger "
+            f"WHERE team_id = '{team_id}' AND reason = 'MatchIncome' ORDER BY id DESC LIMIT 1"
+        )
+
+    home, away = step5_ctx["teams"][0], step5_ctx["teams"][1]
+    for _ in range(100):
+        if gain(home) and gain(away):
+            break
+        time.sleep(0.2)
+    assert gain(home) == ["70"], f"60 + 10 de bonus attendus : {gain(home)}"
+    assert gain(away) == ["50"], f"pas de bonus côté extérieur : {gain(away)}"

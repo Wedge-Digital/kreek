@@ -327,6 +327,8 @@ mod tests {
             version: 7,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_no_stalling_bonus: Default::default(),
+            away_no_stalling_bonus: Default::default(),
             home_fan_mod: FanFactorMod::try_new(1).unwrap(),
             away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
             summary_title: None,

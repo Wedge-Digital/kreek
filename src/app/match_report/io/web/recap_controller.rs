@@ -4,6 +4,7 @@ use crate::app::match_report::domain::match_report_published::MatchReportPublish
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchAction;
+use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
 use crate::app::match_report::io::web::builders::{
     build_correction_zone, build_performance_rows, build_round_context_vm, build_submitted_by,
@@ -84,8 +85,11 @@ struct RecapSource<'a> {
     created_by: String,
     home_actions: &'a [MatchAction],
     away_actions: &'a [MatchAction],
+    /// Le total, bonus compris (carte 481) : c'est ce que la trésorerie crédite.
     home_gain_kpo: u32,
     away_gain_kpo: u32,
+    home_no_stalling_bonus: bool,
+    away_no_stalling_bonus: bool,
     home_fan_mod: i8,
     away_fan_mod: i8,
     summary_title: Option<String>,
@@ -105,8 +109,10 @@ impl<'a> RecapSource<'a> {
             created_by: rtp.created_by.to_string(),
             home_actions: &rtp.home_actions,
             away_actions: &rtp.away_actions,
-            home_gain_kpo: rtp.home_gain.into_inner(),
-            away_gain_kpo: rtp.away_gain.into_inner(),
+            home_gain_kpo: rtp.total_home_gain_kpo(),
+            away_gain_kpo: rtp.total_away_gain_kpo(),
+            home_no_stalling_bonus: rtp.home_no_stalling_bonus.into_inner(),
+            away_no_stalling_bonus: rtp.away_no_stalling_bonus.into_inner(),
             home_fan_mod: rtp.home_fan_mod.into_inner(),
             away_fan_mod: rtp.away_fan_mod.into_inner(),
             summary_title: rtp.summary_title.clone(),
@@ -126,8 +132,10 @@ impl<'a> RecapSource<'a> {
             created_by: p.created_by.to_string(),
             home_actions: &p.home_actions,
             away_actions: &p.away_actions,
-            home_gain_kpo: p.home_gain.into_inner(),
-            away_gain_kpo: p.away_gain.into_inner(),
+            home_gain_kpo: p.total_home_gain_kpo(),
+            away_gain_kpo: p.total_away_gain_kpo(),
+            home_no_stalling_bonus: p.home_no_stalling_bonus.into_inner(),
+            away_no_stalling_bonus: p.away_no_stalling_bonus.into_inner(),
             home_fan_mod: p.home_fan_mod.into_inner(),
             away_fan_mod: p.away_fan_mod.into_inner(),
             summary_title: p.summary_title.clone(),
@@ -299,6 +307,9 @@ async fn build_recap_template(
         gains_fan: GainsFanVm {
             home_gain_kpo: source.home_gain_kpo,
             away_gain_kpo: source.away_gain_kpo,
+            home_no_stalling_bonus: source.home_no_stalling_bonus,
+            away_no_stalling_bonus: source.away_no_stalling_bonus,
+            no_stalling_bonus_kpo: NoStallingBonus::AMOUNT_KPO,
             home_fan_mod: source.home_fan_mod,
             away_fan_mod: source.away_fan_mod,
         },

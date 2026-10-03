@@ -489,6 +489,20 @@
 }
 .ms-page .ms-stat-value--gain,
 .ms-page.ms-stat-value--gain { color: var(--green); }
+/* Carte 481 : d'où viennent les 10 kPo du bonus pour non temporisation. Une
+   note sous le montant, et seulement si le bonus a été pris — le total reste
+   le chiffre, sans addition à faire. */
+.ms-page .ms-stat-note {
+  margin-top: -4px;
+  padding-bottom: 8px;
+  text-align: right;
+  font-size: var(--text-tiny);
+  color: var(--dark-3);
+  border-bottom: 1px solid var(--dark-6);
+}
+/* Le trait de la ligne passe sous sa note : laissé entre les deux, il
+   détacherait la note du montant qu'elle explique. */
+.ms-page .ms-stat-row:has(+ .ms-stat-note) { border-bottom: none; }
 .ms-page .ms-stat-value--pos,
 .ms-page.ms-stat-value--pos  { color: var(--green); }
 .ms-page .ms-stat-value--neg,

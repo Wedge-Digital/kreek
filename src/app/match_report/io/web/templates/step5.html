@@ -79,48 +79,66 @@
     <div class="mr-card">
       <div class="mr-card-title">&#128176; Gains du match</div>
 
-      <div class="mr-gains-team-row">
-        <div class="mr-gains-team-info">
-          {% if let Some(url) = home_logo_url.as_ref() %}
-          <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ home_initials }}">
-          {% else %}
-          <div class="mr-team-row-logo">{{ home_initials }}</div>
-          {% endif %}
-          <div class="mr-gains-team-text">
-            <span class="mr-team-row-name">{{ home_team_name }}</span>
+      <div class="mr-gains-team">
+        <div class="mr-gains-team-row">
+          <div class="mr-gains-team-info">
+            {% if let Some(url) = home_logo_url.as_ref() %}
+            <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ home_initials }}">
+            {% else %}
+            <div class="mr-team-row-logo">{{ home_initials }}</div>
+            {% endif %}
+            <div class="mr-gains-team-text">
+              <span class="mr-team-row-name">{{ home_team_name }}</span>
+            </div>
+          </div>
+          <div class="mr-gains-input-group">
+            <input type="number" class="mr-gains-input"
+                   name="home_gain"
+                   value="{{ home_gain }}"
+                   min="5"
+                   step="5"
+                   required>
+            <span class="mr-gains-unit">kPo</span>
           </div>
         </div>
-        <div class="mr-gains-input-group">
-          <input type="number" class="mr-gains-input"
-                 name="home_gain"
-                 value="{{ home_gain }}"
-                 min="5"
-                 step="5"
-                 required>
-          <span class="mr-gains-unit">kPo</span>
-        </div>
+        {# Carte 481 — un drapeau, pas un montant : le champ ci-dessus reste la
+           base saisie, et le total ne se lit qu'au récapitulatif. #}
+        <label class="mr-gains-bonus">
+          <input type="checkbox" class="mr-gains-bonus-check" name="home_no_stalling_bonus"{% if home_no_stalling_bonus %} checked{% endif %}>
+          <span class="mr-gains-bonus-label">Bonus pour non temporisation</span>
+          <span class="mr-gains-bonus-amount">+{{ no_stalling_bonus_kpo }} kPo</span>
+        </label>
       </div>
 
-      <div class="mr-gains-team-row">
-        <div class="mr-gains-team-info">
-          {% if let Some(url) = away_logo_url.as_ref() %}
-          <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ away_initials }}">
-          {% else %}
-          <div class="mr-team-row-logo">{{ away_initials }}</div>
-          {% endif %}
-          <div class="mr-gains-team-text">
-            <span class="mr-team-row-name">{{ away_team_name }}</span>
+      <div class="mr-gains-team">
+        <div class="mr-gains-team-row">
+          <div class="mr-gains-team-info">
+            {% if let Some(url) = away_logo_url.as_ref() %}
+            <img class="mr-team-row-logo mr-score-logo--img" src="{{ url }}" alt="{{ away_initials }}">
+            {% else %}
+            <div class="mr-team-row-logo">{{ away_initials }}</div>
+            {% endif %}
+            <div class="mr-gains-team-text">
+              <span class="mr-team-row-name">{{ away_team_name }}</span>
+            </div>
+          </div>
+          <div class="mr-gains-input-group">
+            <input type="number" class="mr-gains-input"
+                   name="away_gain"
+                   value="{{ away_gain }}"
+                   min="5"
+                   step="5"
+                   required>
+            <span class="mr-gains-unit">kPo</span>
           </div>
         </div>
-        <div class="mr-gains-input-group">
-          <input type="number" class="mr-gains-input"
-                 name="away_gain"
-                 value="{{ away_gain }}"
-                 min="5"
-                 step="5"
-                 required>
-          <span class="mr-gains-unit">kPo</span>
-        </div>
+        {# Carte 481 — un drapeau, pas un montant : le champ ci-dessus reste la
+           base saisie, et le total ne se lit qu'au récapitulatif. #}
+        <label class="mr-gains-bonus">
+          <input type="checkbox" class="mr-gains-bonus-check" name="away_no_stalling_bonus"{% if away_no_stalling_bonus %} checked{% endif %}>
+          <span class="mr-gains-bonus-label">Bonus pour non temporisation</span>
+          <span class="mr-gains-bonus-amount">+{{ no_stalling_bonus_kpo }} kPo</span>
+        </label>
       </div>
     </div>
 

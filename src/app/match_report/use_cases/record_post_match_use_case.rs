@@ -1,5 +1,6 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
@@ -9,6 +10,8 @@ pub struct RecordPostMatchCommand {
     pub match_report_id: MatchReportId,
     pub home_gain: MatchGain,
     pub away_gain: MatchGain,
+    /// Les bonus pour non temporisation des deux équipes (carte 481).
+    pub no_stalling_bonuses: NoStallingBonuses,
     pub home_fan_mod: FanFactorMod,
     pub away_fan_mod: FanFactorMod,
     pub summary_title: Option<String>,
@@ -45,6 +48,7 @@ pub async fn execute(
             let (ready, ev) = pm.record_post_match(
                 cmd.home_gain,
                 cmd.away_gain,
+                cmd.no_stalling_bonuses,
                 cmd.home_fan_mod,
                 cmd.away_fan_mod,
                 cmd.summary_title,
@@ -57,6 +61,7 @@ pub async fn execute(
             let (updated, ev) = rtp.record_post_match(
                 cmd.home_gain,
                 cmd.away_gain,
+                cmd.no_stalling_bonuses,
                 cmd.home_fan_mod,
                 cmd.away_fan_mod,
                 cmd.summary_title,
