@@ -1,5 +1,7 @@
 # Le domaine sait ajuster une caisse
 
+> **Numérotée 557 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[557]` ; ils ne sont pas réécrits.
+
 **Ordre :** 1 · **Dépend de :** rien
 **Conception :** `docs/specs/ajustement-tresorerie/panneau-d-ajustement/`
 (`04-dtos.md`, `06-domaine.md`)
@@ -109,7 +111,7 @@ bras n'existe que parce que le `match` est exhaustif.
 
 `Team` expose ses 25 champs en `pub`, `treasury` compris : l'invariant ajouté
 reste contournable par `team.treasury = …`. Ce n'est pas introduit ici — c'est
-l'état de l'agrégat pour ses vingt méthodes. Carte **556**.
+l'état de l'agrégat pour ses vingt méthodes. Carte **583**.
 
 ## Checklist
 

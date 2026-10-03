@@ -1,5 +1,7 @@
 # R8 n'a jamais été tranchée, et 318 saisons sont notifiantes
 
+> **Numérotée 366 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[366]` ; ils ne sont pas réécrits.
+
 **Priorité : haute** — bloquant avant tout déploiement de l'épic E02
 **Épic :** E02 — Notifications e-mail de compétition
 **Trouvée par :** la revue de déploiement de la branche `demo`

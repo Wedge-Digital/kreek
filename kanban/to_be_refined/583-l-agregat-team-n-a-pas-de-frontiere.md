@@ -1,10 +1,12 @@
 # L'agrégat `Team` n'a pas de frontière
 
+> **Numérotée 556 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[556]` ; ils ne sont pas réécrits.
+
 **Priorité : moyenne**
 **Dépend de :** rien
 **Contexte :** `teams` — dette de conception
 **Relevé par :** `docs/specs/ajustement-tresorerie/panneau-d-ajustement/06-domaine.md`
-**Entamé par :** carte `557` — `treasury` est le premier champ passé en privé
+**Entamé par :** carte `584` — `treasury` est le premier champ passé en privé
 
 ## Le constat
 
@@ -12,7 +14,7 @@
 vérifient la phase, le statut, le budget, les quotas — et **vingt-quatre de ses
 vingt-cinq champs sont `pub`**.
 
-Le vingt-cinquième, `treasury`, a été fermé par la carte 557 : il se lit par
+Le vingt-cinquième, `treasury`, a été fermé par la carte 584 : il se lit par
 `treasury()` et ne s'écrit que par `apply()`. Il reste donc vingt-quatre.
 
 ```rust
@@ -46,7 +48,7 @@ Mesuré le 2026-10-01 :
 | fichiers concernés | **33** |
 
 Ce n'est pas un correctif, c'est un chantier — mais il **se fait par morceaux**,
-et la 557 l'a prouvé.
+et la 584 l'a prouvé.
 
 Cette carte a d'abord soutenu l'inverse : « il ne se fait pas à moitié, un champ
 privé sur vingt-cinq donnerait l'illusion d'un agrégat gardé ». L'argument n'a

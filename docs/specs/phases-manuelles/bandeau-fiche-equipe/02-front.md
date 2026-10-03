@@ -59,7 +59,7 @@ HX-Retarget: #phase-override-error   HX-Reselect: #phase-override-error   HX-Res
 ```
 
 **Le message seul, pas le pied entier** (décision du 2026-10-03, carte 578) : le
-pied porte le bouton nommé par Alpine, et la carte 559 a appris qu'un pied
+pied porte le bouton nommé par Alpine, et la carte 586 a appris qu'un pied
 remonté effaçait aussitôt ce que le serveur venait de dire. Le conteneur
 `#phase-override-error` existe toujours, vide et masqué, jusqu'au premier
 refus.

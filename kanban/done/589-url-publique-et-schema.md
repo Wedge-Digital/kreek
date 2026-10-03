@@ -1,5 +1,7 @@
 # L'URL publique se recolle à la main, et interdit HTTPS
 
+> **Numérotée 365 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[365]` ; ils ne sont pas réécrits.
+
 **Priorité : moyenne** — bloquant le jour d'un déploiement en HTTPS
 **Trouvée par :** les cartes 339 et 340, qui ont ajouté trois occurrences de plus
 **Fichiers :** `src/config.rs`, `src/main.rs`, `src/cli/send_notifications.rs`,

@@ -170,7 +170,7 @@ pub enum IncidentType {
 mod tests {
     use super::*;
 
-    // ── Ajustement de trésorerie (carte 557) ─────────────────────────────
+    // ── Ajustement de trésorerie (carte 584) ─────────────────────────────
 
     #[test]
     fn un_montant_d_ajustement_accepte_ses_bornes() {

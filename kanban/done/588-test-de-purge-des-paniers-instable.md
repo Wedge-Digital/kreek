@@ -1,5 +1,7 @@
 # Le test de purge des paniers observe la mauvaise chose
 
+> **Numérotée 364 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[364]` ; ils ne sont pas réécrits.
+
 **Priorité : moyenne** — il fait rougir la CI au hasard, sans qu'aucun code ne
 soit en cause
 **Fichier :** `src/app/teams/io/listeners/phase_basket_purge_listener.rs`

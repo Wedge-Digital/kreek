@@ -16,7 +16,7 @@ pub struct TreasuryVm {
     /// Le nombre de lignes du relevé, **dotation comprise** — c'est ce que
     /// compte l'indication « 11 mouvements » sous le titre.
     pub movement_count: u32,
-    /// Le panneau d'ajustement, **ou rien** (carte 559).
+    /// Le panneau d'ajustement, **ou rien** (carte 586).
     ///
     /// `Option` et non un booléen : pour un visiteur qui n'est pas commissaire
     /// il n'y a pas de panneau, pas un panneau vide. Le gabarit ne peut donc

@@ -1,4 +1,4 @@
-//! L'ajustement de trésorerie, de la garde au grand livre (carte 559).
+//! L'ajustement de trésorerie, de la garde au grand livre (carte 586).
 //!
 //! # Ce que ces tests prouvent, et qu'aucun test unitaire ne voyait
 //!

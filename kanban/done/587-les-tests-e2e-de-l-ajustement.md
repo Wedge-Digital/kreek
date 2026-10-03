@@ -1,6 +1,8 @@
 # Les tests e2e de l'ajustement de trésorerie
 
-**Ordre :** 4 · **Dépend de :** `559`
+> **Numérotée 560 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[560]` ; ils ne sont pas réécrits.
+
+**Ordre :** 4 · **Dépend de :** `586`
 **Conception :** `docs/specs/ajustement-tresorerie/panneau-d-ajustement/07-integration.md`
 
 ## Objectif
@@ -24,7 +26,7 @@ exactement les mêmes.
 ### Quatre scénarios, et non cinq
 
 > **Le découpage a vieilli entre l'écriture de cette carte et son
-> implémentation.** La 559 a livré **sept tests de handler** qui montent le
+> implémentation.** La 586 a livré **sept tests de handler** qui montent le
 > routeur de production : membre simple à 403, montant hors bornes, motif vide,
 > retrait non couvert, et le crédit de bout en bout — dont une assertion compte
 > le solde **trois fois** dans la page rendue. Quatre des cinq scénarios prévus
@@ -88,7 +90,7 @@ erreur de console, sans rien. Pas de `sleep` — la condition rend la main en 7 
 ### La base n'est pas relue ici
 
 La carte prévoyait de confronter l'écran à `teams__treasury_ledger`. C'est fait
-**ailleurs et mieux** : la 558 a un test d'intégration sur vraie base qui
+**ailleurs et mieux** : la 585 a un test d'intégration sur vraie base qui
 vérifie le motif, le sens, le montant, le solde après et la charge utile jointe.
 
 Ce que l'écran apporte en plus, c'est la confrontation des **deux affichages du
@@ -101,6 +103,6 @@ mutation. Y ajouter une troisième source affaiblirait le test, comme le dit dé
 - [ ] Les quatre scénarios dans `test_team_treasury_tab.py`
 - [ ] `cliquer_quand_cable` pour atteindre l'onglet, aucun `sleep`
 - [ ] ~~Vérification en base du `reason` et de `balance_after_kpo`~~ — faite par
-      le test d'intégration de la 558, sur une vraie base
+      le test d'intégration de la 585, sur une vraie base
 - [ ] ~~`HX-Request: true` sur les POST directs~~ — plus de POST direct ici
 - [ ] `make e2e` au vert, et la carte d'impact vérifiée inchangée

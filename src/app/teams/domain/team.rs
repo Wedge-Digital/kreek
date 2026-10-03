@@ -481,7 +481,7 @@ pub struct Team {
     /// était `pub`, ces refus se contournaient par une affectation. Il se lit
     /// désormais par `treasury()`, et ne s'écrit que par `apply()`.
     ///
-    /// Les vingt-quatre autres champs restent ouverts : carte **556**, qui s'en
+    /// Les vingt-quatre autres champs restent ouverts : carte **583**, qui s'en
     /// sert comme précédent pour trancher la forme d'accès sur 139 lectures.
     treasury: Kpo,
     pub team_value: Kpo,
@@ -1556,7 +1556,7 @@ mod tests {
         equipe
     }
 
-    // ── Ajustement de trésorerie (carte 557) ─────────────────────────────
+    // ── Ajustement de trésorerie (carte 584) ─────────────────────────────
 
     fn commissaire() -> CoachName {
         CoachName::try_new("Bagouze".to_string()).unwrap()

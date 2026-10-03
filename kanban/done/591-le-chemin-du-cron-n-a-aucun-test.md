@@ -1,5 +1,7 @@
 # Le chemin du cron n'a aucun test, et il porte trois notifications sur quatre
 
+> **Numérotée 367 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[367]` ; ils ne sont pas réécrits.
+
 **Priorité : haute** — c'est le critère de clôture de l'épic qui n'est constaté
 par rien
 **Épic :** E02 — Notifications e-mail de compétition

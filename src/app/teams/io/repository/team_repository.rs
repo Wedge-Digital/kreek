@@ -1493,7 +1493,7 @@ mod tests {
     /// Les doublures ne prouvent rien de ce qui se passe ici : l'insertion au
     /// grand livre n'est écrite nulle part dans le chemin de l'ajustement, elle
     /// est pilotée par `treasury_movement()` dans la transaction d'`append`.
-    /// C'est du code que la carte 557 n'a pas touché et dont elle dépend
+    /// C'est du code que la carte 584 n'a pas touché et dont elle dépend
     /// entièrement — ce test est le seul endroit où les deux se rencontrent.
     #[tokio::test]
     async fn un_ajustement_ecrit_sa_ligne_de_grand_livre() {

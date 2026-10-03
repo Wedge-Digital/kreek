@@ -1,6 +1,8 @@
 # L'ajustement s'écrit, et le relevé le raconte
 
-**Ordre :** 2 · **Dépend de :** `557`
+> **Numérotée 558 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[558]` ; ils ne sont pas réécrits.
+
+**Ordre :** 2 · **Dépend de :** `584`
 **Conception :** `docs/specs/ajustement-tresorerie/panneau-d-ajustement/`
 (`05-use-cases.md`, `07-integration.md`)
 
@@ -9,7 +11,7 @@
 Le use case qui écrit. Toujours aucun écran : la carte se prouve par un test
 d'intégration sur une vraie base.
 
-> **La partie « se lit » a été livrée par la 557.** Ajouter le neuvième motif y
+> **La partie « se lit » a été livrée par la 584.** Ajouter le neuvième motif y
 > cassait trois `match` — `libelle()`, `emoji()` et `detail_de()` — qu'on ne
 > pouvait pas laisser incomplets pour compiler. Le bras `AdminAdjustment`, la
 > fonction `ajustement(payload)` et ses deux tests sont donc déjà en place.
@@ -72,7 +74,7 @@ pub struct AdjustTreasuryCommand {
 Aucune primitive nue. `CoachName` vit dans `shared_kernel/identity/` : pas
 d'import inter-BC.
 
-### 3. ~~La ligne lisible~~ — livrée par la 557
+### 3. ~~La ligne lisible~~ — livrée par la 584
 
 `detail_de()` rend déjà « Par \<auteur\> — \<motif\> » depuis la charge utile de
 l'événement, avec son repli sobre quand elle manque. Rien à faire ici.
@@ -92,11 +94,11 @@ l'événement, avec son repli sobre quand elle manque. Rien à faire ici.
 
 - [ ] `AdjustTreasuryCommand`
 - [ ] `adjust_treasury_use_case.rs`, instrumenté `skip_all`
-- [x] ~~Bras `AdminAdjustment` dans `detail_de()`~~ — livré par la 557
+- [x] ~~Bras `AdminAdjustment` dans `detail_de()`~~ — livré par la 584
 - [ ] Test use case : équipe introuvable → `TeamNotFound`, **rien d'appendé**
 - [ ] Test use case : refus domaine remonté tel quel, **rien d'appendé**
 - [ ] Test use case : l'événement appendé porte le motif, le nom et le bon sens
 - [ ] Test d'intégration sur vraie base : après l'écriture,
       `teams__treasury_ledger` porte une ligne `AdminAdjustment` dont
       `balance_after_kpo` est le solde attendu
-- [x] ~~Test de `detail_de()`~~ — livré par la 557
+- [x] ~~Test de `detail_de()`~~ — livré par la 584

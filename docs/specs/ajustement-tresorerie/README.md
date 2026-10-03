@@ -22,7 +22,7 @@ change, notées à leur place.
 
 | Page | État |
 |---|---|
-| `panneau-d-ajustement/` | conception terminée — cartes 557 à 560 |
+| `panneau-d-ajustement/` | conception terminée — cartes 584 à 587 |
 
 ## Ce que la fonctionnalité suppose déjà acquis
 

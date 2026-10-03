@@ -299,11 +299,11 @@ def test_l_onglet_joueurs_reste_accessible_apres_un_aller_retour(page: Page, tre
     expect(page.locator(".team-tabs .tab.active")).to_have_text("Joueurs & Staff")
 
 
-# ── Le panneau d'ajustement (carte 560) ───────────────────────────────────────
+# ── Le panneau d'ajustement (carte 587) ───────────────────────────────────────
 #
 # **Quatre scénarios et non cinq.** Les refus serveur — membre simple à 403,
 # montant hors bornes, motif vide, retrait non couvert — sont couverts par les
-# tests de handler de la carte 559, qui montent le routeur de production et
+# tests de handler de la carte 586, qui montent le routeur de production et
 # frappent les mêmes chemins. Les rejouer ici coûterait des secondes de suite
 # pour prouver à nouveau, moins précisément, ce qui l'est déjà.
 #

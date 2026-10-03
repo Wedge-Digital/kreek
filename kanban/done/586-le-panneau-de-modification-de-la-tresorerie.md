@@ -1,6 +1,8 @@
 # Le panneau de modification de la trésorerie
 
-**Ordre :** 3 · **Dépend de :** `558`
+> **Numérotée 559 jusqu'au 2026-10-04**, numéro qu'elle partageait avec une autre carte. Les commits déjà poussés portent `[559]` ; ils ne sont pas réécrits.
+
+**Ordre :** 3 · **Dépend de :** `585`
 **Conception :** `docs/specs/ajustement-tresorerie/panneau-d-ajustement/`
 (`02-front.md`, `03-back.md`, `04-dtos.md`, `07-integration.md`)
 **Maquette :** `assets/rawpages/html/app-team-treasury-admin.html`

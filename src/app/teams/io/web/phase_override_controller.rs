@@ -8,7 +8,7 @@
 //! Recharger met tout à jour d'un coup, en gardant l'onglet affiché.
 //!
 //! L'**erreur** ne remplace que le message du panneau, qui reste ouvert avec sa
-//! saisie. Pas le pied entier : la carte 559 a appris qu'un pied porteur
+//! saisie. Pas le pied entier : la carte 586 a appris qu'un pied porteur
 //! d'Alpine, remonté, effaçait aussitôt ce que le serveur venait de dire.
 
 use crate::app::auth::auth_backend::AuthSession;

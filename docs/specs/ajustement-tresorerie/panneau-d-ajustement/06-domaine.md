@@ -113,7 +113,7 @@ par `adjust_treasury` est gardé par la méthode, et reste **contournable** par 
 
 Ce n'est pas une faiblesse introduite ici : c'est l'état de l'agrégat pour ses
 vingt méthodes, mesuré à 139 lectures de champ dans 33 fichiers. Le corriger est
-un chantier à part — **carte 556** — et le faire à moitié, un champ privé sur
+un chantier à part — **carte 583** — et le faire à moitié, un champ privé sur
 vingt-cinq, donnerait l'illusion d'un agrégat gardé sans en être un.
 
 Écrit ici pour qu'on ne lise pas dans cette phase une garantie qu'elle n'offre

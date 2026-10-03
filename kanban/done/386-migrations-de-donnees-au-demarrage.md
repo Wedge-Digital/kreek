@@ -83,7 +83,7 @@ Sur cible `kreek::`, donc `tracing::info!` depuis ce module — une cible hors
 
 **Le nom de migration proposé était déjà pris.** La carte annonçait
 `20260824000001_applied_data_migrations.sql` ; ce numéro appartient depuis au
-`competition_seasons_notifications_off_for_existing` de la carte 366. Le
+`competition_seasons_notifications_off_for_existing` de la carte 590. Le
 registre est donc en `20260825000001`.
 
 **Le cœur est séparé de son point d'entrée.** `executer()` lit le registre réel
