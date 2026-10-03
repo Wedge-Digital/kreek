@@ -10,7 +10,8 @@
 `src/app/teams/io/web/templates/phase-override-foot.html` *(nouveau)*,
 `src/app/teams/io/web/team_detail.rs`,
 `src/app/teams/io/web/templates/teams-team-detail.html`,
-`assets/static/css/pages/team-page.css`
+`assets/static/css/pages/team-page.css`,
+`tests/e2e/test_manual_phase_override.py` *(nouveau)*, `tests/impact-map.toml`
 
 ## L'objectif
 
@@ -36,7 +37,14 @@ Unitaires : le VM du bandeau porte le bouton pour un admin d'une équipe prête,
 pas pour un coach ni dans une autre phase ; `PhaseChoiceVm` reprend les trois
 phases.
 
+E2E (décision du 2026-10-03 — la première carte visible porte ses tests) :
+
+1. L'admin ouvre chacune des trois phases depuis le bandeau ; l'équipe passe
+   dans la phase, avec son bandeau habituel.
+2. Un simple membre ne voit pas le bouton ; sa requête forgée reçoit 403.
+
 ## Terminé quand
 
 Un admin ouvre une phase depuis la fiche, l'équipe affiche le bandeau de la
-phase, et `make test`, `make lint`, `make check-arch` passent.
+phase, les deux scénarios e2e passent, et `make test`, `make lint`,
+`make check-arch`, `make e2e` passent.

@@ -9,8 +9,8 @@
 | **575** | Le domaine sait ouvrir une phase manuelle | `PhaseEntry`, `OverridablePhase`, `OverrideReason`, quatre événements, `open_phase_override`, les sorties, la garde de `revert_post_match_sequence`, `returns_to_ready_to_play()` | `cargo test` au vert sur les règles de la phase 6 — aucun écran |
 | **576** | La projection et les listeners suivent | `team_proj` exhaustive (bras d'avance compris), listeners sur `returns_to_ready_to_play()`, adapter de correction | une sortie manuelle recalcule la TV et purge les paniers |
 | **577** | L'ouverture s'écrit | commande, use case | une ouverture en base, refusée hors de « prête à jouer » |
-| **578** | Le panneau d'ouverture du bandeau | VMs, route, contrôleur, gabarits, Alpine, CSS | un admin ouvre une phase depuis la fiche |
-| **579** | Les tests e2e des phases manuelles | six scénarios Playwright | les gardes tiennent au-delà de l'écran |
+| **578** | Le panneau d'ouverture du bandeau | VMs, route, contrôleur, gabarits, Alpine, CSS | un admin ouvre une phase depuis la fiche ; deux scénarios e2e |
+| **579** | Les tests e2e — sorties et refus | quatre scénarios Playwright | les gardes tiennent au-delà de l'écran |
 
 ## Ce qui commande l'ordre
 
@@ -23,6 +23,10 @@ projection, et « Mes équipes » contredirait la fiche — un faux défaut pour
 578.
 
 **577 avant 578** : l'écran s'appuie sur une écriture déjà testée.
+
+**La 578 porte ses premiers tests e2e** (décision du 2026-10-03) : ouverture
+des trois phases, refus d'un simple membre. Livrer un écran sans e2e
+contredirait la règle de couverture.
 
 **579 en dernier, pas en option** : ses scénarios de refus serveur prouvent que
 la garde ne repose pas sur le bouton masqué.
