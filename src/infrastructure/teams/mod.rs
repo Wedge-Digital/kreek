@@ -1,4 +1,3 @@
-pub mod access_adapter;
 pub mod dice_adapter;
 pub mod journeyman_type_adapter;
 pub mod match_context_adapter;

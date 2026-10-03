@@ -20,9 +20,14 @@
 //! # Ce qu'il ne garde pas, et pourquoi
 //!
 //! La fiche d'équipe, sa trésorerie et ses matchs se lisent par tout le monde —
-//! la carte 500 y retire les boutons, pas la page. Le renvoi d'équipe et les
-//! actions d'inscription relèvent d'une **autre** règle, celle du commissaire
-//! (`SpacePermissions::is_admin()`), qui exclut délibérément le propriétaire.
+//! la carte 500 y retire les boutons, pas la page. Le renvoi d'équipe et
+//! l'ajustement de trésorerie relèvent d'une **autre** règle, celle du
+//! commissaire (`garde_commissaire::exiger_commissaire`), qui exclut
+//! délibérément le propriétaire.
+//!
+//! Les actions d'inscription, elles, ne sont gardées par **rien** : ce
+//! commentaire les disait couvertes par la règle du commissaire, et c'était
+//! faux depuis leur création. C'est la carte 573.
 //!
 //! # La limite
 //!
@@ -88,8 +93,7 @@ async fn autoriser(
     let autorise = roster_edit_access_service::peut_modifier_effectif(
         &team,
         &user.id,
-        &user.coach_name.clone().into_inner(),
-        state.teams.access_port.as_ref(),
+        state.teams.admin_access.as_ref(),
     )
     .await;
 

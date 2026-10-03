@@ -1,7 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
-use crate::app::competitions::use_cases::competition_admin_access_service::{
-    peut_administrer, AdminsDeLaCompetition,
-};
+use crate::app::competitions::use_cases::competition_admin_access_service::peut_administrer;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, SeasonId};
 use crate::app::shared_kernel::identity::ids::SpaceId;
@@ -425,14 +423,14 @@ pub(crate) async fn load_page_base(
     })
 }
 
-/// Traduit l'`AuthSession` et la `PageBase` en les termes du service d'accès.
+/// Traduit l'`AuthSession` et le chemin en les termes du service d'accès.
 ///
-/// Un visiteur anonyme, ou un `space_id` que le chemin a mal formé, n'ouvre
+/// Un visiteur anonyme, ou un identifiant que le chemin a mal formé, n'ouvre
 /// rien : dans les deux cas la question ne se pose pas, et la réponse est non.
 async fn peut_administrer_cette_competition(
     auth_session: &AuthSession,
     space_id: &str,
-    pb: &PageBase,
+    competition_id: &str,
     state: &AppState,
 ) -> bool {
     let Some(user) = auth_session.user.as_ref() else {
@@ -441,13 +439,16 @@ async fn peut_administrer_cette_competition(
     let Ok(space) = SpaceId::try_new(space_id) else {
         return false;
     };
-    let admins = AdminsDeLaCompetition {
-        ids: &pb.admin_ids,
-        names: &pb.admin_names,
+    let Ok(competition) = CompetitionId::try_new(competition_id) else {
+        return false;
     };
-    let nom = user.coach_name.clone().into_inner();
-    let membres = state.competitions.space_member_port.as_ref();
-    peut_administrer(&user.id, &nom, &space, admins, membres).await
+    peut_administrer(
+        state.competitions.admin_access.as_ref(),
+        &user.id,
+        &space,
+        &competition,
+    )
+    .await
 }
 
 /// Le droit d'administrer est **calculé ici**, jamais reçu en paramètre.
@@ -470,7 +471,8 @@ pub(crate) async fn full_page(
     flop_tds: Vec<StatRow>,
     flop_casualties: Vec<StatRow>,
 ) -> Response {
-    let is_admin = peut_administrer_cette_competition(auth_session, &space_id, &pb, state).await;
+    let is_admin =
+        peut_administrer_cette_competition(auth_session, &space_id, &competition_id, state).await;
     CompetitionDetailTemplate {
         app_routes: AppRoutes::default(),
         space_id,

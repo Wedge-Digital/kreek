@@ -1,8 +1,8 @@
 use crate::app::auth::domain::user::User;
 use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
 use crate::app::routes::AppRoutes;
+use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
-use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use axum::http::StatusCode;
@@ -86,9 +86,8 @@ impl ResultAuthorization {
 }
 
 /// Calcule l'autorisation de l'utilisateur courant pour la page publique des
-/// résultats : admin d'espace, admin de compétition (par id ou par nom,
-/// même règle que `admin_page.rs`), ou coach d'une des équipes inscrites
-/// cette saison.
+/// résultats : admin de l'espace ou de la compétition (`est_admin`, la règle
+/// de tout kreek), ou coach d'une des équipes inscrites cette saison.
 pub async fn compute_authorization(
     state: &AppState,
     user: &User,
@@ -96,30 +95,15 @@ pub async fn compute_authorization(
     competition_id: &CompetitionId,
     season_id: &str,
 ) -> ResultAuthorization {
-    let is_space_admin = matches!(
-        state
-            .competitions
-            .space_member_port
-            .find_member_profile(&user.id, space_id)
-            .await,
-        Some(SpaceProfile::SpaceAdmin)
-    );
-
-    let is_comp_admin = match state
-        .competitions
-        .competition_repository
-        .find_base_info(competition_id)
-        .await
-    {
-        Ok(Some(info)) => {
-            let user_id_str = user.id.to_string();
-            let coach_name_str = user.coach_name.clone().into_inner();
-            info.admin_ids.contains(&user_id_str) || info.admin_names.contains(&coach_name_str)
-        }
-        _ => false,
-    };
-
-    let is_admin = is_space_admin || is_comp_admin;
+    // La règle de tout kreek (carte 572) : admin de l'espace ou de la
+    // compétition, par identifiant.
+    let is_admin = est_admin(
+        state.competitions.admin_access.as_ref(),
+        &user.id,
+        space_id,
+        Some(competition_id),
+    )
+    .await;
 
     let my_team_ids = if is_admin {
         HashSet::new()

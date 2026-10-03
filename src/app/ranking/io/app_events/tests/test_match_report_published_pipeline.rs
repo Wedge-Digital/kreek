@@ -120,20 +120,6 @@ where
     panic!("condition never satisfied within timeout");
 }
 
-/// Ce banc n'exerce aucune autorisation : il vérifie le tuyau app event →
-/// lignes de classement. La doublure refuse tout, ce qui est le défaut sûr.
-struct FakeAdmin;
-
-#[async_trait::async_trait]
-impl crate::app::ranking::ports::IRankingAdminPort for FakeAdmin {
-    async fn is_competition_admin(&self, _: &str, _: &str) -> bool {
-        false
-    }
-    async fn is_space_admin(&self, _: &str, _: &str) -> bool {
-        false
-    }
-}
-
 /// Le pipeline ne rend aucun classement : les adresses ne sont jamais lues.
 struct FakeLinks;
 
@@ -153,7 +139,9 @@ async fn match_report_published_creates_two_ranking_lines(pool: PgPool) {
     let ranking = RankingContext::new(
         &pool,
         competition_port.clone(),
-        Arc::new(FakeAdmin),
+        // Ce banc n'exerce aucune autorisation : la doublure partagée refuse
+        // tout, ce qui est le défaut sûr.
+        Arc::new(crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess::new()),
         Arc::new(FakeLinks),
     );
     match_report_published_listener::init(
@@ -211,7 +199,9 @@ async fn match_report_published_persists_the_tiebreak_counters(pool: PgPool) {
     let ranking = RankingContext::new(
         &pool,
         competition_port.clone(),
-        Arc::new(FakeAdmin),
+        // Ce banc n'exerce aucune autorisation : la doublure partagée refuse
+        // tout, ce qui est le défaut sûr.
+        Arc::new(crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess::new()),
         Arc::new(FakeLinks),
     );
     match_report_published_listener::init(

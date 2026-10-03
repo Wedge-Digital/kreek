@@ -137,26 +137,6 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
         .map_err(traduire)
     }
 
-    async fn is_competition_admin(
-        &self,
-        competition_id: &str,
-        coach_id: &str,
-    ) -> Result<bool, String> {
-        let comp_id =
-            crate::app::shared_kernel::bloodbowl::ids::CompetitionId::try_new(competition_id)
-                .map_err(|e| e.to_string())?;
-        let info = self
-            .competition_repo
-            .find_base_info(&comp_id)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        match info {
-            Some(base) => Ok(base.admin_ids.iter().any(|id| id.to_string() == coach_id)),
-            None => Ok(false),
-        }
-    }
-
     async fn find_tier_rules_for_roster(
         &self,
         season_id: &str,

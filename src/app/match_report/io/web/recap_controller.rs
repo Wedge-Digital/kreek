@@ -13,8 +13,8 @@ use crate::app::match_report::io::web::builders::{
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm,
 };
+use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::match_report::ports::TeamInfoDto;
-use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
 use crate::app::match_report::use_cases::correction_eligibility_service;
 use crate::app::match_report::use_cases::match_report_access_service::{
     est_administrateur, is_authorized, AccesRapportDeps, PorteeRapport,
@@ -569,54 +569,18 @@ fn refresh() -> Response {
 #[cfg(test)]
 mod authorization_tests {
     use super::*;
-    use crate::app::match_report::ports::{
-        JourneymanPositionDto, RosterPositionDto, RoundContextDto, TeamInfoDto, TierRulesDto,
-    };
+    use crate::app::match_report::ports::{JourneymanPositionDto, RosterPositionDto, TeamInfoDto};
+    use crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess;
     use crate::app::shared_kernel::identity::coach_name::CoachName;
     use crate::app::shared_kernel::identity::email::Email;
+    use crate::app::shared_kernel::identity::ids::EntityId;
     use crate::app::shared_kernel::identity::ids::UserId;
 
     const HOME: &str = "home-team";
     const AWAY: &str = "away-team";
-    const SPACE: &str = "space-1";
-
-    struct FakeSpaceAdmin(bool);
-    #[async_trait::async_trait]
-    impl ISpaceAdminPort for FakeSpaceAdmin {
-        async fn is_space_admin(&self, _: &str, _: &str) -> bool {
-            self.0
-        }
-    }
-
-    struct FakeCompetitionData(Result<bool, String>);
-    #[async_trait::async_trait]
-    impl ICompetitionDataPort for FakeCompetitionData {
-        /// Doublure : le récapitulatif ne programme aucune rencontre.
-        async fn creer_appariement(
-            &self,
-            _: &str,
-            _: &str,
-            _: &str,
-            _: &str,
-            _: &str,
-            _: &str,
-        ) -> Result<String, crate::app::match_report::ports::CreationAppariementError> {
-            unimplemented!("non utilisé par ces tests")
-        }
-
-        async fn autorise_hors_calendrier(&self, _: &str) -> bool {
-            true
-        }
-        async fn is_competition_admin(&self, _: &str, _: &str) -> Result<bool, String> {
-            self.0.clone()
-        }
-        async fn find_tier_rules_for_roster(&self, _: &str, _: &str) -> Option<TierRulesDto> {
-            None
-        }
-        async fn find_round_context(&self, _: &str, _: &str) -> Option<RoundContextDto> {
-            None
-        }
-    }
+    const SPACE: &str = "00000000000000000000000021";
+    const COMPETITION: &str = "00000000000000000000000022";
+    const UTILISATEUR: &str = "00000000000000000000000023";
 
     /// `coached` liste les équipes dont l'utilisateur est coach. `fails` simule
     /// une indisponibilité du port, pour vérifier qu'on échoue fermé.
@@ -657,7 +621,7 @@ mod authorization_tests {
 
     fn user() -> User {
         User::new(
-            UserId::new(),
+            UserId::try_new(UTILISATEUR).unwrap(),
             CoachName::try_new("Testeur".to_string()).unwrap(),
             None,
             Email::try_new("testeur@example.com".to_string()).unwrap(),
@@ -667,22 +631,29 @@ mod authorization_tests {
 
     fn scope() -> PorteeRapport {
         PorteeRapport {
-            competition_id: "comp-1".to_string(),
+            competition_id: COMPETITION.to_string(),
             home_team_id: HOME.to_string(),
             away_team_id: AWAY.to_string(),
         }
     }
 
-    async fn authorize(
-        space_admin: bool,
-        comp_admin: Result<bool, String>,
-        team_data: FakeTeamData,
-    ) -> bool {
-        let space_admin = FakeSpaceAdmin(space_admin);
-        let competition_data = FakeCompetitionData(comp_admin);
+    /// La doublure partagée de la carte 570, configurée pour l'utilisateur.
+    fn admins(space_admin: bool, comp_admin: bool) -> FakeAdminAccess {
+        let utilisateur = EntityId::try_new(UTILISATEUR).unwrap();
+        let mut port = FakeAdminAccess::new();
+        if space_admin {
+            port = port.admin_espace(&utilisateur, &EntityId::try_new(SPACE).unwrap());
+        }
+        if comp_admin {
+            port = port.admin_competition(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
+        }
+        port
+    }
+
+    async fn authorize(space_admin: bool, comp_admin: bool, team_data: FakeTeamData) -> bool {
+        let admin_access = admins(space_admin, comp_admin);
         let deps = AccesRapportDeps {
-            space_admin: &space_admin,
-            competition_data: &competition_data,
+            admin_access: &admin_access,
             team_data: &team_data,
         };
         is_authorized(&deps, &user(), SPACE, &scope()).await
@@ -697,34 +668,76 @@ mod authorization_tests {
 
     #[tokio::test]
     async fn admin_d_espace_est_autorise() {
-        assert!(authorize(true, Ok(false), coaching(vec![])).await);
+        assert!(authorize(true, false, coaching(vec![])).await);
     }
 
     #[tokio::test]
     async fn admin_de_competition_est_autorise() {
-        assert!(authorize(false, Ok(true), coaching(vec![])).await);
+        assert!(authorize(false, true, coaching(vec![])).await);
     }
 
     #[tokio::test]
     async fn coach_de_l_equipe_domicile_est_autorise() {
-        assert!(authorize(false, Ok(false), coaching(vec![HOME])).await);
+        assert!(authorize(false, false, coaching(vec![HOME])).await);
     }
 
     #[tokio::test]
     async fn coach_de_l_equipe_exterieure_est_autorise() {
-        assert!(authorize(false, Ok(false), coaching(vec![AWAY])).await);
+        assert!(authorize(false, false, coaching(vec![AWAY])).await);
     }
 
     /// Le trou de sécurité que cette carte ferme : un utilisateur connecté mais
     /// étranger aux deux équipes ne doit pas pouvoir publier.
     #[tokio::test]
     async fn utilisateur_etranger_aux_deux_equipes_est_refuse() {
-        assert!(!authorize(false, Ok(false), coaching(vec!["autre-equipe"])).await);
+        assert!(!authorize(false, false, coaching(vec!["autre-equipe"])).await);
+    }
+
+    /// Un identifiant de compétition illisible ne donne pas l'accès : le
+    /// contrôle échoue fermé. L'erreur de lecture du dépôt, elle, est couverte
+    /// par les tests de l'adapter commun (carte 570).
+    #[tokio::test]
+    async fn une_competition_illisible_ne_donne_pas_l_acces() {
+        let admin_access = admins(false, true);
+        let team_data = coaching(vec![]);
+        let deps = AccesRapportDeps {
+            admin_access: &admin_access,
+            team_data: &team_data,
+        };
+        let illisible = PorteeRapport {
+            competition_id: "comp-illisible".to_string(),
+            ..scope()
+        };
+        assert!(!is_authorized(&deps, &user(), SPACE, &illisible).await);
+    }
+
+    // ── `est_administrateur` : sans les coachs (carte 550) ────────────────
+
+    async fn administre(space_admin: bool, comp_admin: bool, team_data: FakeTeamData) -> bool {
+        let admin_access = admins(space_admin, comp_admin);
+        let deps = AccesRapportDeps {
+            admin_access: &admin_access,
+            team_data: &team_data,
+        };
+        est_administrateur(&deps, &user(), SPACE, COMPETITION).await
     }
 
     #[tokio::test]
-    async fn erreur_du_port_competition_ne_donne_pas_l_acces() {
-        assert!(!authorize(false, Err("indisponible".into()), coaching(vec![])).await);
+    async fn l_admin_d_espace_administre() {
+        assert!(administre(true, false, coaching(vec![])).await);
+    }
+
+    #[tokio::test]
+    async fn l_admin_de_competition_administre() {
+        assert!(administre(false, true, coaching(vec![])).await);
+    }
+
+    /// La différence avec `is_authorized` : le coach d'une équipe du match agit
+    /// sur son rapport, mais ne change pas la sélection quand la compétition
+    /// interdit le hors-calendrier.
+    #[tokio::test]
+    async fn le_coach_du_match_n_administre_pas() {
+        assert!(!administre(false, false, coaching(vec![HOME, AWAY])).await);
     }
 
     #[tokio::test]
@@ -733,6 +746,6 @@ mod authorization_tests {
             coached: vec![HOME],
             fails: true,
         };
-        assert!(!authorize(false, Ok(false), failing).await);
+        assert!(!authorize(false, false, failing).await);
     }
 }

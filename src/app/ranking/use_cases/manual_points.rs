@@ -5,7 +5,9 @@
 //! `CLAUDE.md` réserve ce suffixe aux orchestrations, et un fichier qui n'en
 //! porte aucune ne doit pas s'en réclamer.
 
-use crate::app::ranking::ports::{IRankingAdminPort, RankingRepositoryError};
+use crate::app::ranking::ports::RankingRepositoryError;
+use crate::app::shared_kernel::bloodbowl::admin_access::{est_admin, IAdminAccessPort};
+use crate::app::shared_kernel::identity::ids::EntityId;
 
 /// **Pas de variante `Invalid`.** Les value objects de la carte 449 valident à
 /// la construction : le handler ne peut pas fabriquer une commande invalide.
@@ -25,32 +27,32 @@ impl From<RankingRepositoryError> for ManualPointsError {
     }
 }
 
-/// Les deux portes d'entrée, que la carte 426 a montré qu'il faut garder
-/// distinctes : dans `competitions`, un `||` identique avait rendu invisible la
-/// suppression de l'une des deux branches, faute de tests qui les séparent.
+/// Qui peut attribuer ou retirer des points manuels : un admin de l'espace ou
+/// de la compétition — la règle commune à tout kreek (carte 570).
 ///
-/// **Instrumentée, et non déclarée `arch:no-instrument`.** Le port sépare les
-/// deux sources d'autorisation précisément pour qu'on sache laquelle a répondu ;
-/// un journal muet lui ôterait la moitié de sa valeur. Les `ret` des deux
-/// appels laissent la trace en production, là où le seul `Forbidden` du use case
-/// ne dirait pas *pourquoi* — ni, en cas d'accès inattendu, *par où*.
+/// Les deux portes restaient évaluées séparément, pour que la trace dise
+/// laquelle avait ouvert. `est_admin` court-circuite : l'espace répond d'abord,
+/// et la compétition n'est interrogée qu'à défaut. Ce que la carte 426 avait
+/// payé — une branche supprimée sans qu'aucun test ne rougisse — est désormais
+/// tenu par les tests du service commun, qui exercent chaque porte seule.
+///
+/// Un identifiant illisible refuse : un contrôle d'accès échoue fermé.
 // L'attribut tient sur une ligne : l'axe 11 ne regarde que la ligne qui précède
 // la signature, et `cargo fmt` replierait un attribut plus long sur `)]` — que
-// le contrôle ne reconnaît pas. Les identifiants du contexte sont de toute
-// façon dans le `debug!` ci-dessous.
+// le contrôle ne reconnaît pas.
 #[tracing::instrument(skip_all, fields(user_id = %user_id), ret)]
 pub async fn autorise(
-    admin: &dyn IRankingAdminPort,
+    admin: &dyn IAdminAccessPort,
     user_id: &str,
     competition_id: &str,
     space_id: &str,
 ) -> bool {
-    // Les deux sont évaluées, sans court-circuit : un `||` sauterait le second
-    // appel dès que le premier répond vrai, et le journal ne dirait plus que
-    // l'accès était de toute façon acquis par l'autre porte. Deux lectures
-    // coûtent moins que l'ambiguïté qu'un court-circuit installe dans la trace.
-    let par_competition = admin.is_competition_admin(user_id, competition_id).await;
-    let par_espace = admin.is_space_admin(user_id, space_id).await;
-    tracing::debug!(par_competition, par_espace, "autorisation points manuels");
-    par_competition || par_espace
+    let (Ok(user), Ok(competition), Ok(space)) = (
+        EntityId::try_new(user_id),
+        EntityId::try_new(competition_id),
+        EntityId::try_new(space_id),
+    ) else {
+        return false;
+    };
+    est_admin(admin, &user, &space, Some(&competition)).await
 }

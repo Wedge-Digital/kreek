@@ -1,5 +1,6 @@
 //! Noyau Blood Bowl — le vocabulaire métier de kreek. Il dépend du noyau
 //! d'identité ; l'inverse ne doit jamais arriver.
+pub mod admin_access;
 pub mod competition_name;
 pub mod competition_profile;
 pub mod date_string;

@@ -351,13 +351,6 @@ mod tests {
         async fn list_space_members(&self, _: &SpaceId) -> Vec<SpaceMemberDto> {
             self.0.clone()
         }
-        async fn find_member_profile(
-            &self,
-            _: &CoachId,
-            _: &SpaceId,
-        ) -> Option<crate::app::shared_kernel::identity::authorization::SpaceProfile> {
-            None
-        }
         async fn find_all_spaces(
             &self,
         ) -> Vec<crate::app::shared_kernel::identity::space_definition::SpaceDefinition> {

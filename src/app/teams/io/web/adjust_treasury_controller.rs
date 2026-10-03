@@ -17,10 +17,10 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::UserId;
-use crate::app::spaces::io::web::extractors::space_permissions::SpacePermissions;
 use crate::app::teams::domain::error::DomainError;
 use crate::app::teams::domain::treasury::MovementDirection;
 use crate::app::teams::domain::value_objects::{AdjustmentAmount, AdjustmentNote};
+use crate::app::teams::io::web::garde_commissaire::exiger_commissaire;
 use crate::app::teams::io::web::team_detail::rendre_fiche;
 use crate::app::teams::io::web::treasury_view_models::AdjustErrorVm;
 use crate::app::teams::use_cases::adjust_treasury_use_case::{self as uc, AdjustTreasuryError};
@@ -51,17 +51,14 @@ struct AdjustErrorTemplate {
 
 pub async fn adjust_treasury(
     Path((space_id, team_id)): Path<(String, String)>,
-    perms: SpacePermissions,
     State(state): State<AppState>,
     auth_session: AuthSession,
     // **En dernier, et axum l'exige** : il consomme le corps de la requête.
     Form(form): Form<AdjustTreasuryForm>,
 ) -> Response {
-    if !perms.is_admin() {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-    let Some(user) = auth_session.user.clone() else {
-        return StatusCode::UNAUTHORIZED.into_response();
+    let user = match exiger_commissaire(&state, &auth_session, &team_id).await {
+        Ok(user) => user,
+        Err(refus) => return refus,
     };
 
     let cmd = match construire_commande(&form, &team_id, &user) {

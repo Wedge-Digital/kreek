@@ -5,6 +5,7 @@ use crate::app::news::context::NewsContext;
 use crate::app::players::context::PlayersContext;
 use crate::app::ranking::context::RankingContext;
 use crate::app::references::context::ReferencesContext;
+use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 use crate::app::spaces::context::SpacesContext;
 use crate::app::team_creation::context::TeamCreationContext;
 use crate::app::teams::context::TeamsContext;
@@ -34,6 +35,9 @@ pub struct AppState {
     /// calendrier, pour cacher l'entrée de menu (carte 550). Un port et non un
     /// contexte de BC : `src/web/` ne connaît pas `competitions`.
     pub hors_calendrier: Arc<dyn IHorsCalendrierPort>,
+    /// Qui est admin — le même adapter que celui des BCs (carte 570), exposé à
+    /// l'hôte pour le menu : `src/web/` n'a pas de contexte de BC à lui.
+    pub admin_access: Arc<dyn IAdminAccessPort>,
     pub bypass_auth: bool,
     pub event_bus: EventBus,
     pub app_event_bus: EventBus,

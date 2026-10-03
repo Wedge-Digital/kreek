@@ -154,7 +154,7 @@ async fn build_vm(
         can_manage: match user_id {
             Some(id) => {
                 crate::app::ranking::use_cases::manual_points::autorise(
-                    state.ranking.admin_port.as_ref(),
+                    state.ranking.admin_access.as_ref(),
                     id,
                     competition_id,
                     space_id,

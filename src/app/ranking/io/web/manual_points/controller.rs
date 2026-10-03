@@ -87,7 +87,7 @@ fn membre(auth: &AuthSession) -> Result<String, Response> {
 
 async fn peut_gerer(state: &AppState, user_id: &str, competition_id: &str, space_id: &str) -> bool {
     crate::app::ranking::use_cases::manual_points::autorise(
-        state.ranking.admin_port.as_ref(),
+        state.ranking.admin_access.as_ref(),
         user_id,
         competition_id,
         space_id,
@@ -225,7 +225,7 @@ pub async fn post_manual_points(
     match award_manual_points_use_case::execute(
         cmd,
         state.ranking.repository.as_ref(),
-        state.ranking.admin_port.as_ref(),
+        state.ranking.admin_access.as_ref(),
         state.ranking.competition_port.as_ref(),
     )
     .await
@@ -284,7 +284,7 @@ pub async fn delete_manual_point(
     match revoke_manual_points_use_case::execute(
         cmd,
         state.ranking.repository.as_ref(),
-        state.ranking.admin_port.as_ref(),
+        state.ranking.admin_access.as_ref(),
     )
     .await
     {

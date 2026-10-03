@@ -4,8 +4,7 @@ use crate::app::players::domain::value_objects::SkillId;
 use crate::app::players::io::web::player_loader::charger_joueur;
 use crate::app::players::ports::TeamRosterInfoDto;
 use crate::app::players::use_cases::commands::PurchaseSkillCommand;
-use crate::app::players::use_cases::purchase_skill_use_case;
-use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::players::use_cases::{player_access_service, purchase_skill_use_case};
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use axum::body::Body;
@@ -101,42 +100,19 @@ pub async fn post_purchase_skill(
     }
 }
 
-/// Coach de l'équipe, admin de compétition, ou admin d'espace — même patron
-/// que `check_admin_rights` de `player_detail_controller.rs`, étendu au coach.
+/// Coach de l'équipe, admin de son espace ou de sa compétition — la règle vit
+/// dans `player_access_service` (carte 572).
 pub async fn can_spend_spp(
     state: &AppState,
     user: &crate::app::auth::domain::user::User,
     space_id: &SpaceId,
     team: &TeamRosterInfoDto,
 ) -> bool {
-    if team.coach_id == user.id.to_string() {
-        return true;
-    }
-    let is_space_admin = matches!(
-        state
-            .players
-            .space_member_port
-            .find_member_profile(&user.id, space_id)
-            .await,
-        Some(SpaceProfile::SpaceAdmin)
-    );
-    if is_space_admin {
-        return true;
-    }
-    let Some(competition_id) = &team.competition_id else {
-        return false;
-    };
-    let user_id_str = user.id.to_string();
-    let coach_name_str = user.coach_name.clone().into_inner();
-    match state
-        .players
-        .competition_port
-        .find_admin_info(competition_id)
-        .await
-    {
-        Some(info) => {
-            info.admin_ids.contains(&user_id_str) || info.admin_names.contains(&coach_name_str)
-        }
-        None => false,
-    }
+    player_access_service::peut_depenser_des_spp(
+        state.players.admin_access.as_ref(),
+        &user.id,
+        space_id,
+        team,
+    )
+    .await
 }

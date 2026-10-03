@@ -16,6 +16,8 @@
 `src/app/teams/io/web/team_detail.rs`, `src/app/teams/io/web/garde_action_equipe.rs`,
 `src/app/teams/io/web/adjust_treasury_controller.rs`,
 `src/app/teams/io/web/dismiss_team.rs`, `src/app/teams/router.rs`,
+`src/app/teams/io/web/garde_commissaire.rs` *(nouveau)*, `src/app/teams/io/web/mod.rs`,
+`tests/e2e/test_commissaire_de_competition.py` *(nouveau)*, `tests/impact-map.toml`,
 `src/infrastructure/teams/access_adapter.rs` *(supprimé)*,
 `src/infrastructure/teams/mod.rs`, tests de `teams`, `CLAUDE.md`
 
@@ -44,8 +46,9 @@ Le workflow « phases manuelles » allait en écrire une septième (`est_commiss
    n'apportait rien dans une base cohérente, et des cas bizarres dans une base
    désynchronisée — la comparaison est sensible à la casse, les comptes non.
 2. **Le compte exploitant `Bagouze` a toujours les droits**, dans tout espace et
-   toute compétition. L'exception vit **dans l'adapter**, qui reçoit pour cela le
-   nom du demandeur en plus de son identifiant.
+   toute compétition. L'exception vit **dans l'adapter**, qui résout une fois
+   l'identifiant du compte depuis son nom (`IUserRepository::find_by_coach_name`)
+   — sans retenir une absence. Les appelants ne transportent aucun nom.
 3. **Le propriétaire reste l'affaire de chaque BC.** Inclus pour l'effectif,
    exclu pour la customisation : la condition s'ajoute devant `est_admin`, elle
    n'y entre pas.
@@ -60,22 +63,16 @@ non `identity`, parce que la règle parle de compétition, que `auth` et `spaces
 extractibles, ignorent. Eux gardent `SpacePermissions::is_admin()`.
 
 ```rust
-/// Qui pose la question.
-pub struct Demandeur<'a> {
-    pub id: &'a CoachId,
-    pub nom: &'a str,
-}
-
 #[async_trait]
 pub trait IAdminAccessPort: Send + Sync {
-    async fn is_space_admin(&self, demandeur: &Demandeur<'_>, space_id: &SpaceId) -> bool;
-    async fn is_competition_admin(&self, demandeur: &Demandeur<'_>, competition_id: &CompetitionId) -> bool;
+    async fn is_space_admin(&self, user_id: &CoachId, space_id: &SpaceId) -> bool;
+    async fn is_competition_admin(&self, user_id: &CoachId, competition_id: &CompetitionId) -> bool;
 }
 
 /// La règle, écrite une fois : admin de l'espace, ou de la compétition.
 pub async fn est_admin(
     port: &dyn IAdminAccessPort,
-    demandeur: &Demandeur<'_>,
+    user_id: &CoachId,
     space_id: &SpaceId,
     competition_id: Option<&CompetitionId>,
 ) -> bool
@@ -92,8 +89,9 @@ doublures écrites BC par BC.
 **L'adapter unique, `infrastructure/admin_access/`** — repris par copier-coller
 de `infrastructure/teams/access_adapter.rs` (règle 5), moins la comparaison par
 nom, plus l'exception exploitant. Il lit `spaces__user_space.profile` par
-`ISpaceRepository::find_member_profile` et `competitions_members` par
-`ICompetitionRepository::find_base_info`. Construit une fois dans `main.rs`.
+`ISpaceRepository::find_member_profile`, `competitions_members` par
+`ICompetitionRepository::find_base_info`, et le compte exploitant par
+`IUserRepository::find_by_coach_name`. Construit une fois dans `main.rs`.
 
 **`teams` y passe** :
 - `TeamsContext.access_port: Arc<dyn ITeamAccessPort>` devient
@@ -102,7 +100,8 @@ nom, plus l'exception exploitant. Il lit `spaces__user_space.profile` par
   avant (règle 4) ;
 - `roster_edit_access_service` : `peut_modifier_effectif` = propriétaire, ou
   `est_admin` sur l'espace et la compétition de l'équipe ; un second service,
-  `est_admin_de_l_equipe`, pour les actions de commissaire (sans propriétaire) ;
+  `est_admin_de_l_equipe`, pour les actions de commissaire (sans propriétaire),
+  appliqué par `garde_commissaire::exiger_commissaire` ;
 - `team_detail.rs` : le droit d'ajuster la trésorerie passe par
   `est_admin_de_l_equipe` (admin de compétition compris) ;
 - `adjust_treasury_controller.rs` et `dismiss_team.rs` : `SpacePermissions`
@@ -128,8 +127,10 @@ Unitaires :
   refusé, admin de compétition par identifiant, **le même coach désigné par son
   seul nom refusé**, `Bagouze` admin partout, port en erreur refusé ;
 - `roster_edit_access_service` sur la doublure. Le test « admin de compétition
-  par nom » change de sens : il vérifie désormais que le nom seul **ne suffit
-  plus** — c'est la décision 1, pas une régression.
+  par nom » disparaît avec la comparaison par nom — c'est la décision 1, pas une
+  régression ; l'adapter vérifie, lui, que le pseudonyme seul ne suffit pas ;
+- le compte exploitant créé après le premier appel est reconnu sans
+  redémarrage.
 
 E2E : un admin de compétition, non admin d'espace, ajuste la trésorerie d'une
 équipe de sa compétition ; un simple membre est refusé. Les tests existants de

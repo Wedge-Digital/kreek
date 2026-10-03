@@ -1,7 +1,8 @@
 //! Retirer un point de classement manuel.
 
-use crate::app::ranking::ports::{IRankingAdminPort, IRankingRepository};
+use crate::app::ranking::ports::IRankingRepository;
 use crate::app::ranking::use_cases::manual_points::{autorise, ManualPointsError};
+use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 
 #[derive(Debug)]
 pub struct RevokeManualPointsCommand {
@@ -16,7 +17,7 @@ pub struct RevokeManualPointsCommand {
 pub async fn execute(
     cmd: RevokeManualPointsCommand,
     repo: &dyn IRankingRepository,
-    admin: &dyn IRankingAdminPort,
+    admin: &dyn IAdminAccessPort,
 ) -> Result<(), ManualPointsError> {
     if !autorise(admin, &cmd.user_id, &cmd.competition_id, &cmd.space_id).await {
         return Err(ManualPointsError::Forbidden);
@@ -39,6 +40,8 @@ mod tests {
     use crate::app::ranking::ports::{
         ManualPointRow, RankingLineFullRow, RankingLineRow, RankingRepositoryError,
     };
+    use crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess;
+    use crate::app::shared_kernel::identity::ids::EntityId;
     use async_trait::async_trait;
     use std::collections::HashMap;
     use std::sync::Mutex;
@@ -130,38 +133,39 @@ mod tests {
         }
     }
 
-    struct FakeAdmin {
-        competition: bool,
-        espace: bool,
-    }
+    const UTILISATEUR: &str = "00000000000000000000000011";
+    const COMPETITION: &str = "00000000000000000000000012";
+    const ESPACE: &str = "00000000000000000000000013";
 
-    #[async_trait]
-    impl IRankingAdminPort for FakeAdmin {
-        async fn is_competition_admin(&self, _: &str, _: &str) -> bool {
-            self.competition
+    /// Chaque porte se répond séparément — c'est ce qui permet aux tests de
+    /// dire **laquelle** a ouvert. La doublure partagée de la carte 570,
+    /// configurée pour l'utilisateur de la commande.
+    fn faux_admin(competition: bool, espace: bool) -> FakeAdminAccess {
+        let utilisateur = EntityId::try_new(UTILISATEUR).unwrap();
+        let mut port = FakeAdminAccess::new();
+        if competition {
+            port = port.admin_competition(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
         }
-        async fn is_space_admin(&self, _: &str, _: &str) -> bool {
-            self.espace
+        if espace {
+            port = port.admin_espace(&utilisateur, &EntityId::try_new(ESPACE).unwrap());
         }
+        port
     }
 
     fn commande() -> RevokeManualPointsCommand {
         RevokeManualPointsCommand {
             id: 42,
             season_id: "S1".into(),
-            competition_id: "C1".into(),
-            space_id: "E1".into(),
-            user_id: "U1".into(),
+            competition_id: COMPETITION.into(),
+            space_id: ESPACE.into(),
+            user_id: UTILISATEUR.into(),
         }
     }
 
     #[tokio::test]
     async fn un_non_admin_est_refuse() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = FakeAdmin {
-            competition: false,
-            espace: false,
-        };
+        let admin = faux_admin(false, false);
 
         assert_eq!(
             execute(commande(), &repo, &admin).await,
@@ -176,10 +180,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_de_competition_seul_suffit() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = FakeAdmin {
-            competition: true,
-            espace: false,
-        };
+        let admin = faux_admin(true, false);
 
         assert!(execute(commande(), &repo, &admin).await.is_ok());
     }
@@ -187,10 +188,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_d_espace_seul_suffit() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = FakeAdmin {
-            competition: false,
-            espace: true,
-        };
+        let admin = faux_admin(false, true);
 
         assert!(execute(commande(), &repo, &admin).await.is_ok());
     }
@@ -201,10 +199,7 @@ mod tests {
     #[tokio::test]
     async fn zero_ligne_supprimee_vaut_introuvable() {
         let repo = FakeRepo::qui_supprime(0);
-        let admin = FakeAdmin {
-            competition: true,
-            espace: false,
-        };
+        let admin = faux_admin(true, false);
 
         assert_eq!(
             execute(commande(), &repo, &admin).await,
@@ -218,10 +213,7 @@ mod tests {
     #[tokio::test]
     async fn la_saison_accompagne_l_identifiant_jusqu_au_depot() {
         let repo = FakeRepo::qui_supprime(1);
-        let admin = FakeAdmin {
-            competition: true,
-            espace: false,
-        };
+        let admin = faux_admin(true, false);
 
         execute(commande(), &repo, &admin).await.unwrap();
 

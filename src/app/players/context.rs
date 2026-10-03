@@ -7,9 +7,10 @@ use crate::app::players::io::repository::customisation_basket_repository::PgCust
 use crate::app::players::io::repository::player_repository::PgPlayerRepository;
 use crate::app::players::io::repository::projection_repository::PgPlayerProjectionRepository;
 use crate::app::players::ports::{
-    ICustomisationBasketRepository, IPlayerCompetitionPort, IPlayerProjectionRepository,
-    IPlayerRepository, IPlayerRosterPort, IPlayerSpaceMemberPort, ISkillCatalogPort,
+    ICustomisationBasketRepository, IPlayerProjectionRepository, IPlayerRepository,
+    IPlayerRosterPort, ISkillCatalogPort,
 };
+use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -21,8 +22,8 @@ pub struct PlayersContext {
     pub customisation_basket_repository: Arc<dyn ICustomisationBasketRepository>,
     pub skill_catalog: Arc<dyn ISkillCatalogPort>,
     pub roster_port: Arc<dyn IPlayerRosterPort>,
-    pub competition_port: Arc<dyn IPlayerCompetitionPort>,
-    pub space_member_port: Arc<dyn IPlayerSpaceMemberPort>,
+    /// Qui est admin — le service commun à tout kreek (carte 570).
+    pub admin_access: Arc<dyn IAdminAccessPort>,
     pub event_bus: EventBus,
 }
 
@@ -32,8 +33,7 @@ impl PlayersContext {
         pool: &PgPool,
         skill_catalog: Arc<dyn ISkillCatalogPort>,
         roster_port: Arc<dyn IPlayerRosterPort>,
-        competition_port: Arc<dyn IPlayerCompetitionPort>,
-        space_member_port: Arc<dyn IPlayerSpaceMemberPort>,
+        admin_access: Arc<dyn IAdminAccessPort>,
         event_bus: EventBus,
     ) -> Self {
         Self {
@@ -44,8 +44,7 @@ impl PlayersContext {
             )),
             skill_catalog,
             roster_port,
-            competition_port,
-            space_member_port,
+            admin_access,
             event_bus,
         }
     }

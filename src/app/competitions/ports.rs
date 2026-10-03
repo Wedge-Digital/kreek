@@ -94,12 +94,6 @@ pub trait ICompetitionSpaceMemberPort: Send + Sync {
         space_id: &crate::app::shared_kernel::identity::ids::SpaceId,
     ) -> Vec<SpaceMemberDto>;
 
-    async fn find_member_profile(
-        &self,
-        coach_id: &crate::app::shared_kernel::identity::ids::CoachId,
-        space_id: &crate::app::shared_kernel::identity::ids::SpaceId,
-    ) -> Option<crate::app::shared_kernel::identity::authorization::SpaceProfile>;
-
     /// Tous les espaces, pour le sélecteur de la page de test des widgets.
     ///
     /// Le nom du port parle d'appartenance et cette méthode n'en relève pas :

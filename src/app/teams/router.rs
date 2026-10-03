@@ -48,7 +48,8 @@ use axum::{
 ///
 /// `routes_ouvertes()` garde la lecture de la fiche, que tout membre de
 /// l'espace consulte, et les actions de commissaire, qui relèvent d'une autre
-/// règle — `SpacePermissions::is_admin()`, laquelle exclut le propriétaire.
+/// règle — `garde_commissaire::exiger_commissaire`, admin de l'espace ou de la
+/// compétition de l'équipe, propriétaire exclu (carte 570).
 ///
 /// **`router` prend l'état**, là où les autres BCs exposent un `router()` nu :
 /// `from_fn_with_state` exige une valeur à la construction, et la lui donner

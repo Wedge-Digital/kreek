@@ -1,6 +1,5 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::teams::domain::team::{GamePhase, ParticipationStatus, Team};
 use crate::app::teams::io::web::status_view_models::status_display;
 use crate::app::teams::io::web::treasury_tab;
@@ -501,8 +500,7 @@ pub(crate) async fn rendre_fiche(
             roster_edit_access_service::peut_modifier_effectif(
                 &team,
                 &user.id,
-                &user.coach_name.clone().into_inner(),
-                state.teams.access_port.as_ref(),
+                state.teams.admin_access.as_ref(),
             )
             .await
         }
@@ -512,23 +510,20 @@ pub(crate) async fn rendre_fiche(
     let back_url = AppRoutes::default().team_creation.my_teams(space_id);
     let roster_catalog_port = state.teams.roster_catalog_port.as_ref();
 
-    // **Le port, et pas l'extracteur `SpacePermissions`** : celui-ci répond 403
-    // à un non-membre, et fermerait un relevé qu'on veut lisible par tous. Seul
-    // le bouton dépend du droit, jamais la page.
-    //
-    // Le port est donc interrogé deux fois par rendu — `peut_modifier_effectif`
-    // le fait déjà pour le même couple. Les factoriser demanderait de séparer
-    // admin et propriétaire dans ce service, qui les mêle en un booléen : c'est
-    // un refactor, pas un détail de cette carte.
-    let est_admin = match (auth_session.user.as_ref(), SpaceId::try_new(space_id)) {
-        (Some(user), Ok(space)) => {
-            state
-                .teams
-                .access_port
-                .is_space_admin(&user.id, &space)
-                .await
+    // **Le service commun, et pas l'extracteur `SpacePermissions`** : celui-ci
+    // répond 403 à un non-membre, et fermerait un relevé qu'on veut lisible par
+    // tous. Seul le bouton dépend du droit, jamais la page. L'admin de la
+    // compétition de l'équipe y a droit comme l'admin d'espace (carte 570).
+    let est_admin = match auth_session.user.as_ref() {
+        Some(user) => {
+            roster_edit_access_service::est_admin_de_l_equipe(
+                &team,
+                &user.id,
+                state.teams.admin_access.as_ref(),
+            )
+            .await
         }
-        _ => false,
+        None => false,
     };
 
     let vm = TeamDetailVm::from(&team, space_id, roster_catalog_port, peut_editer);

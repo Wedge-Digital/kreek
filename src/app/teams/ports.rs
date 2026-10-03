@@ -1,4 +1,3 @@
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::app::teams::domain::basket::SquadPresence;
 use crate::app::teams::domain::team::{GamePhase, Team, TeamDomainEvent};
 use async_trait::async_trait;
@@ -74,18 +73,6 @@ pub trait IDiceRoller: Send + Sync {
     /// catastrophe sont un seul geste, et un test qui enchaîne deux dés truqués
     /// devient vite illisible.
     fn two_d6(&self) -> (u8, u8);
-}
-
-#[async_trait]
-pub trait ITeamAccessPort: Send + Sync {
-    async fn is_space_admin(&self, coach_id: &CoachId, space_id: &SpaceId) -> bool;
-
-    async fn is_competition_admin(
-        &self,
-        competition_id: &str,
-        coach_id: &str,
-        coach_name: &str,
-    ) -> bool;
 }
 
 /// Consultation de l'effectif. Rend l'effectif **entier**, drapeau de

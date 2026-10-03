@@ -9,9 +9,9 @@ use crate::app::players::ports::{
 use crate::app::players::use_cases::match_history_service::{
     build_match_history, MatchHistoryAction, MatchHistoryActionKind, MatchHistoryEntry,
 };
+use crate::app::players::use_cases::player_access_service;
 use crate::app::players::use_cases::player_stats_service::{self, ResolvedPlayerStats};
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use crate::state::AppState;
 use askama::Template;
@@ -108,49 +108,24 @@ fn match_history_card_vm(entry: MatchHistoryEntry) -> MatchHistoryCardVm {
     }
 }
 
-/// Qui a le droit de customiser un joueur : **admin d'espace ou admin de la
-/// compétition**, et personne d'autre. Le coach de l'équipe en est exclu — un
-/// coach qui s'ajouterait des compétences gratuitement ne serait pas la même
-/// fonctionnalité.
+/// Qui a le droit de customiser un joueur : **admin de l'espace ou de la
+/// compétition de son équipe**, et personne d'autre — la règle vit dans
+/// `player_access_service` (carte 572). Le coach de l'équipe en est exclu.
 ///
-/// C'est `can_spend_spp` qui, lui, est explicitement « étendu au coach ». Les
-/// deux fonctions se ressemblent assez pour qu'on les confonde ; celle-ci
-/// portait auparavant le nom générique `check_admin_rights`, qui ne disait pas
-/// ce qu'il autorisait.
+/// C'est `can_spend_spp` qui, lui, est explicitement « étendu au coach ».
 pub async fn can_customise(
     state: &AppState,
     coach_id: &CoachId,
-    coach_name: &str,
     space_id: &SpaceId,
     team: &TeamRosterInfoDto,
 ) -> bool {
-    let is_space_admin = matches!(
-        state
-            .players
-            .space_member_port
-            .find_member_profile(coach_id, space_id)
-            .await,
-        Some(SpaceProfile::SpaceAdmin)
-    );
-    if is_space_admin {
-        return true;
-    }
-    let Some(competition_id) = &team.competition_id else {
-        return false;
-    };
-    let coach_id_str = coach_id.to_string();
-    match state
-        .players
-        .competition_port
-        .find_admin_info(competition_id)
-        .await
-    {
-        Some(info) => {
-            info.admin_ids.contains(&coach_id_str)
-                || info.admin_names.contains(&coach_name.to_string())
-        }
-        None => false,
-    }
+    player_access_service::peut_customiser(
+        state.players.admin_access.as_ref(),
+        coach_id,
+        space_id,
+        team,
+    )
+    .await
 }
 
 // ── Template ──────────────────────────────────────────────────────────────────
@@ -203,8 +178,7 @@ pub async fn player_detail_controller(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let coach_name = user.coach_name.clone().into_inner();
-    let customisable = can_customise(&state, &user.id, &coach_name, &space_id_vo, &team).await;
+    let customisable = can_customise(&state, &user.id, &space_id_vo, &team).await;
 
     let can_spend =
         team.in_player_improvement_phase && can_spend_spp(&state, &user, &space_id_vo, &team).await;

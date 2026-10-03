@@ -1,3 +1,4 @@
+use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 use crate::app::teams::io::app_events::app_event_publisher::teams_app_event_publisher;
 use crate::app::teams::io::app_events::{
     journeymen_fielded_listener, match_report_cancelled_listener, match_report_confirmed_listener,
@@ -9,7 +10,7 @@ use crate::app::teams::io::repository::phase_basket_repository::PhaseBasketRepos
 use crate::app::teams::io::repository::team_repository::TeamRepository;
 use crate::app::teams::ports::{
     IDiceRoller, IJourneymanTypePort, IMatchContextPort, IPhaseBasketRepository,
-    IRosterCatalogPort, ISquadPort, ITeamAccessPort, ITeamRepository,
+    IRosterCatalogPort, ISquadPort, ITeamRepository,
 };
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -26,7 +27,8 @@ pub struct TeamsContext {
     /// Servait au seul affichage du bouton d'édition d'effectif ; depuis la
     /// carte 409 il garde aussi le **POST** du jet des erreurs coûteuses, dont
     /// l'URL est devinable et l'effet financier.
-    pub access_port: Arc<dyn ITeamAccessPort>,
+    /// Qui est admin — le service commun à tout kreek (carte 570).
+    pub admin_access: Arc<dyn IAdminAccessPort>,
     pub basket_repository: Arc<dyn IPhaseBasketRepository>,
     /// Le hasard, derrière un port : c'est ce qui rend le jet forçable en test.
     pub dice: Arc<dyn IDiceRoller>,
@@ -77,7 +79,7 @@ impl TeamsContext {
         journeyman_type_port: Arc<dyn IJourneymanTypePort>,
         roster_catalog_port: Arc<dyn IRosterCatalogPort>,
         squad_port: Arc<dyn ISquadPort>,
-        access_port: Arc<dyn ITeamAccessPort>,
+        admin_access: Arc<dyn IAdminAccessPort>,
         dice: Arc<dyn IDiceRoller>,
         match_context_port: Arc<dyn IMatchContextPort>,
     ) -> Self {
@@ -86,7 +88,7 @@ impl TeamsContext {
             journeyman_type_port,
             roster_catalog_port,
             squad_port,
-            access_port,
+            admin_access,
             dice,
             match_context_port,
             basket_repository: Arc::new(PhaseBasketRepository::new(pool.clone())),

@@ -20,7 +20,8 @@
 `src/app/competitions/io/web/resultats_view.rs`,
 `src/app/competitions/io/web/latest_results_view.rs`,
 `src/infrastructure/competitions/space_member_adapter.rs`,
-`src/web/app_menu.rs`, `src/main.rs`, tests des BCs
+`src/app/players/use_cases/player_access_service.rs` *(nouveau)*,
+`src/web/app_menu.rs`, `src/state.rs`, `src/main.rs`, tests des BCs
 
 ## L'objectif
 

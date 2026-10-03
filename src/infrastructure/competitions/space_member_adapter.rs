@@ -1,6 +1,5 @@
 use crate::app::competitions::ports::{ICompetitionSpaceMemberPort, SpaceMemberDto};
-use crate::app::shared_kernel::identity::authorization::SpaceProfile;
-use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::app::shared_kernel::identity::space_definition::SpaceDefinition;
 use crate::app::shared_kernel::identity::space_name::SpaceName;
 use crate::app::spaces::domain::space_repository_port::space_repository_port::ISpaceRepository;
@@ -47,18 +46,6 @@ impl ICompetitionSpaceMemberPort for SpaceMemberAdapter {
                 email: u.email.into_inner(),
             })
             .collect()
-    }
-
-    async fn find_member_profile(
-        &self,
-        coach_id: &CoachId,
-        space_id: &SpaceId,
-    ) -> Option<SpaceProfile> {
-        self.space_repo
-            .find_member_profile(coach_id, space_id)
-            .await
-            .ok()
-            .flatten()
     }
 
     /// Les espaces dont l'identifiant ou le nom sont refusés par leur value

@@ -423,6 +423,15 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
         ),
     );
 
+    // Qui est admin — un seul adapter pour tout kreek (carte 570), partagé par
+    // chaque BC qui pose la question.
+    let admin_access: Arc<dyn crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort> =
+        Arc::new(crate::infrastructure::admin_access::admin_access_adapter::AdminAccessAdapter::new(
+            Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
+            Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
+            Arc::new(crate::app::auth::io::repository::user_repository::UserRepository::new(pool.clone())),
+        ));
+
     AppState {
         auth: AuthContext::new(
             &pool,
@@ -450,6 +459,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
                 Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
             )),
+            admin_access.clone(),
             Arc::new(crate::infrastructure::competitions::tiebreak_catalog_adapter::TiebreakCatalogAdapter::new()),
             Arc::new(crate::infrastructure::competitions::match_report_status_adapter::MatchReportStatusAdapter::new(
                 Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
@@ -492,11 +502,6 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
                 ),
             );
-            let space_admin = Arc::new(
-                crate::infrastructure::match_report::space_admin_adapter::SpaceAdminAdapter::new(
-                    Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
-                ),
-            );
             let spp_calculator = Arc::new(
                 crate::infrastructure::match_report::spp_calculator_adapter::SppCalculatorAdapter::new(
                     references.repository.clone(),
@@ -507,7 +512,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     references.repository.clone(),
                 ),
             );
-            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, space_admin, spp_calculator, keyword_catalog, event_bus.clone())
+            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, admin_access.clone(), spp_calculator, keyword_catalog, event_bus.clone())
         },
         teams: {
             TeamsContext::new(
@@ -516,10 +521,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 teams_journeyman_type,
                 teams_roster_catalog,
                 teams_squad,
-                Arc::new(crate::infrastructure::teams::access_adapter::TeamAccessAdapter::new(
-                    Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
-                    Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
-                )),
+                admin_access.clone(),
                 Arc::new(crate::infrastructure::teams::dice_adapter::DiceAdapter),
                 Arc::new(crate::infrastructure::teams::match_context_adapter::MatchContextAdapter::new(pool.clone())),
             )
@@ -530,21 +532,13 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             Arc::new(crate::infrastructure::players::team_roster_adapter::TeamRosterAdapter::new(
                 Arc::new(crate::app::teams::io::repository::team_repository::TeamRepository::new(pool.clone(), event_bus.clone())),
             )),
-            Arc::new(crate::infrastructure::players::competition_admin_adapter::CompetitionAdminAdapter::new(
-                Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
-            )),
-            Arc::new(crate::infrastructure::players::space_member_adapter::SpaceMemberAdapter::new(
-                Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
-            )),
+            admin_access.clone(),
             event_bus.clone(),
         ),
         ranking: RankingContext::new(
             &pool,
             ranking_competition_port,
-            Arc::new(crate::infrastructure::ranking::admin_adapter::RankingAdminAdapter::new(
-                Arc::new(crate::app::competitions::io::repository::competition_repository::CompetitionRepository::new(pool.clone())),
-                Arc::new(crate::app::spaces::io::repository::space_repository::SpaceRepository::new(pool.clone())),
-            )),
+            admin_access.clone(),
             Arc::new(crate::infrastructure::ranking::team_links_adapter::RankingTeamLinksAdapter),
         ),
         // Un résolveur par ressource identifiable dans un chemin. Les six
@@ -594,6 +588,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 ),
             ),
         ]),
+        admin_access: admin_access.clone(),
         hors_calendrier: Arc::new(
             crate::infrastructure::web::hors_calendrier_adapter::HorsCalendrierAdapter::new(
                 Arc::new(

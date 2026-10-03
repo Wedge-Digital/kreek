@@ -359,28 +359,3 @@ pub struct TeamRosterInfoDto {
 pub trait IPlayerRosterPort: Send + Sync {
     async fn find_team_info(&self, team_id: &str) -> Option<TeamRosterInfoDto>;
 }
-
-// ── ACL vers le BC `competitions` (admins, pour l'autorisation) ────────────────
-
-pub struct CompetitionAdminInfoDto {
-    pub admin_ids: Vec<String>,
-    pub admin_names: Vec<String>,
-}
-
-#[async_trait]
-pub trait IPlayerCompetitionPort: Send + Sync {
-    async fn find_admin_info(&self, competition_id: &str) -> Option<CompetitionAdminInfoDto>;
-}
-
-// ── ACL vers le BC `spaces` (profil membre, pour l'autorisation) ───────────────
-// `SpaceProfile` vit dans `shared_kernel` (pas dans `spaces`) — réutilisable
-// tel quel sans DTO supplémentaire.
-
-#[async_trait]
-pub trait IPlayerSpaceMemberPort: Send + Sync {
-    async fn find_member_profile(
-        &self,
-        coach_id: &crate::app::shared_kernel::identity::ids::CoachId,
-        space_id: &crate::app::shared_kernel::identity::ids::SpaceId,
-    ) -> Option<crate::app::shared_kernel::identity::authorization::SpaceProfile>;
-}

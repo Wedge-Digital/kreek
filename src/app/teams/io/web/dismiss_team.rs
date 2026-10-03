@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::shared_kernel::identity::ids::{EntityId, SpaceId, UserId};
-use crate::app::spaces::io::web::extractors::space_permissions::SpacePermissions;
+use crate::app::teams::io::web::garde_commissaire::exiger_commissaire;
 use crate::app::teams::use_cases::commands::DismissTeamCommand;
 use crate::app::teams::use_cases::dismiss_team as dismiss_uc;
 use crate::state::AppState;
@@ -11,16 +11,14 @@ use axum::response::{IntoResponse, Response};
 
 pub async fn dismiss_team(
     Path((space_id, team_id)): Path<(String, String)>,
-    perms: SpacePermissions,
     State(state): State<AppState>,
     auth_session: AuthSession,
 ) -> impl IntoResponse {
-    if !perms.is_admin() {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
-    let Some(user) = auth_session.user else {
-        return StatusCode::UNAUTHORIZED.into_response();
+    // Admin de l'espace ou de la compétition de l'équipe, propriétaire exclu
+    // (carte 570) — l'admin d'espace seul, avant.
+    let user = match exiger_commissaire(&state, &auth_session, &team_id).await {
+        Ok(user) => user,
+        Err(refus) => return refus,
     };
 
     let team_id_val = match EntityId::try_new(&team_id) {

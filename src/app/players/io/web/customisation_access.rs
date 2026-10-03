@@ -32,8 +32,7 @@ pub async fn autoriser(
         return Err(StatusCode::BAD_REQUEST.into_response());
     };
     let team = charger_equipe(state, space_id, player_id).await?;
-    let coach_name = user.coach_name.clone().into_inner();
-    Ok(can_customise(state, &user.id, &coach_name, &space_id_vo, &team).await)
+    Ok(can_customise(state, &user.id, &space_id_vo, &team).await)
 }
 
 /// L'équipe du joueur — c'est elle qui porte la compétition, donc l'admin

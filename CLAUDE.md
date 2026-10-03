@@ -892,6 +892,51 @@ src/
 
 ---
 
+## Qui est admin — un seul service
+
+« Admin d'espace ou de compétition » se demande **uniquement** à
+`shared_kernel::bloodbowl::admin_access::est_admin`, par le port
+`IAdminAccessPort`. Aucun BC ne réécrit cette règle, ni ne déclare son propre
+port pour la poser.
+
+```rust
+// INTERDIT — un port d'admin propre au BC
+pub trait IRankingAdminPort { async fn is_space_admin(…) -> bool; … }
+
+// OBLIGATOIRE — le service commun, reçu dans le contexte du BC
+est_admin(ctx.admin_access.as_ref(), &user.id, &space_id, Some(&competition_id)).await
+```
+
+- **Le propriétaire reste l'affaire de chaque BC.** Inclus pour l'effectif,
+  exclu pour la customisation : la condition s'ajoute **devant** `est_admin`,
+  elle n'y entre pas.
+- **Un admin de compétition se reconnaît par son identifiant seul.** Les admins
+  ne s'enregistrent que par identifiant ; `admin_names` n'est que leur
+  pseudonyme, à afficher, jamais à comparer.
+- **Le compte exploitant `Bagouze` a tous les droits.** L'exception vit dans
+  l'adapter (`infrastructure/admin_access/`), nulle part ailleurs : il résout
+  l'identifiant du compte une fois, et les appelants n'ont aucun nom à
+  transporter.
+- **En test, `FakeAdminAccess`** — la doublure partagée du même module. On
+  n'écrit pas de doublure d'admin par BC.
+- **Un port en erreur refuse** : un contrôle d'accès échoue fermé.
+
+**C'est une exception assumée à « Adapters inter-BCs »** ci-dessus : le port
+vit dans le noyau partagé et non dans le BC consommateur, et un seul adapter
+sert tous les BCs. Le noyau joue déjà ce rôle de contrat commun (`SpaceProfile`,
+`identity::charset`).
+
+**Exception : les BCs extractibles** (`auth`, `spaces`) gardent
+`SpacePermissions::is_admin()`, qui ne parle que de l'espace — la règle parle de
+compétition, et `shared_kernel::bloodbowl` leur est interdit.
+
+**Pourquoi** : la règle existait en six copies, dans six BCs (carte 570). Deux
+comparaient le nom du visiteur aux admins de la compétition, quatre non ; trois
+actions de commissaire étaient réservées à l'admin d'espace sans que ce fût
+voulu ; et le menu montrait l'administration à un compte que la page refusait.
+
+---
+
 ## Domain services pour données inter-BCs — règle fondamentale
 
 Quand un BC récupère des données d'un autre BC via un port (cf. section « Adapters inter-BCs »), les DTOs du port **ne doivent jamais** être manipulés directement par les handlers. La transformation des DTOs du port en objets du domaine local passe par un **domain service** dans la couche `use_cases/`.

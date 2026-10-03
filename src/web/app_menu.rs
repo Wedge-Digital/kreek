@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::identity::authorization::SpaceProfile;
+use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
@@ -30,14 +30,6 @@ pub struct AppMenu {
     /// sont deux markups distincts (carte 550).
     pub hors_calendrier_interdit: bool,
 }
-
-/// Le compte qui administre tous les espaces, quel que soit son profil.
-///
-/// Codé en dur, et dans la couche hôte : c'est une notion d'exploitation de
-/// kreek, pas une règle du BC `spaces`, qui est extractible et n'a pas à
-/// connaître de compte privilégié. Si la valeur devait varier d'un
-/// environnement à l'autre, elle passerait en configuration — pas avant.
-const COMPTE_EXPLOITANT: &str = "Bagouze";
 
 impl AppMenu {
     fn competitions_active(&self) -> bool {
@@ -146,15 +138,13 @@ async fn contexte_espace(
     // rétrogradation doit faire disparaître l'entrée au rafraîchissement
     // suivant, pas à la reconnexion. L'option hors-calendrier suit la même
     // règle, et pour la même raison — décocher doit se voir tout de suite.
+    //
+    // La règle est celle de tout kreek, sans compétition : admin de l'espace,
+    // ou le compte exploitant — dont l'exception vit dans l'adapter, et non plus
+    // ici (carte 572).
     let space_id_vo = SpaceId::try_new(&sid).ok()?;
-    let profil = state
-        .spaces
-        .space_repository
-        .find_member_profile(&user.id, &space_id_vo)
-        .await
-        .ok()?;
-    let peut_administrer = profil == Some(SpaceProfile::SpaceAdmin)
-        || user.coach_name.clone().into_inner() == COMPTE_EXPLOITANT;
+    let peut_administrer =
+        est_admin(state.admin_access.as_ref(), &user.id, &space_id_vo, None).await;
 
     let hors_calendrier_interdit = state.hors_calendrier.un_espace_interdit(&sid).await;
 

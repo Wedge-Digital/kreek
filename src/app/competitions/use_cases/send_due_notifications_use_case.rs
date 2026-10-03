@@ -256,7 +256,6 @@ mod tests {
     use crate::app::competitions::ports::{
         ICompetitionSpaceMemberPort, ITeamInfoPort, SpaceMemberDto, TeamInfoDto,
     };
-    use crate::app::shared_kernel::identity::ids::CoachId;
     use crate::common::services::email::{EmailError, IEmailService};
     use async_trait::async_trait;
     use sqlx::PgPool;
@@ -290,13 +289,6 @@ mod tests {
                 coach_name: "Alice".into(),
                 email: "alice@example.test".into(),
             }]
-        }
-        async fn find_member_profile(
-            &self,
-            _: &CoachId,
-            _: &SpaceId,
-        ) -> Option<crate::app::shared_kernel::identity::authorization::SpaceProfile> {
-            None
         }
         async fn find_all_spaces(
             &self,

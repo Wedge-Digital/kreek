@@ -5,8 +5,9 @@
 //! modification réécrirait l'histoire d'une décision.
 
 use crate::app::ranking::domain::manual_points::{ManualPoints, ManualPointsReason};
-use crate::app::ranking::ports::{IRankingAdminPort, IRankingCompetitionPort, IRankingRepository};
+use crate::app::ranking::ports::{IRankingCompetitionPort, IRankingRepository};
 use crate::app::ranking::use_cases::manual_points::{autorise, ManualPointsError};
+use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 
 #[derive(Debug)]
 pub struct AwardManualPointsCommand {
@@ -26,7 +27,7 @@ pub struct AwardManualPointsCommand {
 pub async fn execute(
     cmd: AwardManualPointsCommand,
     repo: &dyn IRankingRepository,
-    admin: &dyn IRankingAdminPort,
+    admin: &dyn IAdminAccessPort,
     teams: &dyn IRankingCompetitionPort,
 ) -> Result<(), ManualPointsError> {
     if !autorise(admin, &cmd.user_id, &cmd.competition_id, &cmd.space_id).await {
@@ -69,6 +70,8 @@ mod tests {
         EnrolledTeamInfo, ManualPointRow, RankingGroupInfo, RankingLineFullRow, RankingLineRow,
         RankingRepositoryError, RankingRulesInfo,
     };
+    use crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess;
+    use crate::app::shared_kernel::identity::ids::EntityId;
     use async_trait::async_trait;
     use std::collections::HashMap;
     use std::sync::Mutex;
@@ -160,21 +163,23 @@ mod tests {
         }
     }
 
-    /// Chaque porte se répond séparément — c'est ce qui permet aux tests de
-    /// dire **laquelle** a ouvert.
-    struct FakeAdmin {
-        competition: bool,
-        espace: bool,
-    }
+    const UTILISATEUR: &str = "00000000000000000000000011";
+    const COMPETITION: &str = "00000000000000000000000012";
+    const ESPACE: &str = "00000000000000000000000013";
 
-    #[async_trait]
-    impl IRankingAdminPort for FakeAdmin {
-        async fn is_competition_admin(&self, _: &str, _: &str) -> bool {
-            self.competition
+    /// Chaque porte se répond séparément — c'est ce qui permet aux tests de
+    /// dire **laquelle** a ouvert. La doublure partagée de la carte 570,
+    /// configurée pour l'utilisateur de la commande.
+    fn faux_admin(competition: bool, espace: bool) -> FakeAdminAccess {
+        let utilisateur = EntityId::try_new(UTILISATEUR).unwrap();
+        let mut port = FakeAdminAccess::new();
+        if competition {
+            port = port.admin_competition(&utilisateur, &EntityId::try_new(COMPETITION).unwrap());
         }
-        async fn is_space_admin(&self, _: &str, _: &str) -> bool {
-            self.espace
+        if espace {
+            port = port.admin_espace(&utilisateur, &EntityId::try_new(ESPACE).unwrap());
         }
+        port
     }
 
     struct FakeTeams {
@@ -203,10 +208,10 @@ mod tests {
     fn commande(team: &str) -> AwardManualPointsCommand {
         AwardManualPointsCommand {
             season_id: "S1".into(),
-            competition_id: "C1".into(),
-            space_id: "E1".into(),
+            competition_id: COMPETITION.into(),
+            space_id: ESPACE.into(),
             team_id: team.into(),
-            user_id: "U1".into(),
+            user_id: UTILISATEUR.into(),
             points: ManualPoints::try_new(3).unwrap(),
             reason: Some(ManualPointsReason::try_new("forfait de l'adverse").unwrap()),
         }
@@ -217,10 +222,7 @@ mod tests {
     #[tokio::test]
     async fn un_non_admin_est_refuse() {
         let repo = FakeRepo::default();
-        let admin = FakeAdmin {
-            competition: false,
-            espace: false,
-        };
+        let admin = faux_admin(false, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -240,10 +242,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_de_competition_seul_suffit() {
         let repo = FakeRepo::default();
-        let admin = FakeAdmin {
-            competition: true,
-            espace: false,
-        };
+        let admin = faux_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -254,10 +253,7 @@ mod tests {
     #[tokio::test]
     async fn l_admin_d_espace_seul_suffit() {
         let repo = FakeRepo::default();
-        let admin = FakeAdmin {
-            competition: false,
-            espace: true,
-        };
+        let admin = faux_admin(false, true);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -271,10 +267,7 @@ mod tests {
     #[tokio::test]
     async fn une_equipe_non_inscrite_est_refusee() {
         let repo = FakeRepo::default();
-        let admin = FakeAdmin {
-            competition: true,
-            espace: false,
-        };
+        let admin = faux_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -290,10 +283,7 @@ mod tests {
     #[tokio::test]
     async fn le_refus_d_autorisation_precede_celui_d_inscription() {
         let repo = FakeRepo::default();
-        let admin = FakeAdmin {
-            competition: false,
-            espace: false,
-        };
+        let admin = faux_admin(false, false);
         let teams = FakeTeams { inscrites: vec![] };
 
         assert_eq!(
@@ -307,10 +297,7 @@ mod tests {
     #[tokio::test]
     async fn deux_lignes_identiques_sont_acceptees() {
         let repo = FakeRepo::default();
-        let admin = FakeAdmin {
-            competition: true,
-            espace: false,
-        };
+        let admin = faux_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -330,10 +317,7 @@ mod tests {
     #[tokio::test]
     async fn le_motif_et_l_auteur_sont_transmis() {
         let repo = FakeRepo::default();
-        let admin = FakeAdmin {
-            competition: true,
-            espace: false,
-        };
+        let admin = faux_admin(true, false);
         let teams = FakeTeams {
             inscrites: vec!["T1".into()],
         };
@@ -350,7 +334,7 @@ mod tests {
                 "T1".into(),
                 3,
                 Some("forfait de l'adverse".to_string()),
-                "U1".into()
+                UTILISATEUR.to_string()
             )
         );
     }

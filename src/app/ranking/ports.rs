@@ -300,24 +300,3 @@ pub trait IRankingTeamLinksPort: Send + Sync {
     fn team_detail_url(&self, space_id: &str, team_id: &str) -> String;
     fn team_identity_url(&self, space_id: &str, team_id: &str) -> String;
 }
-
-// ── ACL d'autorisation (carte 450) ────────────────────────────────────────────
-
-/// Qui a le droit d'attribuer ou de retirer des points manuels.
-///
-/// **Deux méthodes et non une `is_admin`.** Les autorisations viennent de deux
-/// sources indépendantes — la compétition porte ses administrateurs, l'espace
-/// porte son `SpaceProfile` — et les fondre en une seule réponse cacherait
-/// **laquelle** a répondu. Le BC `competitions` a fait ce choix inverse dans
-/// `require_admin_access`, et la carte 426 a dû écrire deux tests distincts pour
-/// séparer à nouveau ce que le `||` avait mélangé : sans eux, supprimer l'une
-/// des deux branches ne rougissait rien.
-///
-/// Un échec de lecture rend `false` : refuser est le comportement sûr, et
-/// remonter une erreur d'infrastructure jusqu'à l'écran n'apprendrait rien de
-/// plus au commissaire.
-#[async_trait]
-pub trait IRankingAdminPort: Send + Sync {
-    async fn is_competition_admin(&self, user_id: &str, competition_id: &str) -> bool;
-    async fn is_space_admin(&self, user_id: &str, space_id: &str) -> bool;
-}

@@ -9,20 +9,21 @@
 //! réécrit.
 
 use crate::app::auth::domain::user::User;
-use crate::app::match_report::ports::{ICompetitionDataPort, ISpaceAdminPort, ITeamDataPort};
+use crate::app::match_report::ports::ITeamDataPort;
+use crate::app::shared_kernel::bloodbowl::admin_access::{est_admin, IAdminAccessPort};
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::state::AppState;
 
 pub struct AccesRapportDeps<'a> {
-    pub space_admin: &'a dyn ISpaceAdminPort,
-    pub competition_data: &'a dyn ICompetitionDataPort,
+    /// Qui est admin — le service commun à tout kreek (carte 570).
+    pub admin_access: &'a dyn IAdminAccessPort,
     pub team_data: &'a dyn ITeamDataPort,
 }
 
 impl<'a> AccesRapportDeps<'a> {
     pub fn from_state(state: &'a AppState) -> Self {
         Self {
-            space_admin: state.match_report.space_admin.as_ref(),
-            competition_data: state.match_report.competition_data.as_ref(),
+            admin_access: state.match_report.admin_access.as_ref(),
             team_data: state.match_report.team_data.as_ref(),
         }
     }
@@ -43,17 +44,15 @@ pub async fn is_authorized(
     space_id: &str,
     scope: &PorteeRapport,
 ) -> bool {
-    let user_id = user.id.to_string();
-    if deps.space_admin.is_space_admin(&user_id, space_id).await {
+    if est_administrateur(deps, user, space_id, &scope.competition_id).await {
         return true;
     }
-    if is_competition_admin(deps, &scope.competition_id, &user_id).await {
-        return true;
-    }
-    is_coach_of_either_team(deps, scope, &user_id).await
+    is_coach_of_either_team(deps, scope, &user.id.to_string()).await
 }
 
 /// Admin d'espace ou de compétition — **sans** les coachs des deux équipes.
+/// La règle est celle de tout kreek, `est_admin` (carte 570) ; un identifiant
+/// illisible refuse.
 ///
 /// `is_authorized` répond « a le droit d'agir sur ce rapport », ce qui inclut
 /// les deux coachs : c'est leur match. Celui-ci répond « a le droit de changer
@@ -70,20 +69,13 @@ pub async fn est_administrateur(
     space_id: &str,
     competition_id: &str,
 ) -> bool {
-    let user_id = user.id.to_string();
-    deps.space_admin.is_space_admin(&user_id, space_id).await
-        || is_competition_admin(deps, competition_id, &user_id).await
-}
-
-async fn is_competition_admin(
-    deps: &AccesRapportDeps<'_>,
-    competition_id: &str,
-    user_id: &str,
-) -> bool {
-    deps.competition_data
-        .is_competition_admin(competition_id, user_id)
-        .await
-        .unwrap_or(false)
+    let (Ok(space), Ok(competition)) = (
+        EntityId::try_new(space_id),
+        EntityId::try_new(competition_id),
+    ) else {
+        return false;
+    };
+    est_admin(deps.admin_access, &user.id, &space, Some(&competition)).await
 }
 
 /// Une erreur de port vaut « pas coach » : un contrôle d'accès échoue fermé.

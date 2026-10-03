@@ -1,7 +1,7 @@
 use crate::app::auth::domain::user::User;
 use crate::app::competitions::domain::match_day_repository_port::LatestResultDto;
+use crate::app::shared_kernel::bloodbowl::admin_access::est_admin;
 use crate::app::shared_kernel::bloodbowl::ids::CompetitionId;
-use crate::app::shared_kernel::identity::authorization::SpaceProfile;
 use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use std::collections::HashSet;
@@ -43,14 +43,10 @@ pub async fn compute_authorization(
     space_id: &SpaceId,
     rows: &[LatestResultDto],
 ) -> LatestResultsAuthorization {
-    let is_space_admin = matches!(
-        state
-            .competitions
-            .space_member_port
-            .find_member_profile(&user.id, space_id)
-            .await,
-        Some(SpaceProfile::SpaceAdmin)
-    );
+    // La règle de tout kreek (carte 572) : sans compétition, `est_admin` ne
+    // répond que pour l'espace.
+    let access = state.competitions.admin_access.as_ref();
+    let is_space_admin = est_admin(access, &user.id, space_id, None).await;
     if is_space_admin {
         return LatestResultsAuthorization {
             is_space_admin: true,
@@ -59,7 +55,7 @@ pub async fn compute_authorization(
         };
     }
 
-    let admin_competition_ids = admin_competition_ids(state, user, rows).await;
+    let admin_competition_ids = admin_competition_ids(state, user, space_id, rows).await;
     let my_team_ids = my_team_ids(state, user, rows).await;
     LatestResultsAuthorization {
         is_space_admin: false,
@@ -68,13 +64,15 @@ pub async fn compute_authorization(
     }
 }
 
+/// Les compétitions de la page dont le visiteur est admin — chacune posée au
+/// service commun. L'espace a déjà répondu non : seule la compétition compte.
 async fn admin_competition_ids(
     state: &AppState,
     user: &User,
+    space_id: &SpaceId,
     rows: &[LatestResultDto],
 ) -> HashSet<String> {
-    let user_id_str = user.id.to_string();
-    let coach_name_str = user.coach_name.clone().into_inner();
+    let access = state.competitions.admin_access.as_ref();
     let distinct_ids: HashSet<&str> = rows.iter().map(|r| r.competition_id.as_str()).collect();
 
     let mut admin_ids = HashSet::new();
@@ -82,15 +80,8 @@ async fn admin_competition_ids(
         let Ok(competition_id) = CompetitionId::try_new(cid) else {
             continue;
         };
-        if let Ok(Some(info)) = state
-            .competitions
-            .competition_repository
-            .find_base_info(&competition_id)
-            .await
-        {
-            if info.admin_ids.contains(&user_id_str) || info.admin_names.contains(&coach_name_str) {
-                admin_ids.insert(cid.to_string());
-            }
+        if est_admin(access, &user.id, space_id, Some(&competition_id)).await {
+            admin_ids.insert(cid.to_string());
         }
     }
     admin_ids

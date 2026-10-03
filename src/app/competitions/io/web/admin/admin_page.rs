@@ -96,14 +96,11 @@ pub async fn require_admin_access(
 
     let comp_info = charger_competition(&comp_id, state).await?;
 
-    let membres = state.competitions.space_member_port.as_ref();
-    let nom = user.coach_name.clone().into_inner();
     if !peut_administrer(
+        state.competitions.admin_access.as_ref(),
         &user.id,
-        &nom,
         &space_entity_id,
-        (&comp_info).into(),
-        membres,
+        &comp_id,
     )
     .await
     {

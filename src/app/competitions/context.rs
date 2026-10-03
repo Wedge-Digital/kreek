@@ -17,6 +17,7 @@ use crate::app::competitions::ports::{
     ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort,
     IRankingRecomputePort, ITeamInfoPort, ITiebreakCatalogPort,
 };
+use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 use crate::common::services::email::IEmailService;
 use crate::common::services::event_bus::event_bus::EventBus;
 use sqlx::PgPool;
@@ -31,6 +32,8 @@ pub struct CompetitionsContext {
     pub team_info_port: Arc<dyn ITeamInfoPort>,
     pub reference_port: Arc<dyn ICompetitionReferencePort>,
     pub space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
+    /// Qui est admin — le service commun à tout kreek (carte 570).
+    pub admin_access: Arc<dyn IAdminAccessPort>,
     pub tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
     pub match_report_status_port: Arc<dyn IMatchReportStatusPort>,
     /// Le seul port de ce BC qui **ordonne** — cf. `IRankingRecomputePort`.
@@ -98,6 +101,7 @@ impl CompetitionsContext {
         team_info_port: Arc<dyn ITeamInfoPort>,
         reference_port: Arc<dyn ICompetitionReferencePort>,
         space_member_port: Arc<dyn ICompetitionSpaceMemberPort>,
+        admin_access: Arc<dyn IAdminAccessPort>,
         tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
         match_report_status_port: Arc<dyn IMatchReportStatusPort>,
         ranking_recompute_port: Arc<dyn IRankingRecomputePort>,
@@ -112,6 +116,7 @@ impl CompetitionsContext {
             team_info_port,
             reference_port,
             space_member_port,
+            admin_access,
             tiebreak_catalog_port,
             match_report_status_port,
             ranking_recompute_port,
