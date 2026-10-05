@@ -29,6 +29,7 @@ use crate::app::players::ports::{
     IPlayerProjectionRepository, IPlayerRepository, ISkillCatalogPort,
 };
 use crate::app::shared_kernel::app_events::teams_app_events::TeamsAppEvent;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
 use sqlx::PgPool;
@@ -114,8 +115,26 @@ async fn appliquer(
     Ok(())
 }
 
+/// L'annonce qu'une **recrue** est écrite (carte 593) — `None` pour un
+/// journalier aligné : la valeur d'équipe ne se recalcule pas en cours de
+/// match, et le désalignement ou l'embauche ont leurs propres chemins.
+fn joined_roster(
+    membership: RosterMembership,
+    team_id: &impl ToString,
+    player_id: &impl ToString,
+) -> Option<PlayerDomainEvent> {
+    (membership == RosterMembership::Active).then(|| PlayerDomainEvent::PlayerJoinedRoster {
+        team_id: TeamId(team_id.to_string()),
+        player_id: PlayerId(player_id.to_string()),
+    })
+}
+
+/// `event_bus` est le bus **interne** de `players` : l'annonce y part comme un
+/// événement de domaine, et le publisher du BC la convertit en app event — un
+/// listener n'émet jamais d'app event lui-même.
 pub fn init(
     app_event_bus: &EventBus,
+    event_bus: EventBus,
     pool: PgPool,
     projections: Arc<dyn IPlayerProjectionRepository>,
     skill_catalog: Arc<dyn ISkillCatalogPort>,
@@ -183,7 +202,8 @@ pub fn init(
                         ),
                         _ => continue,
                     };
-                    if let Err(e) = handle_player_recruited(
+                    let joined = joined_roster(membership, &team_id, &player_id);
+                    let issue = handle_player_recruited(
                         &team_id.to_string(),
                         &space_id.to_string(),
                         &player_id.to_string(),
@@ -194,16 +214,21 @@ pub fn init(
                         skill_catalog.as_ref(),
                     )
                     .instrument(span)
-                    .await
-                    {
-                        match e {
-                            ListenerError::AlreadyProcessed => tracing::warn!(
-                                "players player_recruited_listener: joueur {player_id} déjà créé"
-                            ),
-                            other => tracing::error!(
-                                "players player_recruited_listener: {other} (équipe {team_id})"
-                            ),
+                    .await;
+                    match issue {
+                        // **Après** l'écriture : c'est tout le sens de
+                        // l'annonce (carte 593).
+                        Ok(()) => {
+                            if let Some(event) = joined {
+                                emettre(&event_bus, event.to_enveloppe(&team_id.to_string()));
+                            }
                         }
+                        Err(ListenerError::AlreadyProcessed) => tracing::warn!(
+                            "players player_recruited_listener: joueur {player_id} déjà créé"
+                        ),
+                        Err(other) => tracing::error!(
+                            "players player_recruited_listener: {other} (équipe {team_id})"
+                        ),
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
@@ -213,4 +238,24 @@ pub fn init(
             }
         }
     });
+}
+
+#[cfg(test)]
+mod joined_roster_tests {
+    use super::*;
+
+    #[test]
+    fn a_recruit_announces_it_joined_the_roster() {
+        assert!(matches!(
+            joined_roster(RosterMembership::Active, &"t1", &"p1"),
+            Some(PlayerDomainEvent::PlayerJoinedRoster { .. })
+        ));
+    }
+
+    /// Un journalier aligné en cours de match ne relance pas la valeur
+    /// d'équipe : elle ne se recalcule pas pendant la saisie.
+    #[test]
+    fn a_fielded_journeyman_announces_nothing() {
+        assert!(joined_roster(RosterMembership::Journeyman, &"t1", &"p1").is_none());
+    }
 }

@@ -69,6 +69,7 @@ pub fn init_listeners(
     journeyman_departure_listener::init(app_event_bus, pool.clone(), player_repo.clone());
     player_recruited_listener::init(
         app_event_bus,
+        event_bus.clone(),
         pool,
         projections,
         skill_catalog.clone(),

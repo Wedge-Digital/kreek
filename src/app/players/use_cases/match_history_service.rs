@@ -84,6 +84,7 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
         // Faits hors de tout historique de match : l'un est un fait d'équipe,
         // l'autre un désalignement d'avant le coup d'envoi.
         PlayerDomainEvent::InitialRosterCompleted { .. }
+        | PlayerDomainEvent::PlayerJoinedRoster { .. }
         | PlayerDomainEvent::JourneymanHired { .. }
         | PlayerDomainEvent::JourneymanLost { .. }
         | PlayerDomainEvent::JourneymanWithdrawn { .. } => None,
@@ -130,6 +131,7 @@ fn event_match_report_id(event: &PlayerDomainEvent) -> Option<String> {
 fn apply_event(entry: &mut MatchHistoryEntry, event: &PlayerDomainEvent) {
     match event {
         PlayerDomainEvent::InitialRosterCompleted { .. }
+        | PlayerDomainEvent::PlayerJoinedRoster { .. }
         | PlayerDomainEvent::JourneymanHired { .. }
         | PlayerDomainEvent::JourneymanLost { .. }
         | PlayerDomainEvent::JourneymanWithdrawn { .. } => {}

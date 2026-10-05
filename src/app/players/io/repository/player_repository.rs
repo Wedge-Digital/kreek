@@ -53,6 +53,11 @@ fn player_and_team_id(event: &PlayerDomainEvent) -> (&str, &str) {
         PlayerDomainEvent::InitialRosterCompleted { .. } => {
             unreachable!("InitialRosterCompleted n'est jamais appendu")
         }
+        // Jamais persisté non plus (carte 593), mais il porte son joueur :
+        // une réponse vaut mieux qu'une panique si ce chemin l'atteignait.
+        PlayerDomainEvent::PlayerJoinedRoster {
+            player_id, team_id, ..
+        } => (&player_id.0, &team_id.0),
         PlayerDomainEvent::PlayerHatredGained {
             player_id, team_id, ..
         } => (&player_id.0, &team_id.0),
@@ -182,7 +187,8 @@ pub async fn upsert_player_projection(
 ) -> Result<(), RepositoryError> {
     match event {
         // Fait d'équipe, jamais persisté : aucune projection joueur à écrire.
-        PlayerDomainEvent::InitialRosterCompleted { .. } => {}
+        PlayerDomainEvent::InitialRosterCompleted { .. }
+        | PlayerDomainEvent::PlayerJoinedRoster { .. } => {}
         PlayerDomainEvent::PlayerCreated {
             player_id,
             team_id,
@@ -824,6 +830,7 @@ fn event_touches_spp_remaining(event: &PlayerDomainEvent) -> bool {
         | PlayerDomainEvent::PlayerCreated { .. } => true,
 
         PlayerDomainEvent::InitialRosterCompleted { .. }
+        | PlayerDomainEvent::PlayerJoinedRoster { .. }
         | PlayerDomainEvent::FoulCommitted { .. }
         | PlayerDomainEvent::InjurySustained { .. }
         | PlayerDomainEvent::PlayerAvailabilityRestored { .. }

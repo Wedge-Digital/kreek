@@ -313,3 +313,42 @@ def test_une_equipe_qui_n_est_plus_prete_recoit_le_message(page: Page, competiti
     assert query_db(
         f"SELECT game_phase FROM team_proj WHERE team_id = '{ctx['team_id']}'"
     ) == ["Dismissals"], "le refus n'a rien ouvert"
+
+
+# ── La valeur d'équipe compte les recrues (carte 593) ─────────────────────────
+
+
+@pytest.fixture(scope="module")
+def granit_ctx(browser, space_id):
+    """Une équipe `DEMO_GRANIT` : sa ligne de recrutement et son prix sont
+    connus d'avance (Piétaille, 50 kPo)."""
+    full = build_full_competition(
+        browser, space_id, num_teams=2, num_rounds=1, roster_uids=["DEMO_GRANIT"] * 2
+    )
+    team_id = full["team_ids"][0]
+    attendre_une_phase(team_id, {"ReadyToPlay"})
+    return {"space_id": space_id, "team_id": team_id}
+
+
+def test_un_recrutement_manuel_compte_la_recrue_dans_la_valeur_d_equipe(granit_ctx):
+    """Mesuré avant la carte 593 : 12 joueurs, mais une valeur restée à celle
+    de 11. Le recalcul de `ManualPhaseClosed` précédait la création de la
+    recrue par `players`, et rien ne le refaisait."""
+    ctx, team_id = granit_ctx, granit_ctx["team_id"]
+    avant = _valeur_equipe(team_id)
+    _ouvrir_par_http(ctx, "recruitment")
+    attendre_une_phase(team_id, {"Recruitment"})
+
+    resp = requests.post(
+        f"{_url_equipe(ctx)}/recruitment/players/add",
+        data={"roster_line_id": "DEMO_GRANIT__PIETAILLE", "version": 0},
+        headers={"HX-Request": "true"}, timeout=20,
+    )
+    assert resp.status_code == 200, resp.text[:200]
+    _fermer(ctx, "validate-recruitment-phase")
+    assert attendre_une_phase(team_id, {"ReadyToPlay"}) == "ReadyToPlay"
+
+    attendre_que(
+        lambda: _valeur_equipe(team_id) == avant + 50,
+        quoi=f"une valeur d'équipe de {avant + 50} kPo, recrue comprise",
+    )

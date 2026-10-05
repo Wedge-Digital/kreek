@@ -340,7 +340,8 @@ impl Player {
         match event {
             // Fait d'équipe, jamais persisté : le rejeu d'un joueur ne le
             // rencontre pas, et il ne modifierait rien de son état.
-            PlayerDomainEvent::InitialRosterCompleted { .. } => current,
+            PlayerDomainEvent::InitialRosterCompleted { .. }
+            | PlayerDomainEvent::PlayerJoinedRoster { .. } => current,
             PlayerDomainEvent::PlayerCreated {
                 player_id,
                 team_id,

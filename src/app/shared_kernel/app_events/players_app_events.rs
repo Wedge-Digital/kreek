@@ -33,6 +33,15 @@ pub enum PlayersAppEvent {
         team_id: String,
         player_id: String,
     },
+    /// Une recrue est **écrite** dans l'effectif (carte 593) — le pendant de
+    /// `PlayerDismissed`. `teams` recalcule sa valeur d'équipe à la sortie d'un
+    /// recrutement avant que `players` ait créé la recrue : sans ce trajet
+    /// retour, une recrue achetée pendant un recrutement ouvert à la main
+    /// manquait à la valeur d'équipe jusqu'au match suivant.
+    PlayerJoinedRoster {
+        team_id: String,
+        player_id: String,
+    },
     /// Un commissaire a **posé** la valeur d'un joueur, hors barème.
     ///
     /// Ne porte ni le montant ni le delta, volontairement : `teams` recalcule
@@ -53,6 +62,7 @@ pub enum PlayersAppEvent {
 impl PlayersAppEvent {
     pub const INITIAL_ROSTER_COMPLETED: &'static str = "PlayersInitialRosterCompleted";
     pub const PLAYER_DISMISSED: &'static str = "PlayersPlayerDismissed";
+    pub const PLAYER_JOINED_ROSTER: &'static str = "PlayersPlayerJoinedRoster";
     pub const PLAYER_VALUE_CUSTOMISED: &'static str = "PlayersPlayerValueCustomised";
 
     pub fn event_type(&self) -> &'static str {
@@ -60,6 +70,7 @@ impl PlayersAppEvent {
             Self::InitialRosterCompleted { .. } => Self::INITIAL_ROSTER_COMPLETED,
             Self::PlayerValueCustomised { .. } => Self::PLAYER_VALUE_CUSTOMISED,
             Self::PlayerDismissed { .. } => Self::PLAYER_DISMISSED,
+            Self::PlayerJoinedRoster { .. } => Self::PLAYER_JOINED_ROSTER,
         }
     }
 
@@ -69,6 +80,7 @@ impl PlayersAppEvent {
             // recalculera, pas le joueur.
             Self::InitialRosterCompleted { team_id, .. }
             | Self::PlayerDismissed { team_id, .. }
+            | Self::PlayerJoinedRoster { team_id, .. }
             | Self::PlayerValueCustomised { team_id, .. } => team_id.clone(),
         };
         EventEnvelope {

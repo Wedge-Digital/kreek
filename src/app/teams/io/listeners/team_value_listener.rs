@@ -35,6 +35,9 @@ fn changes_squad(event: &PlayersAppEvent) -> Option<&str> {
     match event {
         PlayersAppEvent::InitialRosterCompleted { team_id, .. }
         | PlayersAppEvent::PlayerDismissed { team_id, .. }
+        // Une recrue écrite (carte 593) : à la sortie d'un recrutement ouvert à
+        // la main, le recalcul de `ManualPhaseClosed` l'a précédée.
+        | PlayersAppEvent::PlayerJoinedRoster { team_id, .. }
         // Un commissaire a posé la valeur d'un joueur hors barème. L'effectif
         // ne change pas, sa valeur si — et c'est bien la TV qu'il faut relire.
         // `players` n'annonce que le **prix** : compétence et caractéristique
@@ -228,6 +231,19 @@ mod tests {
                 player_id: "p-9".into(),
             }),
             Some("t-2")
+        );
+    }
+
+    /// Carte 593 : une recrue écrite relance le recalcul — celui de la sortie
+    /// d'un recrutement manuel l'a précédée.
+    #[test]
+    fn a_recruit_written_by_players_triggers_the_recomputation() {
+        assert_eq!(
+            changes_squad(&PlayersAppEvent::PlayerJoinedRoster {
+                team_id: "t-3".into(),
+                player_id: "p-1".into(),
+            }),
+            Some("t-3")
         );
     }
 

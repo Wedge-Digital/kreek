@@ -36,6 +36,20 @@ pub enum PlayerDomainEvent {
     /// ce qui dupliquerait la règle de valorisation de `players` (la duplication
     /// même qui avait produit les deux tables divergentes de la carte 249).
     InitialRosterCompleted { team_id: TeamId, player_count: u32 },
+    /// Une recrue est **écrite** dans l'effectif (carte 593).
+    ///
+    /// La course jumelle d'`InitialRosterCompleted` et de `PlayerDismissed` :
+    /// `teams` recalcule sa valeur d'équipe à la sortie d'un recrutement, et la
+    /// recrue n'existe pas encore ici. Cet événement dit le seul instant où elle
+    /// existe. **Jamais persisté** — la naissance du joueur l'est déjà, par
+    /// `PlayerCreated` ; celui-ci n'existe que pour faire le trajet retour.
+    ///
+    /// Les recrues seulement : un journalier aligné en cours de match n'en
+    /// émet pas, la valeur d'équipe ne se recalcule pas pendant la saisie.
+    PlayerJoinedRoster {
+        team_id: TeamId,
+        player_id: PlayerId,
+    },
     PlayerCreated {
         player_id: PlayerId,
         team_id: TeamId,
@@ -409,6 +423,7 @@ impl PlayerDomainEvent {
             Self::JourneymanWithdrawn { .. } => "JourneymanWithdrawn",
             Self::PlayerDismissed { .. } => "PlayerDismissed",
             Self::InitialRosterCompleted { .. } => "InitialRosterCompleted",
+            Self::PlayerJoinedRoster { .. } => "PlayerJoinedRoster",
             Self::PlayerRenamed { .. } => "PlayerRenamed",
             Self::PlayerJerseyChanged { .. } => "PlayerJerseyChanged",
             Self::PlayerReordered { .. } => "PlayerReordered",
@@ -437,6 +452,12 @@ impl PlayerDomainEvent {
                 team_id: team_id.0.clone(),
                 player_count: *player_count,
             }),
+            Self::PlayerJoinedRoster { player_id, team_id } => {
+                Some(PlayersAppEvent::PlayerJoinedRoster {
+                    team_id: team_id.0.clone(),
+                    player_id: player_id.0.clone(),
+                })
+            }
             Self::PlayerDismissed { player_id, team_id } => {
                 Some(PlayersAppEvent::PlayerDismissed {
                     team_id: team_id.0.clone(),
@@ -529,6 +550,22 @@ impl PlayerDomainEvent {
 
 #[cfg(test)]
 mod tests {
+
+    /// Carte 593 : l'annonce d'une recrue franchit la frontière vers `teams`.
+    #[test]
+    fn player_joined_roster_becomes_an_app_event() {
+        use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
+        let event = PlayerDomainEvent::PlayerJoinedRoster {
+            team_id: TeamId("t1".into()),
+            player_id: PlayerId("p1".into()),
+        };
+        assert!(matches!(
+            event.to_app_event(),
+            Some(PlayersAppEvent::PlayerJoinedRoster { team_id, player_id })
+                if team_id == "t1" && player_id == "p1"
+        ));
+    }
+
     use super::*;
     use crate::app::players::domain::value_objects::SkillName;
     use crate::app::shared_kernel::app_events::players_app_events::PlayersAppEvent;
