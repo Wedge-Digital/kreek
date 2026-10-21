@@ -77,4 +77,4 @@ La maquette montre une modale ; l'application en fait une **page dédiée**
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Page « Imprimer » | ✅ | ✅ | | | | | |
+| Page « Imprimer » | ✅ | ✅ | ✅ | | | | |
