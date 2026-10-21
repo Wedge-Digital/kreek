@@ -62,9 +62,16 @@ corpus (`docs/reference-data-schema.md`) ne les porte : ils arrivent dans un
   l'espace de l'URL.
 - Le serveur n'applique pas `availableForRosters` à l'engagement d'un star
   player.
+- `team_creation` sert encore une fiche d'équipe **entièrement statique**
+  (`/app/{space_id}/team/{team_id}/detail`, carte 26) : roster en dur, boutons
+  sans action — dont un « Imprimer en PDF » —, aucun lien n'y mène. Nettoyage à
+  faire à part, après vérification de ses usages.
 
 ## Progression par page
 
+La maquette montre une modale ; l'application en fait une **page dédiée**
+(cf. `team-print/02-front.md`).
+
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Modale et vue d'impression | | | | | | | |
+| Page « Imprimer » | ✅ | | | | | | |
