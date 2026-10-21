@@ -66,6 +66,9 @@ corpus (`docs/reference-data-schema.md`) ne les porte : ils arrivent dans un
   (`/app/{space_id}/team/{team_id}/detail`, carte 26) : roster en dur, boutons
   sans action — dont un « Imprimer en PDF » —, aucun lien n'y mène. Nettoyage à
   faire à part, après vérification de ses usages.
+- La fiche d'équipe code en dur le prix du staff (`StaffVm` : apothicaire 50,
+  assistant 10, pom-pom 10) alors que la VE les lit dans le catalogue du roster.
+  L'impression prend le catalogue ; la fiche reste à aligner.
 
 ## Progression par page
 
@@ -74,4 +77,4 @@ La maquette montre une modale ; l'application en fait une **page dédiée**
 
 | Page | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|
-| Page « Imprimer » | ✅ | | | | | | |
+| Page « Imprimer » | ✅ | ✅ | | | | | |

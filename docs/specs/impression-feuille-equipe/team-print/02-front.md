@@ -84,7 +84,7 @@ Aucune action en écriture : la page ne fait que des `GET`.
 | # | Règle |
 |---|---|
 | R1 | Le bouton « Imprimer » de la fiche n'apparaît que pour une équipe prête à jouer (`ReadyToPlay`), comme aujourd'hui. |
-| R2 | « Prochain adversaire » : si l'équipe est inscrite dans plusieurs compétitions, le coach choisit la compétition ciblée. Sans match à venir, l'option est grisée avec son motif. |
+| R2 | « Prochain adversaire » : celui du prochain match de la saison où l'équipe est inscrite — une équipe n'en a qu'une (cf. `03-back.md`). Sans match à venir, l'option est grisée avec son motif. |
 | R3 | « Autre équipe » : compétition, puis saison, puis équipe, dans l'espace de mon équipe ; seules les équipes prêtes à jouer sont proposées. |
 | R4 | VE imprimée : la VE courante, celle que le rapport de match figera, journaliers compris. Elle sert aussi au favori et à la petite monnaie. |
 | R5 | Colonne SPP : le **solde disponible** (`spp_remaining`), pas le cumul gagné. |
