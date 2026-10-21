@@ -22,6 +22,7 @@ ajouts : une méthode sur `Team`, trois modules de fonctions pures.
 | R13 | Star player disponible pour un roster : sans liste de rosters autorisés, ou si le roster y figure | references · déplacé du contrôleur |
 | R14 | Joueur alignable : ce que le domaine déclare tel (`presence.alignable()`), jamais un recomptage | teams, players |
 | R15 | Lignes vides : 16 − lignes imprimées ; masquer les indisponibles en ajoute | présentation |
+| R16 | Tout utilisateur connecté peut imprimer, comme il peut consulter la fiche | `require_auth` (existant) |
 
 Hors domaine : densité compacte automatique (navigateur), découpage des
 annexes en pages et dédoublonnage des compétences (présentation, service).
