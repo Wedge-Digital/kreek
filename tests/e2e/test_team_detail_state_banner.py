@@ -144,10 +144,11 @@ def _aucune_action_pour_un_tiers(browser, space_id, team_id, texte_attendu):
     profil se pose à la création du contexte, et le partager connecterait tous
     les autres tests en membre simple.
 
-    `:not([onclick])` écarte « Imprimer en PDF », seul CTA sans URL ni action
-    serveur — il n'agit sur rien et reste pour tout le monde. C'est ce qui
-    distingue « retirer un raccourci » de « cacher la page », et sans cette
-    moitié-là un correctif qui viderait le bandeau entier passerait le test.
+    `:not([onclick])` écartait l'ancien « Imprimer en PDF ». Son successeur,
+    « Imprimer » (épic E16), ouvert à tout utilisateur connecté, ne paraît
+    qu'en « Prête à jouer », phase où ce contrôle n'est pas posé. Le texte
+    attendu reste ce qui distingue « retirer un raccourci » de « cacher la
+    page » : sans lui, un correctif qui viderait le bandeau passerait le test.
     """
     contexte = browser.new_context(extra_http_headers=ENTETE_MEMBRE_SIMPLE)
     try:
@@ -350,7 +351,9 @@ def test_dismissals_banner_leads_to_the_dismissals_page(browser, page: Page, spa
     # Bouton désigné par son libellé, et non par sa classe : le bandeau « Prête
     # à jouer » porte désormais trois CTA `--outline` (carte 293 y a ajouté
     # « Modifier l'effectif » et « Annuler »), et la classe seule est ambiguë.
-    expect(ready_banner.get_by_role("button", name="Imprimer en PDF")).to_be_visible()
+    # « Imprimer » est un lien vers la page d'impression (épic E16), sans `href` :
+    # HTMX le pilote par `hx-get`, il n'a donc pas le rôle « link ».
+    expect(ready_banner.locator(".state-banner-cta", has_text="Imprimer")).to_be_visible()
 
     # L'entrée en « Prête à jouer » déclenche le recalcul de la TV (carte 251).
     # Ce qu'on couvre ici est le câblage — listener intra-BC, use case,
