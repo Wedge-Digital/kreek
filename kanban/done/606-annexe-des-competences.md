@@ -25,6 +25,6 @@ imprimées, une seule fois, avec sa catégorie et sa description.
 
 ## Checklist
 
-- [ ] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
-- [ ] Tests unitaires : une compétence partagée par deux équipes n'apparaît qu'une fois · tri · découpage en pages · compétence inconnue du catalogue ignorée sans panique
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
+- [x] Tests unitaires : une compétence partagée par deux équipes n'apparaît qu'une fois · tri · découpage en pages · compétence inconnue du catalogue ignorée sans panique
+- [x] `make check-arch`, `make lint`, `make test`

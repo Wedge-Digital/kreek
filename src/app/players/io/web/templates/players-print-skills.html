@@ -1,0 +1,40 @@
+{# L'annexe des compétences d'une impression (carte 606).
+
+   Le fragment rend ses propres feuilles A4 — autant qu'il en faut. Les classes
+   `print-slot`, `print-frame`, `print-sheet` et `print-sheet-*` sont celles de
+   la page « Imprimer » de `teams`, qui les style et numérote les pages : c'est
+   le contrat des fragments d'impression multi-pages.
+   Feuille du contenu : `widgets/players-print-skills.css`, racine
+   `.players-print-skills`. #}
+{% for page in vm.pages %}
+<div class="print-slot">
+  <span class="print-slot-label">Compétences{% if vm.pages.len() > 1 %} ({{ loop.index }}/{{ vm.pages.len() }}){% endif %}</span>
+  <div class="print-frame">
+    <section class="print-sheet">
+      <div class="players-print-skills" hx-disinherit="*">
+        {% if loop.first %}
+        <header class="players-print-skills-head">
+          <h2 class="players-print-skills-title">Compétences en jeu</h2>
+          <p class="players-print-skills-sub">{{ vm.total }} compétences et traits portés par les équipes imprimées.</p>
+        </header>
+        {% endif %}
+        <div class="players-print-skills-list">
+          {% for s in page %}
+          <div class="players-print-skills-item">
+            <div class="players-print-skills-item-head">
+              <span class="players-print-skills-name">{{ s.name }}</span>
+              <span class="players-print-skills-cat">{{ s.category_label }}</span>
+            </div>
+            <div class="players-print-skills-desc">{{ s.description }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <footer class="print-sheet-foot">
+        <span class="print-sheet-stamp"></span>
+        <span class="print-sheet-page"></span>
+      </footer>
+    </section>
+  </div>
+</div>
+{% endfor %}

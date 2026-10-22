@@ -26,8 +26,8 @@ Les seize lignes de la fiche, en lecture seule.
 
 ## Checklist
 
-- [ ] `membership` jusqu'au VM, sans régression du widget existant
-- [ ] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
-- [ ] Tests unitaires : lignes vides selon le nombre imprimé · masquer ajoute des lignes vides · journalier marqué · SPP = solde
-- [ ] L'aperçu (596) appelle ce fragment
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] `membership` jusqu'au VM, sans régression du widget existant
+- [x] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
+- [x] Tests unitaires : lignes vides selon le nombre imprimé · masquer ajoute des lignes vides · journalier marqué · SPP = solde
+- [x] L'aperçu (596) appelle ce fragment
+- [x] `make check-arch`, `make lint`, `make test`

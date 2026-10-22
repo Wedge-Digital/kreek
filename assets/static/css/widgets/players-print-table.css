@@ -1,0 +1,37 @@
+/* Tableau des joueurs d'une fiche imprimée (carte 598) — BC players.
+ *
+ * Racine `.players-print-table`. Rendu dans une feuille A4 de la page
+ * « Imprimer » de `teams` : couleurs et variantes viennent des `--sheet-*` de
+ * la feuille, avec des replis pour un rendu nu. */
+
+.players-print-table { display: flex; flex-direction: column; gap: 4px; }
+.players-print-table .players-print-table-grid {
+  width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;
+}
+.players-print-table .players-print-table-grid th,
+.players-print-table .players-print-table-grid td {
+  padding: 4px 5px; text-align: left; vertical-align: top; border: var(--sheet-cell-border, 0);
+}
+.players-print-table .players-print-table-grid th {
+  font-family: var(--font-accent); font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; white-space: nowrap;
+  background: var(--sheet-th-bg, #003049); color: var(--sheet-th-fg, #fff);
+  border-bottom: 2px solid var(--sheet-accent, #003049);
+}
+.players-print-table .players-print-table-grid td { border-bottom: 1px solid var(--sheet-line, #b9bfca); }
+.players-print-table .players-print-table-grid tbody tr:nth-child(even) td { background: var(--sheet-row-zebra, transparent); }
+.players-print-table .players-print-table-n { width: 24px; text-align: center; font-weight: 700; }
+.players-print-table .players-print-table-name { width: 110px; font-weight: 600; }
+.players-print-table .players-print-table-pos { width: 118px; }
+.players-print-table .players-print-table-stat { width: 25px; text-align: center; }
+.players-print-table .players-print-table-num { width: 34px; text-align: right; }
+.players-print-table .players-print-table-tag {
+  display: inline-block; margin-top: 2px; padding: 0 3px; border: 1px solid currentColor;
+  font-family: var(--font-accent); font-size: 7.5px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--sheet-accent, #003049);
+}
+.players-print-table .players-print-table-tag--absent { color: #b00020; }
+.players-print-table .players-print-table-struck td:not(.players-print-table-skills) { text-decoration: line-through; color: #888; }
+.players-print-table .players-print-table-struck .players-print-table-skills { color: #888; }
+.players-print-table .players-print-table-blank td { height: 2em; }
+.players-print-table .players-print-table-legend { margin: 0; color: #555; font-size: 9px; }

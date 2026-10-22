@@ -1,0 +1,61 @@
+{# Le tableau des joueurs d'une fiche imprimée (carte 598) — lecture seule.
+
+   Les caractéristiques incluent séquelles, achats et personnalisations : la
+   projection les cumule, et la feuille ne distingue pas la part des blessures.
+   La colonne « Bless. » donne leur nombre, comme la fiche.
+   Feuille : `widgets/players-print-table.css`, racine `.players-print-table`. #}
+<div class="players-print-table" hx-disinherit="*">
+  <table class="players-print-table-grid">
+    <thead>
+      <tr>
+        <th class="players-print-table-n">N°</th>
+        <th>Joueur</th>
+        <th>Poste</th>
+        <th class="players-print-table-stat">MV</th>
+        <th class="players-print-table-stat">FO</th>
+        <th class="players-print-table-stat">AG</th>
+        <th class="players-print-table-stat">PA</th>
+        <th class="players-print-table-stat">AR</th>
+        <th>Compétences</th>
+        <th class="players-print-table-num" title="Blessures persistantes">Bless.</th>
+        <th class="players-print-table-num" title="SPP disponibles">SPP</th>
+        <th class="players-print-table-num">kPo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in vm.rows %}
+      <tr{% if p.struck %} class="players-print-table-struck"{% endif %}>
+        <td class="players-print-table-n">{% if let Some(j) = p.jersey %}{{ j }}{% else %}—{% endif %}</td>
+        <td class="players-print-table-name">
+          {{ p.name }}
+          {% if p.is_journeyman %}<span class="players-print-table-tag">Journalier</span>{% endif %}
+          {% if let Some(a) = p.absence %}<span class="players-print-table-tag players-print-table-tag--absent">{{ a.libelle() }}</span>{% endif %}
+        </td>
+        <td class="players-print-table-pos">{{ p.position_name }}</td>
+        {% if let Some(s) = p.stats %}
+        <td class="players-print-table-stat">{{ s.ma }}</td>
+        <td class="players-print-table-stat">{{ s.st }}</td>
+        <td class="players-print-table-stat">{{ s.ag }}+</td>
+        <td class="players-print-table-stat">{{ s.pa }}+</td>
+        <td class="players-print-table-stat">{{ s.av }}+</td>
+        {% else %}
+        <td class="players-print-table-stat" colspan="5">—</td>
+        {% endif %}
+        <td class="players-print-table-skills">
+          {% for s in p.base_skills %}{{ s }}{% if !loop.last || !p.acquired_skills.is_empty() %}, {% endif %}{% endfor %}
+          {% for s in p.acquired_skills %}<b>{{ s }}</b>{% if !loop.last %}, {% endif %}{% endfor %}
+        </td>
+        <td class="players-print-table-num">{% if p.persistent_injuries > 0 %}{{ p.persistent_injuries }}{% else %}—{% endif %}</td>
+        <td class="players-print-table-num">{{ p.spp_remaining }}</td>
+        <td class="players-print-table-num">{{ p.value_kpo }}</td>
+      </tr>
+      {% endfor %}
+      {% for _ in 0..vm.blank_rows %}
+      <tr class="players-print-table-blank">
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="players-print-table-legend">En gras : compétences acquises. SPP : points disponibles.</p>
+</div>
