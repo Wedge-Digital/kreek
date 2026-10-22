@@ -16,6 +16,21 @@ pub trait IPlayerDataPort: Send + Sync {
         team_id: &str,
         match_report_id: &str,
     ) -> Result<bool, String>;
+
+    /// Les joueurs qui joueront le prochain match, journaliers compris — la
+    /// feuille de match imprimée les liste (carte 605). Vide par défaut : seul
+    /// l'adapter réel a des joueurs à rendre.
+    async fn list_alignable_players(&self, _team_id: &str) -> Vec<AlignablePlayerDto> {
+        Vec::new()
+    }
+}
+
+/// Un joueur de la feuille de match imprimée (épic E16).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AlignablePlayerDto {
+    pub jersey: Option<i16>,
+    pub name: String,
+    pub is_journeyman: bool,
 }
 
 #[async_trait]
@@ -136,6 +151,12 @@ pub trait ITeamDataPort: Send + Sync {
     async fn find_journeyman_position(&self, team_id: &str) -> Option<JourneymanPositionDto>;
 
     async fn find_roster_positions(&self, team_id: &str) -> Vec<RosterPositionDto>;
+
+    /// La saison où l'équipe est inscrite — pour son palier de coups de pouce
+    /// et la journée de la feuille de match (carte 605). `None` par défaut.
+    async fn find_team_season(&self, _team_id: &str) -> Option<String> {
+        None
+    }
 }
 
 #[derive(Debug)]
@@ -216,4 +237,61 @@ pub struct SppMatchResult {
 pub struct PlayerSppDto {
     pub action_player: ActionPlayer,
     pub spp: u8,
+}
+
+// ── ACL vers `references` pour l'impression (épic E16, carte 605) ─────────────
+
+/// Le libellé d'un coup de pouce, tel que le catalogue le nomme.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InducementLabelDto {
+    pub uid: String,
+    pub name: String,
+    pub description: String,
+}
+
+/// Un star player, compétences résolues en noms.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StarPlayerDto {
+    pub uid: String,
+    pub name: String,
+    pub player_type: String,
+    pub cost: u32,
+    pub ma: u8,
+    pub st: u8,
+    pub ag: String,
+    pub pa: String,
+    pub av: String,
+    pub skills: Vec<String>,
+    pub ability_name: String,
+    pub ability_description: String,
+}
+
+/// Le barème SPP d'un roster, vu par `match_report` — DTO propre, jamais le
+/// modèle de `references` (règle « Adapters inter-BCs »).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SppScaleDto {
+    pub touchdown: u8,
+    pub casualty: u8,
+    pub interception: u8,
+    pub pass: u8,
+    pub mvp: u8,
+}
+
+/// Les rappels du corpus de la ligue (fichier optionnel) : vides s'il ne les
+/// fournit pas.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MatchRemindersDto {
+    pub mvp: Option<String>,
+    pub fans: Option<String>,
+    pub weather: Vec<String>,
+}
+
+/// Ce que l'impression lit du catalogue de références. **Synchrone** : le
+/// corpus vit en mémoire.
+pub trait IReferenceCatalogPort: Send + Sync {
+    fn find_inducement_labels(&self, uids: &[String]) -> Vec<InducementLabelDto>;
+    /// Les star players de cette liste que ce roster peut engager (R13).
+    fn find_star_players(&self, uids: &[String], roster_id: &str) -> Vec<StarPlayerDto>;
+    fn find_spp_scale(&self, roster_id: &str) -> SppScaleDto;
+    fn find_match_reminders(&self) -> MatchRemindersDto;
 }

@@ -26,7 +26,7 @@ alignables, saison d'inscription.
 
 ## Checklist
 
-- [ ] Port, DTO, adapters, injection
-- [ ] Tests unitaires des adapters : skills résolus en noms · star player filtré par roster · barème du roster · rappels absents → vides
-- [ ] Doublures de test du port pour les services des 607 et 608
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Port, DTO, adapters, injection
+- [x] Tests unitaires des adapters : skills résolus en noms · star player filtré par roster · barème du roster · rappels absents → vides
+- [x] Doublures de test du port pour les services des 607 et 608
+- [x] `make check-arch`, `make lint`, `make test`
