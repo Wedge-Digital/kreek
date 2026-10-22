@@ -16,6 +16,6 @@
 
 ## Checklist
 
-- [ ] Les scénarios, sur le corpus de démonstration
-- [ ] Entrée dans `tests/impact-map.toml` (axe 8)
-- [ ] `make e2e` vert, `make check-arch`
+- [x] Les scénarios, sur le corpus de démonstration
+- [x] Entrée dans `tests/impact-map.toml` (axe 8)
+- [x] `make e2e` vert, `make check-arch`

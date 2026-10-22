@@ -27,6 +27,6 @@ l'impression, la sécurité des URLs.
 
 ## Checklist
 
-- [ ] Les scénarios, clics sur contenu injecté par `cliquer_quand_cable`, sans `sleep`
-- [ ] Entrée dans `tests/impact-map.toml` (axe 8)
-- [ ] `make e2e` vert, `make check-arch`
+- [x] Les scénarios, clics sur contenu injecté par `cliquer_quand_cable`, sans `sleep`
+- [x] Entrée dans `tests/impact-map.toml` (axe 8)
+- [x] `make e2e` vert, `make check-arch`

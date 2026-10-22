@@ -25,7 +25,7 @@ dans l'espace de mon équipe, parmi les équipes prêtes à jouer.
 
 ## Checklist
 
-- [ ] Cascade dans la page, présélection
-- [ ] Le choix d'une équipe recharge l'aperçu avec sa fiche
-- [ ] Test unitaire du VM : URLs des trois listes et de l'aperçu
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Cascade dans la page, présélection
+- [x] Le choix d'une équipe recharge l'aperçu avec sa fiche
+- [x] Test unitaire du VM : URLs des trois listes et de l'aperçu
+- [x] `make check-arch`, `make lint`, `make test`

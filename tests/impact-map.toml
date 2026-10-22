@@ -337,6 +337,20 @@
 "test_team_matches" = ["competitions", "teams", "match_report", "players",
                        "spp_calculator", "references", "ranking",
                        "team_creation", "spaces", "auth"]
+# La page « Imprimer » (épic E16, carte 601). `teams` sert la page, l'aperçu et
+# l'en-tête ; `players` le tableau des joueurs ; `competitions` l'option du
+# prochain adversaire et la cascade. `match_report` est une dépendance dure :
+# jouer un match est le seul chemin vers une équipe qui ne s'imprime plus (R1).
+# `auth` : le scénario R16 repose sur la seconde identité de `bypass_auth`.
+"test_team_print_page" = ["teams", "players", "competitions", "match_report",
+                          "spp_calculator", "references", "ranking",
+                          "team_creation", "spaces", "auth"]
+# Les pages en plus de l'impression (carte 609) : `players` sert l'annexe,
+# `match_report` les coups de pouce et la feuille de match, `references` le
+# catalogue, le barème et les rappels du corpus.
+"test_team_print_annexes" = ["teams", "players", "match_report", "references",
+                             "competitions", "spp_calculator", "ranking",
+                             "team_creation", "spaces"]
 # Le tarif du sélecteur de compétences après une customisation (carte 482).
 # `players` y est vérifié — le niveau, son coût, la customisation ;
 # `references` aussi, la matrice de coût et le catalogue venant de lui.
