@@ -143,6 +143,54 @@ async fn un_brouillon_non_soumis_reste_atteignable(pool: sqlx::PgPool) {
     );
 }
 
+/// La seconde équipe d'une impression (carte 594) : son espace est celui de
+/// l'équipe, et un brouillon n'en a pas — il ne s'imprime pas.
+#[sqlx::test]
+async fn la_seconde_equipe_rend_son_espace_et_rien_pour_un_brouillon(pool: sqlx::PgPool) {
+    use crate::app::shared_kernel::identity::ids::SpaceId;
+    use crate::web::middleware::space_scope::ISpaceOwnership;
+
+    let (space_id, team_id) = equipe_dans_l_espace_e2e(&pool).await;
+    let draft_id = crate::app::shared_kernel::identity::sulid::SUlid::new().to_string();
+    sqlx::query(
+        "INSERT INTO team_drafts
+            (id, space_id, competition_id, season_id, name, coach_id, coach_name,
+             creation_rules, status)
+         VALUES ($1, $2, 'c', 's', 'Brouillon', 'coach', 'DevCoach', '{}', 'draft')",
+    )
+    .bind(&draft_id)
+    .bind(&space_id)
+    .execute(&pool)
+    .await
+    .expect("brouillon de test");
+
+    let resolveur = crate::infrastructure::teams::space_ownership::OtherTeamSpaceOwnership::new(
+        std::sync::Arc::new(
+            crate::app::teams::io::repository::team_repository::TeamRepository::new(
+                pool,
+                crate::common::services::event_bus::event_bus::new_bus(),
+            ),
+        ),
+    );
+
+    assert_eq!(resolveur.param(), "other_team_id");
+    assert_eq!(
+        resolveur.space_of(&team_id).await,
+        Some(SpaceId::try_new(&space_id).unwrap()),
+        "la seconde équipe doit rendre l'espace où elle a été créée"
+    );
+    assert_eq!(
+        resolveur.space_of(&draft_id).await,
+        None,
+        "un brouillon ne s'imprime pas : aucun espace, donc un refus"
+    );
+    assert_eq!(
+        resolveur.space_of("01JZZZZZZZZZZZZZZZZZZZZZZZ").await,
+        None,
+        "une équipe inconnue ne rend aucun espace"
+    );
+}
+
 /// Le cas que la sonde a prouvé exploitable, et le plus lourd des trois : il
 /// touchait l'effectif et la trésorerie.
 #[sqlx::test]

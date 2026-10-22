@@ -27,7 +27,7 @@ chemin, et ce paramètre a son résolveur.
 
 ## Checklist
 
-- [ ] Résolveur `other_team_id`, sans duplication de la requête de `team_id`
-- [ ] Enregistrement dans `main.rs`
-- [ ] Test unitaire : une équipe de l'espace passe, une équipe d'un autre espace rend `None` ou un autre espace, un identifiant inconnu rend `None`
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Résolveur `other_team_id`, sans duplication de la requête de `team_id`
+- [x] Enregistrement dans `main.rs`
+- [x] Test unitaire : une équipe de l'espace passe, une équipe d'un autre espace rend `None` ou un autre espace, un identifiant inconnu rend `None`
+- [x] `make check-arch`, `make lint`, `make test`
