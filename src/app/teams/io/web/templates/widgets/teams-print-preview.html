@@ -1,0 +1,34 @@
+{# L'aperçu d'impression (carte 596).
+
+   Deux sortes d'emplacements. La fiche d'une équipe est une feuille A4 que
+   l'hôte ouvre et que deux fragments remplissent (en-tête, joueurs). Les pages
+   en plus — compétences, coups de pouce, feuille de match — sont des fragments
+   qui rendent **eux-mêmes** leurs feuilles, autant qu'il en faut : l'hôte ne
+   pose que l'emplacement.
+
+   Le script de la page attend qu'il ne reste aucun `.print-pending` avant
+   d'autoriser l'impression, puis date et numérote toutes les feuilles. #}
+<div class="print-preview {{ vm.root_class }}" hx-disinherit="*">
+  {% for slot in vm.slots %}
+  {% if slot.wraps_sheet %}
+  <div class="print-slot">
+    <span class="print-slot-label">{{ slot.label }}</span>
+    <div class="print-frame">
+      <section class="print-sheet">
+        {% for url in slot.fragment_urls %}
+        <div class="print-pending" hx-get="{{ url }}" hx-trigger="load" hx-swap="outerHTML"></div>
+        {% endfor %}
+        <footer class="print-sheet-foot">
+          <span class="print-sheet-stamp"></span>
+          <span class="print-sheet-page"></span>
+        </footer>
+      </section>
+    </div>
+  </div>
+  {% else %}
+  {% for url in slot.fragment_urls %}
+  <div class="print-pending print-pending--slot" hx-get="{{ url }}" hx-trigger="load" hx-swap="outerHTML" aria-label="{{ slot.label }}"></div>
+  {% endfor %}
+  {% endif %}
+  {% endfor %}
+</div>

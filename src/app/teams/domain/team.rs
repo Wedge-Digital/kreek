@@ -694,6 +694,18 @@ impl Team {
         self.treasury
     }
 
+    /// L'équipe peut-elle être imprimée (R1, carte 595) ?
+    ///
+    /// Inscrite et prête à jouer : la condition même du bouton « Imprimer » de
+    /// la fiche (`BannerVm::pour_etat`). En recrutement ou en saisie de match,
+    /// l'effectif change encore — la feuille serait fausse avant d'être sortie.
+    pub fn is_printable(&self) -> bool {
+        matches!(
+            (&self.participation_status, &self.game_phase),
+            (ParticipationStatus::Enrolled, Some(GamePhase::ReadyToPlay))
+        )
+    }
+
     /// Rejoue un événement sur l'agrégat — pure, sans effet de bord.
     pub fn apply(mut self, event: &TeamDomainEvent) -> Self {
         // La trésorerie est traitée une fois pour toutes, ici : `apply` et le
@@ -3048,5 +3060,30 @@ mod tests {
             !manually_opened(OverridablePhase::PlayerImprovement).is_in_post_match_improvement()
         );
         assert!(!ready_team().is_in_post_match_improvement());
+    }
+    // ── Impression (carte 595, R1) ───────────────────────────────────────
+
+    #[test]
+    fn une_equipe_prete_a_jouer_est_imprimable() {
+        assert!(ready_team().is_printable());
+    }
+
+    #[test]
+    fn une_equipe_non_inscrite_n_est_pas_imprimable() {
+        let team = Team::hydrate(&[created_event()]).unwrap();
+        assert!(!team.is_printable());
+    }
+
+    #[test]
+    fn une_equipe_en_saisie_de_match_n_est_pas_imprimable() {
+        let team = Team::hydrate(&[
+            created_event(),
+            enrolled_event(),
+            TeamDomainEvent::MatchReportingStarted {
+                match_report_id: match_report_id(),
+            },
+        ])
+        .unwrap();
+        assert!(!team.is_printable());
     }
 }

@@ -1,0 +1,61 @@
+/* En-tête d'une fiche imprimée (carte 597) — BC teams.
+ *
+ * Racine `.team-print-sheet-head`. Rendu dans une feuille A4 de la page
+ * « Imprimer » : couleurs et variantes de style viennent des `--sheet-*` que
+ * la feuille pose (`pages/team-print.css`), avec des replis pour un rendu nu. */
+
+.team-print-sheet-head { display: flex; flex-direction: column; gap: 10px; }
+
+.team-print-sheet-head .team-print-sheet-head-top {
+  display: grid; grid-template-columns: 58px 1fr auto; gap: 14px; align-items: center;
+  padding: var(--sheet-head-pad, 0); background: var(--sheet-head-bg, transparent);
+  color: var(--sheet-head-fg, inherit);
+}
+.team-print-sheet-head .team-print-sheet-head-logo {
+  width: 58px; height: 58px; border-radius: 50%; object-fit: cover; display: block;
+}
+.team-print-sheet-head .team-print-sheet-head-logo--initials {
+  display: grid; place-items: center; background: var(--sheet-accent, #003049); color: #fff;
+  font-family: var(--font-accent); font-weight: 800; font-size: 19px;
+}
+.team-print-sheet-head .team-print-sheet-head-role {
+  font-family: var(--font-accent); font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: inherit; opacity: .8;
+}
+.team-print-sheet-head .team-print-sheet-head-name {
+  margin: 0; font-family: var(--sheet-name-font, var(--font-title)); font-weight: 800;
+  font-size: calc(var(--sheet-font, 11px) * 2); line-height: 1.1; text-transform: var(--sheet-name-case, none);
+}
+.team-print-sheet-head .team-print-sheet-head-sub { margin-top: 2px; }
+.team-print-sheet-head .team-print-sheet-head-meta {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 10px; text-align: right;
+}
+
+.team-print-sheet-head .team-print-sheet-head-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  border: 1.5px solid var(--sheet-strong, #111);
+}
+.team-print-sheet-head .team-print-sheet-head-stat {
+  display: flex; flex-direction: column; gap: 1px; padding: 5px 8px;
+  border-left: 1px solid var(--sheet-line, #b9bfca); background: var(--sheet-stat-bg, transparent);
+}
+.team-print-sheet-head .team-print-sheet-head-stat:first-child { border-left: 0; }
+.team-print-sheet-head .team-print-sheet-head-stat-k {
+  font-family: var(--font-accent); font-size: 8px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: #555;
+}
+.team-print-sheet-head .team-print-sheet-head-stat-v {
+  font-size: calc(var(--sheet-font, 11px) + 3px); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.team-print-sheet-head .team-print-sheet-head-stat--key .team-print-sheet-head-stat-v { color: var(--sheet-accent, #003049); }
+.team-print-sheet-head .team-print-sheet-head-stat-d { font-size: 9px; color: #555; }
+
+.team-print-sheet-head .team-print-sheet-head-staff {
+  display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--sheet-line, #b9bfca);
+}
+.team-print-sheet-head .team-print-sheet-head-staff-line {
+  display: flex; gap: 6px; align-items: baseline; padding: 4px 8px;
+  border-left: 1px solid var(--sheet-line, #b9bfca);
+}
+.team-print-sheet-head .team-print-sheet-head-staff-line:first-child { border-left: 0; }
+.team-print-sheet-head .team-print-sheet-head-staff-price { margin-left: auto; color: #555; font-size: 9px; }

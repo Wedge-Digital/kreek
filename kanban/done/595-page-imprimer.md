@@ -18,13 +18,14 @@ vide, barre d'actions. L'aperçu arrive à la 596.
 
 - **Domaine** : `Team::is_printable()` — inscrite et `ReadyToPlay` (R1), la
   condition même de `BannerVm::pour_etat`.
-- **Service** : `team_print_access_service::check(team_id)` charge l'agrégat
+- **Service** : `team_print_service::load_printable(team_id)` charge l'agrégat
   et pose la question ; `// arch:no-instrument` motivé.
 - **Contrôleur** : `get_team_print_page` — page complète dans `app-layout` ;
   équipe non imprimable → `teams-print-unavailable.html`, explication et lien
   vers la fiche, pas un 404. Tout utilisateur connecté (R16).
-- **Layout** : `{% block body_class %}{% endblock %}` sur le `<body>` de
-  `app-layout.html`, vide par défaut ; la page y met `team-print-page`.
+- **Layout** : `layout-app.css` s'efface à l'impression quand la page porte
+  `.team-print` (`.app-layout:has(.team-print)`) — la navigation htmx ne
+  recharge pas `body`, une classe posée par la page ne suivrait pas.
 - **Fiche** : `BannerCtaVm::Print` devient un lien vers la page (via `Routes`
   de teams), même condition d'affichage qu'aujourd'hui.
 - Formulaire d'options (`#print-options`) conforme à la maquette, sans le
@@ -33,9 +34,9 @@ vide, barre d'actions. L'aperçu arrive à la 596.
 
 ## Checklist
 
-- [ ] `Team::is_printable` + tests : prête à jouer · en recrutement · non inscrite
-- [ ] Service, contrôleur, routes, gabarits ; aucun `style="…"`
-- [ ] Bloc `body_class` dans `app-layout.html` — vérifier qu'aucune page ne casse
-- [ ] Le bouton de la fiche mène à la page
-- [ ] `pages/team-print.css` créée, inscrite dans `FEUILLES_APP`
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] `Team::is_printable` + tests : prête à jouer · en recrutement · non inscrite
+- [x] Service, contrôleur, routes, gabarits ; aucun `style="…"`
+- [x] `layout-app.css` : chrome masqué et layout remis à plat à l'impression, pour cette page seulement
+- [x] Le bouton de la fiche mène à la page
+- [x] `pages/team-print.css` créée, inscrite dans `FEUILLES_APP`
+- [x] `make check-arch`, `make lint`, `make test`

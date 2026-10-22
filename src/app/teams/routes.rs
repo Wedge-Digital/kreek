@@ -81,6 +81,18 @@ pub mod path {
     pub const DISMISSALS_MARK_STAFF: &str = "/app/{space_id}/teams/{team_id}/dismissals/staff/mark";
     pub const DISMISSALS_UNMARK_STAFF: &str =
         "/app/{space_id}/teams/{team_id}/dismissals/staff/unmark";
+
+    // ── Impression (épic E16) ─────────────────────────────────────────────
+    /// La page « Imprimer » : options, aperçu, barre d'actions (carte 595).
+    pub const TEAM_PRINT: &str = "/app/{space_id}/teams/{team_id}/print";
+    /// L'aperçu, rechargé à chaque option (carte 596).
+    pub const TEAM_PRINT_PREVIEW: &str = "/app/{space_id}/teams/{team_id}/print/preview";
+    /// L'aperçu à deux équipes. **`{other_team_id}` dans le chemin**, jamais en
+    /// query : c'est ce qui le fait contrôler par `space_scope` (carte 594).
+    pub const TEAM_PRINT_PREVIEW_WITH: &str =
+        "/app/{space_id}/teams/{team_id}/print/preview/with/{other_team_id}";
+    /// L'en-tête d'une fiche imprimée (carte 597).
+    pub const TEAM_PRINT_SHEET_HEAD: &str = "/app/{space_id}/teams/{team_id}/print/sheet-head";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -253,6 +265,30 @@ impl Routes {
     pub fn recruitment_remove_staff(&self, space_id: &str, team_id: &str) -> String {
         pour(path::RECRUITMENT_REMOVE_STAFF, space_id, team_id)
     }
+
+    pub fn team_print(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::TEAM_PRINT, space_id, team_id)
+    }
+    pub fn team_print_preview(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::TEAM_PRINT_PREVIEW, space_id, team_id)
+    }
+    pub fn team_print_preview_with(
+        &self,
+        space_id: &str,
+        team_id: &str,
+        other_team_id: &str,
+    ) -> String {
+        pour(path::TEAM_PRINT_PREVIEW_WITH, space_id, team_id)
+            .replace("{other_team_id}", other_team_id)
+    }
+    /// L'aperçu à deux équipes **avec `{other_team_id}` laissé en place** : la
+    /// page le reçoit et y substitue l'équipe que le coach choisit.
+    pub fn team_print_preview_with_template(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::TEAM_PRINT_PREVIEW_WITH, space_id, team_id)
+    }
+    pub fn team_print_sheet_head(&self, space_id: &str, team_id: &str) -> String {
+        pour(path::TEAM_PRINT_SHEET_HEAD, space_id, team_id)
+    }
 }
 
 fn pour(gabarit: &str, space_id: &str, team_id: &str) -> String {
@@ -359,6 +395,18 @@ mod tests {
         ]
     }
 
+    fn routes_impression() -> Vec<(&'static str, String)> {
+        let r = Routes;
+        vec![
+            ("team_print", r.team_print(SPACE, TEAM)),
+            ("team_print_preview", r.team_print_preview(SPACE, TEAM)),
+            (
+                "team_print_sheet_head",
+                r.team_print_sheet_head(SPACE, TEAM),
+            ),
+        ]
+    }
+
     #[test]
     fn toutes_les_routes_a_deux_parametres_sont_bien_formees() {
         let attendus = [SPACE, TEAM];
@@ -366,6 +414,18 @@ mod tests {
         verifier_toutes(&routes_recrutement(), &attendus);
         verifier_toutes(&routes_renvois(), &attendus);
         verifier_toutes(&routes_phases(), &attendus);
+        verifier_toutes(&routes_impression(), &attendus);
+    }
+
+    /// La seconde équipe est dans le chemin, sous le nom que `space_scope`
+    /// contrôle (carte 594).
+    #[test]
+    fn l_apercu_a_deux_equipes_porte_la_seconde_dans_le_chemin() {
+        const AUTRE: &str = "01M09RF4H8ZJ6S6QC1GM80EPCJ";
+        let url = Routes.team_print_preview_with(SPACE, TEAM, AUTRE);
+        verifier("team_print_preview_with", &url, &[SPACE, TEAM, AUTRE]);
+        assert!(url.ends_with(&format!("/with/{AUTRE}")), "{url}");
+        assert!(path::TEAM_PRINT_PREVIEW_WITH.contains("{other_team_id}"));
     }
 
     #[test]

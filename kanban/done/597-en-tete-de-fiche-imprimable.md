@@ -18,7 +18,7 @@ Le haut de chaque fiche : identité, chiffres, staff.
 - **VM** (`builders::team_sheet_head`) :
   - VE : la valeur persistée `team.team_value` (R4) — jamais recalculée ;
   - alignables : `presence.alignable()` (R14) ;
-  - trésorerie : seulement si `role = own` **et** l'option est cochée (R8) ;
+  - trésorerie : sur toutes les fiches, sans option (R8, révisée au test manuel) ;
   - staff : prix de la relance **et** du staff lus dans le catalogue du roster.
     La fiche, elle, code encore 50 / 10 / 10 en dur : écart noté hors périmètre
     dans le README de la spec, à ne pas corriger ici.
@@ -26,7 +26,7 @@ Le haut de chaque fiche : identité, chiffres, staff.
 
 ## Checklist
 
-- [ ] Service, builder, contrôleur, gabarit, feuille CSS inscrite au bundle
-- [ ] Tests unitaires du builder : trésorerie masquée pour `other` · masquée si l'option est décochée · prix du staff pris au catalogue · alignables selon `presence`
-- [ ] L'aperçu (596) appelle ce fragment
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Service, builder, contrôleur, gabarit, feuille CSS inscrite au bundle
+- [x] Tests unitaires du builder : trésorerie sur toutes les fiches · prix du staff pris au catalogue · alignables selon `presence`
+- [x] L'aperçu (596) appelle ce fragment
+- [x] `make check-arch`, `make lint`, `make test`

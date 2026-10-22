@@ -1,0 +1,402 @@
+{% extends "app-layout.html" %}
+
+{# La page « Imprimer » (épic E16, cartes 595 à 600).
+
+   Elle est sa propre vue d'impression : options à gauche, aperçu à droite,
+   actions en pied. À l'impression, `pages/team-print.css` et `layout-app.css`
+   ne laissent sortir que les feuilles A4 de l'aperçu.
+
+   La maquette validée est `assets/rawpages/html/app-team-print-modal.html` —
+   une modale ; l'application en fait une page, faute de modale dans kreek. #}
+
+{% block content %}
+<div class="team-print">
+
+  <header class="team-print-head">
+    <a class="team-print-back"
+       hx-get="{{ vm.back_url }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="outerHTML"
+       hx-push-url="true">← Retour à la fiche</a>
+    <h1 class="team-print-title">Imprimer la feuille d'équipe</h1>
+    <p class="team-print-subtitle">{{ vm.team_name }}{% if !vm.competition_label.is_empty() %} · {{ vm.competition_label }}{% endif %}</p>
+  </header>
+
+  <div class="team-print-body">
+
+    <form class="team-print-options" id="print-options" aria-label="Options d'impression">
+
+      <fieldset class="team-print-group">
+        <legend>Équipes à imprimer</legend>
+        <label class="team-print-choice">
+          <input type="radio" name="content" value="solo" checked>
+          <span class="team-print-choice-main">Mon équipe seule</span>
+        </label>
+        {# Fourni par `competitions` (carte 599) : le prochain adversaire, ou
+           l'option grisée avec son motif. #}
+        <div class="team-print-choice team-print-choice--pending"
+             hx-get="{{ vm.next_opponent_url }}"
+             hx-trigger="load"
+             hx-swap="outerHTML">
+          <span class="team-print-choice-main">Mon équipe et mon prochain adversaire</span>
+          <span class="team-print-choice-hint">Recherche du prochain match…</span>
+        </div>
+        <div class="team-print-choice team-print-choice--other">
+          <label class="team-print-choice-line">
+            <input type="radio" name="content" value="other">
+            <span class="team-print-choice-main">Mon équipe et une autre équipe</span>
+          </label>
+          <span class="team-print-choice-hint">Une équipe prête à jouer de cet espace.</span>
+          <kreek-select
+              name="print_competition_id"
+              url="{{ vm.competitions_json_url }}"
+              value-field="id"
+              label-field="name"
+              event="printCompetitionSelected"
+              placeholder="Compétition…"
+              {% if !vm.competition_id.is_empty() %}selected-value="{{ vm.competition_id }}"{% endif %}>
+          </kreek-select>
+          <kreek-select
+              name="print_season_id"
+              url="{{ vm.seasons_json_url }}"
+              value-field="id"
+              label-field="name"
+              listen="printCompetitionSelected"
+              listen-param="id"
+              listen-query="competition_id"
+              event="printSeasonSelected"
+              auto-select-first
+              placeholder="Saison…"
+              {% if !vm.season_id.is_empty() %}selected-value="{{ vm.season_id }}"{% endif %}>
+          </kreek-select>
+          <kreek-select
+              name="other_team_id"
+              url="{{ vm.teams_json_url }}"
+              value-field="id"
+              label-field="name"
+              listen="printSeasonSelected"
+              listen-param="id"
+              listen-query="season_id"
+              placeholder="Équipe…">
+          </kreek-select>
+        </div>
+      </fieldset>
+
+      <fieldset class="team-print-group">
+        <legend>Pages en plus</legend>
+        <label class="team-print-check">
+          <input type="checkbox" name="skills_annex" value="true" checked>
+          <span>Détail des compétences</span>
+          <span class="team-print-check-hint">Celles des équipes imprimées, une fois chacune.</span>
+        </label>
+        <label class="team-print-check">
+          <input type="checkbox" name="inducements" value="true">
+          <span>Coups de pouce disponibles</span>
+          <span class="team-print-check-hint">Catalogue et prix pour chaque équipe imprimée, avec les règles d'achat.</span>
+        </label>
+        <label class="team-print-check">
+          <input type="checkbox" name="star_players" value="true">
+          <span>Star players disponibles</span>
+          <span class="team-print-check-hint">Caractéristiques, prix, compétences et règle spéciale de ceux que les équipes peuvent engager.</span>
+        </label>
+        <label class="team-print-check">
+          <input type="checkbox" name="match_sheet" value="true" checked>
+          <span>Feuille de rapport de match</span>
+          <span class="team-print-check-hint">À remplir pendant le match, pour saisir le rapport ensuite.</span>
+        </label>
+        <label class="team-print-check team-print-check--sub">
+          <input type="checkbox" name="two_copies" value="true">
+          <span>En deux exemplaires, un par coach</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="team-print-group">
+        <legend>Mise en page</legend>
+        <div class="team-print-row">
+          <span>Orientation</span>
+          <div class="team-print-segmented">
+            <label><input type="radio" name="orientation" value="portrait" checked>Portrait</label>
+            <label><input type="radio" name="orientation" value="landscape">Paysage</label>
+          </div>
+        </div>
+        <div class="team-print-row">
+          <span>Densité</span>
+          <div class="team-print-segmented">
+            <label><input type="radio" name="density" value="normal" checked>Normale</label>
+            <label><input type="radio" name="density" value="compact">Compacte</label>
+          </div>
+        </div>
+        <div class="team-print-row">
+          <span>Encre</span>
+          <div class="team-print-segmented">
+            <label><input type="radio" name="ink" value="color" checked>Couleur</label>
+            <label><input type="radio" name="ink" value="mono">Noir et blanc</label>
+          </div>
+        </div>
+        <div class="team-print-row">
+          <span>Style</span>
+          <div class="team-print-segmented">
+            <label><input type="radio" name="style" value="plain" checked>Sobre</label>
+            <label><input type="radio" name="style" value="official">Officielle</label>
+            <label><input type="radio" name="style" value="pitch">Terrain</label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="team-print-group">
+        <legend>Sur les fiches</legend>
+        <div class="team-print-row">
+          <span>Indisponibles</span>
+          <div class="team-print-segmented">
+            <label><input type="radio" name="unavailable" value="show">Afficher</label>
+            <label><input type="radio" name="unavailable" value="strike" checked>Barrer</label>
+            <label><input type="radio" name="unavailable" value="hide">Masquer</label>
+          </div>
+        </div>
+        <label class="team-print-check">
+          <input type="checkbox" name="blank_rows" value="true" checked>
+          <span>Lignes vides jusqu'à 16 joueurs</span>
+          <span class="team-print-check-hint">Pour noter un journalier ou une recrue à la main.</span>
+        </label>
+      </fieldset>
+    </form>
+
+    <section class="team-print-preview" aria-label="Aperçu avant impression">
+      <div class="team-print-toolbar">
+        <span class="team-print-count">Préparation de l'aperçu…</span>
+        <div class="team-print-zoom" role="group" aria-label="Zoom">
+          <button type="button" data-zoom="fit" aria-pressed="true">Ajuster</button>
+          <button type="button" data-zoom="full" aria-pressed="false">100 %</button>
+        </div>
+      </div>
+      <p class="team-print-warning" hidden>
+        Une feuille est trop pleine même en densité compacte : passe-la en paysage
+        ou masque les joueurs indisponibles pour qu'aucune ligne ne soit coupée.
+      </p>
+      <div class="team-print-state team-print-state--loading">
+        <span class="team-print-spinner" aria-hidden="true"></span>
+        Préparation de l'aperçu…
+      </div>
+      <div class="team-print-state team-print-state--error" hidden>
+        <p>L'aperçu n'a pas pu être préparé. Vérifie ta connexion, puis réessaie.</p>
+        <button class="team-print-btn" type="button" data-retry>Réessayer</button>
+      </div>
+      <div class="team-print-pages"
+           data-preview-url="{{ vm.preview_url }}"
+           data-preview-with-url="{{ vm.preview_with_url_template }}"></div>
+    </section>
+  </div>
+
+  <footer class="team-print-actions">
+    <span class="team-print-summary"></span>
+    <a class="team-print-btn team-print-btn--ghost"
+       hx-get="{{ vm.back_url }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="outerHTML"
+       hx-push-url="true">Annuler</a>
+    <button class="team-print-btn team-print-btn--primary" type="button" data-print disabled>Imprimer</button>
+  </footer>
+</div>
+<script>
+(function () {
+  var root = document.currentScript.previousElementSibling;
+  var form = root.querySelector('#print-options');
+  var pages = root.querySelector('.team-print-pages');
+  var printBtn = root.querySelector('[data-print]');
+  var counter = root.querySelector('.team-print-count');
+  var summary = root.querySelector('.team-print-summary');
+  var loading = root.querySelector('.team-print-state--loading');
+  var failed = root.querySelector('.team-print-state--error');
+  var warning = root.querySelector('.team-print-warning');
+  var zoom = 'fit';
+  var timer = null;
+  var ready = false;
+  // Un fragment en `outerHTML` remplace son emplacement : son `htmx:afterSettle`
+  // part d'un nœud détaché et n'atteint jamais `body`. Observer le contenu de
+  // l'aperçu est le seul signal qui ne dépend pas de l'ordre des événements.
+  var observer = new MutationObserver(function () { maybeReady(); });
+  // Le format du papier, **pour cette page seulement** : un `@page` dans le
+  // bundle changerait le Ctrl+P de toute l'application. Les pages nommées des
+  // feuilles ne suffisent pas — Firefox n'en tire ni l'orientation ni les marges
+  // de sa boîte d'impression, et réduisait la feuille dans ses propres marges.
+  var pageFormat = document.createElement('style');
+  document.head.appendChild(pageFormat);
+
+  // L'équipe à imprimer à côté de la mienne, selon le choix coché.
+  function otherTeamId() {
+    var choice = form.querySelector('[name="content"]:checked');
+    if (!choice || choice.value === 'solo') return null;
+    if (choice.value === 'opp') return choice.dataset.teamId || null;
+    // Le champ caché du composant, pas le `<kreek-select>` qui porte le même
+    // `name` et n'a pas de `value`.
+    var field = form.querySelector('input[name="other_team_id"]');
+    return field && field.value ? field.value : null;
+  }
+
+  // La seconde équipe part dans le chemin, jamais en query (carte 594).
+  function previewUrl() {
+    var other = otherTeamId();
+    var base = other
+      ? pages.dataset.previewWithUrl.replace('{other_team_id}', encodeURIComponent(other))
+      : pages.dataset.previewUrl;
+    var params = new URLSearchParams(new FormData(form));
+    ['content', 'other_team_id', 'print_competition_id', 'print_season_id']
+      .forEach(function (k) { params.delete(k); });
+    addMatchContext(params);
+    return base + '?' + params.toString();
+  }
+
+  // Le prochain adversaire sait qui reçoit (R10) et quelle journée se joue ;
+  // une autre équipe non — mon équipe reçoit alors, sans journée.
+  function addMatchContext(params) {
+    var choice = form.querySelector('[name="content"]:checked');
+    if (!choice || choice.value !== 'opp') return;
+    params.set('home', choice.dataset.opponentHome === 'true' ? 'other' : 'own');
+    if (choice.dataset.roundId) params.set('round_id', choice.dataset.roundId);
+  }
+
+  function setState(state) {
+    loading.hidden = state !== 'loading';
+    failed.hidden = state !== 'error';
+    pages.hidden = state !== 'ready';
+    printBtn.disabled = state !== 'ready';
+  }
+
+  function refresh() {
+    ready = false;
+    warning.hidden = true;
+    counter.textContent = "Préparation de l'aperçu…";
+    setState('loading');
+    htmx.ajax('GET', previewUrl(), { target: pages, swap: 'innerHTML' });
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 300);
+  }
+
+  function overflows(sheet) {
+    return sheet.scrollHeight > sheet.clientHeight + 1;
+  }
+
+  // Une feuille trop pleine passe en compact ; si elle déborde encore, elle
+  // est signalée — rien n'est coupé en silence.
+  function fitDensity(sheet) {
+    if (!overflows(sheet)) return;
+    sheet.classList.add('density-compact');
+    if (overflows(sheet)) sheet.classList.add('print-sheet--overflow');
+  }
+
+  function setPageFormat() {
+    var choice = form.querySelector('[name="orientation"]:checked');
+    var orientation = choice ? choice.value : 'portrait';
+    pageFormat.textContent = '@page { size: A4 ' + orientation + '; margin: 0; }';
+  }
+
+  // Toutes les feuilles, quel que soit le BC qui les a rendues : la date et
+  // le numéro sont posés ici, une fois.
+  function numberPages(sheets) {
+    var stamp = 'kreek · imprimé le ' + new Date().toLocaleDateString('fr-FR');
+    sheets.forEach(function (sheet, i) {
+      var page = sheet.querySelector('.print-sheet-page');
+      var date = sheet.querySelector('.print-sheet-stamp');
+      if (page) page.textContent = 'page ' + (i + 1) + ' / ' + sheets.length;
+      if (date) date.textContent = stamp;
+      sheet.classList.toggle('print-sheet--last', i === sheets.length - 1);
+    });
+  }
+
+  // À l'écran seulement : les feuilles gardent leur taille réelle à l'impression.
+  function scale() {
+    var avail = pages.clientWidth;
+    pages.querySelectorAll('.print-frame').forEach(function (frame) {
+      var sheet = frame.firstElementChild;
+      var k = zoom === 'full' ? 1 : Math.min(1, avail / sheet.offsetWidth);
+      frame.style.setProperty('--print-scale', k);
+      frame.style.width = sheet.offsetWidth * k + 'px';
+      frame.style.height = sheet.offsetHeight * k + 'px';
+    });
+  }
+
+  function finish() {
+    var sheets = Array.prototype.slice.call(pages.querySelectorAll('.print-sheet'));
+    sheets.forEach(fitDensity);
+    numberPages(sheets);
+    setPageFormat();
+    setState('ready');
+    scale();
+    warning.hidden = !pages.querySelector('.print-sheet--overflow');
+    var label = sheets.length + (sheets.length > 1 ? ' pages' : ' page');
+    counter.textContent = label + ' · A4';
+    summary.textContent = label;
+    htmx.trigger(document.body, 'printPreviewReady', { pages: sheets.length });
+  }
+
+  // La navigation htmx remplace la page sans recharger `body` : ses écouteurs
+  // partent avec elle, sans quoi chaque visite en ajouterait un jeu.
+  function detach() {
+    observer.disconnect();
+    pageFormat.remove();
+    document.body.removeEventListener('htmx:afterSettle', maybeReady);
+    document.body.removeEventListener('htmx:responseError', onError);
+    document.body.removeEventListener('htmx:sendError', onError);
+    window.removeEventListener('resize', scale);
+  }
+
+  // Prêt quand plus aucun fragment n'attend, polices comprises.
+  function maybeReady() {
+    if (!root.isConnected) { detach(); return; }
+    if (ready || !pages.querySelector('.print-sheet')) return;
+    if (pages.querySelector('.print-pending')) return;
+    ready = true;
+    document.fonts.ready.then(finish);
+  }
+
+  // Un fragment en échec ne bloque pas l'aperçu : il le dit à sa place.
+  function onError(evt) {
+    if (!root.isConnected) { detach(); return; }
+    var elt = evt.detail.elt;
+    if (elt === pages) { setState('error'); return; }
+    if (!pages.contains(elt) || !elt.classList.contains('print-pending')) return;
+    elt.classList.remove('print-pending');
+    elt.classList.add('print-failed');
+    elt.textContent = "Cette partie de la feuille n'a pas pu être chargée.";
+    maybeReady();
+  }
+
+  function setZoom(btn) {
+    zoom = btn.dataset.zoom;
+    root.querySelectorAll('[data-zoom]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b === btn));
+    });
+    scale();
+  }
+
+  // Choisir une équipe dans la cascade, c'est vouloir l'imprimer. L'équipe
+  // seule : compétition et saison se présélectionnent au chargement, et
+  // cocheraient l'option sans que le coach ait rien choisi.
+  function onChange(evt) {
+    if (evt.target.getAttribute('name') === 'other_team_id') {
+      form.querySelector('[name="content"][value="other"]').checked = true;
+    }
+    schedule();
+  }
+
+  observer.observe(pages, { childList: true, subtree: true });
+  form.addEventListener('change', onChange);
+  form.addEventListener('submit', function (e) { e.preventDefault(); });
+  document.body.addEventListener('htmx:afterSettle', maybeReady);
+  document.body.addEventListener('htmx:responseError', onError);
+  document.body.addEventListener('htmx:sendError', onError);
+  root.querySelectorAll('[data-zoom]').forEach(function (b) {
+    b.addEventListener('click', function () { setZoom(b); });
+  });
+  root.querySelector('[data-retry]').addEventListener('click', refresh);
+  printBtn.addEventListener('click', function () { window.print(); });
+  window.addEventListener('resize', scale);
+  refresh();
+})();
+</script>
+{% endblock %}

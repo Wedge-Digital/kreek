@@ -18,13 +18,16 @@ option, et « Imprimer » sort **les feuilles seules**, à taille réelle.
   classe racine (orientation, densité, encre, style) et les emplacements.
   Cette carte n'en pose qu'un : la fiche de mon équipe, deux fragments vides
   que remplissent la 597 et la 598.
-- **Déclenchement** : `hx-trigger="load, change from:#print-options delay:300ms"`,
-  `hx-include="#print-options"`.
+- **Déclenchement** : le script de la page appelle `htmx.ajax` au chargement
+  et à chaque `change` du formulaire (300 ms d'attente) — l'URL change selon la
+  seconde équipe choisie, qui va dans le chemin : un `hx-get` figé ne suffit
+  pas.
 - **CSS d'impression**, limité à la page :
   - pages nommées `@page a4-portrait` / `@page a4-landscape`, déclarées par
     les feuilles seules — le Ctrl+P des autres pages ne change pas ;
-  - `@media print` sur `body.team-print-page` : chrome du layout, options et
-    barre d'actions masqués, feuilles à taille réelle, une par page.
+  - `@media print` sous `.team-print` : options et barre d'actions masquées,
+    feuilles à taille réelle, une par page ; le chrome du layout est masqué
+    par `layout-app.css` (carte 595).
 - **Script de la page** (`document.currentScript.previousElementSibling`,
   fonctions ≤ 20 lignes) :
   - réduction des feuilles à la largeur de l'aperçu ;
@@ -38,8 +41,8 @@ option, et « Imprimer » sort **les feuilles seules**, à taille réelle.
 
 ## Checklist
 
-- [ ] Route, contrôleur, `PrintPreviewVm`, gabarit
-- [ ] Tests unitaires : désérialisation des options (valeur inconnue → erreur), classe racine produite
-- [ ] CSS : pages nommées, `@media print` limité à la page, aucune règle hors racine (axes 14, 15, 17)
-- [ ] Script : réduction, `printPreviewReady`, densité automatique, impression
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Route, contrôleur, `PrintPreviewVm`, gabarit
+- [x] Tests unitaires : désérialisation des options (valeur inconnue → erreur), classe racine produite
+- [x] CSS : pages nommées, `@media print` limité à la page, aucune règle hors racine (axes 14, 15, 17)
+- [x] Script : réduction, `printPreviewReady`, densité automatique, impression
+- [x] `make check-arch`, `make lint`, `make test`
