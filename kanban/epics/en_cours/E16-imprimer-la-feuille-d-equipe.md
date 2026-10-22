@@ -1,6 +1,9 @@
 # E16 — Imprimer la feuille d'équipe
 
-**État :** `ready_to_be_done` — seize cartes prêtes, aucune commencée.
+**État :** `en_cours` — 16/16 cartes livrées. Le critère « Terminé quand » est
+vérifié sous Chrome et Edge, pas sous Firefox : son PDF ajoute une page blanche
+après la dernière feuille (cf. README de la spec, hors périmètre). L'épic reste
+ouverte tant que ce défaut n'est pas tranché — corrigé, ou accepté par écrit.
 **Conception :** `docs/specs/impression-feuille-equipe/` — workflow feature,
 phases 1 à 8.
 **Maquette :** `assets/rawpages/html/app-team-print-modal.html`
@@ -41,9 +44,11 @@ option. « Imprimer » sort les feuilles seules ; le navigateur propose
 
 ## Ce qui commande l'ordre
 
-**Deux PR**, chacune utilisable seule et verte sur `lint`, `check-arch`, `test`
-et `e2e`. La première livre la page et les fiches d'équipe ; la seconde, les
-annexes et la feuille de match.
+**Deux PR** étaient prévues, chacune utilisable seule et verte sur `lint`,
+`check-arch`, `test` et `e2e` : la page et les fiches d'équipe, puis les annexes
+et la feuille de match. **La livraison s'est faite en une seule PR**, découpée en
+commits par lot : les deux moitiés ont été testées ensemble, et les séparer
+après coup n'apportait rien à la relecture.
 
 La **594 vient d'abord** : elle pose le contrôle de la seconde équipe avant
 qu'aucune route ne la reçoive. Puis la page (595), l'aperçu (596), ses deux
