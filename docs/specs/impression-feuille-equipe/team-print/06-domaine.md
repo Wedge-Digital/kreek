@@ -14,7 +14,7 @@ ajouts : une méthode sur `Team`, trois modules de fonctions pures.
 | R5 | Colonne SPP : le solde disponible | players (`spp_remaining`) |
 | R6 | Les journaliers sont imprimés, marqués comme tels | players, match_report |
 | R7 | Coups de pouce : palier de **sa** compétition, prix de **son** roster ; « — » si non disponible | references (règles existantes) |
-| R8 | Trésorerie : seulement sur ma fiche, si l'option est cochée | présentation |
+| R8 | Trésorerie : sur toutes les fiches, sans option (révisée au test manuel) | présentation |
 | R9 | Rappels du MVP et des fans, liste des météos : lus dans le corpus ; absents s'il ne les fournit pas | references |
 | R10 | Favori : la VE la plus forte ; à égalité, l'équipe à domicile — pour une autre équipe, mon équipe | match_report · fonction pure |
 | R11 | Petite monnaie imprimée : l'écart de VE, avec le rappel des dépenses du favori | match_report · fonction pure |

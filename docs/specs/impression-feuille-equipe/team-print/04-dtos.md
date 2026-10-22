@@ -99,7 +99,7 @@ pub struct TeamSheetHeadVm {
     pub competition_name: Option<String>,
     pub season_name: Option<String>,
     pub team_value_kpo: u32,            // team.team_value (R4)
-    pub treasury_kpo: Option<u32>,      // Some seulement si role = own et treasury (R8)
+    pub treasury_kpo: u32,              // sur toutes les fiches (R8, révisée)
     pub dedicated_fans: u8,
     pub alignable: u8,                  // presence.alignable() — domaine
     pub squad_size: u8,

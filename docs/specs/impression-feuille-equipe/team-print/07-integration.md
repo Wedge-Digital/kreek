@@ -71,8 +71,10 @@ faux, et il le reste.
 | `widgets/print-inducements.html` | match_report | coups de pouce, star players |
 | `widgets/print-match-sheet.html` | match_report | feuille de match |
 
-- `app-layout.html` : un `{% block body_class %}{% endblock %}` sur `<body>`,
-  vide par défaut ; la page d'impression y met `team-print-page`.
+- `layout-app.css` : sous `@media print`, `.app-layout:has(.team-print)`
+  masque son chrome et remet à plat `height` et `overflow` — sans quoi
+  l'impression s'arrêterait à la première page. `app-layout.html` ne change
+  pas (cf. `03-back.md`, décision 4).
 - CSS : `pages/team-print.css` (page, aperçu, feuilles, `@media print`, pages
   nommées `a4-portrait` / `a4-landscape`) et une feuille par fragment sous
   `widgets/`, chacune nommée d'après sa racine. Toutes inscrites dans

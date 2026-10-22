@@ -54,7 +54,7 @@ corpus (`docs/reference-data-schema.md`) ne les porte : ils arrivent dans un
 | Équipes | mon équipe seule · avec le prochain adversaire · avec une autre équipe de l'espace |
 | Pages en plus | compétences · coups de pouce disponibles · star players disponibles · feuille de match (×2 en option) |
 | Mise en page | orientation · densité · encre · style (Sobre, Officielle, Terrain) |
-| Sur les fiches | joueurs indisponibles (afficher, barrer, masquer) · ma trésorerie · lignes vides jusqu'à 16 |
+| Sur les fiches | joueurs indisponibles (afficher, barrer, masquer) · lignes vides jusqu'à 16 |
 
 ## Hors périmètre
 
@@ -69,6 +69,38 @@ corpus (`docs/reference-data-schema.md`) ne les porte : ils arrivent dans un
 - La fiche d'équipe code en dur le prix du staff (`StaffVm` : apothicaire 50,
   assistant 10, pom-pom 10) alors que la VE les lit dans le catalogue du roster.
   L'impression prend le catalogue ; la fiche reste à aligner.
+- **Firefox imprime une page blanche après la dernière feuille.** Chromium (Chrome,
+  Edge) sort exactement les feuilles de l'aperçu, vérifié par le test e2e E6.
+  Deux correctifs n'ont pas suffi (feuilles de 2 px sous la hauteur du papier,
+  `html` et `body` en hauteur automatique à l'impression) ; le défaut n'a pas été
+  reproduit hors de la boîte d'impression de Firefox.
+
+## Écarts relevés à l'implémentation
+
+La conception (phases 2 à 7) a tenu ; ces points ont été ajustés en codant, et
+les fichiers de phase ou les cartes concernés le disent.
+
+- **Masquer le chrome à l'impression** : par `layout-app.css`
+  (`.app-layout:has(.team-print)`), et non par un bloc `body_class` — la
+  navigation htmx ne recharge jamais `body` (`03-back.md`, décision 4).
+- **L'aperçu se recharge par le script de la page** (`htmx.ajax`), et non par
+  un `hx-get` figé : l'URL change avec la seconde équipe, qui va dans le chemin.
+- **Fragments multi-pages** : l'annexe des compétences, les coups de pouce et
+  la feuille de match rendent **eux-mêmes** leurs feuilles (`print-slot` ›
+  `print-frame` › `print-sheet`) ; l'hôte ne pose que l'emplacement. Seule la
+  fiche d'équipe est une feuille ouverte par l'hôte. Ces classes sont le
+  contrat entre la page de `teams` et les fragments des autres BCs.
+- **Date et numéro de page** : posés par le script de la page sur toutes les
+  feuilles, quel que soit le BC qui les a rendues.
+- **Le tableau des joueurs ne reçoit pas la densité** : elle ne joue qu'en CSS.
+- **Les règles d'achat rappelées lisent les constantes du code** : le domaine
+  de `match_report` expose `MAX_TREASURY_TOP_UP`, `MAX_STAR_PLAYERS` et
+  `MAX_MERCENARIES`, et `init_temp_players_use_case` `JOURNEYMEN_FILL_TO` —
+  des littéraux nommés, valeurs inchangées.
+- **`NextOpponent` porte un `Venue`** et non un booléen (axe 6).
+- **Les méthodes ajoutées aux ports existants** de `match_report`
+  (`list_alignable_players`, `find_team_season`) ont un corps par défaut
+  neutre : les cinq doublures de test de ces ports n'ont pas à changer.
 
 ## Progression par page
 

@@ -90,7 +90,7 @@ Aucune action en écriture : la page ne fait que des `GET`.
 | R5 | Colonne SPP : le **solde disponible** (`spp_remaining`), pas le cumul gagné. |
 | R6 | Les journaliers sont imprimés dans la liste des joueurs, marqués comme tels. |
 | R7 | Coups de pouce : un catalogue par équipe, celui du palier de **sa** compétition, au prix de son roster. |
-| R8 | La trésorerie n'apparaît que sur la fiche de mon équipe, et seulement si l'option est cochée. |
+| R8 | La trésorerie s'imprime sur toutes les fiches, sans option : elle est déjà publique sur la fiche d'équipe. *(Révisée au test manuel : il y avait une option, réservée à ma fiche.)* |
 | R9 | Rappels du MVP et des fans, et liste des météos : lus dans `match_reminders_fr.json`, absents si le corpus ne le fournit pas. |
 
 ## Découpage en deux PR

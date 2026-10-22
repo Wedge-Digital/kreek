@@ -37,10 +37,14 @@ Chaque fragment vit dans son BC : `widgets/<nom>_widget.rs`,
    au contrôleur `inducement_selector_controller.rs:183-188`, rejoint le
    domaine de references à côté de `est_disponible_pour`, par copier-coller.
    Le sélecteur et l'impression appliquent la même règle.
-4. **Masquer le chrome à l'impression** : `app-layout.html` reçoit un
-   `{% block body_class %}` vide ; seule la page d'impression le remplit, et
-   son CSS vise `body.team-print-page`. Un sélecteur `body:has(…)` sortirait de
-   la racine du widget (axe 17).
+4. **Masquer le chrome à l'impression** : c'est `layout-app.css`, feuille
+   globale du layout, qui s'efface sous `@media print` quand la page porte une
+   vue d'impression (`.app-layout:has(.team-print)`). *Révisé en
+   implémentation (carte 595)* : la décision initiale — un
+   `{% block body_class %}` sur `<body>` — ne tenait pas, la navigation htmx ne
+   remplaçant que `#app-content` : la classe n'aurait suivi qu'un chargement
+   complet. Le layout efface son propre chrome, et le gabarit du layout reste
+   intact.
 5. **Lecture seule** : les services de lecture de `use_cases/` portent
    `// arch:no-instrument — <motif>`.
 6. **Corpus** : `match_reminders_fr.json` est lu par un helper de lecture
