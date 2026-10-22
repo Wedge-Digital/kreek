@@ -9,6 +9,10 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
+/// Le nombre de joueurs qu'une équipe aligne : les journaliers comblent jusque-là.
+/// Publique pour que la page des coups de pouce la rappelle (carte 607).
+pub const JOURNEYMEN_FILL_TO: usize = 11;
+
 #[derive(Debug)]
 pub struct InitTempPlayersCommand {
     pub match_report_id: MatchReportId,
@@ -430,7 +434,7 @@ async fn collect_journeymen(
         .count_available_players(&team_id.to_string())
         .await
         .map_err(|e| InitTempPlayersError::PlayerCountUnavailable(e))?;
-    let n = 11usize.saturating_sub(count);
+    let n = JOURNEYMEN_FILL_TO.saturating_sub(count);
     if n == 0 {
         return Ok(vec![]);
     }

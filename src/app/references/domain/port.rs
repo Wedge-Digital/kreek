@@ -1,6 +1,6 @@
 use crate::app::references::domain::models::{
-    Inducement, Keyword, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule,
-    SppScale, Staff, StarPlayer, Team,
+    Inducement, Keyword, League, MatchReminders, PlayerPosition, Skill, SkillCategory,
+    SkillCostLevel, SpecialRule, SppScale, Staff, StarPlayer, Team,
 };
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementDefinition;
 use crate::app::shared_kernel::bloodbowl::roster_definition::RosterDefinition;
@@ -42,6 +42,12 @@ pub trait IReferenceRepository: Send + Sync {
     /// connaît le roster des deux camps et rien de leurs lignes de poste.
     /// Un barème absent retombe sur `normal`, comme pour la ligne de poste.
     fn spp_scale_for_roster(&self, roster_uid: &str) -> SppScale;
+
+    /// Les rappels de match du corpus (carte 604) — vides si le fichier
+    /// optionnel `match_reminders_fr.json` est absent.
+    fn match_reminders(&self) -> MatchReminders {
+        MatchReminders::default()
+    }
 
     // ── Valeur ajoutée par une amélioration ─────────────────────────────────────
     // Unité : kPo, comme partout ailleurs dans le back. Lue dans

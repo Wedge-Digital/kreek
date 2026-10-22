@@ -24,6 +24,6 @@ quelconques.
 
 ## Checklist
 
-- [ ] `underdog.rs` + tests : plus forte à domicile · à l'extérieur · égalité ; écart dans les deux sens · nul
-- [ ] L'agrégat délègue ; ses tests existants restent verts sans modification
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] `underdog.rs` + tests : plus forte à domicile · à l'extérieur · égalité ; écart dans les deux sens · nul
+- [x] L'agrégat délègue ; ses tests existants restent verts sans modification
+- [x] `make check-arch`, `make lint`, `make test`

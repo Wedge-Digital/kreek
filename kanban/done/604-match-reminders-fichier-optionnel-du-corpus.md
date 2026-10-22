@@ -27,8 +27,8 @@ aujourd'hui — démarre comme avant.
 
 ## Checklist
 
-- [ ] Lecture optionnelle + tests : absent → vide · présent → lu · mal formé → erreur nommant le fichier
-- [ ] Fichier fictif ; `load_for_tests` le lit
-- [ ] Doc du schéma : nouveau fichier et correction des obligatoires
-- [ ] À signaler dans la PR : les vrais textes restent à ajouter au catalogue de production
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Lecture optionnelle + tests : absent → vide · présent → lu · mal formé → erreur nommant le fichier
+- [x] Fichier fictif ; `load_for_tests` le lit
+- [x] Doc du schéma : nouveau fichier et correction des obligatoires
+- [x] À signaler dans la PR : les vrais textes restent à ajouter au catalogue de production
+- [x] `make check-arch`, `make lint`, `make test`

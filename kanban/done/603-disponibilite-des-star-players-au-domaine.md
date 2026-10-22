@@ -23,7 +23,7 @@ règle doit vivre au domaine, à côté de `est_disponible_pour`.
 
 ## Checklist
 
-- [ ] Fonction + tests : liste vide · roster présent · roster absent
-- [ ] Le contrôleur l'appelle ; plus aucune copie de la condition (vérifier les consommateurs, règle 4)
-- [ ] Tests existants du sélecteur verts
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Fonction + tests : liste vide · roster présent · roster absent
+- [x] Le contrôleur l'appelle ; plus aucune copie de la condition (vérifier les consommateurs, règle 4)
+- [x] Tests existants du sélecteur verts
+- [x] `make check-arch`, `make lint`, `make test`
