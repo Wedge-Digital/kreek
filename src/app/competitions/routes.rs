@@ -41,6 +41,11 @@ pub mod path {
     /// compétition s'y résout côté serveur, et l'y mettre laisserait un admin
     /// d'une autre compétition la forcer (cf. `team_matches_widget.rs`).
     pub const TEAM_MATCHES_WIDGET: &str = "/app/{space_id}/competitions/teams/{team_id}/matches";
+    /// L'option « prochain adversaire » de la page « Imprimer » (carte 599).
+    /// Même règle que les matchs d'une équipe : seul le `team_id` est dans le
+    /// chemin, la saison se résout depuis l'inscription.
+    pub const TEAM_PRINT_NEXT_OPPONENT: &str =
+        "/app/{space_id}/competitions/teams/{team_id}/print/next-opponent";
     pub const COMPETITION_ADMIN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
     pub const COMPETITION_ADMIN_ENROLLMENTS: &str =
@@ -208,6 +213,12 @@ impl Routes {
     }
     pub fn team_matches_widget(&self, sid: &str, team_id: &str) -> String {
         path::TEAM_MATCHES_WIDGET
+            .replace("{space_id}", sid)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn team_print_next_opponent(&self, sid: &str, team_id: &str) -> String {
+        path::TEAM_PRINT_NEXT_OPPONENT
             .replace("{space_id}", sid)
             .replace("{team_id}", team_id)
     }

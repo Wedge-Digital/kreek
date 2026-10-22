@@ -32,7 +32,7 @@ exemplaires.
 
 ## Checklist
 
-- [ ] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
-- [ ] Tests unitaires : favori / outsider selon les VE · égalité · sans adversaire · `round_id` d'une autre saison ignoré · rappels absents · barème par roster
-- [ ] Tient sur une page A4 en portrait et en paysage
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
+- [x] Tests unitaires : favori / outsider selon les VE · égalité · sans adversaire · `round_id` d'une autre saison ignoré · rappels absents · barème par roster
+- [x] Tient sur une page A4 en portrait et en paysage
+- [x] `make check-arch`, `make lint`, `make test`

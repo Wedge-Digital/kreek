@@ -20,6 +20,12 @@ use crate::app::match_report::io::web::widgets::action_panel_widget::{
     get_action_panel_step3, get_action_panel_step4,
 };
 use crate::app::match_report::io::web::widgets::mercenary_selector_widget::get_mercenary_selector;
+use crate::app::match_report::io::web::widgets::print_inducements_widget::{
+    get_print_inducements, get_print_inducements_with,
+};
+use crate::app::match_report::io::web::widgets::print_match_sheet_widget::{
+    get_print_match_sheet, get_print_match_sheet_with,
+};
 use crate::app::match_report::io::web::widgets::temp_player_selector_widget::{
     get_temp_players_step3, get_temp_players_step4,
 };
@@ -35,6 +41,17 @@ use axum::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
+        // L'impression (épic E16) : lecture seule.
+        .route(path::PRINT_INDUCEMENTS, get(get_print_inducements))
+        .route(
+            path::PRINT_INDUCEMENTS_WITH,
+            get(get_print_inducements_with),
+        )
+        .route(path::PRINT_MATCH_SHEET, get(get_print_match_sheet))
+        .route(
+            path::PRINT_MATCH_SHEET_WITH,
+            get(get_print_match_sheet_with),
+        )
         .route(
             path::MATCH_REPORT_NEW,
             get(new_match_report).post(create_match_report),

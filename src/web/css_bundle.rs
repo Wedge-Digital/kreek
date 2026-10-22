@@ -126,6 +126,8 @@ const FEUILLES_APP: &[&str] = &[
     "widgets/dis-page.css",
     "widgets/inducement-grid.css",
     "widgets/inducement-selector.css",
+    "widgets/match-report-print-inducements.css",
+    "widgets/match-report-print-sheet.css",
     "widgets/merco-selector.css",
     "widgets/move-pairing.css",
     "widgets/my-teams-widget.css",

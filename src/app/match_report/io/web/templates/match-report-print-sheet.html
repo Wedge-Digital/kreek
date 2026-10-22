@@ -1,0 +1,98 @@
+{# La feuille de match imprimée (carte 608) — une page A4, deux colonnes.
+
+   Le fragment rend sa feuille (`print-slot` › `print-frame` › `print-sheet`),
+   contrat des fragments d'impression de la page « Imprimer » de `teams`.
+   Rappels du MVP, des fans et météos : corpus de la ligue (R9), absents s'il
+   ne les fournit pas. Gains, bonus et plafond des fans : règles de kreek.
+   Feuille du contenu : `widgets/match-report-print-sheet.css`, racine
+   `.match-report-print-sheet`. #}
+<div class="print-slot">
+  <span class="print-slot-label">Feuille de match{% if let Some(c) = vm.copy_label %} ({{ c }}){% endif %}</span>
+  <div class="print-frame">
+    <section class="print-sheet">
+      <div class="match-report-print-sheet" hx-disinherit="*">
+        <div class="match-report-print-sheet-head">
+{% for col in vm.columns %}
+          <div class="match-report-print-sheet-team match-report-print-sheet-team--{% if loop.first %}home{% else %}away{% endif %}">
+            {% if let Some(name) = col.name %}
+            <span class="match-report-print-sheet-team-name">{{ name }}</span>
+            {% else %}
+            <span class="match-report-print-sheet-team-name match-report-print-sheet-write"></span>
+            {% endif %}
+            <span class="match-report-print-sheet-team-sub">{% if let Some(sub) = col.subtitle %}{{ sub }}{% else %}Équipe · coach · VE{% endif %}</span>
+          </div>
+          {% if loop.first %}<div class="match-report-print-sheet-score"><i class="match-report-print-sheet-box match-report-print-sheet-box--big"></i>–<i class="match-report-print-sheet-box match-report-print-sheet-box--big"></i></div>{% endif %}
+          {% endfor %}
+        </div>
+        <div class="match-report-print-sheet-meta">
+          <span><b>Feuille de match</b>{% if let Some(r) = vm.round_label %} · {{ r }}{% else %} · journée ____ · date ____{% endif %}{% if let Some(c) = vm.copy_label %} · {{ c }}{% endif %}</span>
+          {% if vm.reminders.weather.is_empty() %}
+          <span class="match-report-print-sheet-line match-report-print-sheet-weather"><b>Météo</b><span class="match-report-print-sheet-fill"></span></span>
+          {% else %}
+          <span class="match-report-print-sheet-chips"><b>Météo</b>{% for m in vm.reminders.weather %}<span><i class="match-report-print-sheet-box"></i>{{ m }}</span>{% endfor %}</span>
+          {% endif %}
+        </div>
+        <div class="match-report-print-sheet-cols">
+{% for col in vm.columns %}
+          <div class="match-report-print-sheet-col">
+            <div class="match-report-print-sheet-col-title">{% if let Some(name) = col.name %}{{ name }}{% else %}Adversaire{% endif %}</div>
+            <div class="match-report-print-sheet-block match-report-print-sheet-block--pre">
+              <div class="match-report-print-sheet-block-title">Avant le match</div>
+              <div class="match-report-print-sheet-line"><span>Fans dévoués {% if let Some(f) = col.dedicated_fans %}{{ f }}{% else %}…{% endif %} + D3</span><i class="match-report-print-sheet-box"></i><span>= fans</span><i class="match-report-print-sheet-box"></i></div>
+              {% match col.money %}
+              {% when MoneyStatus::TopDog { own_tv, other_tv } %}
+              <div class="match-report-print-sheet-money"><b>Favori</b> (VE {{ own_tv }} contre {{ other_tv }}) : il achète en premier, sur sa trésorerie.</div>
+              {% when MoneyStatus::Underdog { petty_cash_kpo } %}
+              <div class="match-report-print-sheet-money"><b>Outsider</b> : petite monnaie de <b>{{ petty_cash_kpo }} kPo</b>, plus ce que le favori dépense.</div>
+              {% when MoneyStatus::Unknown %}
+              <div class="match-report-print-sheet-line"><span>Favori ou outsider · petite monnaie</span><span class="match-report-print-sheet-fill"></span><span>kPo</span></div>
+              {% endmatch %}
+              <div class="match-report-print-sheet-line"><span>Coups de pouce</span><span class="match-report-print-sheet-fill"></span></div>
+              <div class="match-report-print-sheet-line"><i class="match-report-print-sheet-box"></i><span>Star players</span><span class="match-report-print-sheet-fill"></span></div>
+              <div class="match-report-print-sheet-line"><i class="match-report-print-sheet-box"></i><span>Mercenaires</span><span class="match-report-print-sheet-fill"></span></div>
+              <div class="match-report-print-sheet-line"><i class="match-report-print-sheet-box"></i><span>Journaliers</span><span class="match-report-print-sheet-fill"></span></div>
+              <div class="match-report-print-sheet-line"><span>Total dépensé</span><span class="match-report-print-sheet-fill"></span><span>kPo</span></div>
+            </div>
+            <table class="match-report-print-sheet-tally">
+              <thead><tr><th>N°</th><th>Joueur</th><th>TD</th><th>Passe</th><th>Lancer</th><th>Int.</th><th>Sortie</th><th>Agr.</th><th>Blessé</th></tr></thead>
+              <tbody>
+                {% for p in col.players %}
+                <tr>
+                  <td class="match-report-print-sheet-n">{{ p.jersey }}</td>
+                  <td class="match-report-print-sheet-name">{{ p.name }}{% if p.is_journeyman %} <span class="match-report-print-sheet-tag">J</span>{% endif %}</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                {% endfor %}
+                {% for _ in 0..col.blank_rows %}
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <div class="match-report-print-sheet-legend">
+              {% if let Some(s) = col.spp %}SPP : TD {{ s.touchdown }} · Sortie {{ s.casualty }} · Int. {{ s.interception }} · Passe ou lancer {{ s.pass }} · MVP {{ s.mvp }}{% else %}SPP : selon le barème de l'équipe.{% endif %}
+              · J : journalier
+            </div>
+            <div class="match-report-print-sheet-block">
+              <div class="match-report-print-sheet-block-title">Après le match</div>
+              <div class="match-report-print-sheet-line"><span>MVP · nommés</span><span class="match-report-print-sheet-fill"></span><span>dé</span><i class="match-report-print-sheet-box"></i><span>→ n°</span><i class="match-report-print-sheet-box"></i></div>
+              <div class="match-report-print-sheet-line"><span>Gains = (</span><i class="match-report-print-sheet-box"></i><span>+</span><i class="match-report-print-sheet-box"></i><span>) ÷ 2 × 10 +</span><i class="match-report-print-sheet-box"></i><span>TD × 10 +</span><i class="match-report-print-sheet-box"></i><span>=</span><span class="match-report-print-sheet-fill"></span><span>kPo</span></div>
+              <div class="match-report-print-sheet-line"><span>Fans dévoués</span><span class="match-report-print-sheet-chips"><span><i class="match-report-print-sheet-box"></i>−2</span><span><i class="match-report-print-sheet-box"></i>−1</span><span><i class="match-report-print-sheet-box"></i>0</span><span><i class="match-report-print-sheet-box"></i>+1</span><span><i class="match-report-print-sheet-box"></i>+2</span></span></div>
+              <div class="match-report-print-sheet-line"><i class="match-report-print-sheet-box"></i><span>Bonus de non-temporisation : + {{ vm.no_stalling_bonus_kpo }} kPo</span></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="match-report-print-sheet-rules">
+          {% if let Some(t) = vm.reminders.mvp %}<div><b>MVP.</b> {{ t }}</div>{% endif %}
+          <div><b>Gains.</b> Fans des deux équipes additionnés, divisés par 2 (arrondi inférieur), multipliés par 10 kPo, plus 10 kPo par touchdown marqué. Le bonus de non-temporisation ajoute {{ vm.no_stalling_bonus_kpo }} kPo.</div>
+          {% if let Some(t) = vm.reminders.fans %}<div><b>Fans dévoués.</b> {{ t }} Jamais sous 0 ni au-dessus de 20.</div>{% endif %}
+          <div><b>Actions.</b> Un trait par action. Blessé : C commotion · A amoché · BS blessure sérieuse · S séquelle (préciser la caractéristique) · M mort.</div>
+        </div>
+      </div>
+      <footer class="print-sheet-foot">
+        <span class="print-sheet-stamp"></span>
+        <span class="print-sheet-page"></span>
+      </footer>
+    </section>
+  </div>
+</div>

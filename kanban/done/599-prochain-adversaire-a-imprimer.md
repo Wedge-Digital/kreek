@@ -27,7 +27,7 @@ la seconde fiche dans l'aperçu.
 
 ## Checklist
 
-- [ ] `next_opponent` + tests : en cours avant à venir · joués ignorés · position la plus basse d'abord · aucun match · équipe absente des appariements
-- [ ] Service, fragment, gabarit
-- [ ] Route de l'aperçu à deux équipes
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] `next_opponent` + tests : en cours avant à venir · joués ignorés · position la plus basse d'abord · aucun match · équipe absente des appariements
+- [x] Service, fragment, gabarit
+- [x] Route de l'aperçu à deux équipes
+- [x] `make check-arch`, `make lint`, `make test`

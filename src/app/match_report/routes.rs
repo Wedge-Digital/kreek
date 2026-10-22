@@ -37,12 +37,41 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/recap/publish";
     pub const MATCH_REPORT_RECAP_UNPUBLISH: &str =
         "/app/{space_id}/match-report/{match_report_id}/recap/unpublish";
+    // ── Impression (épic E16) ─────────────────────────────────────────────
+    // `print` est un segment fixe : il prime sur `{match_report_id}`. La
+    // seconde équipe est dans le chemin, contrôlée par `space_scope` (carte 594).
+    pub const PRINT_INDUCEMENTS: &str = "/app/{space_id}/match-report/print/inducements/{team_id}";
+    pub const PRINT_INDUCEMENTS_WITH: &str =
+        "/app/{space_id}/match-report/print/inducements/{team_id}/with/{other_team_id}";
+    pub const PRINT_MATCH_SHEET: &str = "/app/{space_id}/match-report/print/sheet/{team_id}";
+    pub const PRINT_MATCH_SHEET_WITH: &str =
+        "/app/{space_id}/match-report/print/sheet/{team_id}/with/{other_team_id}";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Routes;
 
 impl Routes {
+    pub fn print_inducements(&self, space_id: &str, team_id: &str, other: Option<&str>) -> String {
+        print_url(
+            path::PRINT_INDUCEMENTS,
+            path::PRINT_INDUCEMENTS_WITH,
+            space_id,
+            team_id,
+            other,
+        )
+    }
+
+    pub fn print_match_sheet(&self, space_id: &str, team_id: &str, other: Option<&str>) -> String {
+        print_url(
+            path::PRINT_MATCH_SHEET,
+            path::PRINT_MATCH_SHEET_WITH,
+            space_id,
+            team_id,
+            other,
+        )
+    }
+
     pub fn new_match_report(&self, space_id: &str) -> String {
         path::MATCH_REPORT_NEW.replace("{space_id}", space_id)
     }
@@ -186,4 +215,20 @@ impl Routes {
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }
+}
+
+/// L'URL d'un fragment d'impression, à une ou deux équipes.
+fn print_url(
+    seule: &str,
+    avec: &str,
+    space_id: &str,
+    team_id: &str,
+    other: Option<&str>,
+) -> String {
+    let base = match other {
+        Some(o) => avec.replace("{other_team_id}", o),
+        None => seule.to_string(),
+    };
+    base.replace("{space_id}", space_id)
+        .replace("{team_id}", team_id)
 }

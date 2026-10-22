@@ -29,6 +29,6 @@ des star players qu'elle peut engager.
 
 ## Checklist
 
-- [ ] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
-- [ ] Tests unitaires : prix réduit pour un roster · « — » pour un coup de pouce réservé · palier introuvable · star player filtré par roster · union des uids de deux paliers
-- [ ] `make check-arch`, `make lint`, `make test`
+- [x] Service, contrôleur, gabarit, feuille CSS inscrite au bundle
+- [x] Tests unitaires : prix réduit pour un roster · « — » pour un coup de pouce réservé · palier introuvable · star player filtré par roster · union des uids de deux paliers
+- [x] `make check-arch`, `make lint`, `make test`

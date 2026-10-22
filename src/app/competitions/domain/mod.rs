@@ -11,6 +11,7 @@ pub mod error;
 pub mod group_repository_port;
 pub mod match_day;
 pub mod match_day_repository_port;
+pub mod next_opponent;
 pub mod notification_delivery;
 pub mod notification_schedule;
 pub mod season_repository_port;
