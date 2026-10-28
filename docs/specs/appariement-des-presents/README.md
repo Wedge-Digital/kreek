@@ -33,4 +33,4 @@ Spec de la page : `calendrier/`.
 
 | Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| Calendrier · appariement des présents | ✅ | ✅ | ✅ | | | | | |
+| Calendrier · appariement des présents | ✅ | ✅ | ✅ | ✅ | | | | |
