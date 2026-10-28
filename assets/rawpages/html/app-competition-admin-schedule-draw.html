@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Calendrier · Tirage des présents — Blood Bowl Club</title>
+  <link rel="stylesheet" href="shared.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    /* ── Layout ── */
+    .admin-container {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--p2);
+      padding-bottom: var(--p4);
+    }
+
+    /* ── Banner (shared) ── */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+      border-radius: 12px; padding: var(--p2);
+      display: flex; align-items: center; gap: var(--p2);
+    }
+    .admin-banner-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .admin-banner-info { flex: 1; }
+    .admin-banner-title { font-family: var(--font-title); font-size: var(--h4); font-weight: 700; color: var(--white); }
+    .admin-banner-sub { font-size: var(--text-tiny); color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .admin-banner-badge {
+      background: rgba(255,107,53,0.25); color: var(--orange);
+      font-size: var(--text-tiny); font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+      border: 1px solid rgba(255,107,53,0.4);
+    }
+    .admin-banner-back {
+      font-size: var(--text-tiny); color: rgba(255,255,255,0.5);
+      text-decoration: none; margin-top: 4px; display: inline-block;
+    }
+    .admin-banner-back:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── Tabs (shared) ── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: var(--white); border-radius: 10px;
+      padding: 6px; border: 1px solid var(--dark-5);
+    }
+    .admin-tab {
+      flex: 1; text-align: center;
+      padding: 8px var(--p1); border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      color: var(--dark-3); cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .admin-tab:hover  { background: var(--dark-6); color: var(--dark-1); }
+    .admin-tab.active { background: var(--main-blue); color: var(--white); }
+
+    /* ── Actions bar ── */
+    .actions-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+    }
+    .actions-bar-left { display: flex; gap: var(--p1); align-items: center; }
+    .actions-bar-right { display: flex; gap: 8px; }
+
+    /* ── Info note ── */
+    .info-note {
+      font-size: var(--text-tiny); color: var(--dark-3);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .info-note-icon { font-size: 14px; }
+
+    /* ── Schedule split layout ── */
+    .schedule-layout {
+      display: flex;
+      gap: var(--p2);
+      min-height: 600px;
+    }
+
+    /* ── Round sidebar (left) ── */
+    .round-sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: var(--white);
+      border-radius: 12px;
+      padding: var(--p1);
+    }
+    .round-sidebar-title {
+      font-family: var(--font-title); font-size: var(--h5);
+      font-weight: 700; color: var(--dark-1);
+      padding: 0 8px var(--p1) 8px;
+      border-bottom: 2px solid var(--dark-5);
+      margin-bottom: 4px;
+    }
+    .round-sidebar-list {
+      display: flex; flex-direction: column; gap: 3px;
+      overflow-y: auto; flex: 1;
+    }
+
+    .round-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.12s;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+    .round-item:hover { background: var(--dark-7); }
+    .round-item.active {
+      background: rgba(0,48,73,0.06);
+      border-color: var(--main-blue);
+    }
+
+    .round-item-num {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title); font-weight: 700; font-size: 12px;
+      flex-shrink: 0;
+    }
+    .round-item-num--validated { background: rgba(98,149,132,0.12); color: var(--green); }
+    .round-item-num--in-progress { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+    .round-item-num--upcoming { background: var(--dark-6); color: var(--dark-3); }
+    .round-item-num--rest { background: rgba(255,215,0,0.15); color: #9A7800; }
+
+    .round-item-info { flex: 1; min-width: 0; }
+    .round-item-name {
+      font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1);
+    }
+    .round-item.active .round-item-name { color: var(--main-blue); }
+    .round-item-date {
+      font-size: 11px; color: var(--dark-4); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .round-item-badge {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .round-item-badge--warn { background: var(--orange); }
+
+    .round-sidebar-add {
+      display: flex; flex-direction: column; gap: 4px;
+      padding-top: var(--p1);
+      border-top: 1px solid var(--dark-5);
+      margin-top: 4px;
+    }
+    .btn-sidebar {
+      padding: 8px 12px; border-radius: 7px;
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-2);
+      text-align: left; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-sidebar:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .btn-sidebar-icon { font-size: 14px; }
+
+    /* ── Round detail (right) ── */
+    .round-detail {
+      flex: 1;
+      background: var(--white);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .round-detail-head {
+      padding: var(--p2);
+      border-bottom: 2px solid var(--dark-5);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .round-detail-head-left { display: flex; flex-direction: column; gap: 6px; }
+    .round-detail-name {
+      font-family: var(--font-title); font-size: var(--h4);
+      font-weight: 700; color: var(--dark-1);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .round-detail-meta {
+      display: flex; gap: var(--p2); font-size: var(--text-tiny); color: var(--dark-3);
+    }
+    .round-detail-meta strong { color: var(--dark-2); }
+    .round-detail-head-right { display: flex; gap: 8px; }
+
+    .round-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 12px;
+    }
+    .round-badge--upcoming { background: rgba(0,48,73,0.08); color: var(--main-blue); }
+    .round-badge--in-progress { background: rgba(98,149,132,0.12); color: var(--green); }
+    .round-badge--completed { background: var(--dark-6); color: var(--dark-3); }
+    .round-badge--rest { background: rgba(255,215,0,0.15); color: #9A7800; }
+    .round-badge--validated { background: rgba(98,149,132,0.12); color: var(--green); }
+
+    .btn-outline-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-2);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-outline-sm:hover { border-color: var(--main-blue); color: var(--main-blue); }
+
+    .btn-danger-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--white); color: var(--dark-3);
+      font-size: var(--text-tiny); font-weight: 600;
+      cursor: pointer; border: 1px solid var(--dark-5);
+      transition: all 0.15s;
+    }
+    .btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: rgba(224,32,32,0.04); }
+
+    /* ── Date config ── */
+    .round-date-config {
+      padding: var(--p1) var(--p2);
+      background: var(--dark-7);
+      border-bottom: 1px solid var(--dark-5);
+      display: flex; align-items: center; gap: var(--p2);
+      font-size: var(--text-tiny);
+    }
+    .date-config-label { font-weight: 600; color: var(--dark-2); flex-shrink: 0; }
+
+    /* ── Round match actions ── */
+    .round-match-actions {
+      padding: var(--p1) var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+    }
+
+    /* ── Add match form ── */
+    .add-match-form {
+      padding: var(--p2);
+      background: var(--dark-7);
+      border-bottom: 1px solid var(--dark-5);
+    }
+    .add-match-row {
+      display: flex; align-items: flex-end; gap: var(--p1);
+    }
+    .add-match-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .add-match-label {
+      font-size: 11px; font-weight: 600; color: var(--dark-3);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .ts-team-option { padding: 4px 0; }
+    .ts-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .ts-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
+
+    .add-match-vs {
+      font-size: var(--h5); font-weight: 700; color: var(--dark-4);
+      padding-bottom: 12px; flex-shrink: 0;
+    }
+    .btn-add-match {
+      flex-shrink: 0;
+      padding: 10px 20px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer;
+      border: 2px solid var(--main-blue);
+      transition: opacity 0.15s;
+    }
+    .btn-add-match:hover { opacity: 0.9; }
+    .add-match-cancel {
+      flex-shrink: 0;
+      padding: 10px 20px;
+    }
+
+    .date-config-mode {
+      display: flex; gap: 4px;
+    }
+    .date-mode-btn {
+      padding: 4px 12px; border-radius: 5px;
+      font-size: 11px; font-weight: 600;
+      border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-3);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .date-mode-btn.active { background: var(--main-blue); color: var(--white); border-color: var(--main-blue); }
+    .date-mode-btn:hover:not(.active) { border-color: var(--dark-4); color: var(--dark-1); }
+
+    .date-input {
+      padding: 5px 10px; border: 1px solid var(--dark-5);
+      border-radius: 6px; font-size: var(--text-tiny);
+      color: var(--dark-1); font-family: inherit;
+      outline: none;
+    }
+    .date-input:focus { border-color: var(--main-blue); }
+    .date-sep { color: var(--dark-4); }
+
+    /* ── Match list ── */
+    .round-body {
+      padding: var(--p2);
+      flex: 1;
+    }
+    .match-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .match-row {
+      display: flex; align-items: center;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--dark-6);
+      transition: background 0.1s;
+    }
+    .match-row:hover { background: var(--dark-7); }
+
+    .match-home {
+      flex: 1; text-align: right;
+      font-size: var(--text-tiny); font-weight: 500; color: var(--dark-1);
+      padding-right: 12px;
+    }
+    .match-score {
+      font-family: var(--font-title); font-size: var(--text-small);
+      font-weight: 700; color: var(--dark-0);
+      min-width: 60px; text-align: center;
+      flex-shrink: 0;
+    }
+    .match-score--pending {
+      font-family: var(--font-body); font-size: var(--text-tiny);
+      font-weight: 600; color: var(--dark-4);
+    }
+    .match-away {
+      flex: 1; text-align: left;
+      font-size: var(--text-tiny); font-weight: 500; color: var(--dark-1);
+      padding-left: 12px;
+    }
+    .match-group-tag {
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px;
+      background: var(--dark-6); color: var(--dark-3);
+      margin-left: 8px; flex-shrink: 0;
+    }
+    .match-actions {
+      display: flex; gap: 4px; flex-shrink: 0; margin-left: 10px;
+    }
+    .match-action-btn {
+      width: 26px; height: 26px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; border: 1px solid var(--dark-5);
+      background: var(--white); color: var(--dark-3);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .match-action-btn:hover { border-color: var(--main-blue); color: var(--main-blue); }
+    .match-action-btn--danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Rest content ── */
+    .rest-content {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; padding: var(--p4) var(--p2);
+      color: #9A7800;
+    }
+    .rest-icon { font-size: 40px; opacity: 0.5; }
+    .rest-text { font-size: var(--text-tiny); }
+
+    /* ── Match count summary ── */
+    .match-summary {
+      display: flex; gap: var(--p2);
+      padding: var(--p1) var(--p2);
+      border-top: 1px solid var(--dark-5);
+      font-size: var(--text-tiny); color: var(--dark-3);
+    }
+    .match-summary strong { color: var(--dark-2); }
+
+    /* ══ Tirage des présents ══════════════════════════════════════════ */
+    .btn-primary-sm {
+      padding: 8px 16px; border-radius: 7px;
+      background: var(--main-blue); color: var(--white);
+      font-size: var(--text-tiny); font-weight: 700;
+      cursor: pointer; border: 1px solid var(--main-blue);
+      transition: opacity 0.15s;
+    }
+    .btn-primary-sm:hover { opacity: 0.9; }
+    .rest-content--empty { color: var(--dark-3); }
+    .btn-primary-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Sélecteur d'états — propre à la maquette, absent du produit */
+    .mockup-states {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding: var(--p05) var(--p1);
+      border: 1px dashed var(--light-1); border-radius: 8px;
+      font-size: 11px; color: var(--light-1);
+    }
+    .mockup-states button {
+      padding: 3px 10px; border-radius: 5px; cursor: pointer;
+      border: 1px solid var(--light-1); background: var(--white); color: var(--light-1);
+      font-size: 11px; font-weight: 600;
+    }
+    .mockup-states button.active { background: var(--light-1); color: var(--white); }
+
+    .draw-step-head {
+      display: flex; align-items: center; gap: var(--p1);
+      padding: var(--p1) var(--p2);
+      border-bottom: 1px solid var(--dark-5);
+      background: var(--dark-7);
+    }
+    .draw-steps { display: flex; gap: 6px; font-size: 11px; font-weight: 600; color: var(--dark-3); }
+    .draw-step { display: flex; align-items: center; gap: 6px; }
+    .draw-step-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--dark-5); color: var(--dark-2); font-size: 11px;
+    }
+    .draw-step--current { color: var(--main-blue); }
+    .draw-step--current .draw-step-num { background: var(--main-blue); color: var(--white); }
+    .draw-step--done .draw-step-num { background: var(--green); color: var(--white); }
+    .draw-step-sep { color: var(--dark-4); }
+    .draw-step-hint { margin-left: auto; font-size: var(--text-tiny); color: var(--dark-3); }
+
+    .draw-body { padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); }
+
+    /* Une poule */
+    .draw-group { display: flex; flex-direction: column; gap: var(--p05); }
+    .draw-group-head {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+    }
+    .draw-group-title {
+      font-family: var(--font-title); font-size: var(--text-small);
+      font-weight: 700; color: var(--dark-1);
+    }
+    .draw-group-count { font-size: var(--text-tiny); color: var(--dark-3); }
+    .draw-group-count strong { color: var(--dark-1); }
+    .draw-group-tools { display: flex; gap: 10px; font-size: 11px; }
+    .draw-link { color: var(--link-blue); cursor: pointer; background: none; border: 0; padding: 0; font-size: 11px; }
+
+    /* Liste des équipes à cocher */
+    .presence-grid { display: flex; flex-direction: column; gap: 4px; }
+    .presence-team {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--dark-5); background: var(--white);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .presence-team:hover { border-color: var(--dark-4); }
+    .presence-team input { accent-color: var(--main-blue); width: 16px; height: 16px; flex-shrink: 0; }
+    .presence-team--absent { background: var(--dark-7); }
+    .presence-team--absent .presence-team-name { color: var(--dark-3); text-decoration: line-through; }
+    .presence-team-info { flex: 1; min-width: 0; }
+    .presence-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+    .presence-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
+    .presence-team-played { font-size: 11px; color: var(--dark-3); flex-shrink: 0; }
+
+    /* Notes sous une poule */
+    .draw-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 12px; border-radius: 8px;
+      font-size: var(--text-tiny); line-height: 1.4;
+    }
+    .draw-note--info { background: rgba(0,48,73,0.06); color: var(--main-blue); }
+    .draw-note--warn { background: rgba(255,107,53,0.10); color: #B54A1F; }
+    .draw-note--error { background: rgba(224,32,32,0.07); color: var(--red); }
+    .draw-note--success { background: rgba(98,149,132,0.12); color: #3F6B5C; }
+
+    /* Aperçu des rencontres */
+    .draw-match {
+      display: flex; align-items: center;
+      padding: 10px 14px; border-radius: 8px;
+      border: 1px solid var(--dark-6);
+    }
+    .draw-match-home { flex: 1; text-align: right; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); padding-right: 12px; }
+    .draw-match-vs { min-width: 40px; text-align: center; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-4); }
+    .draw-match-away { flex: 1; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); padding-left: 12px; }
+    .draw-history {
+      flex-shrink: 0; margin-left: 10px;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px;
+    }
+    .draw-history--new { background: rgba(98,149,132,0.12); color: var(--green); }
+    .draw-history--rematch { background: rgba(255,107,53,0.12); color: #B54A1F; }
+
+    .draw-bench {
+      display: flex; flex-wrap: wrap; gap: var(--p1);
+      font-size: var(--text-tiny); color: var(--dark-2);
+    }
+    .draw-bench-item { display: flex; align-items: center; gap: 6px; }
+    .draw-bench-label { font-weight: 700; color: var(--dark-3); text-transform: uppercase; font-size: 10px; letter-spacing: 0.3px; }
+
+    .draw-footer {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+      padding: var(--p1) var(--p2);
+      border-top: 1px solid var(--dark-5);
+    }
+    .draw-footer-left, .draw-footer-right { display: flex; align-items: center; gap: 8px; }
+    .draw-footer-note { font-size: var(--text-tiny); color: var(--dark-3); }
+
+    @media (max-width: 768px) {
+      .draw-steps .draw-step-label { display: none; }
+      .draw-step-hint { display: none; }
+      .draw-match { flex-wrap: wrap; row-gap: 6px; }
+      .draw-history { margin-left: 0; width: 100%; text-align: center; }
+      .draw-footer { flex-direction: column-reverse; align-items: stretch; }
+      .draw-footer-left, .draw-footer-right { justify-content: center; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top"></div>
+      <div class="league-btn league-btn-active">TC</div>
+      <div class="league-btn">KC</div>
+      <div class="league-btn">LM</div>
+      <div class="league-btn" style="background: var(--dark-3); font-size: 24px;">+</div>
+    </div>
+
+    <div class="main-area">
+      <div class="menu-bar">
+        <div class="menu-bar-inner">
+          <div class="menu-left">
+            <div class="menu-logo">
+              <div class="menu-logo-icon">BBC</div>
+              <span class="menu-logo-text">Blood Bowl Club</span>
+            </div>
+            <a class="menu-item" href="app-home.html">Accueil</a>
+            <a class="menu-item" href="app-competition-list.html">Compétitions</a>
+            <a class="menu-item">Règles du jeu</a>
+          </div>
+          <div class="menu-right">
+            <a class="menu-item active">Administration</a>
+            <div class="menu-account">👤</div>
+          </div>
+        </div>
+        <div class="sub-menu-placeholder"></div>
+      </div>
+
+      <div class="page-content">
+        <div class="admin-container">
+
+          <!-- ══ Maquette — sélecteur d'états (absent du produit) ══════ -->
+          <div class="mockup-states" x-data>
+            <span>Maquette · état :</span>
+            <button :class="{ active: $store.mock.state === 'empty' }"    @click="$store.mock.state = 'empty'">1 · Journée vide</button>
+            <button :class="{ active: $store.mock.state === 'presence' }" @click="$store.mock.state = 'presence'">2 · Présents</button>
+            <button :class="{ active: $store.mock.state === 'preview' }"  @click="$store.mock.state = 'preview'">3 · Aperçu</button>
+            <button :class="{ active: $store.mock.state === 'written' }"  @click="$store.mock.state = 'written'">4 · Écrit</button>
+            <button :class="{ active: $store.mock.state === 'errors' }"   @click="$store.mock.state = 'errors'">5 · Refus</button>
+          </div>
+
+          <!-- ══ Banner ══════════════════════════════════════════════ -->
+          <div class="admin-banner">
+            <div class="admin-banner-icon">🏆</div>
+            <div class="admin-banner-info">
+              <div class="admin-banner-title">Ligue de Condate — Saison 5</div>
+              <div class="admin-banner-sub">Administration de la compétition · 3 administrateurs</div>
+              <a href="app-competition-detail.html" class="admin-banner-back">← Retour à la compétition</a>
+            </div>
+            <div class="admin-banner-badge">Admin</div>
+          </div>
+
+          <!-- ══ Tabs ═══════════════════════════════════════════════ -->
+          <div class="admin-tabs">
+            <a class="admin-tab" href="app-competition-admin.html">📊 Tableau de bord</a>
+            <a class="admin-tab" href="app-competition-admin-enrollments.html">📋 Inscriptions</a>
+            <a class="admin-tab" href="app-competition-admin-groups.html">🎲 Poules</a>
+            <a class="admin-tab active" href="#">📅 Calendrier</a>
+            <a class="admin-tab" href="app-competition-admin-results.html">✅ Résultats</a>
+            <a class="admin-tab" href="app-competition-admin-settings.html">⚙️ Paramètres</a>
+          </div>
+
+          <!-- ══ Actions globales ══════════════════════════════════ -->
+          <div class="admin-panel" style="padding: var(--p1) var(--p2);">
+            <div class="actions-bar">
+              <div class="actions-bar-left">
+                <span class="info-note">
+                  <span class="info-note-icon">📅</span>
+                  13 journées · 91 matchs · 2 pauses
+                </span>
+              </div>
+              <div class="actions-bar-right">
+                <button class="btn-danger-sm">🗑️ Vider toutes les rencontres</button>
+                <button class="btn-outline-sm">🎲 Générer toutes les rencontres</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ Schedule split layout ═════════════════════════════ -->
+          <div class="schedule-layout">
+
+            <!-- ── Round sidebar ─────────────────────────────────── -->
+            <div class="round-sidebar">
+              <div class="round-sidebar-title">Journées</div>
+              <div class="round-sidebar-list">
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--validated">1</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 1</div>
+                    <div class="round-item-date">12 — 26 sept.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--validated">2</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 2</div>
+                    <div class="round-item-date">26 sept. — 10 oct.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--rest">☀</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Pause</div>
+                    <div class="round-item-date">10 — 24 oct.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--in-progress">3</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 3</div>
+                    <div class="round-item-date">24 oct. — 7 nov.</div>
+                  </div>
+                  <div class="round-item-badge round-item-badge--warn" title="Résultats en attente"></div>
+                </a>
+
+                <a class="round-item active" href="#">
+                  <div class="round-item-num round-item-num--upcoming">4</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 4</div>
+                    <div class="round-item-date">7 — 21 nov.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">5</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 5</div>
+                    <div class="round-item-date">21 nov. — 5 déc.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">6</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 6</div>
+                    <div class="round-item-date">5 — 19 déc.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--rest">☀</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Trêve Noël</div>
+                    <div class="round-item-date">19 déc. — 9 janv.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">7</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 7</div>
+                    <div class="round-item-date">9 — 23 janv.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">8</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 8</div>
+                    <div class="round-item-date">23 janv. — 6 fév.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">9</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 9</div>
+                    <div class="round-item-date">6 — 20 fév.</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">10</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 10</div>
+                    <div class="round-item-date">20 fév. — 6 mars</div>
+                  </div>
+                </a>
+
+                <a class="round-item" href="#">
+                  <div class="round-item-num round-item-num--upcoming">11</div>
+                  <div class="round-item-info">
+                    <div class="round-item-name">Journée 11</div>
+                    <div class="round-item-date">6 — 20 mars</div>
+                  </div>
+                </a>
+
+              </div>
+
+              <div class="round-sidebar-add">
+                <button class="btn-sidebar">
+                  <span class="btn-sidebar-icon">📅</span> Ajouter une journée
+                </button>
+                <button class="btn-sidebar">
+                  <span class="btn-sidebar-icon">☀️</span> Ajouter un repos
+                </button>
+              </div>
+            </div>
+
+            <!-- ── Round detail (Journée 4 selected, sans rencontres) ── -->
+            <div class="round-detail" x-data="drawMockup()">
+
+              <div class="round-detail-head">
+                <div class="round-detail-head-left">
+                  <div class="round-detail-name">
+                    Journée 4
+                    <span class="round-badge round-badge--upcoming">À venir</span>
+                  </div>
+                  <div class="round-detail-meta">
+                    <span x-show="state !== 'written'"><strong>0</strong> match</span>
+                    <span x-show="state === 'written'"><strong>5</strong> matchs</span>
+                    <span>Poules A et B</span>
+                  </div>
+                </div>
+                <div class="round-detail-head-right">
+                  <button class="btn-outline-sm">✏️ Modifier</button>
+                  <button class="btn-danger-sm">✕ Supprimer</button>
+                </div>
+              </div>
+
+              <div class="round-date-config">
+                <span class="date-config-label">Date :</span>
+                <div class="date-config-mode">
+                  <button class="date-mode-btn">Date fixe</button>
+                  <button class="date-mode-btn active">Plage</button>
+                </div>
+                <input type="date" class="date-input" value="2025-11-07">
+                <span class="date-sep">→</span>
+                <input type="date" class="date-input" value="2025-11-21">
+              </div>
+
+              <!-- ════ ÉTAT 1 — Journée vide : le point d'entrée ════════════ -->
+              <template x-if="state === 'empty'">
+                <div>
+                  <div class="round-match-actions">
+                    <div class="actions-bar">
+                      <div class="actions-bar-left">
+                        <span class="info-note">
+                          <span class="info-note-icon">⚔️</span>
+                          Aucune rencontre planifiée
+                        </span>
+                      </div>
+                      <div class="actions-bar-right">
+                        <button class="btn-outline-sm">🎲 Générer une journée complète</button>
+                        <button class="btn-outline-sm">➕ Ajouter un match</button>
+                        <button class="btn-primary-sm" @click="state = 'presence'">🙋 Faire les appariements</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="rest-content rest-content--empty">
+                    <div class="rest-icon">📭</div>
+                    <div class="rest-text">Cette journée n'a pas encore de rencontres.</div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- ════ ÉTAT 2 — Cocher les présents ═══════════════════════ -->
+              <template x-if="state === 'presence'">
+                <div>
+                  <div class="draw-step-head">
+                    <div class="draw-steps">
+                      <span class="draw-step draw-step--current"><span class="draw-step-num">1</span><span class="draw-step-label">Présents</span></span>
+                      <span class="draw-step-sep">›</span>
+                      <span class="draw-step"><span class="draw-step-num">2</span><span class="draw-step-label">Aperçu du tirage</span></span>
+                    </div>
+                    <span class="draw-step-hint">Décochez les équipes absentes ce jour-là.</span>
+                  </div>
+
+                  <div class="draw-body">
+                    <template x-for="group in groups" :key="group.name">
+                      <div class="draw-group">
+                        <div class="draw-group-head">
+                          <div>
+                            <span class="draw-group-title" x-text="'Poule ' + group.name"></span>
+                            <span class="draw-group-count">
+                              · <strong x-text="present(group)"></strong> présentes sur <span x-text="group.teams.length"></span>
+                            </span>
+                          </div>
+                          <div class="draw-group-tools">
+                            <button class="draw-link" @click="setAll(group, true)">Toutes présentes</button>
+                            <button class="draw-link" @click="setAll(group, false)">Toutes absentes</button>
+                          </div>
+                        </div>
+
+                        <div class="presence-grid">
+                          <template x-for="team in group.teams" :key="team.name">
+                            <label class="presence-team" :class="{ 'presence-team--absent': !team.present }">
+                              <input type="checkbox" x-model="team.present">
+                              <div class="presence-team-info">
+                                <div class="presence-team-name" x-text="team.name"></div>
+                                <div class="presence-team-meta" x-text="team.coach + ' · ' + team.roster"></div>
+                              </div>
+                              <span class="presence-team-played" x-text="team.played + ' matchs'"></span>
+                            </label>
+                          </template>
+                        </div>
+
+                        <div class="draw-note draw-note--error" x-show="present(group) < 2">
+                          <span>⛔</span>
+                          <span>Moins de deux équipes présentes : aucune rencontre ne sera tirée dans cette poule.</span>
+                        </div>
+                        <div class="draw-note draw-note--info" x-show="present(group) >= 2 && present(group) % 2 === 1">
+                          <span>🛌</span>
+                          <span>Nombre impair : une équipe sera exemptée — celle qui a joué le plus de matchs.</span>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <div class="draw-footer">
+                    <div class="draw-footer-left">
+                      <button class="btn-outline-sm" @click="state = 'empty'">Annuler</button>
+                    </div>
+                    <div class="draw-footer-right">
+                      <span class="draw-footer-note" x-text="totalPresent() + ' équipes présentes'"></span>
+                      <button class="btn-primary-sm" :disabled="!canDraw()" @click="state = 'preview'">🎲 Tirer au sort</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- ════ ÉTAT 3 — Aperçu du tirage (rien n'est écrit) ═══════ -->
+              <template x-if="state === 'preview'">
+                <div>
+                  <div class="draw-step-head">
+                    <div class="draw-steps">
+                      <span class="draw-step draw-step--done"><span class="draw-step-num">✓</span><span class="draw-step-label">Présents</span></span>
+                      <span class="draw-step-sep">›</span>
+                      <span class="draw-step draw-step--current"><span class="draw-step-num">2</span><span class="draw-step-label">Aperçu du tirage</span></span>
+                    </div>
+                    <span class="draw-step-hint">Rien n'est écrit au calendrier tant que vous n'avez pas validé.</span>
+                  </div>
+
+                  <div class="draw-body">
+                    <div class="draw-group">
+                      <div class="draw-group-head">
+                        <span class="draw-group-title">Poule A</span>
+                        <span class="draw-group-count"><strong>2</strong> rencontres</span>
+                      </div>
+                      <div class="draw-match">
+                        <span class="draw-match-home">Skull Crushers</span>
+                        <span class="draw-match-vs">vs</span>
+                        <span class="draw-match-away">Halfling Legends</span>
+                        <span class="draw-history draw-history--new">1re rencontre</span>
+                      </div>
+                      <div class="draw-match">
+                        <span class="draw-match-home">Iron Forge</span>
+                        <span class="draw-match-vs">vs</span>
+                        <span class="draw-match-away">Storm Treemen</span>
+                        <span class="draw-history draw-history--rematch">Revanche · déjà jouée en J1</span>
+                      </div>
+                      <div class="draw-bench">
+                        <span class="draw-bench-item"><span class="draw-bench-label">Exemptée</span> 🛌 Plague Bringers <span class="presence-team-played">(4 matchs, la plus servie)</span></span>
+                        <span class="draw-bench-item"><span class="draw-bench-label">Absente</span> Dwarf Giants</span>
+                      </div>
+                      <div class="draw-note draw-note--warn">
+                        <span>↺</span>
+                        <span>Une revanche n'a pas pu être évitée : toutes les autres combinaisons laissaient une équipe sans match.</span>
+                      </div>
+                    </div>
+
+                    <div class="draw-group">
+                      <div class="draw-group-head">
+                        <span class="draw-group-title">Poule B</span>
+                        <span class="draw-group-count"><strong>3</strong> rencontres</span>
+                      </div>
+                      <div class="draw-match">
+                        <span class="draw-match-home">Midnight Raiders</span>
+                        <span class="draw-match-vs">vs</span>
+                        <span class="draw-match-away">Green Tide</span>
+                        <span class="draw-history draw-history--new">1re rencontre</span>
+                      </div>
+                      <div class="draw-match">
+                        <span class="draw-match-home">Chaos United</span>
+                        <span class="draw-match-vs">vs</span>
+                        <span class="draw-match-away">Lizard Kings</span>
+                        <span class="draw-history draw-history--new">1re rencontre</span>
+                      </div>
+                      <div class="draw-match">
+                        <span class="draw-match-home">Red Skulls</span>
+                        <span class="draw-match-vs">vs</span>
+                        <span class="draw-match-away">Underworld Warriors</span>
+                        <span class="draw-history draw-history--new">1re rencontre</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="draw-footer">
+                    <div class="draw-footer-left">
+                      <button class="btn-outline-sm" @click="state = 'presence'">← Modifier les présents</button>
+                    </div>
+                    <div class="draw-footer-right">
+                      <button class="btn-outline-sm">↺ Retirer au sort</button>
+                      <button class="btn-primary-sm" @click="state = 'written'">✓ Écrire au calendrier</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- ════ ÉTAT 4 — Écrit : la journée redevient une journée normale ═══ -->
+              <template x-if="state === 'written'">
+                <div>
+                  <div class="round-match-actions">
+                    <div class="actions-bar">
+                      <div class="actions-bar-left">
+                        <span class="info-note">
+                          <span class="info-note-icon">⚔️</span>
+                          5 rencontres planifiées
+                        </span>
+                      </div>
+                      <div class="actions-bar-right">
+                        <button class="btn-danger-sm">🗑️ Vider les matchs</button>
+                        <button class="btn-primary-sm">➕ Ajouter un match</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="round-body">
+                    <div class="draw-note draw-note--success">
+                      <span>✓</span>
+                      <span>5 rencontres écrites au calendrier. Plague Bringers est exemptée, Dwarf Giants absente.</span>
+                    </div>
+                  </div>
+                  <div class="round-body">
+                    <div class="match-list">
+                      <div class="match-row">
+                        <span class="match-home">Skull Crushers</span>
+                        <span class="match-score match-score--pending">vs</span>
+                        <span class="match-away">Halfling Legends</span>
+                        <span class="match-group-tag">A</span>
+                        <div class="match-actions">
+                          <button class="match-action-btn" title="Reporter">📅</button>
+                          <button class="match-action-btn match-action-btn--danger" title="Supprimer">✕</button>
+                        </div>
+                      </div>
+                      <div class="match-row">
+                        <span class="match-home">Iron Forge</span>
+                        <span class="match-score match-score--pending">vs</span>
+                        <span class="match-away">Storm Treemen</span>
+                        <span class="match-group-tag">A</span>
+                        <div class="match-actions">
+                          <button class="match-action-btn" title="Reporter">📅</button>
+                          <button class="match-action-btn match-action-btn--danger" title="Supprimer">✕</button>
+                        </div>
+                      </div>
+                      <div class="match-row">
+                        <span class="match-home">Midnight Raiders</span>
+                        <span class="match-score match-score--pending">vs</span>
+                        <span class="match-away">Green Tide</span>
+                        <span class="match-group-tag">B</span>
+                        <div class="match-actions">
+                          <button class="match-action-btn" title="Reporter">📅</button>
+                          <button class="match-action-btn match-action-btn--danger" title="Supprimer">✕</button>
+                        </div>
+                      </div>
+                      <div class="match-row">
+                        <span class="match-home">Chaos United</span>
+                        <span class="match-score match-score--pending">vs</span>
+                        <span class="match-away">Lizard Kings</span>
+                        <span class="match-group-tag">B</span>
+                        <div class="match-actions">
+                          <button class="match-action-btn" title="Reporter">📅</button>
+                          <button class="match-action-btn match-action-btn--danger" title="Supprimer">✕</button>
+                        </div>
+                      </div>
+                      <div class="match-row">
+                        <span class="match-home">Red Skulls</span>
+                        <span class="match-score match-score--pending">vs</span>
+                        <span class="match-away">Underworld Warriors</span>
+                        <span class="match-group-tag">B</span>
+                        <div class="match-actions">
+                          <button class="match-action-btn" title="Reporter">📅</button>
+                          <button class="match-action-btn match-action-btn--danger" title="Supprimer">✕</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="match-summary">
+                    <span><strong>0</strong> match joué</span>
+                    <span><strong>5</strong> matchs en attente</span>
+                  </div>
+                </div>
+              </template>
+
+              <!-- ════ ÉTAT 5 — Les refus ═════════════════════════════════ -->
+              <template x-if="state === 'errors'">
+                <div class="draw-body">
+                  <div class="draw-group">
+                    <div class="draw-group-title">Au moment de tirer : aucune poule n'a deux présents</div>
+                    <div class="draw-note draw-note--error">
+                      <span>⛔</span>
+                      <span>Il faut au moins deux équipes présentes dans une même poule pour tirer une rencontre. Le bouton « Tirer au sort » reste désactivé.</span>
+                    </div>
+                  </div>
+                  <div class="draw-group">
+                    <div class="draw-group-title">Au moment d'écrire : la journée a changé entre-temps</div>
+                    <div class="draw-note draw-note--error">
+                      <span>⛔</span>
+                      <span>Des rencontres ont été ajoutées à cette journée depuis le tirage. Rien n'a été écrit — rechargez la journée pour voir son état.</span>
+                    </div>
+                  </div>
+                  <div class="draw-group">
+                    <div class="draw-group-title">Au moment d'écrire : une équipe s'est désinscrite</div>
+                    <div class="draw-note draw-note--error">
+                      <span>⛔</span>
+                      <span>Halfling Legends n'est plus inscrite à la compétition. Rien n'a été écrit — relancez le tirage.</span>
+                    </div>
+                  </div>
+                  <div class="draw-group">
+                    <div class="draw-group-title">Journée qui porte déjà des rencontres</div>
+                    <div class="draw-note draw-note--info">
+                      <span>ℹ️</span>
+                      <span>Le bouton « Faire les appariements » n'apparaît que sur une journée sans rencontre. Pour retirer, on vide d'abord la journée.</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+            </div>
+
+          </div><!-- /schedule-layout -->
+
+        </div><!-- /admin-container -->
+      </div><!-- /page-content -->
+    </div><!-- /main-area -->
+  </div><!-- /app-layout -->
+
+<script>
+// Maquette uniquement : un état partagé entre le sélecteur et le panneau.
+document.addEventListener('alpine:init', function () {
+  Alpine.store('mock', { state: 'empty' });
+});
+
+function drawMockup() {
+  return {
+    get state() { return Alpine.store('mock').state; },
+    set state(v) { Alpine.store('mock').state = v; },
+    groups: [
+      { name: 'A', teams: [
+        { name: 'Skull Crushers',   coach: 'Darkmoule', roster: 'Orques',         played: 3, present: true },
+        { name: 'Iron Forge',       coach: 'Guigui',    roster: 'Nains',          played: 3, present: true },
+        { name: 'Storm Treemen',    coach: 'Yan',       roster: 'Elfes Sylvains', played: 3, present: true },
+        { name: 'Halfling Legends', coach: 'Playmore',  roster: 'Halflings',      played: 3, present: true },
+        { name: 'Plague Bringers',  coach: 'Vorax',     roster: 'Nurgle',         played: 4, present: true },
+        { name: 'Dwarf Giants',     coach: 'Kraken',    roster: 'Nains',          played: 2, present: false }
+      ] },
+      { name: 'B', teams: [
+        { name: 'Midnight Raiders',    coach: 'Grim',      roster: 'Elfes Noirs',    played: 3, present: true },
+        { name: 'Chaos United',        coach: 'Calltrakk', roster: 'Élus du Chaos',  played: 3, present: true },
+        { name: 'Green Tide',          coach: 'foxxx',     roster: 'Gobelins',       played: 3, present: true },
+        { name: 'Red Skulls',          coach: 'Crisis',    roster: 'Khorne',         played: 3, present: true },
+        { name: 'Underworld Warriors', coach: 'Nuffle',    roster: 'Skavens',        played: 3, present: true },
+        { name: 'Lizard Kings',        coach: 'Mamba',     roster: 'Hommes-Lézards', played: 3, present: true }
+      ] }
+    ],
+    present(group) { return group.teams.filter(function (t) { return t.present; }).length; },
+    totalPresent() { var self = this; return this.groups.reduce(function (n, g) { return n + self.present(g); }, 0); },
+    canDraw() { var self = this; return this.groups.some(function (g) { return self.present(g) >= 2; }); },
+    setAll(group, value) { group.teams.forEach(function (t) { t.present = value; }); }
+  };
+}
+</script>
+</body>
+</html>
