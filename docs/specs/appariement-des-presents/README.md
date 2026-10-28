@@ -25,6 +25,7 @@ Reprend l'algorithme de tirage de la branche `sondage-presence`
 | R10 | Moins de deux présents dans une poule : aucune rencontre n'y est tirée. Le tirage est refusé si aucune poule n'en a deux. |
 | R11 | Rien n'est écrit avant la validation, qui revérifie que la journée est toujours vide et que les équipes sont toujours inscrites. |
 | R12 | « Générer toutes les rencontres » passe par le même tirage que « Générer une journée complète » (phase 2). |
+| R13 | Une rencontre écrite par la confirmation ou la génération est une rencontre ordinaire du Calendrier (phase 3). |
 
 ## Avancement
 
@@ -32,4 +33,4 @@ Spec de la page : `calendrier/`.
 
 | Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| Calendrier · appariement des présents | ✅ | ✅ | | | | | | |
+| Calendrier · appariement des présents | ✅ | ✅ | ✅ | | | | | |
