@@ -26,6 +26,7 @@ Reprend l'algorithme de tirage de la branche `sondage-presence`
 | R11 | Rien n'est écrit avant la validation, qui revérifie que la journée est toujours vide et que les équipes sont toujours inscrites. |
 | R12 | « Générer toutes les rencontres » passe par le même tirage que « Générer une journée complète » (phase 2). |
 | R13 | Une rencontre écrite par la confirmation ou la génération est une rencontre ordinaire du Calendrier (phase 3). |
+| R14 | « Générer une journée complète » est tout ou rien : un échec d'écriture n'écrit aucune rencontre de la journée (phase 5). |
 
 ## Avancement
 
@@ -33,4 +34,4 @@ Spec de la page : `calendrier/`.
 
 | Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| Calendrier · appariement des présents | ✅ | ✅ | ✅ | ✅ | | | | |
+| Calendrier · appariement des présents | ✅ | ✅ | ✅ | ✅ | ✅ | | | |
