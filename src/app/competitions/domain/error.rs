@@ -1,3 +1,4 @@
+use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use std::fmt;
 
 /// Erreurs d'invariant du domaine `competitions`.
@@ -41,6 +42,35 @@ pub enum DomainError {
     // ── Tirage d'une journée (épic E18) ──────────────────────────────────────
     /// R10 — aucune poule n'a deux équipes à apparier.
     NotEnoughPresent,
+    /// R9 — une journée de repos ne reçoit pas de rencontres.
+    RestDayCannotBeDrawn,
+    /// R9, R11 — la journée porte déjà une rencontre.
+    RoundAlreadyPaired,
+    /// R11 — l'équipe n'est plus inscrite à la compétition.
+    ///
+    /// Les variants qui suivent portent des `TeamId`, pas des noms : le domaine
+    /// ne les connaît pas. Le handler reformule le message avec les noms.
+    TeamNotEnrolled {
+        team: TeamId,
+    },
+    /// R11 — une équipe figure dans deux rencontres, ou deux fois dans la même.
+    TeamDrawnTwice {
+        team: TeamId,
+    },
+    /// R4 — les deux équipes appartiennent au même coach.
+    SameCoachPairing {
+        home: TeamId,
+        away: TeamId,
+    },
+    /// R3 — les deux équipes ne sont pas dans la même poule.
+    PairingAcrossPools {
+        home: TeamId,
+        away: TeamId,
+    },
+    /// R11 — l'exemptée figure aussi dans une rencontre.
+    ExemptedTeamAlsoPaired {
+        team: TeamId,
+    },
 }
 
 impl fmt::Display for DomainError {
@@ -88,6 +118,33 @@ impl fmt::Display for DomainError {
                     f,
                     "Il faut au moins deux équipes présentes dans une même poule pour tirer une rencontre."
                 )
+            }
+            Self::RestDayCannotBeDrawn => {
+                write!(f, "Une journée de repos ne reçoit pas de rencontres.")
+            }
+            Self::RoundAlreadyPaired => {
+                write!(f, "Cette journée a déjà des rencontres.")
+            }
+            Self::TeamNotEnrolled { .. } => {
+                write!(f, "Une équipe tirée n'est plus inscrite à la compétition.")
+            }
+            Self::TeamDrawnTwice { .. } => {
+                write!(f, "Une équipe figure dans deux rencontres du tirage.")
+            }
+            Self::SameCoachPairing { .. } => {
+                write!(
+                    f,
+                    "Deux équipes d'un même coach ne peuvent pas se rencontrer."
+                )
+            }
+            Self::PairingAcrossPools { .. } => {
+                write!(
+                    f,
+                    "Deux équipes de poules différentes ne peuvent pas se rencontrer."
+                )
+            }
+            Self::ExemptedTeamAlsoPaired { .. } => {
+                write!(f, "L'équipe exemptée figure aussi dans une rencontre.")
             }
         }
     }

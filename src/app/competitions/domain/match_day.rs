@@ -1,3 +1,5 @@
+use crate::app::competitions::domain::draw::pair;
+use crate::app::competitions::domain::error::DomainError;
 use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
@@ -122,6 +124,94 @@ impl MatchDay {
         let position = self.pairings.iter().position(|p| &p.id == pairing_id)?;
         Some(self.pairings.remove(position))
     }
+
+    /// R9 — une journée de match, sans rencontres.
+    pub fn can_receive_draw(&self) -> Result<(), DomainError> {
+        if self.is_rest() {
+            return Err(DomainError::RestDayCannotBeDrawn);
+        }
+        if !self.pairings.is_empty() {
+            return Err(DomainError::RoundAlreadyPaired);
+        }
+        Ok(())
+    }
+
+    /// R3, R4, R11 — accepte le tirage et y ajoute ses rencontres, ou refuse
+    /// sans rien changer.
+    ///
+    /// **Tout est vérifié avant que rien ne soit poussé** : un refus à la
+    /// troisième rencontre ne laisse pas les deux premières dans la journée.
+    pub fn accept_draw(
+        &mut self,
+        pairings: Vec<Pairing>,
+        exempted: Option<TeamId>,
+        rules: &DrawRules,
+    ) -> Result<(), DomainError> {
+        self.can_receive_draw()?;
+        let mut seen = HashSet::new();
+        for pairing in &pairings {
+            Self::check_team(&pairing.home_team_id, rules, &mut seen)?;
+            Self::check_team(&pairing.away_team_id, rules, &mut seen)?;
+            Self::check_pair(pairing, rules)?;
+        }
+        Self::check_exempted(exempted, &seen)?;
+        self.pairings.extend(pairings);
+        Ok(())
+    }
+
+    /// R11 — inscrite, et tirée une seule fois. `seen` attrape aussi une
+    /// équipe opposée à elle-même.
+    fn check_team(
+        team: &TeamId,
+        rules: &DrawRules,
+        seen: &mut HashSet<TeamId>,
+    ) -> Result<(), DomainError> {
+        if !rules.enrolled.contains(team) {
+            return Err(DomainError::TeamNotEnrolled { team: *team });
+        }
+        if !seen.insert(*team) {
+            return Err(DomainError::TeamDrawnTwice { team: *team });
+        }
+        Ok(())
+    }
+
+    /// R4 puis R3 — pas deux équipes d'un même coach, et une poule en commun.
+    fn check_pair(pairing: &Pairing, rules: &DrawRules) -> Result<(), DomainError> {
+        let (home, away) = (pairing.home_team_id, pairing.away_team_id);
+        if rules.forbidden.contains(&pair(&home, &away)) {
+            return Err(DomainError::SameCoachPairing { home, away });
+        }
+        let same_pool = rules
+            .pools
+            .iter()
+            .any(|pool| pool.contains(&home) && pool.contains(&away));
+        if !same_pool {
+            return Err(DomainError::PairingAcrossPools { home, away });
+        }
+        Ok(())
+    }
+
+    /// R11 — l'exemptée se repose : elle ne figure dans aucune rencontre.
+    fn check_exempted(exempted: Option<TeamId>, seen: &HashSet<TeamId>) -> Result<(), DomainError> {
+        match exempted {
+            Some(team) if seen.contains(&team) => Err(DomainError::ExemptedTeamAlsoPaired { team }),
+            _ => Ok(()),
+        }
+    }
+}
+
+/// Ce que la journée ne sait pas d'elle-même, fourni par le use case.
+///
+/// **Les poules sont des ensembles, sans identifiant** : la poule de repli
+/// « Toutes les équipes » porte l'identifiant `"default"`, qui n'est pas un
+/// `RankingGroupId` valide, et R3 n'a besoin que de savoir si deux équipes
+/// partagent un ensemble.
+#[derive(Debug, Clone, Default)]
+pub struct DrawRules {
+    pub enrolled: HashSet<TeamId>,
+    /// Même coach — clé normalisée par [`pair`].
+    pub forbidden: HashSet<(TeamId, TeamId)>,
+    pub pools: Vec<HashSet<TeamId>>,
 }
 
 impl Pairing {
@@ -403,5 +493,133 @@ mod tests {
     fn adversaire_de_rend_none_pour_une_equipe_absente() {
         let (a, b, c) = (equipe(), equipe(), equipe());
         assert_eq!(rencontre(&a, &b).adversaire_de(&c), None);
+    }
+
+    // ── Le tirage d'une journée (épic E18) ───────────────────────────────────
+
+    /// Quatre équipes inscrites, toutes dans une seule poule.
+    fn draw_setup() -> (Vec<TeamId>, DrawRules) {
+        let teams: Vec<TeamId> = (0..4).map(|_| equipe()).collect();
+        let all: HashSet<TeamId> = teams.iter().copied().collect();
+        let rules = DrawRules {
+            enrolled: all.clone(),
+            forbidden: HashSet::new(),
+            pools: vec![all],
+        };
+        (teams, rules)
+    }
+
+    fn refusal(pairings: Vec<Pairing>, exempted: Option<TeamId>, rules: &DrawRules) -> DomainError {
+        let mut day = journee_avec(vec![]);
+        let err = day.accept_draw(pairings, exempted, rules).unwrap_err();
+        assert!(day.pairings.is_empty(), "un refus a modifié la journée");
+        err
+    }
+
+    #[test]
+    fn a_rest_day_cannot_receive_a_draw() {
+        let mut day = journee_avec(vec![]);
+        day.day_type = MatchDayType::Rest;
+        assert_eq!(
+            day.can_receive_draw(),
+            Err(DomainError::RestDayCannotBeDrawn)
+        );
+    }
+
+    #[test]
+    fn a_paired_round_cannot_receive_a_draw() {
+        let day = journee_avec(vec![rencontre(&equipe(), &equipe())]);
+        assert_eq!(day.can_receive_draw(), Err(DomainError::RoundAlreadyPaired));
+    }
+
+    #[test]
+    fn accept_draw_refuses_a_paired_round_without_touching_it() {
+        let (t, rules) = draw_setup();
+        let existing = rencontre(&t[0], &t[1]);
+        let mut day = journee_avec(vec![existing.clone()]);
+        let err = day.accept_draw(vec![rencontre(&t[2], &t[3])], None, &rules);
+        assert_eq!(err, Err(DomainError::RoundAlreadyPaired));
+        assert_eq!(day.pairings, vec![existing]);
+    }
+
+    #[test]
+    fn accept_draw_refuses_a_team_no_longer_enrolled() {
+        let (t, mut rules) = draw_setup();
+        rules.enrolled.remove(&t[3]);
+        let err = refusal(
+            vec![rencontre(&t[0], &t[1]), rencontre(&t[2], &t[3])],
+            None,
+            &rules,
+        );
+        assert_eq!(err, DomainError::TeamNotEnrolled { team: t[3] });
+    }
+
+    #[test]
+    fn accept_draw_refuses_a_team_drawn_twice() {
+        let (t, rules) = draw_setup();
+        let err = refusal(
+            vec![rencontre(&t[0], &t[1]), rencontre(&t[1], &t[2])],
+            None,
+            &rules,
+        );
+        assert_eq!(err, DomainError::TeamDrawnTwice { team: t[1] });
+    }
+
+    #[test]
+    fn accept_draw_refuses_a_team_against_itself() {
+        let (t, rules) = draw_setup();
+        let err = refusal(vec![rencontre(&t[0], &t[0])], None, &rules);
+        assert_eq!(err, DomainError::TeamDrawnTwice { team: t[0] });
+    }
+
+    #[test]
+    fn accept_draw_refuses_two_teams_of_the_same_coach() {
+        let (t, mut rules) = draw_setup();
+        rules.forbidden.insert(pair(&t[3], &t[2]));
+        let err = refusal(
+            vec![rencontre(&t[0], &t[1]), rencontre(&t[2], &t[3])],
+            None,
+            &rules,
+        );
+        assert_eq!(
+            err,
+            DomainError::SameCoachPairing {
+                home: t[2],
+                away: t[3]
+            }
+        );
+    }
+
+    #[test]
+    fn accept_draw_refuses_a_pairing_across_pools() {
+        let (t, mut rules) = draw_setup();
+        rules.pools = vec![
+            [t[0], t[1]].into_iter().collect(),
+            [t[2], t[3]].into_iter().collect(),
+        ];
+        let err = refusal(vec![rencontre(&t[0], &t[2])], None, &rules);
+        assert_eq!(
+            err,
+            DomainError::PairingAcrossPools {
+                home: t[0],
+                away: t[2]
+            }
+        );
+    }
+
+    #[test]
+    fn accept_draw_refuses_an_exempted_team_also_paired() {
+        let (t, rules) = draw_setup();
+        let err = refusal(vec![rencontre(&t[0], &t[1])], Some(t[1]), &rules);
+        assert_eq!(err, DomainError::ExemptedTeamAlsoPaired { team: t[1] });
+    }
+
+    #[test]
+    fn accept_draw_adds_every_pairing() {
+        let (t, rules) = draw_setup();
+        let drawn = vec![rencontre(&t[0], &t[1]), rencontre(&t[2], &t[3])];
+        let mut day = journee_avec(vec![]);
+        day.accept_draw(drawn.clone(), None, &rules).unwrap();
+        assert_eq!(day.pairings, drawn);
     }
 }

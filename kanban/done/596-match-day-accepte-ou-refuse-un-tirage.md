@@ -56,9 +56,9 @@ sont des `TeamId` ; les noms sont résolus par le handler.
 
 ## Checklist
 
-- [ ] `DrawRules`, `can_receive_draw`, `accept_draw` dans `domain/match_day.rs`
-- [ ] Les sept variants dans `domain/error.rs`
-- [ ] Tests : `can_receive_draw` refuse repos et journée pourvue ; `accept_draw`
+- [x] `DrawRules`, `can_receive_draw`, `accept_draw` dans `domain/match_day.rs`
+- [x] Les sept variants dans `domain/error.rs`
+- [x] Tests : `can_receive_draw` refuse repos et journée pourvue ; `accept_draw`
       refuse chacun des cinq cas de R3, R4, R11 ; **ne modifie pas la journée**
       quand il refuse ; ajoute toutes les rencontres quand il accepte
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `make lint`, `make check-arch`, `make test`
