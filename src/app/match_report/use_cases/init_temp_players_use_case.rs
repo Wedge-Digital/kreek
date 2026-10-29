@@ -275,6 +275,10 @@ mod tests {
         async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
             vec![]
         }
+
+        async fn find_team_season(&self, _: &str) -> Option<String> {
+            None
+        }
     }
 
     /// Dix alignables sur onze : il manque un journalier.
@@ -296,6 +300,13 @@ mod tests {
         }
         async fn has_spent_spp_since_match(&self, _: &str, _: &str) -> Result<bool, String> {
             Ok(false)
+        }
+
+        async fn list_alignable_players(
+            &self,
+            _: &str,
+        ) -> Vec<crate::app::match_report::ports::AlignablePlayerDto> {
+            Vec::new()
         }
     }
 

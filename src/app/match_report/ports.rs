@@ -18,11 +18,9 @@ pub trait IPlayerDataPort: Send + Sync {
     ) -> Result<bool, String>;
 
     /// Les joueurs qui joueront le prochain match, journaliers compris — la
-    /// feuille de match imprimée les liste (carte 605). Vide par défaut : seul
-    /// l'adapter réel a des joueurs à rendre.
-    async fn list_alignable_players(&self, _team_id: &str) -> Vec<AlignablePlayerDto> {
-        Vec::new()
-    }
+    /// feuille de match imprimée les liste (carte 605). Sans corps par défaut :
+    /// un adapter qui l'oublierait imprimerait une feuille vide sans rien dire.
+    async fn list_alignable_players(&self, team_id: &str) -> Vec<AlignablePlayerDto>;
 }
 
 /// Un joueur de la feuille de match imprimée (épic E16).
@@ -153,10 +151,8 @@ pub trait ITeamDataPort: Send + Sync {
     async fn find_roster_positions(&self, team_id: &str) -> Vec<RosterPositionDto>;
 
     /// La saison où l'équipe est inscrite — pour son palier de coups de pouce
-    /// et la journée de la feuille de match (carte 605). `None` par défaut.
-    async fn find_team_season(&self, _team_id: &str) -> Option<String> {
-        None
-    }
+    /// et la journée de la feuille de match (carte 605).
+    async fn find_team_season(&self, team_id: &str) -> Option<String>;
 }
 
 #[derive(Debug)]

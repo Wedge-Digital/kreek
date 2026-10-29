@@ -5,10 +5,8 @@
 //! le rapport de match, disponibilités comprises. Puis les libellés et les
 //! fiches des star players, lus dans le catalogue.
 
-use crate::app::match_report::ports::{
-    ICompetitionDataPort, IReferenceCatalogPort, ITeamDataPort, InducementLabelDto, StarPlayerDto,
-    TierRulesDto,
-};
+use crate::app::match_report::ports::{ICompetitionDataPort, IReferenceCatalogPort, ITeamDataPort};
+use crate::app::match_report::use_cases::print_models::{InducementLabel, StarPlayer, TierOffer};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum PrintError {
@@ -19,18 +17,18 @@ pub enum PrintError {
 /// la colonne s'imprime vide et le dit, plutôt qu'un catalogue inventé.
 pub struct TeamCatalog {
     pub team_name: String,
-    pub tier: Option<TierRulesDto>,
+    pub tier: Option<TierOffer>,
 }
 
 /// Un star player, et les équipes imprimées qui peuvent l'engager.
 pub struct StarOffer {
-    pub star: StarPlayerDto,
+    pub star: StarPlayer,
     pub team_names: Vec<String>,
 }
 
 pub struct InducementsCatalog {
     pub teams: Vec<TeamCatalog>,
-    pub labels: Vec<InducementLabelDto>,
+    pub labels: Vec<InducementLabel>,
     pub stars: Vec<StarOffer>,
 }
 
@@ -48,7 +46,11 @@ pub async fn build(
         add_stars(&mut stars, catalog, &team, &roster_id);
         teams.push(team);
     }
-    let labels = catalog.find_inducement_labels(&inducement_uids(&teams));
+    let labels = catalog
+        .find_inducement_labels(&inducement_uids(&teams))
+        .into_iter()
+        .map(Into::into)
+        .collect();
     Ok(InducementsCatalog {
         teams,
         labels,
@@ -66,11 +68,10 @@ async fn team_catalog(
         .await
         .ok_or(PrintError::TeamNotFound)?;
     let tier = match team_data.find_team_season(team_id).await {
-        Some(season) => {
-            competition_data
-                .find_tier_rules_for_roster(&season, &info.roster_id)
-                .await
-        }
+        Some(season) => competition_data
+            .find_tier_rules_for_roster(&season, &info.roster_id)
+            .await
+            .map(Into::into),
         None => None,
     };
     let team = TeamCatalog {
@@ -114,7 +115,7 @@ fn add_stars(
         match stars.iter_mut().find(|o| o.star.uid == star.uid) {
             Some(offer) => offer.team_names.push(team.team_name.clone()),
             None => stars.push(StarOffer {
-                star,
+                star: star.into(),
                 team_names: vec![team.team_name.clone()],
             }),
         }
@@ -124,10 +125,10 @@ fn add_stars(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::ports::InducementSpecDto;
+    use crate::app::match_report::use_cases::print_models::OfferedInducement;
 
-    fn spec(uid: &str, cost: u32) -> InducementSpecDto {
-        InducementSpecDto {
+    fn spec(uid: &str, cost: u32) -> OfferedInducement {
+        OfferedInducement {
             uid: uid.into(),
             max_qty: 1,
             unit_cost: cost,
@@ -137,7 +138,7 @@ mod tests {
     fn equipe(nom: &str, uids: &[&str]) -> TeamCatalog {
         TeamCatalog {
             team_name: nom.into(),
-            tier: Some(TierRulesDto {
+            tier: Some(TierOffer {
                 allowed_inducements: uids.iter().map(|u| spec(u, 10)).collect(),
                 allowed_star_players: vec![],
             }),

@@ -219,15 +219,15 @@ impl Routes {
 
 /// L'URL d'un fragment d'impression, à une ou deux équipes.
 fn print_url(
-    seule: &str,
-    avec: &str,
+    single: &str,
+    with_other: &str,
     space_id: &str,
     team_id: &str,
     other: Option<&str>,
 ) -> String {
     let base = match other {
-        Some(o) => avec.replace("{other_team_id}", o),
-        None => seule.to_string(),
+        Some(o) => with_other.replace("{other_team_id}", o),
+        None => single.to_string(),
     };
     base.replace("{space_id}", space_id)
         .replace("{team_id}", team_id)

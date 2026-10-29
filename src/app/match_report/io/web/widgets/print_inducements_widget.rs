@@ -239,7 +239,7 @@ impl IntoResponse for InducementsPrintTemplate {
     }
 }
 
-async fn rendre(state: &AppState, team_ids: &[&str], query: &InducementsPrintQuery) -> Response {
+async fn render(state: &AppState, team_ids: &[&str], query: &InducementsPrintQuery) -> Response {
     let ctx = &state.match_report;
     let built = inducements_print_service::build(
         ctx.team_data.as_ref(),
@@ -262,7 +262,7 @@ pub async fn get_print_inducements(
     Query(query): Query<InducementsPrintQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    rendre(&state, &[&team_id], &query).await
+    render(&state, &[&team_id], &query).await
 }
 
 /// `{other_team_id}` est contrôlé par `space_scope` (carte 594).
@@ -271,21 +271,21 @@ pub async fn get_print_inducements_with(
     Query(query): Query<InducementsPrintQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    rendre(&state, &[&team_id, &other_team_id], &query).await
+    render(&state, &[&team_id, &other_team_id], &query).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::ports::{InducementSpecDto, TierRulesDto};
+    use crate::app::match_report::use_cases::print_models::{OfferedInducement, TierOffer};
 
     fn equipe(nom: &str, specs: &[(&str, u32)]) -> TeamCatalog {
         TeamCatalog {
             team_name: nom.into(),
-            tier: Some(TierRulesDto {
+            tier: Some(TierOffer {
                 allowed_inducements: specs
                     .iter()
-                    .map(|(uid, cost)| InducementSpecDto {
+                    .map(|(uid, cost)| OfferedInducement {
                         uid: uid.to_string(),
                         max_qty: 2,
                         unit_cost: *cost,

@@ -8,11 +8,12 @@
 //! Le statut financier est le résultat des fonctions du domaine, transposé ;
 //! le bonus de non-temporisation et le plafond des fans sont ceux du code.
 
+use crate::app::match_report::domain::underdog::Side;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
-use crate::app::match_report::ports::{AlignablePlayerDto, MatchRemindersDto, SppScaleDto};
 use crate::app::match_report::use_cases::match_sheet_service::{
     self, MatchSheet, MoneyStatus, SheetPorts, SheetRequest, SheetTeam,
 };
+use crate::app::match_report::use_cases::print_models::{MatchReminders, SheetPlayer, SppScale};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
@@ -23,12 +24,26 @@ use serde::Deserialize;
 /// La feuille prévoit seize lignes, le plafond d'un effectif.
 const TALLY_ROWS: usize = 16;
 
+/// Qui reçoit. **Inconnu par défaut** : seule l'option « prochain adversaire »
+/// le sait, et une équipe choisie à la main ne doit pas recevoir d'office.
 #[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HomeSide {
-    #[default]
     Own,
     Other,
+    #[default]
+    Unknown,
+}
+
+impl HomeSide {
+    /// Le camp de mon équipe, pour les fonctions du domaine.
+    pub fn own_side(self) -> Option<Side> {
+        match self {
+            Self::Own => Some(Side::Home),
+            Self::Other => Some(Side::Away),
+            Self::Unknown => None,
+        }
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -55,7 +70,7 @@ pub struct SheetColumnVm {
     pub money: MoneyStatus,
     pub players: Vec<SheetPlayerVm>,
     pub blank_rows: usize,
-    pub spp: Option<SppScaleDto>,
+    pub spp: Option<SppScale>,
 }
 
 pub struct MatchSheetVm {
@@ -63,7 +78,7 @@ pub struct MatchSheetVm {
     pub copy_label: Option<String>,
     /// Mon équipe, puis l'autre — à gauche, puis à droite.
     pub columns: [SheetColumnVm; 2],
-    pub reminders: MatchRemindersDto,
+    pub reminders: MatchReminders,
     pub no_stalling_bonus_kpo: u32,
 }
 
@@ -104,10 +119,10 @@ fn column(team: Option<SheetTeam>, money: MoneyStatus) -> SheetColumnVm {
 }
 
 fn team_column(t: SheetTeam, money: MoneyStatus) -> SheetColumnVm {
-    let sous_titre = subtitle(&t);
+    let subtitle_text = subtitle(&t);
     let players: Vec<SheetPlayerVm> = t.players.into_iter().map(sheet_player).collect();
     SheetColumnVm {
-        subtitle: Some(sous_titre),
+        subtitle: Some(subtitle_text),
         name: Some(t.name),
         dedicated_fans: Some(t.dedicated_fans),
         money,
@@ -125,10 +140,13 @@ fn subtitle(t: &SheetTeam) -> String {
     } else {
         format!(" · Coach {}", t.coach_name)
     };
-    format!("{}{coach} · VE {} kPo", t.roster_name, t.team_value_kpo)
+    let tv = t
+        .team_value_kpo
+        .map_or_else(|| "—".to_string(), |v| format!("{v} kPo"));
+    format!("{}{coach} · VE {tv}", t.roster_name)
 }
 
-fn sheet_player(p: AlignablePlayerDto) -> SheetPlayerVm {
+fn sheet_player(p: SheetPlayer) -> SheetPlayerVm {
     SheetPlayerVm {
         jersey: p.jersey.map(|j| j.to_string()).unwrap_or_default(),
         name: p.name,
@@ -154,7 +172,7 @@ impl IntoResponse for MatchSheetTemplate {
     }
 }
 
-async fn rendre(
+async fn render(
     state: &AppState,
     own_id: &str,
     other_id: Option<&str>,
@@ -170,7 +188,7 @@ async fn rendre(
     let request = SheetRequest {
         own_id,
         other_id,
-        own_is_home: query.home == HomeSide::Own,
+        own_side: query.home.own_side(),
         round_id: query.round_id.as_deref(),
     };
     match match_sheet_service::build(&ports, &request).await {
@@ -187,7 +205,7 @@ pub async fn get_print_match_sheet(
     Query(query): Query<MatchSheetQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    rendre(&state, &team_id, None, &query).await
+    render(&state, &team_id, None, &query).await
 }
 
 /// `{other_team_id}` est contrôlé par `space_scope` (carte 594).
@@ -196,7 +214,7 @@ pub async fn get_print_match_sheet_with(
     Query(query): Query<MatchSheetQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    rendre(&state, &team_id, Some(&other_team_id), &query).await
+    render(&state, &team_id, Some(&other_team_id), &query).await
 }
 
 #[cfg(test)]
@@ -208,16 +226,16 @@ mod tests {
             name: "Les Tailleurs de Roc".into(),
             roster_name: "Granitiers".into(),
             coach_name: "Brunhild".into(),
-            team_value_kpo: 1440,
+            team_value_kpo: Some(1440),
             dedicated_fans: 4,
             players: (0..joueurs)
-                .map(|i| AlignablePlayerDto {
+                .map(|i| SheetPlayer {
                     jersey: Some(i as i16 + 1),
                     name: format!("J{i}"),
                     is_journeyman: i == 0,
                 })
                 .collect(),
-            spp: SppScaleDto::default(),
+            spp: SppScale::default(),
         }
     }
 
@@ -243,6 +261,20 @@ mod tests {
     }
 
     #[test]
+    fn une_ve_absente_s_imprime_en_tiret() {
+        let mut t = equipe(11);
+        t.team_value_kpo = None;
+        assert_eq!(subtitle(&t), "Granitiers · Coach Brunhild · VE —");
+    }
+
+    #[test]
+    fn sans_home_dans_l_url_personne_ne_recoit() {
+        assert_eq!(MatchSheetQuery::default().home.own_side(), None);
+        assert_eq!(HomeSide::Own.own_side(), Some(Side::Home));
+        assert_eq!(HomeSide::Other.own_side(), Some(Side::Away));
+    }
+
+    #[test]
     fn sans_adversaire_la_colonne_se_remplit_a_la_main() {
         let col = column(None, MoneyStatus::Unknown);
         assert!(col.name.is_none() && col.spp.is_none());
@@ -257,7 +289,7 @@ mod tests {
             own_money: MoneyStatus::Unknown,
             other_money: MoneyStatus::Unknown,
             round: None,
-            reminders: MatchRemindersDto::default(),
+            reminders: MatchReminders::default(),
         };
         let vm = MatchSheetVm::build(sheet, Some(2));
         assert_eq!(vm.no_stalling_bonus_kpo, NoStallingBonus::AMOUNT_KPO);

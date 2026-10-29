@@ -10,7 +10,7 @@
   font-size: calc(var(--sheet-font, 11px) * 1.6); text-transform: var(--sheet-name-case, none);
 }
 .match-report-print-inducements .match-report-print-inducements-sub { margin: 2px 0 0; color: #555; }
-.match-report-print-inducements .match-report-print-inducements-missing { margin: 0; color: #b00020; }
+.match-report-print-inducements .match-report-print-inducements-missing { margin: 0; color: var(--red); }
 .match-report-print-inducements .match-report-print-inducements-grid { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .match-report-print-inducements .match-report-print-inducements-grid th {
   font-family: var(--font-accent); font-size: 7.5px; font-weight: 700; letter-spacing: .05em;

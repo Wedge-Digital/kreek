@@ -138,18 +138,17 @@ pub struct PrintOptionsQuery {
     #[serde(default)]
     pub two_copies: bool,
     /// Qui reçoit (R10) : l'option « prochain adversaire » le sait, une autre
-    /// équipe non — mon équipe reçoit alors.
+    /// équipe non — et la feuille ne le suppose pas.
     #[serde(default)]
-    pub home: HomeSide,
+    pub home: Option<HomeSide>,
     /// La journée du prochain match, pour l'en-tête de la feuille de match.
     #[serde(default)]
     pub round_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HomeSide {
-    #[default]
     Own,
     Other,
 }
@@ -205,18 +204,16 @@ impl PrintOptionsQuery {
     /// doit rien injecter dans l'URL du fragment. `match_report` la vérifie
     /// encore contre la saison de l'équipe.
     fn match_sheet_query(&self, copy: Option<u8>) -> String {
-        let mut query = format!("home={}", self.home.as_str());
-        if let Some(round) = self
+        let round = self
             .round_id
             .as_deref()
-            .filter(|r| r.chars().all(|c| c.is_ascii_alphanumeric()))
-        {
-            query.push_str(&format!("&round_id={round}"));
-        }
-        if let Some(n) = copy {
-            query.push_str(&format!("&copy={n}"));
-        }
-        query
+            .filter(|r| r.chars().all(|c| c.is_ascii_alphanumeric()));
+        let parts = [
+            self.home.map(|h| format!("home={}", h.as_str())),
+            round.map(|r| format!("round_id={r}")),
+            copy.map(|n| format!("copy={n}")),
+        ];
+        parts.into_iter().flatten().collect::<Vec<_>>().join("&")
     }
 
     /// Le rôle de la fiche — « Mon équipe » ou « Adversaire ». La trésorerie,
@@ -510,7 +507,14 @@ mod tests {
     #[test]
     fn une_journee_qui_n_est_pas_un_identifiant_est_ecartee() {
         let opts = options("round_id=x%26home%3Dother").unwrap();
-        assert_eq!(opts.match_sheet_query(None), "home=own");
+        assert_eq!(opts.match_sheet_query(None), "");
+    }
+
+    /// Une autre équipe choisie à la main : personne ne reçoit d'office.
+    #[test]
+    fn sans_camp_connu_la_feuille_ne_recoit_pas_de_home() {
+        let opts = options("").unwrap();
+        assert_eq!(opts.match_sheet_query(Some(1)), "copy=1");
     }
 
     #[test]

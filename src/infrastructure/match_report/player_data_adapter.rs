@@ -101,11 +101,16 @@ impl IPlayerDataPort for PlayerDataAdapter {
         use crate::app::players::domain::match_impact::PlayerParticipationStatus;
         use crate::app::players::domain::player::{RosterMembership, TeamId};
         let tid = TeamId(team_id.to_string());
+        // Une panne rendrait une feuille vierge, pareille à celle d'une équipe
+        // sans joueur : on la dit avant de replier.
         let players = self
             .player_projection_repo
             .find_alive_by_team_id(&tid)
             .await
-            .unwrap_or_default();
+            .unwrap_or_else(|e| {
+                tracing::error!(team_id, error = %e, "joueurs alignables illisibles");
+                Vec::new()
+            });
         players
             .into_iter()
             .filter(|p| PlayerParticipationStatus::from_str(&p.participation_status).disponible())
