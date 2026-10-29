@@ -20,12 +20,18 @@ pub enum PairingStatus {
 }
 
 impl PairingStatus {
-    /// Depuis le statut porté par `competition_match_display_proj`.
-    pub fn from_projection(statut: &str) -> Self {
-        match statut {
-            "in_progress" => Self::InProgress,
-            "upcoming" => Self::Upcoming,
-            _ => Self::Played,
+    /// Depuis le statut porté par `competition_match_display_proj` — les trois
+    /// valeurs qu'y écrivent les listeners, et elles seules.
+    ///
+    /// **Pas de joker** : un statut ajouté demain (« reporté »…) rangé d'office
+    /// parmi les matchs joués ferait imprimer l'adversaire du match suivant,
+    /// sans un mot. Inconnu, il rend `None`, et l'appelant le signale.
+    pub fn from_projection(status: &str) -> Option<Self> {
+        match status {
+            "in_progress" => Some(Self::InProgress),
+            "upcoming" => Some(Self::Upcoming),
+            "completed" => Some(Self::Played),
+            _ => None,
         }
     }
 }
@@ -52,21 +58,39 @@ pub struct NextOpponent {
     pub opponent_venue: Venue,
 }
 
+/// Le prochain adversaire : le premier des matchs à venir (R12).
 pub fn next_opponent(team: &TeamId, pairings: &[ScheduledPairing]) -> Option<NextOpponent> {
-    let prochain = pairings
+    upcoming_opponents(team, pairings).into_iter().next()
+}
+
+/// Tous les matchs que l'équipe n'a pas encore joués, dans l'ordre de R12 : le
+/// match en cours de saisie d'abord, puis les journées à venir dans leur
+/// ordre. Le coach peut en choisir un autre que le premier — un match oublié
+/// d'une journée passée reste le prochain à jouer, mais pas forcément celui
+/// qu'il veut imprimer.
+pub fn upcoming_opponents(team: &TeamId, pairings: &[ScheduledPairing]) -> Vec<NextOpponent> {
+    let mut upcoming: Vec<&ScheduledPairing> = pairings
         .iter()
         .filter(|p| p.status != PairingStatus::Played && p.pairing.engage(team))
-        .min_by_key(|p| {
-            (
-                p.status != PairingStatus::InProgress,
-                p.round_position.into_inner(),
-            )
-        })?;
-    let adversaire = prochain.pairing.adversaire_de(team)?;
+        .collect();
+    upcoming.sort_by_key(|p| {
+        (
+            p.status != PairingStatus::InProgress,
+            p.round_position.into_inner(),
+        )
+    });
+    upcoming
+        .into_iter()
+        .filter_map(|p| opponent_in(team, p))
+        .collect()
+}
+
+fn opponent_in(team: &TeamId, scheduled: &ScheduledPairing) -> Option<NextOpponent> {
+    let opponent = scheduled.pairing.adversaire_de(team)?;
     Some(NextOpponent {
-        team_id: adversaire.clone(),
-        round_id: prochain.round_id.clone(),
-        opponent_venue: if prochain.pairing.home_team_id == *adversaire {
+        team_id: opponent.clone(),
+        round_id: scheduled.round_id.clone(),
+        opponent_venue: if scheduled.pairing.home_team_id == *opponent {
             Venue::Home
         } else {
             Venue::Away
@@ -123,6 +147,34 @@ mod tests {
         assert_eq!(prochain.opponent_venue, Venue::Away);
     }
 
+    /// La liste suit l'ordre de R12, et son premier élément est le prochain
+    /// adversaire : une seule règle, deux usages.
+    #[test]
+    fn les_matchs_a_venir_dans_l_ordre_de_r12() {
+        let (moi, a, b, c, d) = (
+            TeamId::new(),
+            TeamId::new(),
+            TeamId::new(),
+            TeamId::new(),
+            TeamId::new(),
+        );
+        let matchs = [
+            rencontre(&moi, &a, 1, PairingStatus::Played),
+            rencontre(&moi, &b, 6, PairingStatus::Upcoming),
+            rencontre(&c, &moi, 3, PairingStatus::Upcoming),
+            rencontre(&moi, &d, 5, PairingStatus::InProgress),
+        ];
+        let equipes: Vec<TeamId> = upcoming_opponents(&moi, &matchs)
+            .into_iter()
+            .map(|o| o.team_id)
+            .collect();
+        assert_eq!(equipes, vec![d, c, b]);
+        assert_eq!(
+            next_opponent(&moi, &matchs).map(|o| o.team_id),
+            Some(equipes[0].clone())
+        );
+    }
+
     #[test]
     fn sans_match_a_venir_aucun_adversaire() {
         let (moi, a) = (TeamId::new(), TeamId::new());
@@ -138,19 +190,27 @@ mod tests {
         assert_eq!(next_opponent(&moi, &matchs), None);
     }
 
+    /// Les valeurs que la projection contient réellement : `'completed'` est
+    /// celle de `match_report_published_listener`.
     #[test]
     fn le_statut_de_la_projection_est_lu() {
         assert_eq!(
             PairingStatus::from_projection("in_progress"),
-            PairingStatus::InProgress
+            Some(PairingStatus::InProgress)
         );
         assert_eq!(
             PairingStatus::from_projection("upcoming"),
-            PairingStatus::Upcoming
+            Some(PairingStatus::Upcoming)
         );
         assert_eq!(
-            PairingStatus::from_projection("played"),
-            PairingStatus::Played
+            PairingStatus::from_projection("completed"),
+            Some(PairingStatus::Played)
         );
+    }
+
+    #[test]
+    fn un_statut_inconnu_n_est_pas_range_parmi_les_matchs_joues() {
+        assert_eq!(PairingStatus::from_projection("postponed"), None);
+        assert_eq!(PairingStatus::from_projection("played"), None);
     }
 }

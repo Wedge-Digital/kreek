@@ -10,21 +10,41 @@
 
 use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
 use crate::app::competitions::domain::next_opponent::{NextOpponent, Venue};
-use crate::app::competitions::use_cases::next_opponent_service::{self, NextOpponentLookup};
+use crate::app::competitions::use_cases::next_opponent_service::{
+    self, NextOpponentLookup, UpcomingMatch,
+};
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 
+/// Un match à venir, tel que l'option le propose.
+pub struct UpcomingMatchVm {
+    pub other_team_id: String,
+    pub team_name: String,
+    pub roster_name: String,
+    pub round_id: String,
+    pub round_label: String,
+    pub opponent_is_home: bool,
+}
+
+impl UpcomingMatchVm {
+    /// « Journée 6, 25/10/2026 : Les Tailleurs (Granitiers) »
+    pub fn choice_label(&self) -> String {
+        format!(
+            "{} : {} ({})",
+            self.round_label, self.team_name, self.roster_name
+        )
+    }
+}
+
 pub enum NextOpponentOptionVm {
+    /// `next` est le prochain match (R12) ; `choices` les liste tous, lui
+    /// compris, pour en choisir un autre — vide quand il n'y en a qu'un.
     Available {
-        other_team_id: String,
-        team_name: String,
-        roster_name: String,
-        round_id: String,
-        round_label: String,
-        opponent_is_home: bool,
+        next: UpcomingMatchVm,
+        choices: Vec<UpcomingMatchVm>,
     },
     Unavailable {
         reason: &'static str,
@@ -34,31 +54,45 @@ pub enum NextOpponentOptionVm {
 impl NextOpponentOptionVm {
     pub fn from_lookup(lookup: NextOpponentLookup) -> Self {
         match lookup {
-            NextOpponentLookup::Found { opponent, pairing } => Self::available(&opponent, &pairing),
+            NextOpponentLookup::Found { upcoming } => Self::available(upcoming),
             NextOpponentLookup::NotEnrolled => Self::Unavailable {
                 reason: "L'équipe n'est inscrite dans aucune compétition.",
             },
             NextOpponentLookup::NoUpcomingMatch => Self::Unavailable {
                 reason: "Aucun match à venir pour mon équipe dans cette compétition.",
             },
+            NextOpponentLookup::Unreadable => Self::Unavailable {
+                reason: "Calendrier illisible : l'adversaire ne peut pas être déterminé.",
+            },
         }
     }
 
-    fn available(opponent: &NextOpponent, pairing: &PairingDisplayDto) -> Self {
-        let opponent_is_home = opponent.opponent_venue == Venue::Home;
-        let (team_name, roster_name) = if opponent_is_home {
-            (&pairing.home_team_name, &pairing.home_roster_name)
-        } else {
-            (&pairing.away_team_name, &pairing.away_roster_name)
-        };
-        Self::Available {
-            other_team_id: opponent.team_id.to_string(),
-            team_name: team_name.clone(),
-            roster_name: roster_name.clone(),
-            round_id: opponent.round_id.to_string(),
-            round_label: round_label(pairing),
-            opponent_is_home,
+    /// `upcoming` n'est jamais vide (`NextOpponentLookup::Found`).
+    fn available(upcoming: Vec<UpcomingMatch>) -> Self {
+        let mut choices: Vec<UpcomingMatchVm> = upcoming.iter().map(upcoming_match).collect();
+        let next = upcoming_match(&upcoming[0]);
+        if choices.len() < 2 {
+            choices.clear();
         }
+        Self::Available { next, choices }
+    }
+}
+
+fn upcoming_match(m: &UpcomingMatch) -> UpcomingMatchVm {
+    let (opponent, pairing): (&NextOpponent, &PairingDisplayDto) = (&m.opponent, &m.pairing);
+    let opponent_is_home = opponent.opponent_venue == Venue::Home;
+    let (team_name, roster_name) = if opponent_is_home {
+        (&pairing.home_team_name, &pairing.home_roster_name)
+    } else {
+        (&pairing.away_team_name, &pairing.away_roster_name)
+    };
+    UpcomingMatchVm {
+        other_team_id: opponent.team_id.to_string(),
+        team_name: team_name.clone(),
+        roster_name: roster_name.clone(),
+        round_id: opponent.round_id.to_string(),
+        round_label: round_label(pairing),
+        opponent_is_home,
     }
 }
 
@@ -138,6 +172,14 @@ mod tests {
         let vm = NextOpponentOptionVm::from_lookup(NextOpponentLookup::NoUpcomingMatch);
         assert!(
             matches!(vm, NextOpponentOptionVm::Unavailable { reason } if reason.contains("Aucun match"))
+        );
+    }
+
+    #[test]
+    fn un_calendrier_illisible_grise_l_option() {
+        let vm = NextOpponentOptionVm::from_lookup(NextOpponentLookup::Unreadable);
+        assert!(
+            matches!(vm, NextOpponentOptionVm::Unavailable { reason } if reason.contains("illisible"))
         );
     }
 }

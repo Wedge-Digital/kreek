@@ -173,7 +173,7 @@ def test_le_prochain_adversaire_ajoute_sa_fiche(page: Page, print_ctx):
     nom = _nom(print_ctx["adversaire"])
     expect(option).to_contain_text(nom)
 
-    option.locator("input").check()
+    option.locator("input[type=radio]").check()
     expect(_fiches(page)).to_have_count(2, timeout=15000)
     expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
     seconde = _feuilles(page).nth(1)
@@ -181,12 +181,31 @@ def test_le_prochain_adversaire_ajoute_sa_fiche(page: Page, print_ctx):
     expect(seconde).to_contain_text("Trésorerie")
 
 
+def test_une_autre_journee_change_l_adversaire(page: Page, print_ctx):
+    """Carte 610 — l'équipe imprimable joue les deux journées : la première
+    est présélectionnée (R12), la seconde se choisit et change la fiche
+    adverse."""
+    _ouvrir(page, print_ctx, print_ctx["imprimable"])
+    _sans_pages_en_plus(page)
+    nom = _nom(print_ctx["autre"])
+
+    journee = page.locator(".print-next-opponent kreek-select[name='print_round_id']")
+    journee.locator(".ks-control").click()
+    journee.locator(".ks-option", has_text=nom).first.click()
+
+    expect(page.locator(".print-next-opponent input[type=radio]")).to_be_checked()
+    expect(page.locator(".print-next-opponent .team-print-choice-hint")).to_contain_text(nom)
+    expect(_fiches(page)).to_have_count(2, timeout=15000)
+    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(_fiches(page).nth(1).locator(".team-print-sheet-head-name")).to_have_text(nom)
+
+
 def test_sans_match_a_venir_l_option_est_grisee(page: Page, print_ctx):
     """E3 — R2 : l'option dit pourquoi elle n'est pas disponible."""
     _ouvrir(page, print_ctx, print_ctx["sans_match"])
     option = page.locator(".print-next-opponent")
     expect(option).to_contain_text("Aucun match à venir")
-    expect(option.locator("input")).to_be_disabled()
+    expect(option.locator("input[type=radio]")).to_be_disabled()
 
 
 def test_une_autre_equipe_par_la_cascade(page: Page, print_ctx):
@@ -222,7 +241,7 @@ def test_l_impression_ne_sort_que_les_feuilles(page: Page, print_ctx):
     l'application comme les options sont masqués à l'impression."""
     _ouvrir(page, print_ctx, print_ctx["imprimable"])
     _sans_pages_en_plus(page)
-    page.locator(".print-next-opponent input").check()
+    page.locator(".print-next-opponent input[type=radio]").check()
     expect(_feuilles(page)).to_have_count(2, timeout=15000)
     expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
 
@@ -252,7 +271,7 @@ def test_rien_n_est_coupe_en_silence(page: Page, print_ctx):
     tient sans avertissement : aucune feuille marquée en débordement."""
     _ouvrir(page, print_ctx, print_ctx["imprimable"])
     page.locator(".team-print-segmented label:has-text('Paysage')").click()
-    page.locator(".print-next-opponent input").check()
+    page.locator(".print-next-opponent input[type=radio]").check()
     expect(_fiches(page)).to_have_count(2, timeout=15000)
     expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
 

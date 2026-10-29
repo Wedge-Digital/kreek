@@ -1,17 +1,36 @@
-{# L'option « prochain adversaire » de la page « Imprimer » (carte 599).
+{# L'option « prochain adversaire » de la page « Imprimer » (cartes 599 et 610).
 
    Un bouton radio du formulaire de la page : `data-team-id` porte l'équipe
    adverse, que le script de la page met dans le chemin de l'aperçu. Sans
    match à venir, l'option est grisée et dit pourquoi (R2).
+
+   Avec plusieurs matchs à venir, un sélecteur propose de choisir la journée :
+   le prochain match (R12) est présélectionné. Chaque match porte ses données
+   sur une ligne `print-next-opponent-match` ; le script de la page les recopie
+   sur le bouton radio au choix d'une journée.
    Les classes `team-print-choice*` sont stylées par la page hôte. #}
 {% match vm %}
-{% when NextOpponentOptionVm::Available { other_team_id, team_name, roster_name, round_id, round_label, opponent_is_home } %}
-<label class="team-print-choice print-next-opponent" hx-disinherit="*">
-  <input type="radio" name="content" value="opp" data-team-id="{{ other_team_id }}"
-         data-round-id="{{ round_id }}" data-opponent-home="{{ opponent_is_home }}">
-  <span class="team-print-choice-main">Mon équipe et mon prochain adversaire</span>
-  <span class="team-print-choice-hint">{{ round_label }} : {{ team_name }} ({{ roster_name }})</span>
-</label>
+{% when NextOpponentOptionVm::Available { next, choices } %}
+<div class="team-print-choice print-next-opponent" hx-disinherit="*">
+  <label class="team-print-choice-line">
+    <input type="radio" name="content" value="opp" data-team-id="{{ next.other_team_id }}"
+           data-round-id="{{ next.round_id }}" data-opponent-home="{{ next.opponent_is_home }}">
+    <span class="team-print-choice-main">Mon équipe et mon prochain adversaire</span>
+  </label>
+  <span class="team-print-choice-hint">{{ next.choice_label() }}</span>
+  {% if !choices.is_empty() %}
+  <kreek-select name="print_round_id" placeholder="Journée…">
+    {% for m in choices %}
+    <option value="{{ m.round_id }}"{% if m.round_id == next.round_id %} selected{% endif %}>{{ m.choice_label() }}</option>
+    {% endfor %}
+  </kreek-select>
+  {% for m in choices %}
+  <span class="print-next-opponent-match" hidden data-round-id="{{ m.round_id }}"
+        data-team-id="{{ m.other_team_id }}" data-opponent-home="{{ m.opponent_is_home }}"
+        data-label="{{ m.choice_label() }}"></span>
+  {% endfor %}
+  {% endif %}
+</div>
 {% when NextOpponentOptionVm::Unavailable { reason } %}
 <label class="team-print-choice team-print-choice--disabled print-next-opponent" hx-disinherit="*">
   <input type="radio" name="content" value="opp" disabled>

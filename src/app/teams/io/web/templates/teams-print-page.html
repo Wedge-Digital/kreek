@@ -242,7 +242,7 @@
       ? pages.dataset.previewWithUrl.replace('{other_team_id}', encodeURIComponent(other))
       : pages.dataset.previewUrl;
     var params = new URLSearchParams(new FormData(form));
-    ['content', 'other_team_id', 'print_competition_id', 'print_season_id']
+    ['content', 'other_team_id', 'print_competition_id', 'print_season_id', 'print_round_id']
       .forEach(function (k) { params.delete(k); });
     addMatchContext(params);
     return base + '?' + params.toString();
@@ -374,13 +374,31 @@
     scale();
   }
 
+  // Une autre journée choisie (carte 610) : ses données passent sur le bouton
+  // radio, que `otherTeamId` et `addMatchContext` lisent déjà.
+  function pickRound() {
+    var field = form.querySelector('input[name="print_round_id"]');
+    var match = field && form.querySelector(
+      '.print-next-opponent-match[data-round-id="' + field.value + '"]');
+    if (!match) return;
+    var radio = form.querySelector('[name="content"][value="opp"]');
+    radio.dataset.teamId = match.dataset.teamId;
+    radio.dataset.roundId = match.dataset.roundId;
+    radio.dataset.opponentHome = match.dataset.opponentHome;
+    radio.checked = true;
+    radio.closest('.print-next-opponent')
+      .querySelector('.team-print-choice-hint').textContent = match.dataset.label;
+  }
+
   // Choisir une équipe dans la cascade, c'est vouloir l'imprimer. L'équipe
   // seule : compétition et saison se présélectionnent au chargement, et
   // cocheraient l'option sans que le coach ait rien choisi.
   function onChange(evt) {
-    if (evt.target.getAttribute('name') === 'other_team_id') {
+    var name = evt.target.getAttribute('name');
+    if (name === 'other_team_id') {
       form.querySelector('[name="content"][value="other"]').checked = true;
     }
+    if (name === 'print_round_id') pickRound();
     schedule();
   }
 
