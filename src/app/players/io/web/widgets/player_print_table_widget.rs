@@ -65,7 +65,7 @@ impl PlayerPrintTableVm {
     pub fn build(players: Vec<PlayerRowVm>, query: &PlayerPrintQuery) -> Self {
         let rows: Vec<PlayerPrintRowVm> = players
             .into_iter()
-            .filter(|p| !(query.unavailable == UnavailableMode::Hide && p.absence.is_some()))
+            .filter(|p| !(query.unavailable == UnavailableMode::Hide && unavailable(p)))
             .map(|p| PlayerPrintRowVm::from_row(p, query.unavailable))
             .collect();
         // R15 : masquer les indisponibles libère des lignes, qu'on rend vides.
@@ -79,7 +79,8 @@ impl PlayerPrintTableVm {
 }
 
 impl PlayerPrintRowVm {
-    fn from_row(p: PlayerRowVm, unavailable: UnavailableMode) -> Self {
+    fn from_row(p: PlayerRowVm, mode: UnavailableMode) -> Self {
+        let struck = mode == UnavailableMode::Strike && unavailable(&p);
         let name = if p.personal_name.is_empty() {
             p.position_name.clone()
         } else {
@@ -99,7 +100,7 @@ impl PlayerPrintRowVm {
             persistent_injuries: p.persistent_injuries,
             spp_remaining: p.spp,
             value_kpo: p.value_kpo,
-            struck: unavailable == UnavailableMode::Strike && p.absence.is_some(),
+            struck,
             absence: p.absence,
             is_journeyman: p.is_journeyman,
         }
@@ -134,6 +135,13 @@ pub async fn get_player_print_table(
         vm: PlayerPrintTableVm::build(players, &query),
     }
     .into_response()
+}
+
+/// Indisponible au sens du domaine, comme le décompte de la fiche : un statut
+/// que `absence` ne sait pas nommer reste indisponible, et la feuille ne peut
+/// pas diverger de l'écran.
+fn unavailable(p: &PlayerRowVm) -> bool {
+    !p.participation.disponible()
 }
 
 #[cfg(test)]
@@ -201,6 +209,16 @@ mod tests {
         let vm = PlayerPrintTableVm::build(joueurs, &requete(UnavailableMode::Strike, false));
         let barres: Vec<bool> = vm.rows.iter().map(|r| r.struck).collect();
         assert_eq!(barres, vec![false, true]);
+    }
+
+    /// Un statut que l'absence ne nomme pas — mort, retraité — reste
+    /// indisponible : la feuille compte comme l'écran.
+    #[test]
+    fn l_indisponibilite_vient_de_la_participation() {
+        let mut mort = joueur(false, false);
+        mort.participation = PlayerParticipationStatus::Dead;
+        let vm = PlayerPrintTableVm::build(vec![mort], &requete(UnavailableMode::Hide, false));
+        assert!(vm.rows.is_empty());
     }
 
     /// R5 et R6 : le solde de SPP, et le journalier marqué.

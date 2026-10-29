@@ -89,7 +89,7 @@ impl IntoResponse for SkillsAnnexTemplate {
     }
 }
 
-async fn rendre(state: &AppState, team_ids: &[&str], query: &SkillsAnnexQuery) -> Response {
+async fn render(state: &AppState, team_ids: &[&str], query: &SkillsAnnexQuery) -> Response {
     let ctx = &state.players;
     let skills = skills_annex_service::collect(
         ctx.projection_repository.as_ref(),
@@ -108,7 +108,7 @@ pub async fn get_skills_annex(
     Query(query): Query<SkillsAnnexQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    rendre(&state, &[&team_id], &query).await
+    render(&state, &[&team_id], &query).await
 }
 
 /// `{other_team_id}` est contrôlé par `space_scope` (carte 594).
@@ -117,7 +117,7 @@ pub async fn get_skills_annex_with(
     Query(query): Query<SkillsAnnexQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    rendre(&state, &[&team_id, &other_team_id], &query).await
+    render(&state, &[&team_id, &other_team_id], &query).await
 }
 
 #[cfg(test)]
