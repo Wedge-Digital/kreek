@@ -92,7 +92,7 @@ pub struct TeamPrintUnavailableTemplate {
     pub back_url: String,
 }
 
-fn rendre<T: Template>(template: T) -> Response {
+fn render<T: Template>(template: T) -> Response {
     match template.render() {
         Ok(html) => Html(html).into_response(),
         Err(e) => {
@@ -108,11 +108,11 @@ pub async fn get_team_print_page(
 ) -> Response {
     let repo = state.teams.team_repository.as_ref();
     match team_print_service::load_printable(repo, &team_id).await {
-        Ok(team) => rendre(TeamPrintPageTemplate {
+        Ok(team) => render(TeamPrintPageTemplate {
             app_routes: AppRoutes::default(),
             vm: TeamPrintPageVm::build(&space_id, &team),
         }),
-        Err(TeamPrintError::NotPrintable { team_name }) => rendre(TeamPrintUnavailableTemplate {
+        Err(TeamPrintError::NotPrintable { team_name }) => render(TeamPrintUnavailableTemplate {
             app_routes: AppRoutes::default(),
             team_name,
             back_url: AppRoutes::default().teams.team_detail(&space_id, &team_id),

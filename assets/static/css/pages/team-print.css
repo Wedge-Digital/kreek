@@ -28,7 +28,7 @@
 }
 .team-print .team-print-group { display: flex; flex-direction: column; gap: 8px; border: 0; margin: 0; padding: 0; min-width: 0; }
 .team-print .team-print-group legend {
-  font-family: var(--font-accent); font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  font-family: var(--font-accent); font-size: var(--text-tiny); font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; color: var(--dark-3); padding: 0; margin-bottom: 2px;
 }
 /* Le bouton radio à gauche, libellé et précisions à droite. */
@@ -47,21 +47,21 @@
 .team-print .team-print-choice-line { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; cursor: pointer; }
 .team-print .team-print-choice input { accent-color: var(--main-blue); margin: 2px 0 0; }
 .team-print .team-print-choice-main { font-weight: 500; }
-.team-print .team-print-choice-hint { color: var(--dark-2); font-size: 12.5px; }
+.team-print .team-print-choice-hint { color: var(--dark-2); font-size: var(--text-tiny); }
 .team-print .team-print-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 10px; }
-.team-print .team-print-row > span { font-size: 13px; color: var(--dark-2); }
+.team-print .team-print-row > span { font-size: var(--text-xs); color: var(--dark-2); }
 .team-print .team-print-segmented {
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
   border: 1px solid var(--dark-4); border-radius: var(--radius-sm); overflow: hidden;
 }
-.team-print .team-print-segmented label { position: relative; text-align: center; padding: 7px 4px; cursor: pointer; font-size: 13px; border-left: 1px solid var(--dark-4); }
+.team-print .team-print-segmented label { position: relative; text-align: center; padding: 7px 4px; cursor: pointer; font-size: var(--text-xs); border-left: 1px solid var(--dark-4); }
 .team-print .team-print-segmented label:first-child { border-left: 0; }
 .team-print .team-print-segmented input { position: absolute; opacity: 0; pointer-events: none; }
 .team-print .team-print-segmented label:has(input:checked) { background: var(--main-blue); color: var(--white); font-weight: 500; }
 .team-print .team-print-segmented label:has(input:focus-visible) { outline: 2px solid var(--link-blue); outline-offset: -3px; }
 .team-print .team-print-check { display: grid; grid-template-columns: 18px 1fr; gap: 2px 10px; align-items: start; cursor: pointer; }
 .team-print .team-print-check input { margin: 2px 0 0; accent-color: var(--main-blue); }
-.team-print .team-print-check-hint { grid-column: 2; color: var(--dark-2); font-size: 12.5px; }
+.team-print .team-print-check-hint { grid-column: 2; color: var(--dark-2); font-size: var(--text-tiny); }
 .team-print .team-print-check--sub { margin-left: 28px; }
 
 /* ─── Aperçu ─── */
@@ -71,7 +71,7 @@
 }
 .team-print .team-print-toolbar {
   display: flex; justify-content: space-between; align-items: center; gap: var(--p1);
-  padding: 8px var(--p2); background: var(--dark-1); color: var(--dark-5); font-size: 13px;
+  padding: 8px var(--p2); background: var(--dark-1); color: var(--dark-5); font-size: var(--text-xs);
 }
 .team-print .team-print-zoom { display: flex; gap: 4px; }
 .team-print .team-print-zoom button {
@@ -81,7 +81,7 @@
 .team-print .team-print-zoom button[aria-pressed="true"] { background: var(--dark-5); color: var(--dark-0); }
 .team-print .team-print-warning {
   margin: 0 var(--p2); padding: 10px 12px; border-radius: var(--radius-sm);
-  background: var(--white); color: var(--red); font-size: 13px;
+  background: var(--white); color: var(--red); font-size: var(--text-xs);
 }
 .team-print .team-print-state {
   display: flex; flex-direction: column; align-items: center; gap: var(--p1);
@@ -97,7 +97,7 @@
 .team-print .team-print-pages { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 0 var(--p2); }
 .team-print .print-preview { display: contents; }
 .team-print .print-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.team-print .print-slot-label { color: var(--dark-5); font-family: var(--font-accent); font-size: 12px; letter-spacing: .04em; }
+.team-print .print-slot-label { color: var(--dark-5); font-family: var(--font-accent); font-size: var(--text-tiny); letter-spacing: .04em; }
 .team-print .print-frame { position: relative; overflow: hidden; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); background: var(--white); }
 
 /* ─── Actions ─── */
@@ -106,14 +106,6 @@
   padding: var(--p1) var(--p2); background: var(--white); border-radius: var(--radius-md);
 }
 .team-print .team-print-summary { margin-right: auto; color: var(--dark-2); }
-.team-print .team-print-btn {
-  display: inline-block; border-radius: var(--radius-sm); padding: 9px 16px; cursor: pointer;
-  font-family: var(--font-body); font-size: var(--text-xs); font-weight: 500;
-  border: 1px solid var(--main-blue); background: var(--white); color: var(--main-blue);
-}
-.team-print .team-print-btn--ghost { border-color: var(--dark-4); }
-.team-print .team-print-btn--primary { background: var(--main-blue); color: var(--white); }
-.team-print .team-print-btn:disabled { opacity: .5; cursor: not-allowed; }
 .team-print.team-print--unavailable { align-items: flex-start; max-width: 640px; }
 
 /* ─── Feuilles A4 ─── */

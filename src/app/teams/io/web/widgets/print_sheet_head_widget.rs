@@ -18,7 +18,8 @@ use serde::Deserialize;
 pub struct StaffPrintLineVm {
     pub label: &'static str,
     pub quantity: u8,
-    pub unit_price_kpo: u32,
+    /// `None` sans catalogue : le gabarit imprime un tiret.
+    pub unit_price_kpo: Option<u32>,
 }
 
 pub struct TeamSheetHeadVm {
@@ -37,7 +38,7 @@ pub struct TeamSheetHeadVm {
     pub alignable: usize,
     pub squad_size: usize,
     pub rerolls: u8,
-    pub reroll_price_kpo: u32,
+    pub reroll_price_kpo: Option<u32>,
     pub staff: Vec<StaffPrintLineVm>,
 }
 

@@ -180,7 +180,7 @@
       </div>
       <div class="team-print-state team-print-state--error" hidden>
         <p>L'aperçu n'a pas pu être préparé. Vérifie ta connexion, puis réessaie.</p>
-        <button class="team-print-btn" type="button" data-retry>Réessayer</button>
+        <button class="btn btn-outline btn-md btn-fit" type="button" data-retry>Réessayer</button>
       </div>
       <div class="team-print-pages"
            data-preview-url="{{ vm.preview_url }}"
@@ -190,13 +190,13 @@
 
   <footer class="team-print-actions">
     <span class="team-print-summary"></span>
-    <a class="team-print-btn team-print-btn--ghost"
+    <a class="btn btn-outline btn-md btn-fit"
        hx-get="{{ vm.back_url }}"
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="outerHTML"
        hx-push-url="true">Annuler</a>
-    <button class="team-print-btn team-print-btn--primary" type="button" data-print disabled>Imprimer</button>
+    <button class="btn btn-primary-blue btn-md btn-fit" type="button" data-print disabled>Imprimer</button>
   </footer>
 </div>
 <script>

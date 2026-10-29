@@ -37,7 +37,7 @@
     <div class="team-print-sheet-head-stat">
       <span class="team-print-sheet-head-stat-k">Relances</span>
       <span class="team-print-sheet-head-stat-v">{{ vm.rerolls }}</span>
-      <span class="team-print-sheet-head-stat-d">{{ vm.reroll_price_kpo }} kPo l'une</span>
+      <span class="team-print-sheet-head-stat-d">{% match vm.reroll_price_kpo %}{% when Some with (prix) %}{{ prix }} kPo l'une{% when None %}—{% endmatch %}</span>
     </div>
     <div class="team-print-sheet-head-stat">
       <span class="team-print-sheet-head-stat-k">Fans dévoués</span>
@@ -50,7 +50,7 @@
     <div class="team-print-sheet-head-staff-line">
       <span>{{ line.label }}</span>
       <b>{{ line.quantity }}</b>
-      <span class="team-print-sheet-head-staff-price">{{ line.unit_price_kpo }} kPo</span>
+      <span class="team-print-sheet-head-staff-price">{% match line.unit_price_kpo %}{% when Some with (prix) %}{{ prix }} kPo{% when None %}—{% endmatch %}</span>
     </div>
     {% endfor %}
   </div>

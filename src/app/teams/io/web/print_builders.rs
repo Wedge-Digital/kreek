@@ -33,7 +33,7 @@ pub fn build_sheet_head_vm(data: &SheetHeadData, role: SheetRole) -> TeamSheetHe
         alignable: data.squad.iter().filter(|m| m.presence.alignable()).count(),
         squad_size: data.squad.len(),
         rerolls: team.rerolls.0,
-        reroll_price_kpo: catalog.map(|c| c.reroll_base_cost).unwrap_or(0),
+        reroll_price_kpo: catalog.map(|c| c.reroll_base_cost),
         staff: staff_lines(data, catalog),
     }
 }
@@ -53,7 +53,8 @@ fn logo(url: &str) -> String {
 }
 
 fn staff_lines(data: &SheetHeadData, catalog: Option<&RosterCatalogDto>) -> Vec<StaffPrintLineVm> {
-    let price = |uid: &str| catalog.map(|c| c.staff_price(uid)).unwrap_or(0);
+    // Sans catalogue, aucun prix : un « 0 kPo » serait plausible, donc faux.
+    let price = |uid: &str| catalog.map(|c| c.staff_price(uid));
     let team = &data.team;
     vec![
         StaffPrintLineVm {
@@ -137,9 +138,9 @@ mod tests {
     #[test]
     fn les_prix_du_staff_sont_lus_dans_le_catalogue() {
         let vm = build_sheet_head_vm(&donnees(vec![]), SheetRole::Own);
-        let prix: Vec<u32> = vm.staff.iter().map(|l| l.unit_price_kpo).collect();
-        assert_eq!(prix, vec![50, 15, 12]);
-        assert_eq!(vm.reroll_price_kpo, 60);
+        let prix: Vec<Option<u32>> = vm.staff.iter().map(|l| l.unit_price_kpo).collect();
+        assert_eq!(prix, vec![Some(50), Some(15), Some(12)]);
+        assert_eq!(vm.reroll_price_kpo, Some(60));
     }
 
     /// R14 : les alignables sont ceux que le domaine déclare tels.
@@ -155,11 +156,11 @@ mod tests {
     }
 
     #[test]
-    fn sans_catalogue_les_prix_valent_zero_plutot_qu_une_erreur() {
+    fn sans_catalogue_aucun_prix_n_est_invente() {
         let mut d = donnees(vec![]);
         d.catalog = None;
         let vm = build_sheet_head_vm(&d, SheetRole::Own);
-        assert_eq!(vm.reroll_price_kpo, 0);
-        assert!(vm.staff.iter().all(|l| l.unit_price_kpo == 0));
+        assert_eq!(vm.reroll_price_kpo, None);
+        assert!(vm.staff.iter().all(|l| l.unit_price_kpo.is_none()));
     }
 }
