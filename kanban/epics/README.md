@@ -53,7 +53,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E13 — Gestion des erreurs coûteuses](done/E13-gestion-des-erreurs-couteuses.md) | `done` · 4/4 | 4 |
 | [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 7/10 | 10 |
 | [E15 — Recruter un journalier](ready_to_be_done/E15-recruter-un-journalier.md) | `ready_to_be_done` · 0/6 | 6 |
-| [E16 — Imprimer la feuille d'équipe](en_cours/E16-imprimer-la-feuille-d-equipe.md) | `en_cours` · 17/17, page blanche sous Firefox | 17 |
+| [E16 — Imprimer la feuille d'équipe](done/E16-imprimer-la-feuille-d-equipe.md) | `done` · 17/17 | 17 |
 
 ## Les cartes sans épic
 

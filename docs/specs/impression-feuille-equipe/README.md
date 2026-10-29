@@ -69,17 +69,18 @@ corpus (`docs/reference-data-schema.md`) ne les porte : ils arrivent dans un
 - La fiche d'équipe code en dur le prix du staff (`StaffVm` : apothicaire 50,
   assistant 10, pom-pom 10) alors que la VE les lit dans le catalogue du roster.
   L'impression prend le catalogue ; la fiche reste à aligner.
-- **Firefox imprime une page blanche après la dernière feuille.** Chromium (Chrome,
-  Edge) sort exactement les feuilles de l'aperçu, vérifié par le test e2e E6.
-  Deux correctifs n'ont pas suffi (feuilles de 2 px sous la hauteur du papier,
-  `html` et `body` en hauteur automatique à l'impression) ; le défaut n'a pas été
-  reproduit hors de la boîte d'impression de Firefox.
 
 ## Écarts relevés à l'implémentation
 
 La conception (phases 2 à 7) a tenu ; ces points ont été ajustés en codant, et
 les fichiers de phase ou les cartes concernés le disent.
 
+- **Pas de page nommée sur les feuilles.** `page: a4-portrait` faisait
+  imprimer à Firefox une page blanche après la dernière feuille : il ouvre une
+  page neuve dès qu'on quitte une page nommée, même pour une boîte vide. Le
+  format vient du seul `@page` posé par le script de la page. Vérifié en
+  pilotant Firefox (impression PDF A4 par WebDriver BiDi) : autant de pages que
+  de feuilles, en portrait, en paysage et avec les annexes.
 - **Masquer le chrome à l'impression** : par `layout-app.css`
   (`.app-layout:has(.team-print)`), et non par un bloc `body_class` — la
   navigation htmx ne recharge jamais `body` (`03-back.md`, décision 4).

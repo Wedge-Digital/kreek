@@ -1,9 +1,9 @@
 # E16 — Imprimer la feuille d'équipe
 
-**État :** `en_cours` — 17/17 cartes livrées. Le critère « Terminé quand » est
-vérifié sous Chrome et Edge, pas sous Firefox : son PDF ajoute une page blanche
-après la dernière feuille (cf. README de la spec, hors périmètre). L'épic reste
-ouverte tant que ce défaut n'est pas tranché — corrigé, ou accepté par écrit.
+**État :** `done` — 17/17 cartes livrées. Le critère « Terminé quand » est
+vérifié sous Chrome, Edge et Firefox. La page blanche que Firefox ajoutait
+après la dernière feuille venait des pages nommées des feuilles, retirées en
+revue (cf. README de la spec, « Écarts relevés à l'implémentation »).
 **Conception :** `docs/specs/impression-feuille-equipe/` — workflow feature,
 phases 1 à 8.
 **Maquette :** `assets/rawpages/html/app-team-print-modal.html`
