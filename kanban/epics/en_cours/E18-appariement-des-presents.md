@@ -1,6 +1,6 @@
 # E18 — Appariement des présents
 
-**État :** `en_cours` — 8 cartes, 2 faites. Spécifiée par le workflow
+**État :** `en_cours` — 8 cartes, 3 faites. Spécifiée par le workflow
 feature les 2026-10-28 et 29.
 **Conception :** `docs/specs/appariement-des-presents/`
 
@@ -23,7 +23,7 @@ de saison.
 
 ## État
 
-2/8 : le tirage vit dans `domain/draw.rs` (595) et `MatchDay` le vérifie (596). Il reste 597 à 602.
+3/8 : le tirage vit dans `domain/draw.rs` (595), `MatchDay` le vérifie (596) et `save_pairings` écrit une journée d'un bloc (597). Il reste 598 à 602.
 
 L'algorithme de tirage est **repris** de la branche `sondage-presence`, où il a
 été écrit, mesuré et testé ; le reste de la branche — sondage par e-mail,

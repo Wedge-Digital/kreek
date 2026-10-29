@@ -34,12 +34,12 @@ Les doublures de test de `IMatchDayRepository` gagnent la méthode.
 
 ## Checklist
 
-- [ ] `save_pairings` dans le port, sans défaut
-- [ ] Implémentation sqlx, `write_pairing` partagé avec `save_pairing`
-- [ ] `MatchDayRepositoryError::PairingsAlreadyExist` — absent sur `main` au
+- [x] `save_pairings` dans le port, sans défaut
+- [x] Implémentation sqlx, `write_pairing` partagé avec `save_pairing`
+- [x] `MatchDayRepositoryError::PairingsAlreadyExist` — absent sur `main` au
       2026-10-29, à ajouter
-- [ ] Doublures de test mises à jour
-- [ ] `test_save_pairings.rs` : tout est écrit ; journée pourvue refusée ; un
+- [x] Doublures de test mises à jour
+- [x] `test_save_pairings.rs` : tout est écrit ; journée pourvue refusée ; un
       refus n'écrit rien
-- [ ] Aucun appelant à cette étape — la carte 598 le branche
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] Aucun appelant à cette étape — la carte 598 le branche
+- [x] `make lint`, `make check-arch`, `make test`
