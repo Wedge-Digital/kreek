@@ -1,6 +1,6 @@
 # Calendrier · appariement des présents — cartes
 
-Épic : `kanban/epics/ready_to_be_done/E18-appariement-des-presents.md`.
+Épic : `kanban/epics/en_cours/E18-appariement-des-presents.md`.
 
 | Ordre | Carte | Contenu | Dépend de |
 |---|---|---|---|

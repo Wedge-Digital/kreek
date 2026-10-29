@@ -50,14 +50,14 @@ aucune poule n'en a deux.
 
 ## Checklist
 
-- [ ] `domain/draw.rs` copié, puis renommé à l'outil ; `domain/mod.rs`
-- [ ] `ecartees` retiré, commentaire de tête corrigé
-- [ ] `draw_pools` et `DomainError::NotEnoughPresent`
-- [ ] Les tests copiés passent sous leurs nouveaux noms — dont R5 sur quatre
+- [x] `domain/draw.rs` copié, puis renommé à l'outil ; `domain/mod.rs`
+- [x] `ecartees` retiré, commentaire de tête corrigé
+- [x] `draw_pools` et `DomainError::NotEnoughPresent`
+- [x] Les tests copiés passent sous leurs nouveaux noms — dont R5 sur quatre
       équipes (A-B A-C B-C jouées → deux rencontres), moindre total de
       revanches, revanche la plus ancienne, R4 au prix d'une rencontre, R8,
       l'aléa
-- [ ] Tests de `draw_pools` : poule à un présent sans rencontre ; aucune poule
+- [x] Tests de `draw_pools` : poule à un présent sans rencontre ; aucune poule
       tirable → `NotEnoughPresent`
-- [ ] `generate_round_pairings` **n'est pas touché** ici (carte 598)
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `generate_round_pairings` **n'est pas touché** ici (carte 598)
+- [x] `make lint`, `make check-arch`, `make test`

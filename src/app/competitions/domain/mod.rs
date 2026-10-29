@@ -7,6 +7,7 @@ pub mod competition_rules;
 pub mod competition_season;
 pub mod competition_structure;
 pub mod domain_event;
+pub mod draw;
 pub mod error;
 pub mod group_repository_port;
 pub mod match_day;

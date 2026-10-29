@@ -37,6 +37,10 @@ pub enum DomainError {
         roster: String,
         tiers: (String, String),
     },
+
+    // ── Tirage d'une journée (épic E18) ──────────────────────────────────────
+    /// R10 — aucune poule n'a deux équipes à apparier.
+    NotEnoughPresent,
 }
 
 impl fmt::Display for DomainError {
@@ -77,6 +81,12 @@ impl fmt::Display for DomainError {
                 write!(
                     f,
                     "Le roster « {roster} » figure dans deux tiers : « {a} » et « {b} »."
+                )
+            }
+            Self::NotEnoughPresent => {
+                write!(
+                    f,
+                    "Il faut au moins deux équipes présentes dans une même poule pour tirer une rencontre."
                 )
             }
         }
