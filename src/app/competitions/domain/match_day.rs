@@ -74,6 +74,12 @@ pub struct MatchDay {
 }
 
 impl MatchDay {
+    /// Vrai pour une journée de cette saison. Un identifiant de journée reçu
+    /// d'ailleurs que de la saison elle-même — une URL — se vérifie par là.
+    pub fn belongs_to(&self, season_id: &SeasonId) -> bool {
+        self.season_id == *season_id
+    }
+
     pub fn is_rest(&self) -> bool {
         self.day_type == MatchDayType::Rest
     }
@@ -293,6 +299,13 @@ mod tests {
             position: MatchDayPosition::try_new(14).unwrap(),
             pairings,
         }
+    }
+
+    #[test]
+    fn une_journee_n_appartient_qu_a_sa_saison() {
+        let journee = journee_avec(vec![]);
+        assert!(journee.belongs_to(&journee.season_id.clone()));
+        assert!(!journee.belongs_to(&SeasonId::new()));
     }
 
     fn rencontre(domicile: &TeamId, exterieur: &TeamId) -> Pairing {
