@@ -213,9 +213,9 @@
   // l'aperçu est le seul signal qui ne dépend pas de l'ordre des événements.
   var observer = new MutationObserver(function () { maybeReady(); });
   // Le format du papier, **pour cette page seulement** : un `@page` dans le
-  // bundle changerait le Ctrl+P de toute l'application. Les pages nommées des
-  // feuilles ne suffisent pas — Firefox n'en tire ni l'orientation ni les marges
-  // de sa boîte d'impression, et réduisait la feuille dans ses propres marges.
+  // bundle changerait le Ctrl+P de toute l'application. Les feuilles ne portent
+  // pas de page nommée : Firefox n'en tirait ni l'orientation ni les marges, et
+  // imprimait une page blanche après la dernière (cf. `team-print.css`).
   var pageFormat = document.createElement('style');
   document.head.appendChild(pageFormat);
 

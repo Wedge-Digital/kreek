@@ -132,10 +132,9 @@
   width: 794px; height: 1123px; padding: 34px 38px 30px; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 12px; overflow: hidden;
   background: #fff; color: #111; font-family: var(--font-body); font-size: var(--sheet-font); line-height: 1.3;
-  page: a4-portrait;
 }
 .team-print .orientation-landscape .print-sheet {
-  width: 1123px; height: 794px; padding: 28px 34px 24px; page: a4-landscape; gap: 8px;
+  width: 1123px; height: 794px; padding: 28px 34px 24px; gap: 8px;
   --sheet-columns: 3; --sheet-tally-row: 13.5px; --sheet-pre-columns: 2;
 }
 .team-print .orientation-landscape.density-compact .print-sheet { --sheet-tally-row: 12px; }
@@ -170,8 +169,10 @@
 .team-print .print-failed { padding: 8px; border: 1px dashed var(--red); color: var(--red); }
 .team-print .print-sheet--overflow { box-shadow: inset 0 0 0 3px var(--red); }
 
-@page a4-portrait { size: A4 portrait; margin: 0; }
-@page a4-landscape { size: A4 landscape; margin: 0; }
+/* Pas de page nommée (`page: …`) sur les feuilles : Firefox ouvre une page
+   neuve dès qu'on quitte une page nommée, et ce qui suit la dernière feuille —
+   même vide — imprimait une page blanche. Le format vient du `@page` que pose
+   le script de la page, pour elle seule. */
 
 /* ─── Impression : les feuilles seules ─── */
 @media print {
@@ -194,14 +195,11 @@
      que 297 mm, et ce demi-pixel suffisait à pousser chaque feuille sur une
      page blanche. La dernière ne force pas de saut (`print-sheet--last`, posé
      par le script) — sans quoi une page vide suit. */
-  /* 2 px sous la hauteur du papier : Firefox place la feuille un demi-pixel
-     plus bas que le haut de page, et ce demi-pixel suffisait à imprimer une
-     page blanche à la fin. */
   .team-print .print-sheet {
-    position: relative; transform: none; width: 210mm; height: calc(297mm - 2px);
+    position: relative; transform: none; width: 210mm; height: 297mm;
     break-after: page; break-inside: avoid;
   }
-  .team-print .orientation-landscape .print-sheet { width: 297mm; height: calc(210mm - 2px); }
+  .team-print .orientation-landscape .print-sheet { width: 297mm; height: 210mm; }
   .team-print .print-sheet.print-sheet--last { break-after: auto; }
   .team-print .print-sheet--overflow { box-shadow: none; }
   .team-print .print-pending { background: none; }
