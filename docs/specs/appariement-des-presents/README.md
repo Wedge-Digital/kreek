@@ -30,8 +30,8 @@ Reprend l'algorithme de tirage de la branche `sondage-presence`
 
 ## Avancement
 
-Spec de la page : `calendrier/`.
+Spec de la page : `calendrier/`. Épic : `E18`, cartes 595 à 602.
 
 | Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|
-| Calendrier · appariement des présents | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| Calendrier · appariement des présents | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
