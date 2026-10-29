@@ -57,7 +57,7 @@ def _ve(team_id: str) -> int:
 
 def _ouvrir_avec_l_adversaire(page: Page, ctx: dict) -> None:
     page.goto(f"{BASE_URL}/app/{ctx['space_id']}/teams/{ctx['own']}/print", wait_until="load")
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
     page.locator(".print-next-opponent input[type=radio]").check()
     _attendre_l_apercu(page)
 
@@ -65,7 +65,7 @@ def _ouvrir_avec_l_adversaire(page: Page, ctx: dict) -> None:
 def _attendre_l_apercu(page: Page) -> None:
     """Une option rechargée désactive « Imprimer » jusqu'au nouvel aperçu."""
     page.wait_for_timeout(400)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
 
 
 # ── Scénarios ─────────────────────────────────────────────────────────────────

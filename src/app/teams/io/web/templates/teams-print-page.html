@@ -3,7 +3,7 @@
 {# La page « Imprimer » (épic E16, cartes 595 à 600).
 
    Elle est sa propre vue d'impression : options à gauche, aperçu à droite,
-   actions en pied. À l'impression, `pages/team-print.css` et `layout-app.css`
+   « Imprimer » en tête et en pied de l'aperçu. À l'impression, `pages/team-print.css` et `layout-app.css`
    ne laissent sortir que les feuilles A4 de l'aperçu.
 
    La maquette validée est `assets/rawpages/html/app-team-print-modal.html` —
@@ -131,7 +131,7 @@
           <span>Encre</span>
           <div class="team-print-segmented">
             <label><input type="radio" name="ink" value="color" checked>Couleur</label>
-            <label><input type="radio" name="ink" value="mono">Noir et blanc</label>
+            <label title="Noir et blanc"><input type="radio" name="ink" value="mono">N&amp;B</label>
           </div>
         </div>
         <div class="team-print-row">
@@ -165,9 +165,12 @@
     <section class="team-print-preview" aria-label="Aperçu avant impression">
       <div class="team-print-toolbar">
         <span class="team-print-count">Préparation de l'aperçu…</span>
-        <div class="team-print-zoom" role="group" aria-label="Zoom">
-          <button type="button" data-zoom="fit" aria-pressed="true">Ajuster</button>
-          <button type="button" data-zoom="full" aria-pressed="false">100 %</button>
+        <div class="team-print-toolbar-end">
+          <div class="team-print-zoom" role="group" aria-label="Zoom">
+            <button type="button" data-zoom="fit" aria-pressed="true">Ajuster</button>
+            <button type="button" data-zoom="full" aria-pressed="false">100 %</button>
+          </div>
+          <button class="btn btn-orange btn-sm btn-fit" type="button" data-print disabled>Imprimer</button>
         </div>
       </div>
       <p class="team-print-warning" hidden>
@@ -185,28 +188,20 @@
       <div class="team-print-pages"
            data-preview-url="{{ vm.preview_url }}"
            data-preview-with-url="{{ vm.preview_with_url_template }}"></div>
+      {# Le même bouton qu'en tête : on y arrive après avoir relu les feuilles. #}
+      <div class="team-print-toolbar team-print-toolbar--foot">
+        <button class="btn btn-orange btn-sm btn-fit" type="button" data-print disabled>Imprimer</button>
+      </div>
     </section>
   </div>
-
-  <footer class="team-print-actions">
-    <span class="team-print-summary"></span>
-    <a class="btn btn-outline btn-md btn-fit"
-       hx-get="{{ vm.back_url }}"
-       hx-target="#app-content"
-       hx-select="#app-content"
-       hx-swap="outerHTML"
-       hx-push-url="true">Annuler</a>
-    <button class="btn btn-primary-blue btn-md btn-fit" type="button" data-print disabled>Imprimer</button>
-  </footer>
 </div>
 <script>
 (function () {
   var root = document.currentScript.previousElementSibling;
   var form = root.querySelector('#print-options');
   var pages = root.querySelector('.team-print-pages');
-  var printBtn = root.querySelector('[data-print]');
+  var printBtns = root.querySelectorAll('[data-print]');
   var counter = root.querySelector('.team-print-count');
-  var summary = root.querySelector('.team-print-summary');
   var loading = root.querySelector('.team-print-state--loading');
   var failed = root.querySelector('.team-print-state--error');
   var warning = root.querySelector('.team-print-warning');
@@ -261,7 +256,7 @@
     loading.hidden = state !== 'loading';
     failed.hidden = state !== 'error';
     pages.hidden = state !== 'ready';
-    printBtn.disabled = state !== 'ready';
+    printBtns.forEach(function (b) { b.disabled = state !== 'ready'; });
   }
 
   function refresh() {
@@ -330,7 +325,6 @@
     warning.hidden = !pages.querySelector('.print-sheet--overflow');
     var label = sheets.length + (sheets.length > 1 ? ' pages' : ' page');
     counter.textContent = label + ' · A4';
-    summary.textContent = label;
     htmx.trigger(document.body, 'printPreviewReady', { pages: sheets.length });
   }
 
@@ -412,7 +406,9 @@
     b.addEventListener('click', function () { setZoom(b); });
   });
   root.querySelector('[data-retry]').addEventListener('click', refresh);
-  printBtn.addEventListener('click', function () { window.print(); });
+  printBtns.forEach(function (b) {
+    b.addEventListener('click', function () { window.print(); });
+  });
   window.addEventListener('resize', scale);
   refresh();
 })();

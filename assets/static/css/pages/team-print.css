@@ -54,7 +54,10 @@
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
   border: 1px solid var(--dark-4); border-radius: var(--radius-sm); overflow: hidden;
 }
-.team-print .team-print-segmented label { position: relative; text-align: center; padding: 7px 4px; cursor: pointer; font-size: var(--text-xs); border-left: 1px solid var(--dark-4); }
+/* Centré dans les deux axes : quand un libellé passe à la ligne (« Noir et
+   blanc »), ses voisins restent au milieu du bouton au lieu d'en coller au haut.
+   Pas de `nowrap` : le panneau est trop étroit, le texte serait coupé. */
+.team-print .team-print-segmented label { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; padding: 7px 4px; cursor: pointer; font-size: var(--text-xs); border-left: 1px solid var(--dark-4); }
 .team-print .team-print-segmented label:first-child { border-left: 0; }
 .team-print .team-print-segmented input { position: absolute; opacity: 0; pointer-events: none; }
 .team-print .team-print-segmented label:has(input:checked) { background: var(--main-blue); color: var(--white); font-weight: 500; }
@@ -67,12 +70,14 @@
 /* ─── Aperçu ─── */
 .team-print .team-print-preview {
   display: flex; flex-direction: column; gap: var(--p1); min-width: 0;
-  padding: 0 0 var(--p2); background: var(--dark-2); border-radius: var(--radius-md); overflow: hidden;
+  padding: 0; background: var(--dark-2); border-radius: var(--radius-md); overflow: hidden;
 }
 .team-print .team-print-toolbar {
   display: flex; justify-content: space-between; align-items: center; gap: var(--p1);
   padding: 8px var(--p2); background: var(--dark-1); color: var(--dark-5); font-size: var(--text-xs);
 }
+.team-print .team-print-toolbar--foot { justify-content: flex-end; }
+.team-print .team-print-toolbar-end { display: flex; align-items: center; gap: var(--p1); }
 .team-print .team-print-zoom { display: flex; gap: 4px; }
 .team-print .team-print-zoom button {
   border: 1px solid var(--dark-3); background: transparent; color: var(--dark-5);
@@ -100,12 +105,6 @@
 .team-print .print-slot-label { color: var(--dark-5); font-family: var(--font-accent); font-size: var(--text-tiny); letter-spacing: .04em; }
 .team-print .print-frame { position: relative; overflow: hidden; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); background: var(--white); }
 
-/* ─── Actions ─── */
-.team-print .team-print-actions {
-  display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: var(--p1) var(--p2); background: var(--white); border-radius: var(--radius-md);
-}
-.team-print .team-print-summary { margin-right: auto; color: var(--dark-2); }
 .team-print.team-print--unavailable { align-items: flex-start; max-width: 640px; }
 
 /* ─── Feuilles A4 ─── */
@@ -181,7 +180,6 @@
   .team-print .team-print-toolbar,
   .team-print .team-print-warning,
   .team-print .team-print-state,
-  .team-print .team-print-actions,
   .team-print .print-slot-label { display: none !important; }
   .team-print,
   .team-print .team-print-body,
@@ -214,5 +212,4 @@
 @media (max-width: 768px) {
   .team-print .team-print-body { grid-template-columns: minmax(0, 1fr); }
   .team-print .team-print-pages { padding: 0 var(--p1); }
-  .team-print .team-print-actions { position: sticky; bottom: 64px; }
 }

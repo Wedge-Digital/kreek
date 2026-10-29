@@ -100,7 +100,10 @@ def _ouvrir(page: Page, ctx: dict, team_id: str) -> None:
     """Ouvre la page et attend l'aperçu complet : « Imprimer » ne s'active
     qu'une fois tous les fragments chargés (`printPreviewReady`)."""
     page.goto(_page_url(ctx, team_id), wait_until="load")
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
+    # Le même bouton en tête d'aperçu et en pied : les deux s'activent ensemble.
+    expect(page.locator("[data-print]")).to_have_count(2)
+    expect(page.locator("[data-print]").last).to_be_enabled()
 
 
 def _feuilles(page: Page):
@@ -117,7 +120,7 @@ def _sans_pages_en_plus(page: Page) -> None:
     for nom in ("skills_annex", "match_sheet"):
         page.locator(f"[name='{nom}']").uncheck()
     page.wait_for_timeout(400)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
 
 
 # ── Scénarios ─────────────────────────────────────────────────────────────────
@@ -129,7 +132,7 @@ def test_le_bouton_de_la_fiche_mene_a_la_page(page: Page, print_ctx):
     cliquer_quand_cable(page, ".state-banner-cta:has-text('Imprimer')")
 
     expect(page.locator(".team-print")).to_be_visible(timeout=10000)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
     assert page.url.endswith("/print"), f"hx-push-url n'a pas suivi : {page.url}"
 
 
@@ -162,7 +165,7 @@ def test_l_apercu_suit_les_options(page: Page, print_ctx):
 
     page.locator(".team-print-segmented label:has-text('Paysage')").click()
     expect(page.locator(".print-preview.orientation-landscape")).to_have_count(1, timeout=10000)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
 
 
 
@@ -175,7 +178,7 @@ def test_le_prochain_adversaire_ajoute_sa_fiche(page: Page, print_ctx):
 
     option.locator("input[type=radio]").check()
     expect(_fiches(page)).to_have_count(2, timeout=15000)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
     seconde = _feuilles(page).nth(1)
     expect(seconde.locator(".team-print-sheet-head-name")).to_have_text(nom)
     expect(seconde).to_contain_text("Trésorerie")
@@ -196,7 +199,7 @@ def test_une_autre_journee_change_l_adversaire(page: Page, print_ctx):
     expect(page.locator(".print-next-opponent input[type=radio]")).to_be_checked()
     expect(page.locator(".print-next-opponent .team-print-choice-hint")).to_contain_text(nom)
     expect(_fiches(page)).to_have_count(2, timeout=15000)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
     expect(_fiches(page).nth(1).locator(".team-print-sheet-head-name")).to_have_text(nom)
 
 
@@ -243,7 +246,7 @@ def test_l_impression_ne_sort_que_les_feuilles(page: Page, print_ctx):
     _sans_pages_en_plus(page)
     page.locator(".print-next-opponent input[type=radio]").check()
     expect(_feuilles(page)).to_have_count(2, timeout=15000)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
 
     page.emulate_media(media="print")
     expect(page.locator(".team-print-options")).to_be_hidden()
@@ -262,8 +265,11 @@ def test_imprimer_attend_l_apercu_puis_ouvre_l_impression(page: Page, print_ctx)
     """E7 — « Imprimer » n'imprime pas un aperçu à moitié chargé."""
     page.add_init_script("window.__impressions = 0; window.print = () => { window.__impressions += 1; };")
     _ouvrir(page, print_ctx, print_ctx["imprimable"])
-    page.locator("[data-print]").click()
+    # En tête puis en pied d'aperçu : chacun des deux boutons imprime.
+    page.locator(".team-print-toolbar-end [data-print]").click()
     assert page.evaluate("window.__impressions") == 1
+    page.locator(".team-print-toolbar--foot [data-print]").click()
+    assert page.evaluate("window.__impressions") == 2
 
 
 def test_rien_n_est_coupe_en_silence(page: Page, print_ctx):
@@ -273,7 +279,7 @@ def test_rien_n_est_coupe_en_silence(page: Page, print_ctx):
     page.locator(".team-print-segmented label:has-text('Paysage')").click()
     page.locator(".print-next-opponent input[type=radio]").check()
     expect(_fiches(page)).to_have_count(2, timeout=15000)
-    expect(page.locator("[data-print]")).to_be_enabled(timeout=15000)
+    expect(page.locator("[data-print]").first).to_be_enabled(timeout=15000)
 
     debordees = page.evaluate(
         """() => [...document.querySelectorAll('.print-sheet--overflow')].map(s => {
