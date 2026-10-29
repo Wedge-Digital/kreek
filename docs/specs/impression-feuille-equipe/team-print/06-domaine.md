@@ -16,9 +16,9 @@ ajouts : une méthode sur `Team`, trois modules de fonctions pures.
 | R7 | Coups de pouce : palier de **sa** compétition, prix de **son** roster ; « — » si non disponible | references (règles existantes) |
 | R8 | Trésorerie : sur toutes les fiches, sans option (révisée au test manuel) | présentation |
 | R9 | Rappels du MVP et des fans, liste des météos : lus dans le corpus ; absents s'il ne les fournit pas | references |
-| R10 | Favori : la VE la plus forte ; à égalité, l'équipe à domicile — pour une autre équipe, mon équipe | match_report · fonction pure |
+| R10 | Favori : la VE la plus forte ; à égalité, l'équipe à domicile. Domicile inconnu (autre équipe choisie à la main) et VE égales : personne, la ligne se remplit à la main *(révisée en revue de la PR #12)* | match_report · fonction pure |
 | R11 | Petite monnaie imprimée : l'écart de VE, avec le rappel des dépenses du favori | match_report · fonction pure |
-| R12 | Prochain match : celui en cours de saisie s'il existe, sinon le premier à venir dans l'ordre des journées | competitions · fonction pure |
+| R12 | Prochain match : celui en cours de saisie s'il existe, sinon le premier à venir dans l'ordre des journées. Le coach peut choisir un autre match à venir (carte 610) | competitions · fonction pure |
 | R13 | Star player disponible pour un roster : sans liste de rosters autorisés, ou si le roster y figure | references · déplacé du contrôleur |
 | R14 | Joueur alignable : ce que le domaine déclare tel (`presence.alignable()`), jamais un recomptage | teams, players |
 | R15 | Lignes vides : 16 − lignes imprimées ; masquer les indisponibles en ajoute | présentation |
@@ -78,7 +78,15 @@ pub struct NextOpponent {
 }
 
 pub fn next_opponent(team: &TeamId, pairings: &[ScheduledPairing]) -> Option<NextOpponent>;
+
+/// Tous les matchs à venir dans l'ordre de R12 ; le premier est `next_opponent`.
+pub fn upcoming_opponents(team: &TeamId, pairings: &[ScheduledPairing]) -> Vec<NextOpponent>;
 ```
+
+`PairingStatus::from_projection` ne connaît que les trois statuts que la
+projection contient (`in_progress`, `upcoming`, `completed`) ; un statut inconnu
+rend `None`, et la recherche répond « calendrier illisible » au lieu de sauter la
+ligne *(revue de la PR #12)*.
 
 Réutilise `Pairing::adversaire_de` (`match_day.rs:134`). Le service construit
 les `ScheduledPairing` depuis `PairingDisplayDto` ; la fonction ne dépend pas de

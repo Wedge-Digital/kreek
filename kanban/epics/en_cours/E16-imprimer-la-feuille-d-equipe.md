@@ -1,6 +1,6 @@
 # E16 — Imprimer la feuille d'équipe
 
-**État :** `en_cours` — 16/16 cartes livrées. Le critère « Terminé quand » est
+**État :** `en_cours` — 17/17 cartes livrées. Le critère « Terminé quand » est
 vérifié sous Chrome et Edge, pas sous Firefox : son PDF ajoute une page blanche
 après la dernière feuille (cf. README de la spec, hors périmètre). L'épic reste
 ouverte tant que ce défaut n'est pas tranché — corrigé, ou accepté par écrit.
@@ -41,6 +41,7 @@ option. « Imprimer » sort les feuilles seules ; le navigateur propose
 | **607** | Les coups de pouce et les star players disponibles | 2 |
 | **608** | La feuille de match imprimable | 2 |
 | **609** | Les tests e2e des annexes et de la feuille de match | 2 |
+| **610** | Choisir la journée du match à imprimer — issue de la revue | 2 |
 
 ## Ce qui commande l'ordre
 
