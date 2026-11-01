@@ -147,7 +147,22 @@ async fn aiguiller(
             )
             .await
         }
-        _ => {}
+        // Ce qui ne sort pas du BC, nommé un à un et sans joker (carte 631) :
+        // un événement ajouté casse la compilation ici, et son auteur tranche
+        // — il sort, ou il rejoint cette liste.
+        MatchReportDomainEvent::MatchReportCreated { .. }
+        | MatchReportDomainEvent::SelectionUpdated { .. }
+        | MatchReportDomainEvent::EntryModeChosen { .. }
+        | MatchReportDomainEvent::FanFactorRecorded { .. }
+        | MatchReportDomainEvent::TeamValuesRecorded { .. }
+        | MatchReportDomainEvent::InducementsRecorded { .. }
+        // L'annulation ne sort pas : la trésorerie n'est débitée qu'à la
+        // publication, et le retrait des journaliers passe par `TempPlayersReset`.
+        | MatchReportDomainEvent::InducementsCancelled { .. }
+        | MatchReportDomainEvent::StarPlayerEngaged { .. }
+        | MatchReportDomainEvent::ActionRecorded { .. }
+        | MatchReportDomainEvent::ActionDeleted { .. }
+        | MatchReportDomainEvent::PostMatchRecorded { .. } => {}
     }
 }
 
@@ -817,6 +832,8 @@ mod unpublished_events_tests {
             home_team_id: TeamId::new(),
             away_team_id: TeamId::new(),
             created_by: CoachId::new(),
+            entry_mode: crate::app::match_report::domain::value_objects::EntryMode::SoloEntry,
+            started_by: CoachId::new(),
             origin: MatchReportOrigin::Manual,
             pairing_id: Some("pairing-1".to_string()),
             home_fan_roll: None,

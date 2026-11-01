@@ -1,5 +1,5 @@
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
-use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+use crate::app::match_report::domain::value_objects::{EntryMode, MatchReportOrigin};
 use crate::app::match_report::use_cases::create_match_report_use_case;
 use crate::app::shared_kernel::app_events::competitions_app_events::CompetitionsAppEvent;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
@@ -76,6 +76,10 @@ pub fn init(app_event_bus: &EventBus, event_bus: &EventBus, repo: Arc<dyn IMatch
                         created_by: coach,
                         origin: MatchReportOrigin::Pairing,
                         pairing_id: Some(pairing_id),
+                        // Sans effet : un brouillon du calendrier n'est pas
+                        // confirmé à sa création, son mode se choisit quand
+                        // il démarre.
+                        entry_mode: EntryMode::SoloEntry,
                     };
 
                     match create_match_report_use_case::execute(cmd, repo.as_ref(), &bus)

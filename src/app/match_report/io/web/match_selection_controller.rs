@@ -1,6 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+use crate::app::match_report::domain::value_objects::{EntryMode, MatchReportOrigin};
 use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::CreationAppariementError;
 use crate::app::match_report::use_cases::match_report_access_service::{
@@ -340,16 +340,26 @@ pub async fn create_match_report(
         // existe depuis le tirage. Le POST du coach vaut confirmation de sa
         // sélection — sans quoi il repartirait sur un brouillon non confirmé,
         // et devrait revalider ce qu'il vient d'envoyer.
-        if let Err(e) = create_match_report_use_case::confirmer_si_brouillon(
+        //
+        // Le mode vaut « Je saisis tout » tant que l'écran ne le demande pas
+        // (carte 631 ; la question arrive avec la carte 632).
+        match create_match_report_use_case::confirmer_si_brouillon(
             &mr_id,
             user.id,
+            EntryMode::SoloEntry,
             state.match_report.match_report_repo.as_ref(),
             &state.match_report.event_bus,
         )
         .await
         {
-            tracing::error!("create_match_report: confirmation de {mr_id} : {e:?}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            Ok(()) => {}
+            Err(create_match_report_use_case::CreateMatchReportError::Conflict) => {
+                return conflict_response()
+            }
+            Err(e) => {
+                tracing::error!("create_match_report: confirmation de {mr_id} : {e:?}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
         }
         return ouvrir(&space_id, &mr_id);
     }
@@ -498,6 +508,8 @@ fn construire_commande(
         // et il en porte l'identifiant juste en dessous.
         origin: MatchReportOrigin::Manual,
         pairing_id: Some(pairing_id),
+        // « Je saisis tout » tant que l'écran ne le demande pas (carte 632).
+        entry_mode: EntryMode::SoloEntry,
     })
 }
 
@@ -526,6 +538,9 @@ async fn creer_le_rapport(
                 "Une équipe ne peut pas s'affronter elle-même.".into(),
             )
         }
+        // Deux « Commencer » simultanés : 409 et rechargement, le premier
+        // l'emporte (carte 631, sur le modèle de la carte 623).
+        Err(create_match_report_use_case::CreateMatchReportError::Conflict) => conflict_response(),
         Err(e) => {
             tracing::error!("create_match_report: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -619,6 +634,8 @@ pub async fn update_match_selection(
             Err(_) => return StatusCode::BAD_REQUEST.into_response(),
         },
         confirmed_by: user.id,
+        // « Je saisis tout » tant que l'écran ne le demande pas (carte 632).
+        entry_mode: EntryMode::SoloEntry,
     };
 
     match update_match_selection_use_case::execute(

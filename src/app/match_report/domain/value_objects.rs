@@ -34,6 +34,28 @@ pub enum MatchReportOrigin {
     Pairing,
 }
 
+/// Le mode de saisie d'un compte rendu, choisi une fois par celui qui le
+/// démarre (carte 631, règle R1 de l'épic E21).
+///
+/// **Une seule variante en E21** : « Je saisis tout ». Une variante « Chacun
+/// son équipe » sans son comportement serait un mode qu'on peut choisir et qui
+/// ne fait rien ; E22 l'ajoute avec ce qui la fait exister.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EntryMode {
+    /// « Je saisis tout » : le démarreur saisit les deux camps.
+    SoloEntry,
+}
+
+impl EntryMode {
+    /// La forme écrite en projection (`match_report_proj.entry_mode`), égale à
+    /// celle que `serde` écrit dans l'event store.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::SoloEntry => "SoloEntry",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct D3Roll(u8);
 

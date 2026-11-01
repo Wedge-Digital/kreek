@@ -15,6 +15,15 @@ pub struct MatchActionRow {
     pub player_position: String,
 }
 
+/// Le mode de saisie d'un rapport et celui qui l'a démarré, lus sur la
+/// projection (carte 631). DTO de lecture : `started_by` est vide tant que le
+/// rapport n'est qu'un brouillon.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryModeRow {
+    pub entry_mode: String,
+    pub started_by: Option<String>,
+}
+
 #[derive(Debug)]
 pub enum RepositoryError {
     ConcurrentWrite,
@@ -66,6 +75,14 @@ pub trait IMatchReportRepository: Send + Sync {
         &self,
         match_report_id: &str,
     ) -> Result<Option<(String, String, String)>, RepositoryError>;
+
+    /// Le mode de saisie et le démarreur du rapport, `None` s'il n'existe pas
+    /// (carte 631). Lu sur la projection, à côté de `find_access_scope`, pour
+    /// la garde de l'écriture qui le demandera à chaque requête.
+    async fn find_entry_mode(
+        &self,
+        match_report_id: &str,
+    ) -> Result<Option<EntryModeRow>, RepositoryError>;
 
     /// Les deux équipes du rapport : `(domicile, extérieur)`.
     ///

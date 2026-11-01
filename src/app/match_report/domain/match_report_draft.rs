@@ -1,7 +1,7 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
-use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+use crate::app::match_report::domain::value_objects::{EntryMode, MatchReportOrigin};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
@@ -84,13 +84,24 @@ impl MatchReportDraft {
         }
     }
 
+    /// Démarre le compte rendu : l'avant-match, et **deux** événements à
+    /// appender ensemble — `SelectionConfirmed` puis `EntryModeChosen`
+    /// (carte 631). Celui qui confirme est celui qui démarre.
     pub fn confirm_selection(
         self,
         confirmed_by: CoachId,
-    ) -> (MatchReportPreMatch, MatchReportDomainEvent) {
-        let event = MatchReportDomainEvent::SelectionConfirmed { confirmed_by };
-        let pre_match = MatchReportPreMatch::from_draft(self);
-        (pre_match, event)
+        mode: EntryMode,
+    ) -> (MatchReportPreMatch, Vec<MatchReportDomainEvent>) {
+        let pre_match = MatchReportPreMatch::from_draft(self, confirmed_by)
+            .choose_entry_mode(mode, confirmed_by);
+        let events = vec![
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by },
+            MatchReportDomainEvent::EntryModeChosen {
+                mode,
+                started_by: confirmed_by,
+            },
+        ];
+        (pre_match, events)
     }
 
     pub(crate) fn from_created_event(event: &MatchReportDomainEvent) -> Self {

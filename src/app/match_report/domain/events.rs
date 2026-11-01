@@ -1,7 +1,7 @@
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
-    ActionId, ActionPlayer, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
+    ActionId, ActionPlayer, D3Roll, DedicatedFans, EntryMode, FanFactorMod, InducementPurchase,
     MatchActionType, MatchGain, MatchReportOrigin, TeamSide, TeamValue, TempPlayer, TempPlayerId,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -34,6 +34,16 @@ pub enum MatchReportDomainEvent {
     },
     SelectionConfirmed {
         confirmed_by: CoachId,
+    },
+    /// Le mode de saisie et celui qui démarre le compte rendu (carte 631).
+    ///
+    /// **Toujours appendé avec `SelectionConfirmed`**, dans le même
+    /// `append_many` : un démarrage n'existe pas sans son mode. Un flux écrit
+    /// avant la carte n'en a pas ; il se rejoue en « Je saisis tout », démarré
+    /// par le `confirmed_by` de sa confirmation.
+    EntryModeChosen {
+        mode: EntryMode,
+        started_by: CoachId,
     },
     FanFactorRecorded {
         home_fan_roll: D3Roll,
@@ -191,6 +201,7 @@ impl MatchReportDomainEvent {
             Self::MatchReportCreated { .. } => "MatchReportCreated",
             Self::SelectionUpdated { .. } => "SelectionUpdated",
             Self::SelectionConfirmed { .. } => "SelectionConfirmed",
+            Self::EntryModeChosen { .. } => "EntryModeChosen",
             Self::FanFactorRecorded { .. } => "FanFactorRecorded",
             Self::MatchReportCancelled { .. } => "MatchReportCancelled",
             Self::TeamValuesRecorded { .. } => "TeamValuesRecorded",

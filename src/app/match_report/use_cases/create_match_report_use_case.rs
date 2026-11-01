@@ -1,7 +1,9 @@
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+use crate::app::match_report::domain::value_objects::{EntryMode, MatchReportOrigin};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
@@ -19,12 +21,30 @@ pub struct CreateMatchReportCommand {
     pub created_by: CoachId,
     pub origin: MatchReportOrigin,
     pub pairing_id: Option<String>,
+    /// Le mode de saisie, pour le chemin qui confirme aussitôt (`Manual`).
+    /// Un brouillon du calendrier l'ignore : son mode se choisit quand il
+    /// démarre (carte 631).
+    pub entry_mode: EntryMode,
 }
 
 #[derive(Debug)]
 pub enum CreateMatchReportError {
     SameTeam,
+    /// Une autre écriture est passée entre le chargement et l'append — deux
+    /// « Commencer » simultanés (carte 631, sur le modèle de la carte 623).
+    Conflict,
     Repository(String),
+}
+
+impl CreateMatchReportError {
+    /// `ConcurrentWrite` garde son sens : sans cette conversion, il devenait un
+    /// `Repository` comme un autre, et le contrôleur rendait 500.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
 }
 
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
@@ -62,7 +82,7 @@ pub async fn execute(
 
     repo.append(&id.to_string(), &event, 0)
         .await
-        .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?;
+        .map_err(CreateMatchReportError::from_repository)?;
 
     // Le coach vient de choisir lui-même compétition, journée et équipes : lui
     // redemander la même sélection serait un aller-retour pour rien.
@@ -80,7 +100,7 @@ pub async fn execute(
     // dans quel état il récupère la main — et une confirmation de trop répond
     // `409`, ce que la suite e2e a montré sur une trentaine de tests.
     if cmd.origin == MatchReportOrigin::Manual {
-        confirm_draft(draft, cmd.created_by, repo, event_bus).await?;
+        confirm_draft(draft, cmd.created_by, cmd.entry_mode, repo, event_bus).await?;
     }
 
     Ok(id)
@@ -103,37 +123,48 @@ pub async fn execute(
 pub async fn confirmer_si_brouillon(
     match_report_id: &str,
     confirmed_by: CoachId,
+    mode: EntryMode,
     repo: &dyn IMatchReportRepository,
     event_bus: &EventBus,
 ) -> Result<(), CreateMatchReportError> {
     let state = repo
         .find_by_id(match_report_id)
         .await
-        .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?
+        .map_err(CreateMatchReportError::from_repository)?
         .ok_or_else(|| CreateMatchReportError::Repository("rapport introuvable".into()))?;
 
     match state {
-        MatchReportState::Draft(draft) => confirm_draft(draft, confirmed_by, repo, event_bus).await,
+        MatchReportState::Draft(draft) => {
+            confirm_draft(draft, confirmed_by, mode, repo, event_bus).await
+        }
         _ => Ok(()),
     }
 }
 
+/// Confirme et démarre : `SelectionConfirmed` et `EntryModeChosen` partent
+/// dans le **même** `append_many` — un démarrage n'existe pas sans son mode
+/// (carte 631). Deux démarrages simultanés : le second échoue sur la version.
 async fn confirm_draft(
     draft: MatchReportDraft,
     confirmed_by: CoachId,
+    mode: EntryMode,
     repo: &dyn IMatchReportRepository,
     event_bus: &EventBus,
 ) -> Result<(), CreateMatchReportError> {
     let mr_id_str = draft.id.to_string();
-    let (pre_match, confirm_event) = draft.confirm_selection(confirmed_by);
+    let expected_version = draft.version;
+    let (_, events) = draft.confirm_selection(confirmed_by, mode);
 
-    repo.append(&mr_id_str, &confirm_event, pre_match.version - 1)
+    repo.append_many(&mr_id_str, events.clone(), expected_version)
         .await
-        .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?;
+        .map_err(CreateMatchReportError::from_repository)?;
 
-    // Le domain event, sur le bus du BC : c'est le publisher qui en fait
-    // `MatchReportConfirmed` pour `teams` et `competitions` (carte 352).
-    emettre(event_bus, confirm_event.to_enveloppe(&mr_id_str));
+    // Les domain events, sur le bus du BC : c'est le publisher qui fait de
+    // `SelectionConfirmed` un `MatchReportConfirmed` pour `teams` et
+    // `competitions` (carte 352) ; `EntryModeChosen` ne sort pas du BC.
+    for event in &events {
+        emettre(event_bus, event.to_enveloppe(&mr_id_str));
+    }
     Ok(())
 }
 
@@ -158,6 +189,15 @@ mod tests {
 
     #[async_trait]
     impl IMatchReportRepository for FakeMatchReportRepo {
+        async fn find_entry_mode(
+            &self,
+            _: &str,
+        ) -> Result<
+            Option<crate::app::match_report::domain::match_report_repository_port::EntryModeRow>,
+            RepositoryError,
+        > {
+            Ok(None)
+        }
         async fn find_access_scope(
             &self,
             _: &str,
@@ -200,11 +240,14 @@ mod tests {
         }
         async fn append_many(
             &self,
-            _: &str,
-            _: Vec<MatchReportDomainEvent>,
-            _: u64,
+            match_report_id: &str,
+            new_events: Vec<MatchReportDomainEvent>,
+            _expected_version: u64,
         ) -> Result<u64, RepositoryError> {
-            unimplemented!("non utilisé par ces tests")
+            let mut events = self.events.lock().unwrap();
+            let entry = events.entry(match_report_id.to_string()).or_default();
+            entry.extend(new_events);
+            Ok(entry.len() as u64)
         }
         async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
             Ok(None)
@@ -264,6 +307,7 @@ mod tests {
             created_by: CoachId::new(),
             origin,
             pairing_id: None,
+            entry_mode: EntryMode::SoloEntry,
         }
     }
 
@@ -317,6 +361,78 @@ mod tests {
         assert!(
             !types.iter().any(|t| t == "MatchReportConfirmed"),
             "émis : {types:?}"
+        );
+    }
+
+    /// Le démarrage part **avec son mode** : les deux événements sur le bus,
+    /// dans l'ordre où ils sont appendés (carte 631).
+    #[tokio::test]
+    async fn the_entry_mode_is_emitted_with_the_confirmation() {
+        let repo = FakeMatchReportRepo::default();
+        let bus = new_bus();
+        let mut rx = bus.subscribe();
+
+        execute(sample_cmd(MatchReportOrigin::Manual), &repo, &bus)
+            .await
+            .unwrap();
+
+        let types: Vec<String> = std::iter::from_fn(|| rx.try_recv().ok())
+            .map(|envelope| envelope.event_type)
+            .collect();
+        assert_eq!(
+            types,
+            ["SelectionConfirmed", "EntryModeChosen"],
+            "émis : {types:?}"
+        );
+    }
+
+    /// Hors calendrier, celui qui crée est celui qui démarre.
+    #[tokio::test]
+    async fn the_creator_of_an_out_of_schedule_report_starts_it() {
+        let repo = FakeMatchReportRepo::default();
+        let cmd = sample_cmd(MatchReportOrigin::Manual);
+        let creator = cmd.created_by;
+
+        let id = execute(cmd, &repo, &new_bus()).await.unwrap();
+
+        let Some(MatchReportState::PreMatch(pm)) = repo.find_by_id(&id.to_string()).await.unwrap()
+        else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(
+            (pm.started_by, pm.entry_mode),
+            (creator, EntryMode::SoloEntry)
+        );
+    }
+
+    /// Deux « Commencer » simultanés : le second échoue sur la version, et le
+    /// conflit arrive jusqu'au contrôleur au lieu de devenir un 500 (carte 631).
+    #[tokio::test]
+    async fn a_conflict_on_the_start_is_relayed() {
+        use crate::app::match_report::use_cases::test_doubles::ConflictingRepository;
+        let (draft, _) = MatchReportDraft::create(
+            MatchReportId::new(),
+            SpaceId::new(),
+            CompetitionId::new(),
+            SeasonId::new(),
+            RoundId::new(),
+            TeamId::new(),
+            TeamId::new(),
+            CoachId::new(),
+            MatchReportOrigin::Pairing,
+            None,
+        )
+        .unwrap();
+        let id = draft.id.to_string();
+        let repo = ConflictingRepository::holding(MatchReportState::Draft(draft));
+
+        let erreur =
+            confirmer_si_brouillon(&id, CoachId::new(), EntryMode::SoloEntry, &repo, &new_bus())
+                .await
+                .expect_err("l'append doit échouer");
+        assert!(
+            matches!(erreur, CreateMatchReportError::Conflict),
+            "{erreur:?}"
         );
     }
 

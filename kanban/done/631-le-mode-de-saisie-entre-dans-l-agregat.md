@@ -72,11 +72,11 @@ livraison** : aucun rapport en `PreMatch`, `ReadyToPublish` ou `Published` sans
 
 ## Checklist
 
-- [ ] `EntryMode`, `EntryModeChosen`, `confirm_selection` à deux événements
-- [ ] `entry_mode` et `started_by` dans les trois états confirmés, et leur rejeu
-- [ ] Les trois chemins de confirmation par `append_many` ; `Conflict` dans `CreateMatchReportError`
-- [ ] Migration : colonnes et remplissage ; projection de `SelectionConfirmed` et `EntryModeChosen` ; lecture pour la garde
-- [ ] Aiguillage du publisher sans joker
-- [ ] Tests unitaires : rejeu d'un flux ancien (`SoloEntry`, `confirmed_by`), d'un flux nouveau, à travers publication et dépublication ; `EntryModeChosen` hors avant-match refusé ; conflit relayé
-- [ ] Mesure sur dump consignée dans la carte
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `EntryMode`, `EntryModeChosen`, `confirm_selection` à deux événements
+- [x] `entry_mode` et `started_by` dans les trois états confirmés, et leur rejeu
+- [x] Les trois chemins de confirmation par `append_many` ; `Conflict` dans `CreateMatchReportError`
+- [x] Migration : colonnes et remplissage ; projection de `SelectionConfirmed` et `EntryModeChosen` ; lecture pour la garde
+- [x] Aiguillage du publisher sans joker
+- [x] Tests unitaires : rejeu d'un flux ancien (`SoloEntry`, `confirmed_by`), d'un flux nouveau, à travers publication et dépublication ; `EntryModeChosen` hors avant-match refusé ; conflit relayé
+- [x] Mesure sur dump consignée dans la carte
+- [x] `make lint`, `make check-arch`, `make test`

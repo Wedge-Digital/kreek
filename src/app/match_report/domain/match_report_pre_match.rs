@@ -6,7 +6,7 @@ use crate::app::match_report::domain::underdog;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
-    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, FanFactorMod,
+    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, EntryMode, FanFactorMod,
     InducementMaxQty, InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain,
     MatchReportOrigin, TeamSide, TeamValue, TempPlayer, TempPlayerKind,
 };
@@ -35,6 +35,12 @@ pub struct MatchReportPreMatch {
     pub home_team_id: TeamId,
     pub away_team_id: TeamId,
     pub created_by: CoachId,
+    /// Le mode de saisie, choisi au démarrage (carte 631).
+    pub entry_mode: EntryMode,
+    /// Celui qui a démarré le compte rendu. À ne pas confondre avec
+    /// `created_by`, qui vaut l'identifiant de compétition pour un brouillon
+    /// né du calendrier.
+    pub started_by: CoachId,
     pub origin: MatchReportOrigin,
     pub pairing_id: Option<String>,
     pub home_fan_roll: Option<D3Roll>,
@@ -514,7 +520,12 @@ impl MatchReportPreMatch {
         (ready, event)
     }
 
-    pub fn from_draft(draft: MatchReportDraft) -> Self {
+    /// L'avant-match d'un brouillon confirmé par `confirmed_by`.
+    ///
+    /// **Premier temps du rejeu** (carte 631) : sans `EntryModeChosen` à la
+    /// suite — tout flux écrit avant la carte —, le compte rendu est en « Je
+    /// saisis tout », démarré par celui qui a confirmé.
+    pub fn from_draft(draft: MatchReportDraft, confirmed_by: CoachId) -> Self {
         Self {
             id: draft.id,
             space_id: draft.space_id,
@@ -524,6 +535,8 @@ impl MatchReportPreMatch {
             home_team_id: draft.home_team_id,
             away_team_id: draft.away_team_id,
             created_by: draft.created_by,
+            entry_mode: EntryMode::SoloEntry,
+            started_by: confirmed_by,
             origin: draft.origin,
             pairing_id: draft.pairing_id,
             home_fan_roll: None,
@@ -540,6 +553,17 @@ impl MatchReportPreMatch {
             home_actions: vec![],
             away_actions: vec![],
             version: draft.version + 1,
+        }
+    }
+
+    /// **Second temps du rejeu** (carte 631) : `EntryModeChosen` remplace ce
+    /// que `from_draft` a posé par défaut.
+    pub(crate) fn choose_entry_mode(self, mode: EntryMode, started_by: CoachId) -> Self {
+        Self {
+            entry_mode: mode,
+            started_by,
+            version: self.version + 1,
+            ..self
         }
     }
 }
@@ -742,6 +766,8 @@ mod tests {
             home_team_id: home_id,
             away_team_id: away_id,
             created_by: CoachId::new(),
+            entry_mode: EntryMode::SoloEntry,
+            started_by: CoachId::new(),
             origin: MatchReportOrigin::Manual,
             pairing_id: None,
             home_fan_roll: None,

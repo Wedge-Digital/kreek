@@ -1,9 +1,9 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_repository_port::{
-    IMatchReportRepository, MatchActionRow, RepositoryError,
+    EntryModeRow, IMatchReportRepository, MatchActionRow, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::{rehydrate, MatchReportState};
-use crate::app::match_report::domain::value_objects::TeamSide;
+use crate::app::match_report::domain::value_objects::{EntryMode, TeamSide};
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 
@@ -84,14 +84,34 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
-            MatchReportDomainEvent::SelectionConfirmed { .. } => {
+            // Le même pli que l'agrégat (carte 631) : la confirmation pose
+            // « Je saisis tout » et son auteur comme démarreur…
+            MatchReportDomainEvent::SelectionConfirmed { confirmed_by } => {
                 sqlx::query(
                     "UPDATE match_report_proj
-                     SET phase = 'PreMatch', version = $2, updated_at = now()
+                     SET phase = 'PreMatch', entry_mode = $3, started_by = $4,
+                         version = $2, updated_at = now()
                      WHERE match_report_id = $1",
                 )
                 .bind(match_report_id)
                 .bind(version as i64)
+                .bind(EntryMode::SoloEntry.as_str())
+                .bind(confirmed_by.to_string())
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
+            // …et `EntryModeChosen` les remplace.
+            MatchReportDomainEvent::EntryModeChosen { mode, started_by } => {
+                sqlx::query(
+                    "UPDATE match_report_proj
+                     SET entry_mode = $3, started_by = $4, version = $2, updated_at = now()
+                     WHERE match_report_id = $1",
+                )
+                .bind(match_report_id)
+                .bind(version as i64)
+                .bind(mode.as_str())
+                .bind(started_by.to_string())
                 .execute(&mut **tx)
                 .await
                 .map_err(RepositoryError::Database)?;
@@ -399,6 +419,23 @@ impl IMatchReportRepository for MatchReportRepository {
         Ok(row)
     }
 
+    async fn find_entry_mode(
+        &self,
+        match_report_id: &str,
+    ) -> Result<Option<EntryModeRow>, RepositoryError> {
+        let row: Option<(String, Option<String>)> = sqlx::query_as(
+            "SELECT entry_mode, started_by FROM match_report_proj WHERE match_report_id = $1",
+        )
+        .bind(match_report_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+        Ok(row.map(|(entry_mode, started_by)| EntryModeRow {
+            entry_mode,
+            started_by,
+        }))
+    }
+
     async fn find_team_ids(
         &self,
         match_report_id: &str,
@@ -655,6 +692,77 @@ mod tests {
             .execute(&pool)
             .await
             .ok();
+    }
+
+    async fn delete_report(pool: &PgPool, mr_id: &str) {
+        for table in ["match_report_event_store", "match_report_proj"] {
+            sqlx::query(&format!("DELETE FROM {table} WHERE match_report_id = $1"))
+                .bind(mr_id)
+                .execute(pool)
+                .await
+                .ok();
+        }
+    }
+
+    /// Le démarrage projeté par le même pli que l'agrégat (carte 631) : vide
+    /// sur un brouillon, posé par `SelectionConfirmed`, remplacé par
+    /// `EntryModeChosen` — les deux appendés ensemble.
+    #[tokio::test]
+    async fn the_projection_follows_the_start_of_the_report() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = MatchReportRepository::new(pool.clone());
+        let mr_id = MatchReportId::new().to_string();
+        repo.append(&mr_id, &test_created_event(&mr_id), 0)
+            .await
+            .unwrap();
+        let draft = repo.find_entry_mode(&mr_id).await.unwrap().unwrap();
+        assert_eq!(
+            (draft.entry_mode.as_str(), draft.started_by),
+            ("SoloEntry", None)
+        );
+
+        let (confirmer, starter) = (CoachId::new(), CoachId::new());
+        let events = vec![
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: confirmer,
+            },
+            MatchReportDomainEvent::EntryModeChosen {
+                mode: EntryMode::SoloEntry,
+                started_by: starter,
+            },
+        ];
+        assert_eq!(repo.append_many(&mr_id, events, 1).await.unwrap(), 3);
+        let started = repo.find_entry_mode(&mr_id).await.unwrap().unwrap();
+        assert_eq!(started.started_by, Some(starter.to_string()));
+
+        delete_report(&pool, &mr_id).await;
+    }
+
+    /// Un flux sans `EntryModeChosen` — tout rapport confirmé avant la carte
+    /// 631 — garde celui qui a confirmé comme démarreur.
+    #[tokio::test]
+    async fn a_confirmation_alone_projects_the_confirmer_as_starter() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = MatchReportRepository::new(pool.clone());
+        let mr_id = MatchReportId::new().to_string();
+        let confirmer = CoachId::new();
+        repo.append(&mr_id, &test_created_event(&mr_id), 0)
+            .await
+            .unwrap();
+        let confirmed = MatchReportDomainEvent::SelectionConfirmed {
+            confirmed_by: confirmer,
+        };
+        repo.append(&mr_id, &confirmed, 1).await.unwrap();
+
+        let row = repo.find_entry_mode(&mr_id).await.unwrap().unwrap();
+        assert_eq!(row.started_by, Some(confirmer.to_string()));
+        assert_eq!(row.entry_mode, "SoloEntry");
+
+        delete_report(&pool, &mr_id).await;
     }
 
     /// Un rapport annulé n'est plus rattaché à son pairing : sans ce filtre,

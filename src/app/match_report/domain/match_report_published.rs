@@ -3,7 +3,7 @@ use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{
-    CorrectionEligibility, D3Roll, DedicatedFans, FanFactorMod, InducementPurchase,
+    CorrectionEligibility, D3Roll, DedicatedFans, EntryMode, FanFactorMod, InducementPurchase,
     InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -22,6 +22,9 @@ pub struct MatchReportPublished {
     pub home_team_id: TeamId,
     pub away_team_id: TeamId,
     pub created_by: CoachId,
+    /// Le mode de saisie et le démarreur, venus de l'avant-match (carte 631).
+    pub entry_mode: EntryMode,
+    pub started_by: CoachId,
     pub origin: MatchReportOrigin,
     pub pairing_id: Option<String>,
     pub home_fan_roll: Option<D3Roll>,
@@ -95,6 +98,8 @@ impl MatchReportPublished {
             home_team_id: self.home_team_id.clone(),
             away_team_id: self.away_team_id.clone(),
             created_by: self.created_by,
+            entry_mode: self.entry_mode,
+            started_by: self.started_by,
             origin: self.origin,
             pairing_id: self.pairing_id.clone(),
             home_fan_roll: self.home_fan_roll,
@@ -139,6 +144,8 @@ impl MatchReportPublished {
             home_team_id: rtp.home_team_id.clone(),
             away_team_id: rtp.away_team_id.clone(),
             created_by: rtp.created_by,
+            entry_mode: rtp.entry_mode,
+            started_by: rtp.started_by,
             origin: rtp.origin,
             pairing_id: rtp.pairing_id.clone(),
             home_fan_roll: rtp.home_fan_roll,
@@ -188,6 +195,8 @@ mod unpublish_tests {
             home_team_id: TeamId::new(),
             away_team_id: TeamId::new(),
             created_by: CoachId::new(),
+            entry_mode: EntryMode::SoloEntry,
+            started_by: CoachId::new(),
             origin: MatchReportOrigin::Manual,
             pairing_id: None,
             home_fan_roll: None,

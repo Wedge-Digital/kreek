@@ -20,6 +20,10 @@ Le parcours : la fiche équipe en phase de recrutement, puis le clic sur le
 bouton du bandeau (`.state-banner--phase .state-banner-cta`), qui échange
 `#app-content` par htmx (`hx-get`, `hx-push-url`) pour ouvrir le catalogue.
 
+**Un troisième parcours** (e2e de la carte 631) :
+`test_dismissals_phase.py::test_01_banniere_ouvre_l_effectif` — l'effectif ouvert
+depuis le bandeau de la fiche équipe.
+
 **Un second parcours** (e2e de la carte 623, 2026-11-01) :
 `test_team_print_page.py::test_le_bouton_de_la_fiche_mene_a_la_page` lève la
 même erreur en quittant la fiche équipe par le bouton « Imprimer ». Le point

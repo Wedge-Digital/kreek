@@ -809,6 +809,8 @@ mod published_by_tests {
             home_team_id: TeamId::new(),
             away_team_id: TeamId::new(),
             created_by: CoachId::new(),
+            entry_mode: crate::app::match_report::domain::value_objects::EntryMode::SoloEntry,
+            started_by: CoachId::new(),
             origin: MatchReportOrigin::Manual,
             pairing_id: None,
             home_fan_roll: None,

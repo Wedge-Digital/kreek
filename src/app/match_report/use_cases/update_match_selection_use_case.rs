@@ -2,6 +2,7 @@ use crate::app::match_report::domain::match_report_repository_port::{
     IMatchReportRepository, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::value_objects::EntryMode;
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
@@ -15,6 +16,8 @@ pub struct UpdateMatchSelectionCommand {
     pub home_team_id: TeamId,
     pub away_team_id: TeamId,
     pub confirmed_by: CoachId,
+    /// Le mode de saisie choisi par celui qui démarre (carte 631).
+    pub entry_mode: EntryMode,
 }
 
 #[derive(Debug)]
@@ -94,15 +97,21 @@ pub async fn execute(
         ));
     }
 
-    let (pre_match, confirm_event) = draft.confirm_selection(cmd.confirmed_by);
+    // `SelectionConfirmed` et `EntryModeChosen` dans le **même**
+    // `append_many` : un démarrage n'existe pas sans son mode (carte 631).
+    let expected_version = draft.version;
+    let (_, events) = draft.confirm_selection(cmd.confirmed_by, cmd.entry_mode);
 
-    repo.append(&mr_id_str, &confirm_event, pre_match.version - 1)
+    repo.append_many(&mr_id_str, events.clone(), expected_version)
         .await
         .map_err(UpdateMatchSelectionError::from_repository)?;
 
-    // Le domain event, sur le bus du BC : c'est le publisher qui en fait
-    // `MatchReportConfirmed` pour `teams` et `competitions` (carte 352).
-    emettre(event_bus, confirm_event.to_enveloppe(&mr_id_str));
+    // Les domain events, sur le bus du BC : c'est le publisher qui fait de
+    // `SelectionConfirmed` un `MatchReportConfirmed` pour `teams` et
+    // `competitions` (carte 352) ; `EntryModeChosen` ne sort pas du BC.
+    for event in &events {
+        emettre(event_bus, event.to_enveloppe(&mr_id_str));
+    }
 
     Ok(cmd.match_report_id)
 }
@@ -140,6 +149,7 @@ mod tests {
             home_team_id: home,
             away_team_id: away,
             confirmed_by: CoachId::new(),
+            entry_mode: EntryMode::SoloEntry,
         };
         execute(cmd, &repo, &ReadyTeams, &new_bus())
             .await

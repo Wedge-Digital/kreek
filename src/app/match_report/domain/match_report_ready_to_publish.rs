@@ -2,8 +2,8 @@ use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::value_objects::{
-    D3Roll, DedicatedFans, FanFactorMod, InducementPurchase, InducementSpending, MatchAction,
-    MatchGain, MatchReportOrigin, TempPlayer, TempPlayerKind,
+    D3Roll, DedicatedFans, EntryMode, FanFactorMod, InducementPurchase, InducementSpending,
+    MatchAction, MatchGain, MatchReportOrigin, TempPlayer, TempPlayerKind,
 };
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -22,6 +22,9 @@ pub struct MatchReportReadyToPublish {
     pub home_team_id: TeamId,
     pub away_team_id: TeamId,
     pub created_by: CoachId,
+    /// Le mode de saisie et le démarreur, venus de l'avant-match (carte 631).
+    pub entry_mode: EntryMode,
+    pub started_by: CoachId,
     pub origin: MatchReportOrigin,
     pub pairing_id: Option<String>,
     pub home_fan_roll: Option<D3Roll>,
@@ -117,6 +120,8 @@ impl MatchReportReadyToPublish {
             home_team_id: pm.home_team_id.clone(),
             away_team_id: pm.away_team_id.clone(),
             created_by: pm.created_by.clone(),
+            entry_mode: pm.entry_mode,
+            started_by: pm.started_by,
             origin: pm.origin,
             pairing_id: pm.pairing_id.clone(),
             home_fan_roll: pm.home_fan_roll,
@@ -161,6 +166,8 @@ impl MatchReportReadyToPublish {
             home_team_id: self.home_team_id,
             away_team_id: self.away_team_id,
             created_by: self.created_by,
+            entry_mode: self.entry_mode,
+            started_by: self.started_by,
             origin: self.origin,
             pairing_id: self.pairing_id,
             home_fan_roll: self.home_fan_roll,
@@ -249,6 +256,8 @@ mod tests {
             home_team_id: TeamId::new(),
             away_team_id: TeamId::new(),
             created_by: CoachId::new(),
+            entry_mode: EntryMode::SoloEntry,
+            started_by: CoachId::new(),
             origin: MatchReportOrigin::Manual,
             pairing_id: None,
             home_fan_roll: None,

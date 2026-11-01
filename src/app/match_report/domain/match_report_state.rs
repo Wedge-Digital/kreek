@@ -84,10 +84,18 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 Some(MatchReportState::Draft(draft)),
                 MatchReportDomainEvent::SelectionUpdated { .. },
             ) => MatchReportState::Draft(draft.apply_selection_updated(event)),
+            // Le démarrage se rejoue en deux temps (carte 631) : la
+            // confirmation pose « Je saisis tout » et son auteur comme
+            // démarreur, `EntryModeChosen` les remplace s'il suit. Un flux
+            // écrit avant la carte n'a que le premier temps.
             (
                 Some(MatchReportState::Draft(draft)),
-                MatchReportDomainEvent::SelectionConfirmed { .. },
-            ) => MatchReportState::PreMatch(MatchReportPreMatch::from_draft(draft)),
+                MatchReportDomainEvent::SelectionConfirmed { confirmed_by },
+            ) => MatchReportState::PreMatch(MatchReportPreMatch::from_draft(draft, *confirmed_by)),
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::EntryModeChosen { mode, started_by },
+            ) => MatchReportState::PreMatch(pm.choose_entry_mode(*mode, *started_by)),
             (
                 Some(MatchReportState::Draft(draft)),
                 MatchReportDomainEvent::MatchReportCancelled { reason, .. },
@@ -501,7 +509,7 @@ fn rejouer_la_journee(
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{
-        D3Roll, DedicatedFans, MatchReportOrigin,
+        D3Roll, DedicatedFans, EntryMode, MatchReportOrigin,
     };
     use crate::app::shared_kernel::bloodbowl::ids::{
         CompetitionId, MatchReportId, RoundId, SeasonId,
@@ -682,14 +690,203 @@ mod tests {
         )
         .unwrap();
 
-        let (pre_match, event) = draft.confirm_selection(coach_id);
+        let (pre_match, events) = draft.confirm_selection(coach_id, EntryMode::SoloEntry);
         assert_eq!(pre_match.id, mr_id);
         assert_eq!(pre_match.home_team_id, home_id);
-        assert_eq!(pre_match.version, 2);
+        assert_eq!(pre_match.version, 3, "deux événements après la création");
+        assert_eq!(pre_match.entry_mode, EntryMode::SoloEntry);
+        assert_eq!(pre_match.started_by, coach_id);
         assert!(matches!(
-            event,
-            MatchReportDomainEvent::SelectionConfirmed { .. }
+            events.as_slice(),
+            [
+                MatchReportDomainEvent::SelectionConfirmed { confirmed_by },
+                MatchReportDomainEvent::EntryModeChosen {
+                    mode: EntryMode::SoloEntry,
+                    started_by,
+                },
+            ] if *confirmed_by == coach_id && *started_by == coach_id
         ));
+    }
+
+    /// Ce que `confirm_selection` rend est ce que le rejeu de ses événements
+    /// reconstruit : version, mode et démarreur (carte 631).
+    #[test]
+    fn confirm_selection_matches_the_replay_of_its_events() {
+        let (draft, coach_id) = draft_by_competition();
+        let created = created_event_of(&draft);
+        let (pre_match, events) = draft.confirm_selection(coach_id, EntryMode::SoloEntry);
+
+        let mut stream = vec![created];
+        stream.extend(events);
+        let MatchReportState::PreMatch(replayed) = rehydrate(stream).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(replayed.version, pre_match.version);
+        assert_eq!(replayed.started_by, pre_match.started_by);
+        assert_eq!(replayed.entry_mode, pre_match.entry_mode);
+    }
+
+    // ── mode de saisie et démarreur (carte 631) ──────────────────────────
+
+    /// Un brouillon né du calendrier : `created_by` vaut un autre identifiant
+    /// que celui du coach qui démarre, comme en production.
+    fn draft_by_competition() -> (MatchReportDraft, CoachId) {
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, creator) = test_ids();
+        let (draft, _) = MatchReportDraft::create(
+            mr_id,
+            space_id,
+            comp_id,
+            season_id,
+            round_id,
+            home_id,
+            away_id,
+            creator,
+            MatchReportOrigin::Pairing,
+            None,
+        )
+        .unwrap();
+        (draft, CoachId::new())
+    }
+
+    fn created_event_of(draft: &MatchReportDraft) -> MatchReportDomainEvent {
+        created_event(
+            draft.id,
+            draft.space_id,
+            draft.competition_id,
+            draft.season_id,
+            draft.round_id,
+            draft.home_team_id,
+            draft.away_team_id,
+            draft.created_by,
+        )
+    }
+
+    fn entry_mode_chosen(started_by: CoachId) -> MatchReportDomainEvent {
+        MatchReportDomainEvent::EntryModeChosen {
+            mode: EntryMode::SoloEntry,
+            started_by,
+        }
+    }
+
+    /// Un flux écrit avant la carte n'a pas d'`EntryModeChosen` : il se rejoue
+    /// en « Je saisis tout », démarré par celui qui a confirmé — et non par
+    /// `created_by`.
+    #[test]
+    fn an_old_stream_replays_as_solo_entry_started_by_the_confirmer() {
+        let (draft, confirmer) = draft_by_competition();
+        let events = vec![
+            created_event_of(&draft),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: confirmer,
+            },
+        ];
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(pm.entry_mode, EntryMode::SoloEntry);
+        assert_eq!(pm.started_by, confirmer);
+        assert_ne!(pm.started_by, pm.created_by);
+        assert_eq!(pm.version, 2);
+    }
+
+    /// `EntryModeChosen` remplace ce que la confirmation a posé.
+    #[test]
+    fn a_new_stream_replays_the_chosen_mode() {
+        let (draft, confirmer) = draft_by_competition();
+        let starter = CoachId::new();
+        let events = vec![
+            created_event_of(&draft),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: confirmer,
+            },
+            entry_mode_chosen(starter),
+        ];
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(pm.entry_mode, EntryMode::SoloEntry);
+        assert_eq!(pm.started_by, starter);
+        assert_eq!(pm.version, 3);
+    }
+
+    /// Le démarreur traverse la publication et la dépublication, comme
+    /// `created_by`.
+    #[test]
+    fn the_starter_survives_publication_and_unpublication() {
+        let (draft, confirmer) = draft_by_competition();
+        let starter = CoachId::new();
+        let mut events = vec![
+            created_event_of(&draft),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: confirmer,
+            },
+            entry_mode_chosen(starter),
+            post_match_event(confirmer),
+            published_event(confirmer),
+        ];
+        let MatchReportState::Published(p) = rehydrate(events.clone()).unwrap() else {
+            panic!("attendu Published");
+        };
+        assert_eq!(
+            (p.started_by, p.entry_mode),
+            (starter, EntryMode::SoloEntry)
+        );
+
+        events.push(unpublished_event(confirmer));
+        let MatchReportState::ReadyToPublish(rtp) = rehydrate(events).unwrap() else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(
+            (rtp.started_by, rtp.entry_mode),
+            (starter, EntryMode::SoloEntry)
+        );
+        assert_eq!(rtp.into_pre_match().started_by, starter);
+    }
+
+    /// Un flux ancien garde son démarreur jusqu'à la publication.
+    #[test]
+    fn an_old_stream_keeps_its_starter_once_published() {
+        let (draft, confirmer) = draft_by_competition();
+        let events = vec![
+            created_event_of(&draft),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: confirmer,
+            },
+            post_match_event(confirmer),
+            published_event(confirmer),
+        ];
+        let MatchReportState::Published(p) = rehydrate(events).unwrap() else {
+            panic!("attendu Published");
+        };
+        assert_eq!(
+            (p.started_by, p.entry_mode),
+            (confirmer, EntryMode::SoloEntry)
+        );
+    }
+
+    /// Le mode se choisit au démarrage, nulle part ailleurs : ni sur un
+    /// brouillon, ni après le match.
+    #[test]
+    fn entry_mode_chosen_outside_pre_match_is_refused() {
+        let (draft, coach) = draft_by_competition();
+        let on_draft = vec![created_event_of(&draft), entry_mode_chosen(coach)];
+        assert_eq!(
+            rehydrate(on_draft).unwrap_err(),
+            DomainError::InvalidEventSequence
+        );
+
+        let after_match = vec![
+            created_event_of(&draft),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach,
+            },
+            post_match_event(coach),
+            entry_mode_chosen(coach),
+        ];
+        assert_eq!(
+            rehydrate(after_match).unwrap_err(),
+            DomainError::InvalidEventSequence
+        );
     }
 
     // ── rehydrate ────────────────────────────────────────────────────────
@@ -773,7 +970,7 @@ mod tests {
             None,
         )
         .unwrap();
-        let (pm, _) = draft.confirm_selection(coach_id);
+        let (pm, _) = draft.confirm_selection(coach_id, EntryMode::SoloEntry);
         pm
     }
 

@@ -190,6 +190,15 @@ mod tests {
 
     #[async_trait::async_trait]
     impl IMatchReportRepository for FakeRepo {
+        async fn find_entry_mode(
+            &self,
+            _: &str,
+        ) -> Result<
+            Option<crate::app::match_report::domain::match_report_repository_port::EntryModeRow>,
+            RepositoryError,
+        > {
+            Ok(None)
+        }
         async fn find_access_scope(
             &self,
             _: &str,
@@ -343,6 +352,8 @@ mod tests {
             home_team_id: TeamId::new(),
             away_team_id: TeamId::new(),
             created_by: CoachId::new(),
+            entry_mode: crate::app::match_report::domain::value_objects::EntryMode::SoloEntry,
+            started_by: CoachId::new(),
             origin: MatchReportOrigin::Manual,
             pairing_id: None,
             home_fan_roll: None,
