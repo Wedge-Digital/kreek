@@ -54,6 +54,14 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 7/10 | 10 |
 | [E15 — Recruter un journalier](ready_to_be_done/E15-recruter-un-journalier.md) | `ready_to_be_done` · 0/6 | 6 |
 | [E18 — Appariement des présents](en_cours/E18-appariement-des-presents.md) | `en_cours` · 4/8 | 8 |
+| [E19 — Saisie du compte rendu : droits et robustesse](to_be_refined/E19-saisie-du-compte-rendu-droits-et-robustesse.md) | `to_be_refined` | 5 |
+| [E20 — Coups de pouce : le panier et l'annulation](to_be_refined/E20-coups-de-pouce-panier-et-annulation.md) | `to_be_refined` | 5 |
+| [E21 — Le mode de saisie et l'après-match en séquence](to_be_refined/E21-mode-de-saisie-et-apres-match-en-sequence.md) | `to_be_refined` | 9 |
+| [E22 — Le mode « Chacun son équipe »](to_be_refined/E22-mode-chacun-son-equipe.md) | `to_be_refined` | 10 |
+| [E23 — Le temps réel : connexions, présence et notifications](to_be_refined/E23-temps-reel-connexions-et-notifications.md) | `to_be_refined` | 6 |
+| [E24 — La navigation mobile](to_be_refined/E24-navigation-mobile.md) | `to_be_refined` | 3 |
+| [E25 — Retrouver ses matchs](to_be_refined/E25-retrouver-ses-matchs.md) | `to_be_refined` | 4 |
+| [E26 — Les équipes sur mobile : recherche et fiches](to_be_refined/E26-equipes-sur-mobile.md) | `to_be_refined` | 5 |
 
 ## Les cartes sans épic
 
@@ -116,6 +124,7 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `461-changer-le-logo-d-une-equipe` | Un logo choisi à la création ne se corrige nulle part. L'événement LogoChanged existe depuis l'origine dans l'agrégat, mais personne ne l'émet et rien ne le projette |
 | `460-sous-total-des-joueurs-disponibles` | Une ligne de pied sous le tableau des joueurs. Elle porte aussi le marquage des indisponibles, sans lequel un total qui exclut une ligne sans dire laquelle paraîtrait faux |
 | `454` à `459` — recruter un journalier | Un journalier devient un joueur dès le début du rapport de match : il agit, gagne des SPP, prend ses améliorations, et doit être recruté en phase de recrutement pour rester. Six cartes issues du workflow feature, spécifiées dans `docs/specs/embaucher-un-journalier/` |
+| `603-les-journaliers-sans-coups-de-pouce` | Les temporaires ne sont créés que par l'écran des coups de pouce, qu'un tier sans coups de pouce saute : une équipe à court d'alignables jouerait sans ses journaliers. Soupçon à mesurer en prod avant tout code. Sortie de E19 |
 | `594-match-day-expose-ses-appariements` | Tous les champs de `MatchDay` sont publics : rien n'empêche de pousser une rencontre sans passer par `accept_draw` ni `accueillir`. Relevée par la phase 6 de E18, hors de son périmètre |
 | `449` à `453` — les points de classement manuels | Attribuer à une équipe des points qui ne viennent d'aucun match — forfait, sanction, rattrapage — et les rendre visibles et motivés. Cinq cartes issues du workflow feature, spécifiées dans `docs/specs/points-classement-manuels/`. La 451 demande la 448 |
 | `448-deux-tokens-de-gris-indiscernables` | `--dark-6` et `--dark-7` diffèrent d'une unité par canal — rapport 1,0012. Le classement détaillé les oppose pour distinguer zébrage et survol : son survol est invisible une ligne sur deux |
@@ -130,5 +139,4 @@ dupliquée), `14` (`cloudinary_transform()` privée), `15` (URLs par
 | `361-reserver-la-place-sur-la-construction-d-equipe` | 1 265 px de saut en desktop, 1 841 en mobile — la plus grosse zone non réservée, hors périmètre de la 343 |
 | `360-bandeau-d-inscription-en-attente-inexistant` | Un test e2e attend une classe qui n'a jamais été rendue. La suite est rouge en permanence |
 | `357-le-champ-tags-est-en-ecriture-seule` | Quatre formes écrites, aucun lecteur : `find_by_tag()` n'a pas d'appelant. À trancher — compléter l'abstraction ou la supprimer |
-| `352-match-report-confirmed-passe-par-le-publisher` | Deux use cases émettent un app event directement, ce que `CLAUDE.md` interdit. Trouvée par la carte 350. Débloque un axe « pas d'`app_event_bus` dans `use_cases/` » |
 | `432-rendre-accessible-un-espace-publiquement` | Contenu à définir — « publiquement » recouvre trois portées, et la plus large touche `space_scope`, le verrou de la carte 416. Portait le numéro 61, déjà pris |
