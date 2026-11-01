@@ -70,8 +70,8 @@ def options_etanches(space_id):
     ## Remettre, et non vider
 
     Le teardown restaure l'état exact relevé au départ plutôt que de tout mettre
-    à `NULL` : la suite tourne sur la base de travail (`db_helpers` lit
-    `.env.dev`), où un réglage volontaire ne doit pas être effacé par un test.
+    à `NULL` : la base de la suite (`kreek_e2e`) se garde d'une exécution à
+    l'autre, et un test n'efface pas un réglage qu'il n'a pas posé.
     """
     avant = _options_de_l_espace(space_id)
     _poser_options(space_id, None)

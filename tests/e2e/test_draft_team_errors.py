@@ -9,10 +9,11 @@ Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true).
 """
 
 from playwright.sync_api import Page, expect
+from e2e_env import BASE_URL
 
 
 def _goto_draft(page: Page, space_id: str) -> None:
-    url = f"http://localhost:3210/app/{space_id}/team/create"
+    url = f"{BASE_URL}/app/{space_id}/team/create"
     page.goto(url, wait_until="load")
     page.wait_for_selector("#draft-team-form", timeout=5000)
 

@@ -32,8 +32,10 @@ la CI sur la base de cette analyse. En cas de doute à n'importe quelle étape :
 
 Les tests e2e ne démarrent pas le serveur (cf. `tests/e2e/README.md`) :
 
-- serveur lancé en `make dev-demo` (jeu de démonstration + `BYPASS_AUTH=true`) ;
-- base seedée : `make seed_e2e`.
+- serveur de la suite lancé : `make e2e-server` — port 3211, base `kreek_e2e`,
+  jeu de démonstration et `BYPASS_AUTH=true`, à côté du serveur de travail
+  (port 3210) ;
+- base e2e seedée : `make init_e2e_db` (remise à zéro) ou `make seed_e2e`.
 
 Ne jamais démarrer ni redémarrer ce serveur soi-même (règle 8 du CLAUDE.md).
 Vérifier qu'il répond, sinon demander à l'utilisateur de le lancer.

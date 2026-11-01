@@ -21,7 +21,7 @@ import requests
 from playwright.sync_api import Page, expect
 from competition_lifecycle import liberer_les_equipes
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 _TEAM_ID_RE = re.compile(r"/inducements/([0-9A-Z]{26})")
 

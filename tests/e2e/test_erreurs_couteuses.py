@@ -24,7 +24,7 @@ from competition_lifecycle import build_full_competition
 from match_report_helpers import play_match
 from db_helpers import query_db
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 PIETAILLE = "DEMO_GRANIT__PIETAILLE"
 PERCUTEUR = "DEMO_GRANIT__PERCUTEUR"

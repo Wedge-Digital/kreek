@@ -23,6 +23,7 @@ from playwright.sync_api import Page
 
 from competition_lifecycle import create_full_competition
 from db_helpers import query_db
+from e2e_env import BASE_URL
 
 
 def _lignes_du_journal(season_id: str) -> list[str]:
@@ -109,7 +110,7 @@ def test_republier_n_annonce_pas_une_seconde_fois(page: Page, space_id, competit
     assert avant, "sans première annonce, ce test ne prouverait rien"
 
     validation = (
-        f"http://localhost:3210/app/{space_id}/competitions/create/"
+        f"{BASE_URL}/app/{space_id}/competitions/create/"
         f"{comp['competition_id']}/{comp['season_id']}/validation"
     )
     page.goto(validation, wait_until="load")

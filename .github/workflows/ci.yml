@@ -12,7 +12,7 @@ on:
   # celui qui l'a écrit.
   #
   # Le coût est assumé : le pipeline complet, `e2e` compris, à chaque poussée
-  # sur `demo`. Les quatre jobs sont autonomes — service Postgres, `.env.dev`
+  # sur `demo`. Les quatre jobs sont autonomes — service Postgres, `.env.e2e`
   # généré, seed synthétique, serveur lancé — et tournent déjà tels quels à
   # chaque pull request.
   push:
@@ -128,7 +128,7 @@ jobs:
     name: Tests E2E
     runs-on: ubuntu-latest
     env:
-      # Le fichier .env.dev n'est chargé qu'au runtime (dotenvy) ; la compilation
+      # Le fichier .env.e2e n'est chargé qu'au runtime (dotenvy) ; la compilation
       # des macros query!/query_as! a besoin de la variable dès la compilation.
       SQLX_OFFLINE: "true"
     services:
@@ -163,15 +163,16 @@ jobs:
         with:
           enable-cache: true
 
-      # Les scripts d'import (import_*.sh) et l'app (AppConfig::load via dotenvy)
-      # lisent tous .env.dev, gitignored donc absent en CI. On le matérialise avec
-      # les creds du service Postgres ci-dessus. BYPASS_AUTH=true : les e2e passent
+      # La suite a son profil, `.env.e2e` (cf. `make e2e-server`) : l'app le lit
+      # par `EXEC_PROFILE=e2e`, et `tests/e2e/e2e_env.py` y trouve la base. Il est
+      # gitignored, donc absent en CI : on le matérialise avec les creds du
+      # service Postgres ci-dessus, sur le port de la suite (3211). BYPASS_AUTH=true : les e2e passent
       # par le coach seedé DevCoach, sans login. EMAIL__PROVIDER=console : le
       # parcours « mot de passe oublié » est couvert par la suite, et appellerait
       # sinon l'API Resend à chaque exécution.
-      - name: Générer .env.dev (config CI)
+      - name: Générer .env.e2e (config CI)
         run: |
-          cat > .env.dev <<'EOF'
+          cat > .env.e2e <<'EOF'
           ENV=development
           DATABASE__URL=postgresql://dev:devpassword@localhost:5432/kreek_db
           DATABASE__HOST=localhost
@@ -181,12 +182,12 @@ jobs:
           DATABASE__NAME=kreek_db
           DATABASE__MAX_CONNECTIONS=20
           SERVER__HOST=0.0.0.0
-          SERVER__PORT=3210
+          SERVER__PORT=3211
           SQLX_OFFLINE=true
           EMAIL__PROVIDER=console
           EMAIL__FROM=mailer@example.test
           EMAIL__FROM_NAME=KreekCI
-          HOST_DOMAIN=localhost:3210
+          HOST_DOMAIN=localhost:3211
           BYPASS_AUTH=true
           REFERENCES__DIR=assets/references.example
           EOF
@@ -195,19 +196,17 @@ jobs:
       # inutilisable en CI. Le seed synthétique couvre tout ce dont la suite a
       # besoin. Les migrations sont appliquées par le binaire au démarrage.
       - name: Initialiser la base (reset + seed e2e synthétique)
-        run: |
-          make reset_db
-          make seed_e2e
+        run: make init_e2e_db
 
       - name: Lancer le serveur en arrière-plan
         run: |
-          nohup cargo run > server.log 2>&1 &
+          EXEC_PROFILE=e2e nohup cargo run > server.log 2>&1 &
           echo $! > server.pid
 
       - name: Attendre que le serveur réponde
         run: |
           for i in $(seq 1 60); do
-            if curl -sf http://localhost:3210 > /dev/null; then
+            if curl -sf http://localhost:3211 > /dev/null; then
               echo "Serveur prêt."
               exit 0
             fi

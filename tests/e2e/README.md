@@ -6,20 +6,22 @@ rendu HTML/HTMX/Alpine réellement produit dans un navigateur.
 
 ## Prérequis
 
-- Le serveur kreek doit déjà tourner en local avec `BYPASS_AUTH=true`
-  (ex: `ENV=dev cargo run`, ou via `.env.dev`). Les tests ne le démarrent pas
-  eux-mêmes — ils échouent immédiatement et clairement si rien ne répond sur
-  `http://localhost:3210`.
-- Le serveur doit servir le **jeu de démonstration** (`assets/references.example`),
-  sur lequel les tests s'appuient : rosters Granitiers, Zéphyriens et
-  Lanterniers. C'est le défaut de `config/default.toml`, donc `make dev`
-  suffit — sauf si ton `.env.dev` surcharge `REFERENCES__DIR` vers un jeu de
-  règles réel, auquel cas lance `make dev-demo`.
-- La base doit contenir le seed de la suite : `make seed_e2e`. Il crée un space
+- **Le serveur de la suite** tourne à côté du serveur de travail :
+
+  ```bash
+  make e2e-server     # port 3211, base kreek_e2e (.env.e2e), BYPASS_AUTH
+  ```
+
+  Les tests ne le démarrent pas eux-mêmes — ils s'arrêtent net si rien ne
+  répond sur `http://localhost:3211`. Le serveur de travail (`make dev`, port
+  3210, `.env.dev`) n'est pas concerné : la suite n'écrit plus dans sa base.
+- `.env.e2e` porte la base `kreek_e2e`, `SERVER__PORT=3211` et
+  `BYPASS_AUTH=true`. Le serveur e2e sert le **jeu de démonstration**
+  (`assets/references.example`) : rosters Granitiers, Zéphyriens et Lanterniers.
+- La base e2e contient le seed de la suite : `make init_e2e_db` la remet à zéro
+  et la peuple, `make seed_e2e` peuple sans rien effacer. Le seed crée un space
   « Espace E2E », le coach `DevCoach` (celui que `BYPASS_AUTH` connecte, repéré
-  par son nom) et onze autres coachs pour alimenter les sélecteurs. Entièrement
-  synthétique et idempotent — rejouable après n'importe quel `make reset_db`, et
-  installable sur une base portant déjà les données legacy.
+  par son nom) et onze autres coachs. Entièrement synthétique et idempotent.
 - `uv` installé.
 
 ## Installation (une fois)
@@ -43,7 +45,7 @@ Ou depuis la racine : `make e2e`.
 
 | Variable | Défaut | Usage |
 |---|---|---|
-| `E2E_BASE_URL` | `http://localhost:3210` | URL du serveur dev |
+| `E2E_BASE_URL` | `http://localhost:3211` | URL du serveur e2e (`make e2e-server`) |
 | `E2E_SPACE_ID` | résolu par nom | Space ciblé par les tests — **toutes** les compétitions et équipes qu'ils créent y atterrissent. Par défaut, résolu au lancement via `GET /app/spaces` en cherchant l'espace nommé « Espace E2E » (créé par `make seed_e2e`). Ce n'est délibérément **pas** le premier espace venu : sur une base contenant de vraies données, ce raccourci polluerait un espace de production. Si l'espace dédié est absent, la suite s'arrête. Surcharger uniquement pour cibler un espace précis. |
 | `E2E_COMPETITION_ID` / `E2E_SEASON_ID` | `E2E_SPACE_ID` | Utilisés seulement par `competition_rules_url` (la page accepte des IDs inexistants) |
 

@@ -24,7 +24,7 @@ from playwright.sync_api import Page, expect
 from competition_lifecycle import create_full_competition, recruter_joueurs
 from htmx_helpers import attendre_cablage, cliquer_quand_cable
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 
 def _create_minimal_competition(page: Page, competition_create_url: str) -> str:

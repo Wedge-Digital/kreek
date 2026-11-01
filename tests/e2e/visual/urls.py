@@ -15,18 +15,20 @@ manquante.
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
-BASE = os.environ.get("E2E_BASE_URL", "http://localhost:3210")
+# Les scripts de ce dossier se lancent depuis lui : le module commun de la
+# suite, un niveau au-dessus, n'est pas sur le chemin d'import sans cela.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from e2e_env import BASE_URL as BASE, database_url  # noqa: E402
+
 ESPACE_E2E = "Espace E2E"
 
 
 def _url_base_de_donnees() -> str:
-    env = Path(__file__).resolve().parents[3] / ".env.dev"
-    for ligne in env.read_text().splitlines():
-        if ligne.startswith("DATABASE__URL="):
-            return ligne.split("=", 1)[1].strip()
-    raise RuntimeError(f"DATABASE__URL introuvable dans {env}")
+    return database_url()
 
 
 def _un(sql: str) -> str | None:

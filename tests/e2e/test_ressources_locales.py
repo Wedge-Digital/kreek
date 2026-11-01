@@ -20,7 +20,7 @@ Prérequis : serveur kreek lancé en dev.
 
 from playwright.sync_api import Page
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 # Tiré par `widget.cloudinary.com/v2.0/global/all.js`, pas par nous. Listé
 # nommément plutôt que sous un `cloudinary.com` large : le jour où le widget

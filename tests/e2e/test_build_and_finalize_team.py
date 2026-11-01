@@ -23,7 +23,7 @@ from htmx_helpers import attendre_cablage
 
 from competition_lifecycle import create_full_competition, recruter_joueurs
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 
 def test_build_and_finalize_with_spp(page: Page, competition_create_url, space_id):

@@ -18,7 +18,7 @@ from playwright.sync_api import Page, expect
 
 from db_helpers import query_db
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 PASSWORD = "casse-e2e-12345"
 

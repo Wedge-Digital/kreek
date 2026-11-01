@@ -20,6 +20,7 @@ import time
 
 import pytest
 from playwright.sync_api import Page, expect
+from e2e_env import BASE_URL
 
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
@@ -62,7 +63,7 @@ def _detail_url(base: str, ids: dict) -> str:
 @pytest.fixture(scope="module")
 def competition_ids(browser, space_id):
     """Crée une compétition une seule fois pour le module."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     create_url = f"{base}/app/{space_id}/competitions/create"
     context = browser.new_context()
     page = context.new_page()
@@ -76,7 +77,7 @@ def competition_ids(browser, space_id):
 
 def test_s1_classement_actif_par_defaut(page: Page, competition_ids, console_errors):
     """S1 — L'onglet Classement est actif au chargement initial."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     page.goto(_detail_url(base, competition_ids), wait_until="load")
 
     # Texte exact : « Classement détaillé » répondrait aussi à une sous-chaîne.
@@ -92,7 +93,7 @@ def test_s1_classement_actif_par_defaut(page: Page, competition_ids, console_err
 
 def test_s2_switch_vers_resultats_desactive_classement(page: Page, competition_ids, console_errors):
     """S2 — Clic sur Résultats désactive Classement."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     page.goto(_detail_url(base, competition_ids), wait_until="load")
 
     page.locator(".tabs .tab", has_text="Résultats").click()
@@ -111,7 +112,7 @@ def test_s2_switch_vers_resultats_desactive_classement(page: Page, competition_i
 
 def test_r1_clic_resultats_charge_fragment(page: Page, competition_ids, console_errors):
     """R1 — Clic sur Résultats charge le fragment HTMX (état vide attendu)."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     page.goto(_detail_url(base, competition_ids), wait_until="load")
 
     page.locator(".tabs .tab", has_text="Résultats").click()
@@ -125,7 +126,7 @@ def test_r1_clic_resultats_charge_fragment(page: Page, competition_ids, console_
 
 def test_r8_navigation_directe_url_resultats(page: Page, competition_ids, console_errors):
     """R8 — Navigation directe sur /resultats : full page, onglet Résultats actif."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     ids = competition_ids
     url = (
         f"{base}/app/{ids['space_id']}"
@@ -152,7 +153,7 @@ def test_r8_navigation_directe_url_resultats(page: Page, competition_ids, consol
 
 def test_c1_clic_calendrier_charge_fragment(page: Page, competition_ids, console_errors):
     """C1 — Clic sur Calendrier charge le fragment HTMX (état vide attendu)."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     page.goto(_detail_url(base, competition_ids), wait_until="load")
 
     page.locator(".tabs .tab", has_text="Calendrier").click()
@@ -166,7 +167,7 @@ def test_c1_clic_calendrier_charge_fragment(page: Page, competition_ids, console
 
 def test_c6_navigation_directe_url_calendrier(page: Page, competition_ids, console_errors):
     """C6 — Navigation directe sur /calendrier : full page, onglet Calendrier actif."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     ids = competition_ids
     url = (
         f"{base}/app/{ids['space_id']}"
@@ -190,7 +191,7 @@ def test_c6_navigation_directe_url_calendrier(page: Page, competition_ids, conso
 
 def test_r1_etat_vide_resultats_sans_matchs(page: Page, competition_ids, console_errors):
     """R1 — Sans matchs terminés, l'état vide est affiché dans Résultats."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     page.goto(_detail_url(base, competition_ids), wait_until="load")
 
     page.locator(".tabs .tab", has_text="Résultats").click()
@@ -208,7 +209,7 @@ def test_r1_etat_vide_resultats_sans_matchs(page: Page, competition_ids, console
 
 def test_c1_etat_vide_calendrier_sans_matchs(page: Page, competition_ids, console_errors):
     """C1 — Sans matchs à venir, l'état vide est affiché dans Calendrier."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     page.goto(_detail_url(base, competition_ids), wait_until="load")
 
     page.locator(".tabs .tab", has_text="Calendrier").click()
@@ -245,7 +246,7 @@ def test_c7_clic_ligne_calendrier_ouvre_la_saisie_du_rapport(
     page: Page, paired_competition, console_errors
 ):
     """C7 — Une ligne de calendrier mène à la phase 1 de la saisie du rapport."""
-    base = "http://localhost:3210"
+    base = BASE_URL
     url = f"{_detail_url(base, paired_competition)}/calendrier"
     page.goto(url, wait_until="load")
 

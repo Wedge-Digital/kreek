@@ -14,6 +14,7 @@ import requests
 from playwright.sync_api import Page, expect
 
 from htmx_helpers import attendre_cablage
+from e2e_env import BASE_URL
 
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
@@ -42,7 +43,7 @@ def _create_competition_and_get_admin_url(page: Page, competition_create_url: st
     competition_id = match.group(2)
     season_id = match.group(3)
 
-    return f"http://localhost:3210/app/{space_id}/competitions/{competition_id}/{season_id}/admin"
+    return f"{BASE_URL}/app/{space_id}/competitions/{competition_id}/{season_id}/admin"
 
 
 def test_ouvrir_l_administration_mene_au_resume(page: Page, competition_create_url):

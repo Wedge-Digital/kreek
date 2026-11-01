@@ -26,7 +26,7 @@ from match_report_helpers import (
     publish,
 )
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 HTMX = {"HX-Request": "true"}
 
 

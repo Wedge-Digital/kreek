@@ -52,7 +52,7 @@ from htmx_helpers import cliquer_quand_cable
 from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 

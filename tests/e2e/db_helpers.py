@@ -7,17 +7,13 @@ l'environnement de dev.
 """
 
 import subprocess
-from pathlib import Path
+
+from e2e_env import database_url
 
 
-def dev_database_url() -> str:
-    """Lit DATABASE__URL depuis .env.dev — même source de vérité que le
-    Makefile (`grep -E '^DATABASE__URL=' .env.dev`)."""
-    env_path = Path(__file__).resolve().parents[2] / ".env.dev"
-    for line in env_path.read_text().splitlines():
-        if line.startswith("DATABASE__URL="):
-            return line.split("=", 1)[1].strip()
-    raise RuntimeError(f"DATABASE__URL introuvable dans {env_path}")
+def e2e_database_url() -> str:
+    """La base du serveur e2e (`.env.e2e`) — celle que les tests remplissent."""
+    return database_url()
 
 
 def execute_db(sql: str) -> None:
@@ -38,7 +34,7 @@ def execute_db(sql: str) -> None:
     impossible le déclare, il ne le glisse pas dans une lecture.
     """
     result = subprocess.run(
-        ["psql", dev_database_url(), "-t", "-A", "-c", sql],
+        ["psql", e2e_database_url(), "-t", "-A", "-c", sql],
         capture_output=True, text=True, timeout=10,
     )
     assert result.returncode == 0, f"psql error: {result.stderr}"
@@ -46,7 +42,7 @@ def execute_db(sql: str) -> None:
 
 def query_db(sql: str) -> list[str]:
     result = subprocess.run(
-        ["psql", dev_database_url(), "-t", "-A", "-c", sql],
+        ["psql", e2e_database_url(), "-t", "-A", "-c", sql],
         capture_output=True, text=True, timeout=10,
     )
     assert result.returncode == 0, f"psql error: {result.stderr}"

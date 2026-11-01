@@ -22,7 +22,7 @@ from db_helpers import attendre_que, query_db
 from htmx_helpers import attendre_cablage
 from match_report_helpers import play_match
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 ENTETE_MEMBRE_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
 COACH_SIMPLE = "E2E Coach 01"
 

@@ -16,7 +16,7 @@ Prérequis : serveur kreek lancé en dev, migrations appliquées (`make migrate`
 
 from playwright.sync_api import Page
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 # Un ULID fait 26 caractères en Crockford base32.
 LONGUEUR_ULID = 26

@@ -19,6 +19,11 @@ DATABASE_URL := $(if $(DATABASE_URL),$(DATABASE_URL),$(shell grep -E '^DATABASE_
 # `export DATABASE_URL=…dev…` local ne fasse cibler la base dev par `make test`.
 TEST_DB_URL := $(if $(DATABASE_URL_TEST),$(DATABASE_URL_TEST),$(shell grep -E '^DATABASE__URL=' .env.test 2>/dev/null | cut -d= -f2- | $(unquote)))
 
+# URL de la base de la suite e2e : `.env.e2e`, base `kreek_e2e`. Séparée de la
+# base de travail : les tests y créent compétitions et équipes sans toucher à ce
+# qu'on consulte à la main.
+E2E_DB_URL := $(shell grep -E '^DATABASE__URL=' .env.e2e 2>/dev/null | cut -d= -f2- | $(unquote))
+
 # Profil de la base de démo, cible de `init_remote_demo_db`.
 #
 # Nommé `remote.demo` et non `demo` : c'est le seul profil dont la base vit
@@ -35,7 +40,7 @@ PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
 .PHONY: dev dev-demo e2e-server test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e lint check-arch coverage analyze help
+        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 #
@@ -82,46 +87,37 @@ dev: ## Serveur en watch, vrai catalogue (31 rosters, non versionné)
 	  cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 
-# Force le jeu de démonstration versionné, quelle que soit la configuration
-# locale. Utile quand `.env.dev` surcharge REFERENCES__DIR vers un jeu de
-# règles réel : la suite e2e attend les rosters de `assets/references.example`
-# (Granitiers, Zéphyriens, Lanterniers).
-#
-# **Ce qu'il ajoute à `make dev` : `EMAIL__PROVIDER=console`**, et rien d'autre.
-# Les deux servent le même catalogue. Le nom laisse croire à un mode ; il n'y en
-# a pas — c'est `dev` plus les e-mails au terminal, ce qu'attend la suite e2e.
-dev-demo: ## Jeu de démonstration (4 rosters) + e-mails au terminal — requis par e2e
+# Le serveur de travail sur le jeu de démonstration versionné, avec les e-mails
+# au terminal — pour essayer à la main ce que voit la suite e2e, sur la base de
+# travail. Ce n'est **plus** le serveur des tests : c'est `make e2e-server`, sur
+# sa propre base et son propre port.
+dev-demo: ## Serveur de travail sur le jeu de démonstration (4 rosters), e-mails au terminal
 	REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
-# Le serveur que la suite e2e attend (carte 550).
+# Le serveur que la suite e2e attend — **à côté** du serveur de travail.
 #
-# **C'est `dev-demo`, sous un nom qui le dit.** La suite lit `.env.dev` — voir
-# `tests/e2e/db_helpers.py`, qui y pointe en dur — donc elle interroge la base de
-# travail, pas une base dédiée. Un serveur lancé sur un autre profil écrirait
-# dans une base que les tests ne regardent pas : les données seraient créées, et
-# les tests ne les verraient jamais.
+# Profil `e2e` : `.env.e2e`, base `kreek_e2e`, port **3211**, `BYPASS_AUTH`. Le
+# serveur de travail reste sur `.env.dev` et le port 3210 : les deux tournent
+# en même temps, et la suite n'écrit plus dans la base qu'on consulte à la main.
 #
-# `.env.e2e` existe et porte `kreek_e2e` + `BYPASS_AUTH`, mais **rien ne s'en
-# sert**. Ne pas s'y fier : c'est un fichier orphelin, et le prendre pour le
-# profil des tests coûte une demi-journée. La carte 536 propose de donner
-# vraiment sa base à la suite ; tant qu'elle n'est pas faite, c'est `.env.dev`.
+# Le catalogue est la démonstration (`assets/references.example`) : la suite
+# attend ses rosters (Granitiers, Zéphyriens, Lanterniers). Les e-mails partent
+# au terminal — le parcours « mot de passe oublié » est couvert.
 #
-# Les deux profils écoutent sur le même port, donc `curl localhost:3210` répond
-# dans les deux cas. Ce qui les sépare est la base à laquelle le serveur est
-# connecté, et elle ne se voit pas de l'extérieur :
+# Les deux observateurs partagent `target/` : à chaque modification, l'un
+# compile pendant que l'autre attend le verrou, puis trouve le binaire à jour.
+# Les deux serveurs redémarrent ensemble.
 #
-#     psql "$$url" -At -c "SELECT DISTINCT datname FROM pg_stat_activity \
-#                          WHERE datname LIKE 'kreek%'"
-#
-# Prérequis, portés par `.env.dev` et la base de travail : `BYPASS_AUTH=true`,
-# et le coach `DevCoach` (`make seed_e2e`).
-e2e-server: dev-demo ## Alias de dev-demo, sous le nom qui dit à quoi il sert
+# Première fois, ou base e2e à refaire : `make init_e2e_db`.
+e2e-server: ## Serveur de la suite e2e — port 3211, base kreek_e2e, à côté de make dev
+	EXEC_PROFILE=e2e REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console \
+	  cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 ##@ Tests
 test: reset_test_db ## Lance les tests (utilise .env.test)
 	DATABASE_URL="$(TEST_DB_URL)" cargo test
 
-e2e: ## Lance les tests E2E Playwright (nécessite `make e2e-server` lancé)
+e2e: ## Lance les tests E2E Playwright (nécessite `make e2e-server`, port 3211)
 	cd tests/e2e && uv run pytest -v
 
 # Filtre LOCAL de productivité : n'exécute que les tests e2e susceptibles
@@ -255,9 +251,17 @@ seed_accounts: ## Seed les comptes dev (scripts/seed_accounts.json)
 
 # Seed synthétique de la suite e2e : un space, DevCoach (celui que BYPASS_AUTH
 # connecte, repéré par son nom) et onze autres coachs. Idempotent — rejouable
-# sans risque, et installable par-dessus les données legacy.
-seed_e2e: ## Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)
-	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-e2e
+# sans risque. Dans la base **e2e** : c'est le profil, et non une URL, qui dit au
+# binaire où écrire — `AppConfig` lit `.env.<EXEC_PROFILE>`.
+seed_e2e: ## Seed synthétique de la base e2e (space + 12 coachs, idempotent)
+	EXEC_PROFILE=e2e cargo run -- seed-e2e
+
+# Remet la base e2e à zéro puis la peuple. Le binaire applique les migrations
+# au démarrage, `seed_e2e` compris.
+init_e2e_db: ## Remet la base e2e (kreek_e2e) à zéro et la peuple
+	$(call refuser_si_distant,$(E2E_DB_URL))
+	DATABASE_URL="$(E2E_DB_URL)" sqlx database reset -y -f
+	@$(MAKE) --no-print-directory seed_e2e
 
 init_db: reset_db ## reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)
 	@$(MAKE) --no-print-directory load_data

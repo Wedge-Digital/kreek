@@ -21,6 +21,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import build_and_submit_team, create_full_competition
 from db_helpers import execute_db
+from e2e_env import BASE_URL
 
 # Le statut que porte une saison dont seules les règles sont posées : la
 # première des quatre étapes, et déjà joignable avant la carte 407.
@@ -45,7 +46,7 @@ def saison_inachevee(page: Page, competition_create_url):
 
 
 def _ouvrir_creation(page: Page, space_id: str) -> None:
-    page.goto(f"http://localhost:3210/app/{space_id}/team/create", wait_until="load")
+    page.goto(f"{BASE_URL}/app/{space_id}/team/create", wait_until="load")
     page.wait_for_selector("#draft-team-form", timeout=5000)
 
 
@@ -105,7 +106,7 @@ def test_la_saison_redevient_joignable_une_fois_prete(page: Page, space_id, sais
     # l'absence d'un message d'erreur ne dirait rien — sur succès l'élément
     # n'existe pas, et l'attendre expire au lieu de conclure.
     expect(page).not_to_have_url(
-        f"http://localhost:3210/app/{space_id}/team/create", timeout=10000
+        f"{BASE_URL}/app/{space_id}/team/create", timeout=10000
     )
 
 

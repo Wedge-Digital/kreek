@@ -6,7 +6,7 @@ import urllib.request
 
 import pytest
 
-BASE_URL = os.environ.get("E2E_BASE_URL", "http://localhost:3210")
+from e2e_env import BASE_URL
 
 # Roster du jeu de démonstration servant de sentinelle : sa présence atteste
 # que le serveur charge bien `assets/references.example`.
@@ -33,7 +33,8 @@ def _server_is_running():
     except urllib.error.URLError as exc:
         pytest.exit(
             f"Serveur kreek inaccessible sur {BASE_URL} ({exc}).\n"
-            "Lance-le d'abord en dev (BYPASS_AUTH=true), ex : `cargo run`.",
+            "Lance le serveur de la suite : `make e2e-server` (port 3211, base kreek_e2e),\n"
+            "à côté de ton serveur de travail. Base vide ou à refaire : `make init_e2e_db`.",
             returncode=2,
         )
 

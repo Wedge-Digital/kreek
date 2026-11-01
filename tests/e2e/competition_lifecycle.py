@@ -38,7 +38,7 @@ import requests
 from htmx_helpers import cliquer_quand_cable
 from playwright.sync_api import Page, expect
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 FAKE_LOGO_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 # Nom du compte connecté par bypass_auth — c'est par ce nom qu'il le cherche.
 BYPASS_AUTH_COACH_NAME = "DevCoach"

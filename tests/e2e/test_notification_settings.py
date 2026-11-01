@@ -29,7 +29,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import create_full_competition
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 
 def _ouvrir_synthese(page: Page, space_id: str, comp: dict) -> None:

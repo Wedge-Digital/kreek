@@ -36,7 +36,7 @@ import requests
 from db_helpers import attendre_que, query_db
 from competition_lifecycle import liberer_les_equipes
 
-BASE_URL = "http://localhost:3210"
+from e2e_env import BASE_URL
 
 
 @pytest.fixture(scope="module")
