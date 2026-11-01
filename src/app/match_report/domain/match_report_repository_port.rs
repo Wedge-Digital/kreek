@@ -7,12 +7,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MatchActionRow {
     pub action_id: String,
+    /// Le camp de l'action : le journal montre les deux (carte 635).
+    pub team_side: TeamSide,
     pub turn_number: i16,
     pub player_id: String,
     pub player_type: String,
     pub action_json: serde_json::Value,
     pub player_display_name: String,
     pub player_position: String,
+    /// Qui l'a saisie, `None` pour une action sans événement correspondant —
+    /// jamais un auteur inventé (carte 635).
+    pub recorded_by: Option<String>,
 }
 
 /// Le mode de saisie d'un rapport et celui qui l'a démarré, lus sur la
@@ -121,9 +126,10 @@ pub trait IMatchReportRepository: Send + Sync {
         team_b: &str,
     ) -> Result<Option<String>, RepositoryError>;
 
-    async fn find_actions_by_match_and_side(
+    /// Les actions des deux camps, de la plus récente à la plus ancienne
+    /// (carte 635).
+    async fn find_actions_by_match(
         &self,
         match_report_id: &str,
-        side: TeamSide,
     ) -> Result<Vec<MatchActionRow>, RepositoryError>;
 }

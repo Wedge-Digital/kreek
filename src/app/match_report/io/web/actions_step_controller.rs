@@ -93,21 +93,20 @@ async fn get_step(space_id: String, mr_id: String, side: TeamSide, state: AppSta
     );
     let home_info = home_info.unwrap_or_default();
     let away_info = away_info.unwrap_or_default();
-    let (turn_selector_url, temp_player_selector_url, action_panel_url, action_log_url) = match side
-    {
+    let (turn_selector_url, temp_player_selector_url, action_panel_url) = match side {
         TeamSide::Home => (
             routes.match_report.step3_turn_selector(&space_id, &mr_id),
             routes.match_report.step3_temp_players(&space_id, &mr_id),
             routes.match_report.step3_action_panel(&space_id, &mr_id),
-            routes.match_report.step3_action_log(&space_id, &mr_id),
         ),
         TeamSide::Away => (
             routes.match_report.step4_turn_selector(&space_id, &mr_id),
             routes.match_report.step4_temp_players(&space_id, &mr_id),
             routes.match_report.step4_action_panel(&space_id, &mr_id),
-            routes.match_report.step4_action_log(&space_id, &mr_id),
         ),
     };
+    // Un seul journal pour les deux camps (carte 635).
+    let action_log_url = routes.match_report.action_log(&space_id, &mr_id);
     let player_selector_url = routes.players.match_player_selector(&space_id, &team_id);
     let team_side_label = match side {
         TeamSide::Home => "home",

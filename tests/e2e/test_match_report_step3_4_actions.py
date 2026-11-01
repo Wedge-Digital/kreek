@@ -12,6 +12,7 @@ Scénarios couverts :
 - S9  — Joueur temp visible si inducements soumis (skip sinon)
 - S10 — Journaliers automatiques si équipe < 11 (skip sinon)
 - S11 — Page step4 (équipe away) : mêmes zones présentes
+- S12 — Journal des deux camps : l'action du visiteur en tête, son camp, « saisi par toi »
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée.
 """
@@ -355,7 +356,9 @@ def test_s7_delete_action(page: Page, space_id, mr_step3):
     count_before = page.locator("#action-log .mr-log-entry").count()
     assert count_before >= 1
 
-    page.locator("#action-log .mr-log-delete").last.click()
+    # Le journal va du plus récent au plus ancien (carte 635) : l'action du
+    # tour 8, la plus tardive à ce stade, est la première ligne.
+    page.locator("#action-log .mr-log-delete").first.click()
     page.wait_for_timeout(1000)
 
     count_after = page.locator("#action-log .mr-log-entry").count()
@@ -595,3 +598,33 @@ def test_h7_deux_fois_le_meme_mot_clef_est_accepte(page: Page, space_id, mr_step
         expect(entree).to_contain_text("Haine", timeout=6000)
 
     assert libelles[0] == libelles[1], "le test doit rejouer le même mot-clef"
+
+
+# ── S12 — Journal des deux camps (carte 635) ──────────────────────────────────
+
+def test_s12_le_journal_montre_les_deux_camps(page: Page, space_id, mr_step3):
+    """Une action du visiteur paraît au journal de l'étape domicile, en tête,
+    avec le liseré de son camp et son auteur.
+
+    Tour 16 : aucun autre test du module n'y saisit, l'action est donc la plus
+    récente du journal. En fin de fichier, après les scénarios de Haine, pour
+    que rien ne la dépasse avant l'assertion.
+    """
+    player_id = _first_player_id(mr_step3, "away")
+    if not player_id:
+        pytest.skip("Aucun joueur trouvé pour l'équipe extérieure")
+
+    _record_action_api(space_id, mr_step3, "away", player_id, turn=16, action_type="TOUCHDOWN")
+
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_step3}/step3",
+              wait_until="load")
+    page.wait_for_selector("#action-log .mr-log-entry", timeout=6000)
+
+    premiere = page.locator("#action-log .mr-log-entry").first
+    expect(premiere).to_contain_text("T16")
+    expect(premiere).to_have_class(re.compile(r"\bmr-log-entry--away\b"))
+    expect(premiere).to_contain_text("saisi par toi")
+    # Le coach qui saisit a le droit de supprimer : le ✕ est là.
+    expect(premiere.locator(".mr-log-delete")).to_be_visible()
+    # Les actions domicile des scénarios précédents restent dans le même fil.
+    expect(page.locator("#action-log .mr-log-entry--home").first).to_be_visible()

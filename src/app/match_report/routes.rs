@@ -24,10 +24,9 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/step3/action-panel";
     pub const MATCH_REPORT_STEP4_ACTION_PANEL: &str =
         "/app/{space_id}/match-report/{match_report_id}/step4/action-panel";
-    pub const MATCH_REPORT_STEP3_LOG: &str =
-        "/app/{space_id}/match-report/{match_report_id}/step3/action-log";
-    pub const MATCH_REPORT_STEP4_LOG: &str =
-        "/app/{space_id}/match-report/{match_report_id}/step4/action-log";
+    /// Le journal des deux camps, une seule route (carte 635).
+    pub const MATCH_REPORT_ACTION_LOG: &str =
+        "/app/{space_id}/match-report/{match_report_id}/action-log";
     pub const MATCH_REPORT_STEP3_ACTIONS: &str =
         "/app/{space_id}/match-report/{match_report_id}/step3/actions";
     pub const MATCH_REPORT_STEP4_ACTIONS: &str =
@@ -159,14 +158,8 @@ impl Routes {
             .replace("{match_report_id}", match_report_id)
     }
 
-    pub fn step3_action_log(&self, space_id: &str, match_report_id: &str) -> String {
-        path::MATCH_REPORT_STEP3_LOG
-            .replace("{space_id}", space_id)
-            .replace("{match_report_id}", match_report_id)
-    }
-
-    pub fn step4_action_log(&self, space_id: &str, match_report_id: &str) -> String {
-        path::MATCH_REPORT_STEP4_LOG
+    pub fn action_log(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_ACTION_LOG
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }

@@ -53,12 +53,12 @@ SELECT count(*) FROM match_report_actions WHERE recorded_by IS NULL;  -- après 
 
 ## Checklist
 
-- [ ] Migration : colonne et remplissage ; écriture de `recorded_by` à l'insertion
-- [ ] `find_actions_by_match` ; l'ancienne lecture retirée après inventaire
-- [ ] La route `/action-log`, ses deux anciennes retirées après inventaire ; le widget, « saisi par », ✕ selon le droit
-- [ ] Tests unitaires : le VM nomme « toi » et l'autre coach ; ✕ absent pour qui ne peut pas écrire
-- [ ] Test d'intégration dépôt : une action insérée porte son auteur
-- [ ] E2E : `test_match_report_step3_4_actions.py` suit le journal à deux camps ; l'autre coach voit le journal sans ✕
-- [ ] Mesures sur dump consignées
-- [ ] `tests/impact-map.toml` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] Migration : colonne et remplissage ; écriture de `recorded_by` à l'insertion
+- [x] `find_actions_by_match` ; l'ancienne lecture retirée après inventaire
+- [x] La route `/action-log`, ses deux anciennes retirées après inventaire ; le widget, « saisi par », ✕ selon le droit
+- [x] Tests unitaires : le VM nomme « toi » et l'autre coach ; ✕ absent pour qui ne peut pas écrire
+- [x] Test d'intégration dépôt : une action insérée porte son auteur
+- [x] E2E : `test_match_report_step3_4_actions.py` suit le journal à deux camps ; l'autre coach voit le journal sans ✕
+- [x] Mesures sur dump consignées
+- [x] `tests/impact-map.toml` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

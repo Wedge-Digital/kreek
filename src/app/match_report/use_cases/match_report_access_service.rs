@@ -50,6 +50,22 @@ pub async fn is_authorized(
     is_coach_of_either_team(deps, scope, &user.id.to_string()).await
 }
 
+/// Peut retirer une action du journal — ce qui décide du ✕ (carte 635).
+///
+/// Aujourd'hui la règle d'`is_authorized`, celle de la garde qui couvre la
+/// suppression : un ✕ visible doit mener à une suppression acceptée. La carte
+/// 634 y substituera `can_write_report` ; c'est ici, et nulle part dans le
+/// gabarit, que ce changement se fera.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn can_delete_actions(
+    deps: &AccesRapportDeps<'_>,
+    user: &User,
+    space_id: &str,
+    scope: &PorteeRapport,
+) -> bool {
+    is_authorized(deps, user, space_id, scope).await
+}
+
 /// Admin d'espace ou de compétition — **sans** les coachs des deux équipes.
 /// La règle est celle de tout kreek, `is_admin` (carte 570) ; un identifiant
 /// illisible refuse.

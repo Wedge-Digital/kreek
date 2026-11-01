@@ -264,10 +264,9 @@ mod tests {
         ) -> Result<Option<String>, RepositoryError> {
             Ok(None)
         }
-        async fn find_actions_by_match_and_side(
+        async fn find_actions_by_match(
             &self,
             _: &str,
-            _: TeamSide,
         ) -> Result<
             Vec<crate::app::match_report::domain::match_report_repository_port::MatchActionRow>,
             RepositoryError,

@@ -468,6 +468,14 @@
 
 .mr-log-hate { color: var(--dark-2); font-style: italic; }
 
+/* ── Journal des deux camps (carte 635) ────────────────────────────────────
+   Repris de `rawpages/html/app-mobile.css` (`.mb-log--home`, `.mb-log--away`,
+   `.mb-log-by`), renommés dans l'espace `mr-log` du journal : le liseré dit le
+   camp, la ligne du dessous l'équipe et qui a saisi. */
+.mr-log-entry.mr-log-entry--home { border-left: 3px solid var(--main-blue); }
+.mr-log-entry.mr-log-entry--away { border-right: 3px solid var(--green); }
+.mr-log-by { display: block; font-size: 11px; color: var(--dark-3); }
+
 /* ── Annuler le rapport (carte 433) ────────────────────────────────────────
    Discret et à l'écart des actions du match : c'est une sortie, pas une étape.
    Rouge sourd plutôt que plein — le bouton ne doit pas attirer le clic. */

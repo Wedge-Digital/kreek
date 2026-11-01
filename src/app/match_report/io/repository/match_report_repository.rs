@@ -221,7 +221,7 @@ impl MatchReportRepository {
                 action,
                 player_display_name,
                 player_position,
-                ..
+                recorded_by,
             } => {
                 use crate::app::match_report::domain::value_objects::TeamSide;
                 let (player_id, player_type) = match player {
@@ -241,8 +241,9 @@ impl MatchReportRepository {
                 sqlx::query(
                     "INSERT INTO match_report_actions
                         (action_id, match_report_id, team_side, turn_number, player_id,
-                         player_type, action_json, player_display_name, player_position)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                         player_type, action_json, player_display_name, player_position,
+                         recorded_by)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
                 )
                 .bind(&action_id.0)
                 .bind(match_report_id)
@@ -253,6 +254,7 @@ impl MatchReportRepository {
                 .bind(&action_json)
                 .bind(player_display_name)
                 .bind(player_position)
+                .bind(recorded_by.to_string())
                 .execute(&mut **tx)
                 .await
                 .map_err(RepositoryError::Database)?;
@@ -586,42 +588,48 @@ impl IMatchReportRepository for MatchReportRepository {
         Ok(row.map(|r| r.get("match_report_id")))
     }
 
-    async fn find_actions_by_match_and_side(
+    async fn find_actions_by_match(
         &self,
         match_report_id: &str,
-        side: TeamSide,
     ) -> Result<Vec<MatchActionRow>, RepositoryError> {
-        use crate::app::match_report::domain::value_objects::TeamSide;
-        let side_str = match side {
-            TeamSide::Home => "home",
-            TeamSide::Away => "away",
-        };
         let rows = sqlx::query(
-            "SELECT action_id, turn_number, player_id, player_type,
-                    action_json, player_display_name, player_position
+            "SELECT action_id, team_side, turn_number, player_id, player_type,
+                    action_json, player_display_name, player_position, recorded_by
              FROM match_report_actions
-             WHERE match_report_id = $1 AND team_side = $2 AND NOT is_deleted
-             ORDER BY turn_number ASC, recorded_at ASC",
+             WHERE match_report_id = $1 AND NOT is_deleted
+             ORDER BY turn_number DESC, recorded_at DESC",
         )
         .bind(match_report_id)
-        .bind(side_str)
         .fetch_all(&self.pool)
         .await
         .map_err(RepositoryError::Database)?;
-
-        Ok(rows
-            .iter()
-            .map(|r| MatchActionRow {
-                action_id: r.get("action_id"),
-                turn_number: r.get("turn_number"),
-                player_id: r.get("player_id"),
-                player_type: r.get("player_type"),
-                action_json: r.get("action_json"),
-                player_display_name: r.get("player_display_name"),
-                player_position: r.get("player_position"),
-            })
-            .collect())
+        rows.iter().map(action_row_from).collect()
     }
+}
+
+/// Une ligne de `match_report_actions` en DTO de lecture. Un camp illisible
+/// est une erreur, pas un camp par défaut : l'action changerait d'équipe.
+fn action_row_from(r: &sqlx::postgres::PgRow) -> Result<MatchActionRow, RepositoryError> {
+    let team_side = match r.get::<String, _>("team_side").as_str() {
+        "home" => TeamSide::Home,
+        "away" => TeamSide::Away,
+        other => {
+            return Err(RepositoryError::Rehydration(format!(
+                "camp inconnu : {other}"
+            )))
+        }
+    };
+    Ok(MatchActionRow {
+        action_id: r.get("action_id"),
+        team_side,
+        turn_number: r.get("turn_number"),
+        player_id: r.get("player_id"),
+        player_type: r.get("player_type"),
+        action_json: r.get("action_json"),
+        player_display_name: r.get("player_display_name"),
+        player_position: r.get("player_position"),
+        recorded_by: r.get("recorded_by"),
+    })
 }
 
 #[cfg(test)]
@@ -762,6 +770,63 @@ mod tests {
         assert_eq!(row.started_by, Some(confirmer.to_string()));
         assert_eq!(row.entry_mode, "SoloEntry");
 
+        delete_report(&pool, &mr_id).await;
+    }
+
+    fn action_recorded(turn: u8, side: TeamSide, recorded_by: CoachId) -> MatchReportDomainEvent {
+        use crate::app::match_report::domain::value_objects::{
+            ActionId, ActionPlayer, MatchActionType, TurnNumber,
+        };
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        MatchReportDomainEvent::ActionRecorded {
+            action_id: ActionId(MatchReportId::new().to_string()),
+            team_side: side,
+            turn: TurnNumber::try_new(turn).unwrap(),
+            player: ActionPlayer::Regular(PlayerId::new()),
+            action: MatchActionType::Touchdown,
+            player_display_name: "Borin".to_string(),
+            player_position: "Bloqueur".to_string(),
+            recorded_by,
+        }
+    }
+
+    /// Une action insérée porte son auteur, et le journal rend les deux camps
+    /// du plus récent au plus ancien (carte 635).
+    #[tokio::test]
+    async fn an_inserted_action_carries_its_author() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = MatchReportRepository::new(pool.clone());
+        let mr_id = MatchReportId::new().to_string();
+        let (home_coach, away_coach) = (CoachId::new(), CoachId::new());
+        repo.append(&mr_id, &test_created_event(&mr_id), 0)
+            .await
+            .unwrap();
+        let actions = vec![
+            action_recorded(2, TeamSide::Home, home_coach),
+            action_recorded(5, TeamSide::Away, away_coach),
+        ];
+        repo.append_many(&mr_id, actions, 1).await.unwrap();
+
+        let rows = repo.find_actions_by_match(&mr_id).await.unwrap();
+        let seen: Vec<_> = rows
+            .iter()
+            .map(|r| (r.turn_number, r.team_side, r.recorded_by.clone()))
+            .collect();
+        assert_eq!(
+            seen,
+            vec![
+                (5, TeamSide::Away, Some(away_coach.to_string())),
+                (2, TeamSide::Home, Some(home_coach.to_string())),
+            ]
+        );
+
+        sqlx::query("DELETE FROM match_report_actions WHERE match_report_id = $1")
+            .bind(&mr_id)
+            .execute(&pool)
+            .await
+            .ok();
         delete_report(&pool, &mr_id).await;
     }
 

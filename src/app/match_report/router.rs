@@ -15,9 +15,7 @@ use crate::app::match_report::io::web::record_action_controller::{
     delete_action, post_action_step3, post_action_step4,
 };
 use crate::app::match_report::io::web::step5_controller::{get_step5, post_step5};
-use crate::app::match_report::io::web::widgets::action_log_widget::{
-    get_action_log_step3, get_action_log_step4,
-};
+use crate::app::match_report::io::web::widgets::action_log_widget::get_action_log;
 use crate::app::match_report::io::web::widgets::action_panel_widget::{
     get_action_panel_step3, get_action_panel_step4,
 };
@@ -130,8 +128,10 @@ fn routes_de_saisie() -> Router<AppState> {
             path::MATCH_REPORT_STEP4_ACTION_PANEL,
             get(get_action_panel_step4),
         )
-        .route(path::MATCH_REPORT_STEP3_LOG, get(get_action_log_step3))
-        .route(path::MATCH_REPORT_STEP4_LOG, get(get_action_log_step4))
+        // Le journal des deux camps (carte 635). Il rejoindra le groupe de
+        // suivi de la carte 634, lecture permise à l'autre coach ; d'ici là,
+        // la garde de saisie est exactement le droit de le lire.
+        .route(path::MATCH_REPORT_ACTION_LOG, get(get_action_log))
         .route(path::MATCH_REPORT_STEP3_ACTIONS, post(post_action_step3))
         .route(path::MATCH_REPORT_STEP4_ACTIONS, post(post_action_step4))
         .route(path::MATCH_REPORT_ACTION, delete(delete_action))

@@ -11,7 +11,7 @@ use crate::app::match_report::domain::match_report_repository_port::{
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
-    DedicatedFans, MatchReportOrigin, TeamSide, TeamValue,
+    DedicatedFans, MatchReportOrigin, TeamValue,
 };
 use crate::app::match_report::ports::{
     CreationAppariementError, ICompetitionDataPort, IPlayerDataPort, ITeamDataPort,
@@ -99,11 +99,7 @@ impl IMatchReportRepository for ConflictingRepository {
     ) -> Result<Option<String>, RepositoryError> {
         Ok(None)
     }
-    async fn find_actions_by_match_and_side(
-        &self,
-        _: &str,
-        _: TeamSide,
-    ) -> Result<Vec<MatchActionRow>, RepositoryError> {
+    async fn find_actions_by_match(&self, _: &str) -> Result<Vec<MatchActionRow>, RepositoryError> {
         Ok(vec![])
     }
 }
@@ -191,11 +187,7 @@ impl IMatchReportRepository for RecordingRepository {
     ) -> Result<Option<String>, RepositoryError> {
         Ok(None)
     }
-    async fn find_actions_by_match_and_side(
-        &self,
-        _: &str,
-        _: TeamSide,
-    ) -> Result<Vec<MatchActionRow>, RepositoryError> {
+    async fn find_actions_by_match(&self, _: &str) -> Result<Vec<MatchActionRow>, RepositoryError> {
         Ok(vec![])
     }
 }

@@ -176,7 +176,6 @@ mod tests {
         MatchActionRow, RepositoryError,
     };
     use crate::app::match_report::domain::match_report_state::rehydrate;
-    use crate::app::match_report::domain::value_objects::TeamSide;
     use crate::common::services::event_bus::event_bus::new_bus;
     use async_trait::async_trait;
     use std::collections::HashMap;
@@ -287,10 +286,9 @@ mod tests {
             }
             Ok(None)
         }
-        async fn find_actions_by_match_and_side(
+        async fn find_actions_by_match(
             &self,
             _: &str,
-            _: TeamSide,
         ) -> Result<Vec<MatchActionRow>, RepositoryError> {
             Ok(vec![])
         }

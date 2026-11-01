@@ -5,18 +5,21 @@
     {% else %}
     <div class="mr-log">
         {% for action in actions %}
-        <div class="mr-log-entry">
+        <div class="mr-log-entry mr-log-entry--{{ action.side_class }}">
             <div class="mr-log-turn">T{{ action.turn }}</div>
             <div class="mr-log-icon">{{ action.action_icon }}</div>
             <div class="mr-log-text">
                 {% if !action.player_name.is_empty() %}<strong>{{ action.player_name }}</strong> — {% endif %}{{ action.action_label }}{% if let Some(haine) = action.hate_label.as_ref() %}<span class="mr-log-hate"> + Haine&nbsp;: {{ haine }}</span>{% endif %}
+                <span class="mr-log-by">{{ action.team_name }}{% if let Some(auteur) = action.recorded_by.as_ref() %}{% if !action.team_name.is_empty() %} · {% endif %}saisi par {{ auteur }}{% endif %}</span>
             </div>
+            {% if let Some(url) = action.delete_url.as_ref() %}
             <button type="button"
                     class="mr-log-delete"
-                    hx-delete="{{ action.delete_url }}"
+                    hx-delete="{{ url }}"
                     hx-swap="none">
                 ✕
             </button>
+            {% endif %}
         </div>
         {% endfor %}
     </div>

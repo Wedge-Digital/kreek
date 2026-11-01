@@ -46,13 +46,19 @@ async fn render_turn_selector(mr_id: &str, side: TeamSide, state: &AppState) -> 
     let actions = match state
         .match_report
         .match_report_repo
-        .find_actions_by_match_and_side(mr_id, side)
+        .find_actions_by_match(mr_id)
         .await
     {
         Ok(a) => a,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let turns_with_action: HashSet<i16> = actions.iter().map(|a| a.turn_number).collect();
+    // Le journal rend les deux camps (carte 635) ; le sélecteur ne marque que
+    // les tours du camp saisi.
+    let turns_with_action: HashSet<i16> = actions
+        .iter()
+        .filter(|a| a.team_side == side)
+        .map(|a| a.turn_number)
+        .collect();
     let turns = (1u8..=16)
         .map(|t| TurnButtonVm {
             turn: t,

@@ -387,10 +387,9 @@ mod tests {
         ) -> Result<Option<String>, RepositoryError> {
             panic!("le dépôt ne doit pas être sollicité")
         }
-        async fn find_actions_by_match_and_side(
+        async fn find_actions_by_match(
             &self,
             _: &str,
-            _: TeamSide,
         ) -> Result<Vec<MatchActionRow>, RepositoryError> {
             panic!("le dépôt ne doit pas être sollicité")
         }

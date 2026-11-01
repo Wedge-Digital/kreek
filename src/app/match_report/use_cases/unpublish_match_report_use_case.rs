@@ -265,10 +265,9 @@ mod tests {
         ) -> Result<Option<String>, RepositoryError> {
             Ok(None)
         }
-        async fn find_actions_by_match_and_side(
+        async fn find_actions_by_match(
             &self,
             _: &str,
-            _: TeamSide,
         ) -> Result<Vec<MatchActionRow>, RepositoryError> {
             Ok(vec![])
         }
