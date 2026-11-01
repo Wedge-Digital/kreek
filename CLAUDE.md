@@ -47,10 +47,17 @@ Directives de travail pour Claude Code sur ce projet.
       redémarrer quoi que ce soit, et l'observateur en réécrit un autre par
       dessus. Les deux dates se croisent sans rapport avec ce qui tourne.
 
+    **Deux serveurs tournent** — travail sur le port 3210 (`make dev`, base de
+    `.env.dev`), suite e2e sur le port 3211 (`make e2e-server`, base
+    `kreek_e2e`). `pgrep -f 'target/debug/kreek'` les trouve tous les deux : on
+    repère donc celui qu'on attend **par son port**.
+
     ```bash
-    PID=$(pgrep -f 'target/debug/kreek' | head -1)
-    touch src/main.rs   # réveille l'observateur, même si le code vient d'être édité
-    until [ "$(pgrep -f 'target/debug/kreek' | head -1)" != "$PID" ]; do sleep 1; done
+    PORT=3211   # 3210 pour le serveur de travail
+    PID=$(lsof -ti tcp:$PORT -sTCP:LISTEN)
+    touch src/main.rs   # réveille les observateurs, même si le code vient d'être édité
+    until [ -n "$(lsof -ti tcp:$PORT -sTCP:LISTEN)" ] && \
+          [ "$(lsof -ti tcp:$PORT -sTCP:LISTEN)" != "$PID" ]; do sleep 1; done
     ```
 
     **Attendre que `make test` ou `cargo build` soient finis** avant de réveiller
