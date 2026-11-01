@@ -57,6 +57,9 @@
     </template>
   </div>
 
+  {#- La zone de contenu de la journée : l'étape « Présents » (E18) s'y
+      substitue, l'en-tête et les dates restant visibles. -#}
+  <div class="round-detail-content">
   <div class="match-actions-bar">
     <span class="info-note">
       <span class="info-note-icon">&#9917;</span>
@@ -66,6 +69,16 @@
       <button class="btn-danger-sm"
               onclick="fetch('{{ app_routes.competitions.admin_schedule_clear_round(space_id, competition_id, season_id) }}',{method:'POST',headers:{'Content-Type':'application/json','HX-Request':'true'},body:JSON.stringify({round_id:'{{ detail.round_id }}'})}).then(function(r){return r.text().then(function(t){return {status:r.status,responseText:t};});}).then(function(res){if(window.handleScheduleActionResponse(res))htmx.trigger(document.body,'scheduleChanged');})">Vider les matchs</button>
       {% if detail.fixtures.is_empty() %}
+      <button class="btn-primary-sm"
+              {# `round_id` en `hx-vals` et non dans l'URL : `#schedule-detail`
+                  pose le sien en `hx-vals`, dont ce bouton hérite. La clé
+                  locale le remplace ; dans l'URL, il s'y ajouterait, et le
+                  doublon fait refuser la requête (400). #}
+              hx-get="{{ app_routes.competitions.admin_schedule_draw(space_id, competition_id, season_id) }}"
+              hx-vals='{"round_id": "{{ detail.round_id }}"}'
+              hx-target="closest .round-detail-content"
+              hx-swap="innerHTML"
+              hx-on::after-request="if (event.detail.xhr.status >= 400) window.handleScheduleActionResponse(event.detail.xhr)">🙋 Faire les appariements</button>
       <button class="btn-primary-sm"
               onclick="fetch('{{ app_routes.competitions.admin_schedule_generate_round(space_id, competition_id, season_id) }}',{method:'POST',headers:{'Content-Type':'application/json','HX-Request':'true'},body:JSON.stringify({round_id:'{{ detail.round_id }}'})}).then(function(r){return r.text().then(function(t){return {status:r.status,responseText:t};});}).then(function(res){if(window.handleScheduleActionResponse(res))htmx.trigger(document.body,'scheduleChanged');})">🎲 Générer une journée complète</button>
       {% endif %}
@@ -187,6 +200,8 @@
     {% if detail.fixtures.is_empty() %}
     <div class="match-list-empty">Aucun match programmé. Utilisez « Générer une journée complète » ou ajoutez un match à la main.</div>
     {% endif %}
+  </div>
+
   </div>
 
   <div class="round-detail-footer">

@@ -143,6 +143,7 @@ const FEUILLES_APP: &[&str] = &[
     "widgets/rec-page.css",
     "widgets/roster-picker-widget.css",
     "widgets/roster-picker.css",
+    "widgets/schedule-draw.css",
     "widgets/skill-picker.css",
     "widgets/team-logo.css",
     // En **dernier**, et c'est délibéré : la feuille amont de Tom Select était

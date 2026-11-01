@@ -1,0 +1,81 @@
+{#- L'appariement des présents (E18), étape 1 : décocher les absentes.
+    Rien n'est écrit ici. Les compteurs et les avertissements sont calculés
+    dans le navigateur ; le tirage parmi les cochées est la carte 617. -#}
+<div class="schedule-draw" hx-disinherit="*"
+     x-data="{
+       total: {{ draw.present_count() }},
+       sync() { this.total = this.$root.querySelectorAll('input[name=team_ids]:checked').length; }
+     }"
+     @change="sync()">
+
+  <div class="draw-step-head">
+    <div class="draw-steps">
+      <span class="draw-step draw-step--current"><span class="draw-step-num">1</span><span class="draw-step-label">Présents</span></span>
+      <span class="draw-step-sep">›</span>
+      <span class="draw-step"><span class="draw-step-num">2</span><span class="draw-step-label">Aperçu du tirage</span></span>
+    </div>
+    <span class="draw-step-hint">Décochez les équipes absentes ce jour-là.</span>
+  </div>
+
+  <form class="draw-body">
+    {% for group in draw.groups %}
+    <div class="draw-group"
+         x-data="{
+           present: {{ group.present_count }},
+           sync() { this.present = this.$root.querySelectorAll('input[name=team_ids]:checked').length; },
+           setAll(value) {
+             this.$root.querySelectorAll('input[name=team_ids]').forEach(function (c) { c.checked = value; });
+             this.$root.dispatchEvent(new Event('change', { bubbles: true }));
+           }
+         }"
+         @change="sync()">
+      <div class="draw-group-head">
+        <div>
+          <span class="draw-group-title">{{ group.name }}</span>
+          <span class="draw-group-count">
+            · <strong x-text="present">{{ group.present_count }}</strong> présentes sur {{ group.teams.len() }}
+          </span>
+        </div>
+        <div class="draw-group-tools">
+          <button type="button" class="draw-link" @click="setAll(true)">Toutes présentes</button>
+          <button type="button" class="draw-link" @click="setAll(false)">Toutes absentes</button>
+        </div>
+      </div>
+
+      <div class="presence-list">
+        {% for team in group.teams %}
+        <label class="presence-team">
+          <input type="checkbox" name="team_ids" value="{{ team.team_id }}"{% if team.present %} checked{% endif %}>
+          <div class="presence-team-info">
+            <div class="presence-team-name">{{ team.team_name }}</div>
+            <div class="presence-team-meta">{{ team.coach_name }} · {{ team.roster_name }}</div>
+          </div>
+          <span class="presence-team-played">{{ team.matches_played }} match{% if team.matches_played != 1 %}s{% endif %}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="draw-note draw-note--error" x-show="present < 2" x-cloak>
+        <span>⛔</span>
+        <span>Moins de deux équipes présentes : aucune rencontre ne sera tirée dans cette poule.</span>
+      </div>
+      <div class="draw-note draw-note--info" x-show="present >= 2 && present % 2 === 1" x-cloak>
+        <span>🛌</span>
+        <span>Nombre impair : une équipe sera exemptée — celle qui a joué le plus de matchs.</span>
+      </div>
+    </div>
+    {% endfor %}
+  </form>
+
+  <div class="draw-footer">
+    <div class="draw-footer-left">
+      <button type="button" class="btn-outline-sm" data-round-id="{{ draw.round_id }}"
+              @click="htmx.trigger(document.body, 'roundSelected', { round_id: $el.dataset.roundId })">Annuler</button>
+    </div>
+    <div class="draw-footer-right">
+      <span class="draw-footer-note"><span x-text="total">{{ draw.present_count() }}</span> équipes présentes</span>
+      {#- Rendu désactivé : la carte 617 le branche sur l'aperçu. -#}
+      <button type="button" class="btn-primary-sm" disabled>🎲 Tirer au sort</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,83 @@
+/* L'appariement des présents (E18) — widget du Calendrier d'administration.
+   Portée : `.schedule-draw`, racine du widget. Styles repris de la maquette
+   `assets/rawpages/html/app-competition-admin-schedule-draw.html`. */
+
+/* ── Les étapes ─────────────────────────────────────────────────────────── */
+.schedule-draw .draw-step-head {
+  display: flex; align-items: center; gap: var(--p1);
+  padding: var(--p1) var(--p2);
+  border-bottom: 1px solid var(--dark-5);
+  background: var(--dark-7);
+}
+.schedule-draw .draw-steps { display: flex; gap: 6px; font-size: 11px; font-weight: 600; color: var(--dark-3); }
+.schedule-draw .draw-step { display: flex; align-items: center; gap: 6px; }
+.schedule-draw .draw-step-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--dark-5); color: var(--dark-2); font-size: 11px;
+}
+.schedule-draw .draw-step--current { color: var(--main-blue); }
+.schedule-draw .draw-step--current .draw-step-num { background: var(--main-blue); color: var(--white); }
+.schedule-draw .draw-step-sep { color: var(--dark-4); }
+.schedule-draw .draw-step-hint { margin-left: auto; font-size: var(--text-tiny); color: var(--dark-3); }
+
+.schedule-draw .draw-body { padding: var(--p2); display: flex; flex-direction: column; gap: var(--p2); }
+
+/* ── Une poule ──────────────────────────────────────────────────────────── */
+.schedule-draw .draw-group { display: flex; flex-direction: column; gap: var(--p05); }
+.schedule-draw .draw-group-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+}
+.schedule-draw .draw-group-title {
+  font-family: var(--font-title); font-size: var(--text-small);
+  font-weight: 700; color: var(--dark-1);
+}
+.schedule-draw .draw-group-count { font-size: var(--text-tiny); color: var(--dark-3); }
+.schedule-draw .draw-group-count strong { color: var(--dark-1); }
+.schedule-draw .draw-group-tools { display: flex; gap: 10px; font-size: 11px; }
+.schedule-draw .draw-link { color: var(--link-blue); cursor: pointer; background: none; border: 0; padding: 0; font-size: 11px; }
+
+/* ── Les équipes à cocher : une par ligne ───────────────────────────────── */
+.schedule-draw .presence-list { display: flex; flex-direction: column; gap: 4px; }
+.schedule-draw .presence-team {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--dark-5); background: var(--white);
+  cursor: pointer; transition: all 0.12s;
+}
+.schedule-draw .presence-team:hover { border-color: var(--dark-4); }
+.schedule-draw .presence-team input { accent-color: var(--main-blue); width: 16px; height: 16px; flex-shrink: 0; }
+/* Une équipe décochée : l'état vient de la case elle-même, sans script. */
+.schedule-draw .presence-team:has(input:not(:checked)) { background: var(--dark-7); }
+.schedule-draw .presence-team:has(input:not(:checked)) .presence-team-name { color: var(--dark-3); text-decoration: line-through; }
+.schedule-draw .presence-team-info { flex: 1; min-width: 0; }
+.schedule-draw .presence-team-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+.schedule-draw .presence-team-meta { font-size: 11px; color: var(--dark-3); margin-top: 1px; }
+.schedule-draw .presence-team-played { font-size: 11px; color: var(--dark-3); flex-shrink: 0; }
+
+/* ── Les notes sous une poule ───────────────────────────────────────────── */
+.schedule-draw .draw-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 12px; border-radius: 8px;
+  font-size: var(--text-tiny); line-height: 1.4;
+}
+.schedule-draw .draw-note--info { background: rgba(0,48,73,0.06); color: var(--main-blue); }
+.schedule-draw .draw-note--error { background: rgba(224,32,32,0.07); color: var(--red); }
+
+/* ── Le pied ────────────────────────────────────────────────────────────── */
+.schedule-draw .draw-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+  padding: var(--p1) var(--p2);
+  border-top: 1px solid var(--dark-5);
+}
+.schedule-draw .draw-footer-left,
+.schedule-draw .draw-footer-right { display: flex; align-items: center; gap: 8px; }
+.schedule-draw .draw-footer-note { font-size: var(--text-tiny); color: var(--dark-3); }
+
+@media (max-width: 768px) {
+  .schedule-draw .draw-steps .draw-step-label { display: none; }
+  .schedule-draw .draw-step-hint { display: none; }
+  .schedule-draw .draw-footer { flex-direction: column-reverse; align-items: stretch; }
+  .schedule-draw .draw-footer-left,
+  .schedule-draw .draw-footer-right { justify-content: center; flex-wrap: wrap; }
+}

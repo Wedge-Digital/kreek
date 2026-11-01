@@ -54,10 +54,10 @@ scopés sous `.schedule-draw`, inscrit dans `src/web/css_bundle.rs` (axe 14).
 
 ## Checklist
 
-- [ ] Service, handler, VMs, gabarit, route
-- [ ] Bouton d'entrée sur journée vide seulement
-- [ ] Feuille scopée et inscrite au bundle ; `scripts/check-css-collisions.sh`
-- [ ] Aucun `style=""`, aucun `id` global
-- [ ] Tests unitaires : le service refuse repos et journée pourvue ; une poule
+- [x] Service, handler, VMs, gabarit, route
+- [x] Bouton d'entrée sur journée vide seulement
+- [x] Feuille scopée et inscrite au bundle ; `scripts/check-css-collisions.sh`
+- [x] Aucun `style=""`, aucun `id` global
+- [x] Tests unitaires : le service refuse repos et journée pourvue ; une poule
       sans inscrite n'apparaît pas ; `from_candidates` restitue les absentes
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `make lint`, `make check-arch`, `make test`

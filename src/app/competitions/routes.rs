@@ -78,6 +78,9 @@ pub mod path {
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/add-rest";
     pub const COMPETITION_ADMIN_SCHEDULE_ROUND: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/rounds/{round_id}";
+    /// L'appariement des présents (E18) : l'étape « Présents ».
+    pub const COMPETITION_ADMIN_SCHEDULE_DRAW: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/draw";
     pub const COMPETITION_ADMIN_SCHEDULE_GENERATE_ROUND: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/generate-round";
     pub const COMPETITION_ADMIN_SCHEDULE_CLEAR_ROUND: &str =
@@ -302,6 +305,12 @@ impl Routes {
     }
     pub fn admin_schedule_round_detail(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SCHEDULE_ROUND_DETAIL
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_draw(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_DRAW
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
