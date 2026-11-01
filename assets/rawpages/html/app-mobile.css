@@ -250,3 +250,25 @@
 .mb-done-row { background: var(--white); border-radius: 12px; padding: 10px var(--p1); }
 .mb-done-row--wait { background: transparent; border: 1px dashed var(--dark-4); color: var(--dark-2); }
 .mb-done-text b { color: var(--dark-1); }
+
+/* Coups de pouce : le panier du pied de page se déplie. Le résumé actuel
+   (.mr-cart-summary) devient le bouton ; les lignes reprennent celles des
+   mercenaires (.mr-cart-merco-item), étendues à tous les articles. */
+.mr-cart-summary.mb-cart-toggle { text-decoration: none; color: inherit; cursor: pointer; }
+.mb-cart-link { color: var(--link-blue); font-weight: 600; }
+.mr-cart-footer.mb-cart--open { border-radius: 16px 16px 0 0; }
+.mb-cart-list { max-height: 300px; overflow-y: auto; }
+.mb-cart-list .mr-cart-merco-item { gap: 8px; }
+.mb-cart-list .mr-inducement-qty { display: flex; align-items: center; gap: 4px; }
+.mb-cart-list .mr-cart-merco-price { min-width: 52px; text-align: right; }
+.mb-cart-left { font-size: var(--text-tiny); color: var(--dark-2); text-align: right; }
+.mb-cart-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 550; }
+/* Les boutons de quantité du sélecteur (widgets/inducement-selector.css),
+   repris dans le panier : la feuille réelle les borne à sa racine. */
+.mb-cart-list .mr-qty-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+  border: 1px solid var(--dark-5); background: var(--white); color: var(--dark-2);
+}
+.mb-cart-list .mr-qty-value { min-width: 16px; text-align: center; font-weight: 700; font-size: var(--text-tiny); }
