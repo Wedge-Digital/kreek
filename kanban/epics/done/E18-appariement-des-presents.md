@@ -1,6 +1,6 @@
 # E18 — Appariement des présents
 
-**État :** `en_cours` — 8 cartes, 7 faites. Spécifiée par le workflow
+**État :** close le 2026-11-01 — 8 cartes, 8 faites. Spécifiée par le workflow
 feature les 2026-10-28 et 29.
 **Conception :** `docs/specs/appariement-des-presents/`
 
@@ -23,7 +23,7 @@ de saison.
 
 ## État
 
-6/8 : le tirage vit dans `domain/draw.rs` (612), `MatchDay` le vérifie (613), `save_pairings` écrit une journée d'un bloc (614), « Générer une journée complète » s'en sert (615), l'étape « Présents » s'ouvre sur une journée vide (616), l'aperçu tire parmi les présentes sans rien écrire (617), et l'écriture revérifie tout avant d'écrire la journée (618). Il reste 619.
+6/8 : le tirage vit dans `domain/draw.rs` (612), `MatchDay` le vérifie (613), `save_pairings` écrit une journée d'un bloc (614), « Générer une journée complète » s'en sert (615), l'étape « Présents » s'ouvre sur une journée vide (616), l'aperçu tire parmi les présentes sans rien écrire (617), l'écriture revérifie tout avant d'écrire la journée (618), et les tests e2e tiennent le parcours entier dans un navigateur (619). Le critère de clôture est constaté par `tests/e2e/test_schedule_draw.py` : décoche des absentes, aperçu, écriture, une rencontre par présente hors l'exemptée, l'exemptée parmi les plus servies, et « Générer une journée complète » ; l'évitement des revanches l'est par les tests unitaires du domaine (612).
 
 L'algorithme de tirage est **repris** de la branche `sondage-presence`, où il a
 été écrit, mesuré et testé ; le reste de la branche — sondage par e-mail,

@@ -33,8 +33,8 @@ Cliquer sur le contenu fraîchement injecté passe par
 
 ## Checklist
 
-- [ ] Les huit scénarios
-- [ ] Les données : une saison à deux poules, un coach à deux équipes, un
+- [x] Les huit scénarios
+- [x] Les données : une saison à deux poules, un coach à deux équipes, un
       historique qui force une revanche
-- [ ] `tests/impact-map.toml` mis à jour (skill `test-impact`)
-- [ ] Suite e2e impactée verte, trois passages de suite
+- [x] `tests/impact-map.toml` mis à jour (skill `test-impact`)
+- [x] Suite e2e impactée verte, trois passages de suite
