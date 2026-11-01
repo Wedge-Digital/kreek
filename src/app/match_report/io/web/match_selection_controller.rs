@@ -36,6 +36,9 @@ pub struct MatchSelectionTemplate {
     /// La sélection est figée (carte 550) : les deux widgets cèdent la place
     /// aux quatre noms en clair. `None` quand elle reste modifiable.
     pub lecture_seule: Option<SelectionFigeeVm>,
+    /// La valeur que porte l'option « Je saisis tout » de la carte « Qui
+    /// saisit ? » (carte 632) — celle que `read_entry_mode` relit.
+    pub solo_entry_value: &'static str,
 }
 
 /// Ce que la phase 1 montre quand elle ne se modifie plus.
@@ -213,6 +216,7 @@ pub async fn new_match_report(
         // Jamais figée : la garde de `create_match_report` interdit déjà d'y
         // arriver quand la compétition refuse le hors-calendrier.
         lecture_seule: None,
+        solo_entry_value: EntryMode::SoloEntry.as_str(),
     }
     .into_response()
 }
@@ -268,6 +272,7 @@ pub async fn edit_match_report(
                 error_message: None,
                 form_action,
                 lecture_seule,
+                solo_entry_value: EntryMode::SoloEntry.as_str(),
             }
             .into_response()
         }
@@ -295,6 +300,8 @@ pub struct CreateMatchReportForm {
     pub round_id: String,
     pub home_team_id: String,
     pub away_team_id: String,
+    /// La réponse à « Qui saisit ? » (carte 632) ; cf. `read_entry_mode`.
+    pub entry_mode: Option<String>,
 }
 
 /// Le corps du POST de la phase 1 sur un rapport **existant**.
@@ -312,6 +319,23 @@ pub struct CreateMatchReportForm {
 pub struct UpdateMatchSelectionForm {
     pub home_team_id: Option<String>,
     pub away_team_id: Option<String>,
+    /// La réponse à « Qui saisit ? » (carte 632) ; cf. `read_entry_mode`.
+    pub entry_mode: Option<String>,
+}
+
+/// Traduit le champ `entry_mode` du formulaire en mode de saisie (carte 632).
+///
+/// **Absent, il vaut « Je saisis tout »**, le défaut déclaré par l'épic E21
+/// (décision 2 du cadrage) : les tests et les appels qui postent sans la carte
+/// « Qui saisit ? » démarrent comme avant. Une valeur inconnue est une requête
+/// mal formée — `Err`, que le handler rend en 400. « Chacun son équipe » n'a
+/// pas encore de valeur : l'option est grisée, elle n'est jamais envoyée.
+pub(crate) fn read_entry_mode(field: Option<&str>) -> Result<EntryMode, ()> {
+    match field {
+        None => Ok(EntryMode::SoloEntry),
+        Some(value) if value == EntryMode::SoloEntry.as_str() => Ok(EntryMode::SoloEntry),
+        Some(_) => Err(()),
+    }
 }
 
 // ── Handlers POST ────────────────────────────────────────────────────────────
@@ -324,6 +348,10 @@ pub async fn create_match_report(
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
+    };
+    // Lu avant tout effet : un mode inconnu ne doit rien programmer.
+    let Ok(entry_mode) = read_entry_mode(form.entry_mode.as_deref()) else {
+        return StatusCode::BAD_REQUEST.into_response();
     };
     if let Err(refus) = garde_hors_calendrier(&state, &form).await {
         return refus;
@@ -340,26 +368,8 @@ pub async fn create_match_report(
         // existe depuis le tirage. Le POST du coach vaut confirmation de sa
         // sélection — sans quoi il repartirait sur un brouillon non confirmé,
         // et devrait revalider ce qu'il vient d'envoyer.
-        //
-        // Le mode vaut « Je saisis tout » tant que l'écran ne le demande pas
-        // (carte 631 ; la question arrive avec la carte 632).
-        match create_match_report_use_case::confirmer_si_brouillon(
-            &mr_id,
-            user.id,
-            EntryMode::SoloEntry,
-            state.match_report.match_report_repo.as_ref(),
-            &state.match_report.event_bus,
-        )
-        .await
-        {
-            Ok(()) => {}
-            Err(create_match_report_use_case::CreateMatchReportError::Conflict) => {
-                return conflict_response()
-            }
-            Err(e) => {
-                tracing::error!("create_match_report: confirmation de {mr_id} : {e:?}");
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
+        if let Err(refus) = demarrer_le_brouillon(&state, &mr_id, user.id, entry_mode).await {
+            return refus;
         }
         return ouvrir(&space_id, &mr_id);
     }
@@ -369,11 +379,39 @@ pub async fn create_match_report(
         Err(refus) => return refus,
     };
 
-    let cmd = match construire_commande(&space_id, &form, user.id, pairing_id) {
+    let cmd = match construire_commande(&space_id, &form, user.id, pairing_id, entry_mode) {
         Ok(cmd) => cmd,
         Err(refus) => return refus,
     };
     creer_le_rapport(cmd, &state, &space_id).await
+}
+
+/// Démarre le brouillon d'un match du calendrier, avec le mode choisi par
+/// celui qui le démarre (cartes 631 et 632).
+async fn demarrer_le_brouillon(
+    state: &AppState,
+    mr_id: &str,
+    started_by: crate::app::shared_kernel::identity::ids::CoachId,
+    entry_mode: EntryMode,
+) -> Result<(), Response> {
+    match create_match_report_use_case::confirmer_si_brouillon(
+        mr_id,
+        started_by,
+        entry_mode,
+        state.match_report.match_report_repo.as_ref(),
+        &state.match_report.event_bus,
+    )
+    .await
+    {
+        Ok(()) => Ok(()),
+        Err(create_match_report_use_case::CreateMatchReportError::Conflict) => {
+            Err(conflict_response())
+        }
+        Err(e) => {
+            tracing::error!("create_match_report: confirmation de {mr_id} : {e:?}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
+    }
 }
 
 /// Le rapport de cette rencontre, s'il en existe déjà un.
@@ -480,6 +518,7 @@ fn formulaire_en_erreur(space_id: &str, message: String) -> Response {
         error_message: Some(message),
         form_action: AppRoutes::default().match_report.new_match_report(space_id),
         lecture_seule: None,
+        solo_entry_value: EntryMode::SoloEntry.as_str(),
     };
     (StatusCode::UNPROCESSABLE_ENTITY, gabarit).into_response()
 }
@@ -491,6 +530,7 @@ fn construire_commande(
     form: &CreateMatchReportForm,
     created_by: crate::app::shared_kernel::identity::ids::CoachId,
     pairing_id: String,
+    entry_mode: EntryMode,
 ) -> Result<create_match_report_use_case::CreateMatchReportCommand, Response> {
     let mauvaise_requete = || StatusCode::BAD_REQUEST.into_response();
     Ok(create_match_report_use_case::CreateMatchReportCommand {
@@ -508,8 +548,7 @@ fn construire_commande(
         // et il en porte l'identifiant juste en dessous.
         origin: MatchReportOrigin::Manual,
         pairing_id: Some(pairing_id),
-        // « Je saisis tout » tant que l'écran ne le demande pas (carte 632).
-        entry_mode: EntryMode::SoloEntry,
+        entry_mode,
     })
 }
 
@@ -604,6 +643,9 @@ pub async fn update_match_selection(
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
+    let Ok(entry_mode) = read_entry_mode(form.entry_mode.as_deref()) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
 
     // Carte 550 — la garde **n'interdit rien, elle ignore**. Un non-admin sur une
     // compétition qui refuse le hors-calendrier confirme la sélection telle
@@ -634,8 +676,7 @@ pub async fn update_match_selection(
             Err(_) => return StatusCode::BAD_REQUEST.into_response(),
         },
         confirmed_by: user.id,
-        // « Je saisis tout » tant que l'écran ne le demande pas (carte 632).
-        entry_mode: EntryMode::SoloEntry,
+        entry_mode,
     };
 
     match update_match_selection_use_case::execute(
@@ -664,5 +705,34 @@ pub async fn update_match_selection(
             tracing::error!("update_match_selection: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod entry_mode_tests {
+    use super::*;
+
+    /// La valeur de l'option « Je saisis tout » se relit telle quelle.
+    #[test]
+    fn the_solo_entry_value_reads_as_solo_entry() {
+        assert_eq!(
+            read_entry_mode(Some(EntryMode::SoloEntry.as_str())),
+            Ok(EntryMode::SoloEntry)
+        );
+    }
+
+    /// Une valeur inconnue est refusée — dont « Chacun son équipe », qui
+    /// n'existe pas avant E22 : le handler répond 400.
+    #[test]
+    fn an_unknown_value_is_refused() {
+        assert_eq!(read_entry_mode(Some("TeamEntry")), Err(()));
+        assert_eq!(read_entry_mode(Some("")), Err(()));
+    }
+
+    /// Un POST sans le champ démarre en « Je saisis tout » (décision 2 du
+    /// cadrage E21).
+    #[test]
+    fn a_missing_field_defaults_to_solo_entry() {
+        assert_eq!(read_entry_mode(None), Ok(EntryMode::SoloEntry));
     }
 }

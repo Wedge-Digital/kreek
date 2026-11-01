@@ -1,0 +1,56 @@
+/* La carte « Qui saisit ce match ? » de l'écran de sélection (carte 632).
+   Reprise de la maquette `assets/rawpages/html/app-mobile-match-mode.html`
+   (`.mb-mode`), sur de vrais boutons radio : la case native reste dans le
+   formulaire, invisible, et la pastille dessinée suit son état. */
+.entry-mode-card .entry-mode-option {
+  position: relative;
+  display: flex; align-items: flex-start; gap: var(--p1);
+  padding: var(--p1);
+  border: 1px solid var(--dark-5); border-radius: 12px;
+  background: var(--white);
+  cursor: pointer;
+}
+.entry-mode-card .entry-mode-option:has(.entry-mode-input:checked) {
+  border: 2px solid var(--main-blue);
+  background: rgba(0, 48, 73, 0.04);
+}
+.entry-mode-card .entry-mode-option:has(.entry-mode-input:focus-visible) {
+  outline: 2px solid var(--main-blue); outline-offset: 2px;
+}
+.entry-mode-card .entry-mode-option--soon { cursor: not-allowed; opacity: 0.55; }
+
+.entry-mode-card .entry-mode-input {
+  position: absolute; width: 1px; height: 1px; margin: 0;
+  opacity: 0; pointer-events: none;
+}
+.entry-mode-card .entry-mode-radio {
+  width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;
+  border-radius: 50%; border: 2px solid var(--dark-4);
+  box-sizing: border-box;
+}
+.entry-mode-card .entry-mode-input:checked + .entry-mode-radio {
+  border: 6px solid var(--main-blue);
+}
+
+.entry-mode-card .entry-mode-body { display: flex; flex-direction: column; gap: 4px; }
+.entry-mode-card .entry-mode-title {
+  font-family: var(--font-title); font-weight: 700;
+  font-size: var(--text-small); color: var(--dark-1);
+}
+.entry-mode-card .entry-mode-text {
+  font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.45;
+}
+.entry-mode-card .entry-mode-soon {
+  margin-left: var(--p05); padding: 1px 8px;
+  border-radius: 10px; background: var(--dark-5);
+  font-family: inherit; font-size: var(--text-tiny); font-weight: 600;
+  color: var(--dark-2); vertical-align: middle;
+}
+.entry-mode-card .entry-mode-note { font-size: var(--text-tiny); color: var(--dark-2); }
+
+/* Sous 768 px, la carte occupe la largeur du téléphone : les options se
+   resserrent pour que les deux tiennent sans défilement. */
+@media (max-width: 768px) {
+  .entry-mode-card .entry-mode-option { gap: var(--p05); padding: var(--p05) var(--p1); }
+  .entry-mode-card .entry-mode-title { font-size: var(--text-tiny); }
+}

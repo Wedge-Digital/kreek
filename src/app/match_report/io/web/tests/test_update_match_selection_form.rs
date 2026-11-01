@@ -35,3 +35,14 @@ async fn le_corps_du_widget_rend_les_deux_equipes() {
     assert_eq!(form.home_team_id.as_deref(), Some("h"));
     assert_eq!(form.away_team_id.as_deref(), Some("a"));
 }
+
+/// La carte « Qui saisit ? » (carte 632) ajoute son champ au corps ; absent,
+/// il reste `None`, que le handler lit comme « Je saisis tout ».
+#[tokio::test]
+async fn le_mode_de_saisie_est_lu_quand_il_est_envoye() {
+    assert_eq!(
+        extraire("entry_mode=SoloEntry").await.entry_mode.as_deref(),
+        Some("SoloEntry")
+    );
+    assert_eq!(extraire("").await.entry_mode, None);
+}

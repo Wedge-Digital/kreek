@@ -453,6 +453,11 @@
 # (`teams`) ; la fixture traverse la même construction que ci-dessus.
 "test_match_selection_edition" = ["match_report", "competitions", "teams", "auth", "spaces",
                                   "references", "team_creation"]
+# « Qui saisit ? » au démarrage (carte 632) : la carte vit dans la phase 1 de
+# `match_report`, et le démarrage d'un brouillon du calendrier passe par
+# `teams` (disponibilité) ; la fixture traverse la même construction.
+"test_match_report_entry_mode" = ["match_report", "competitions", "teams", "auth", "spaces",
+                                  "references", "team_creation"]
 
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget

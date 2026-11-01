@@ -35,9 +35,9 @@ Aucune.
 
 ## Checklist
 
-- [ ] Le fragment « Qui saisit ? » et sa feuille, dans `css_bundle.rs`
-- [ ] `entry_mode` lu par les deux formulaires et porté par les trois commandes
-- [ ] Tests unitaires : traduction du champ (valeur connue, inconnue, absente)
-- [ ] E2E : la carte est visible et cochée sur `/new` ; un match créé en sort en « Je saisis tout » (`match_report_proj.entry_mode`)
-- [ ] `tests/impact-map.toml` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] Le fragment « Qui saisit ? » et sa feuille, dans `css_bundle.rs`
+- [x] `entry_mode` lu par les deux formulaires et porté par les trois commandes
+- [x] Tests unitaires : traduction du champ (valeur connue, inconnue, absente)
+- [x] E2E : la carte est visible et cochée sur `/new` ; un match créé en sort en « Je saisis tout » (`match_report_proj.entry_mode`)
+- [x] `tests/impact-map.toml` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

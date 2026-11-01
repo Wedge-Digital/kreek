@@ -1,0 +1,28 @@
+{# Carte 632 — « Qui saisit ce match ? », posée sur l'écran de sélection,
+   ordinateur et mobile. Le mode se choisit une fois, au démarrage : le POST de
+   la phase 1 le porte dans le champ `entry_mode`.
+
+   « Chacun son équipe » est montrée grisée et marquée « bientôt » (décision 1
+   du cadrage E21) : la question garde sa forme quand E22 l'ouvrira. Sa case
+   est désactivée et n'a pas de valeur — elle n'est jamais envoyée. #}
+<div class="mr-card entry-mode-card">
+  <div class="mr-card-title">Qui saisit ce match ?</div>
+  <label class="entry-mode-option">
+    <input class="entry-mode-input" type="radio" name="entry_mode"
+           value="{{ solo_entry_value }}" checked>
+    <span class="entry-mode-radio"></span>
+    <span class="entry-mode-body">
+      <span class="entry-mode-title">📱 Je saisis tout</span>
+      <span class="entry-mode-text">Un seul téléphone pour la table : vous saisissez les actions des deux équipes, les deux MVP, et vous publiez seul.</span>
+    </span>
+  </label>
+  <label class="entry-mode-option entry-mode-option--soon">
+    <input class="entry-mode-input" type="radio" name="entry_mode" disabled>
+    <span class="entry-mode-radio"></span>
+    <span class="entry-mode-body">
+      <span class="entry-mode-title">👥 Chacun son équipe <span class="entry-mode-soon">bientôt</span></span>
+      <span class="entry-mode-text">Chaque coach saisit son équipe sur son téléphone, en même temps : son avant-match, ses actions, son MVP, ses gains, sa validation.</span>
+    </span>
+  </label>
+  <div class="entry-mode-note">Le mode vaut pour tout le match : il ne pourra plus changer.</div>
+</div>
