@@ -6,10 +6,12 @@ pub mod dismissals;
 pub mod dismissals_view_models;
 pub mod garde_action_equipe;
 pub mod phase_override_controller;
+pub mod print_builders;
 pub mod recruitment;
 pub mod status_view_models;
 pub mod team_admin_guard;
 pub mod team_detail;
+pub mod team_print_controller;
 #[cfg(test)]
 pub mod tests;
 pub mod treasury_tab;

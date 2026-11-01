@@ -1,4 +1,4 @@
-use crate::app::match_report::ports::{IPlayerDataPort, PositionCountDto};
+use crate::app::match_report::ports::{AlignablePlayerDto, IPlayerDataPort, PositionCountDto};
 use crate::app::players::ports::{IPlayerProjectionRepository, IPlayerRepository};
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -91,6 +91,38 @@ impl IPlayerDataPort for PlayerDataAdapter {
             .map(|(position_uid, count)| PositionCountDto {
                 position_uid,
                 count,
+            })
+            .collect()
+    }
+
+    /// Alignables au sens du domaine de `players` (`disponible()`, R14), et non
+    /// d'un recomptage ici ; journaliers compris, marqués (R6).
+    async fn list_alignable_players(&self, team_id: &str) -> Vec<AlignablePlayerDto> {
+        use crate::app::players::domain::match_impact::PlayerParticipationStatus;
+        use crate::app::players::domain::player::{RosterMembership, TeamId};
+        let tid = TeamId(team_id.to_string());
+        // Une panne rendrait une feuille vierge, pareille à celle d'une équipe
+        // sans joueur : on la dit avant de replier.
+        let players = self
+            .player_projection_repo
+            .find_alive_by_team_id(&tid)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::error!(team_id, error = %e, "joueurs alignables illisibles");
+                Vec::new()
+            });
+        players
+            .into_iter()
+            .filter(|p| PlayerParticipationStatus::from_str(&p.participation_status).disponible())
+            .map(|p| AlignablePlayerDto {
+                jersey: p.jersey,
+                name: if p.personal_name.is_empty() {
+                    p.position_name
+                } else {
+                    p.personal_name
+                },
+                is_journeyman: RosterMembership::from_str(&p.membership)
+                    == RosterMembership::Journeyman,
             })
             .collect()
     }

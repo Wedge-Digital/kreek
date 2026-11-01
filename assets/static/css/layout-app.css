@@ -363,3 +363,28 @@
     color: var(--main-blue);
   }
 }
+
+/* ─── Impression d'une feuille d'équipe (épic E16) ───
+   Le layout s'efface quand la page porte une vue d'impression (`.team-print`).
+   C'est à lui de le faire, pas à la page : c'est son chrome, et la navigation
+   htmx ne recharge jamais `body` — une classe posée par la page ne suivrait
+   pas. Sans ces remises à zéro, `overflow: hidden` et `height: 100vh`
+   couperaient l'impression à la première page. */
+@media print {
+  .app-layout:has(.team-print) .sidebar,
+  .app-layout:has(.team-print) .menu-zone,
+  .app-layout:has(.team-print) .space-drawer,
+  .app-layout:has(.team-print) .space-drawer-overlay { display: none !important; }
+  .app-layout:has(.team-print),
+  .app-layout:has(.team-print) .main-area,
+  .app-layout:has(.team-print) .page-content,
+  .app-layout:has(.team-print) .home-grid {
+    display: block; height: auto; overflow: visible; padding: 0; margin: 0; background: none;
+  }
+  body:has(.team-print) .toast-zone { display: none; }
+  /* `common.css` pose `height: 100%` sur `html` et `body`. À l'impression,
+     Firefox rapporte ces 100 % à la hauteur d'une page et imprime une page
+     blanche après la dernière feuille. */
+  html:has(.team-print),
+  body:has(.team-print) { height: auto; min-height: 0; background: none; }
+}

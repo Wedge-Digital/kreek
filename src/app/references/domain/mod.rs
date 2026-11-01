@@ -4,3 +4,4 @@ pub mod inducement_pricing;
 pub mod models;
 pub mod port;
 pub mod profil_roster;
+pub mod star_player_availability;

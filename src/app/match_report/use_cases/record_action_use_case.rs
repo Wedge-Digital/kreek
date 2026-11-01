@@ -383,6 +383,13 @@ mod tests {
         async fn has_spent_spp_since_match(&self, _: &str, _: &str) -> Result<bool, String> {
             panic!("le port joueur ne doit pas être sollicité")
         }
+
+        async fn list_alignable_players(
+            &self,
+            _: &str,
+        ) -> Vec<crate::app::match_report::ports::AlignablePlayerDto> {
+            Vec::new()
+        }
     }
 
     #[tokio::test]

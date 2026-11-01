@@ -9,6 +9,10 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
+/// Le nombre de joueurs qu'une équipe aligne : les journaliers comblent jusque-là.
+/// Publique pour que la page des coups de pouce la rappelle (carte 607).
+pub const JOURNEYMEN_FILL_TO: usize = 11;
+
 #[derive(Debug)]
 pub struct InitTempPlayersCommand {
     pub match_report_id: MatchReportId,
@@ -271,6 +275,10 @@ mod tests {
         async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
             vec![]
         }
+
+        async fn find_team_season(&self, _: &str) -> Option<String> {
+            None
+        }
     }
 
     /// Dix alignables sur onze : il manque un journalier.
@@ -292,6 +300,13 @@ mod tests {
         }
         async fn has_spent_spp_since_match(&self, _: &str, _: &str) -> Result<bool, String> {
             Ok(false)
+        }
+
+        async fn list_alignable_players(
+            &self,
+            _: &str,
+        ) -> Vec<crate::app::match_report::ports::AlignablePlayerDto> {
+            Vec::new()
         }
     }
 
@@ -430,7 +445,7 @@ async fn collect_journeymen(
         .count_available_players(&team_id.to_string())
         .await
         .map_err(|e| InitTempPlayersError::PlayerCountUnavailable(e))?;
-    let n = 11usize.saturating_sub(count);
+    let n = JOURNEYMEN_FILL_TO.saturating_sub(count);
     if n == 0 {
         return Ok(vec![]);
     }

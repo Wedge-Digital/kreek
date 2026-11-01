@@ -12,6 +12,7 @@ pub mod open_phase_override_use_case;
 pub mod recompute_team_value_use_case;
 pub mod reject_enrollment;
 pub mod roster_edit_access_service;
+pub mod team_print_service;
 pub mod team_value_service;
 #[cfg(test)]
 pub mod test_doubles;

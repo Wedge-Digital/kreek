@@ -273,6 +273,10 @@ mod tests {
         async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
             vec![]
         }
+
+        async fn find_team_season(&self, _: &str) -> Option<String> {
+            None
+        }
     }
 
     struct FakePlayerData {
@@ -294,6 +298,13 @@ mod tests {
         }
         async fn find_player_counts_by_position(&self, _: &str) -> Vec<PositionCountDto> {
             vec![]
+        }
+
+        async fn list_alignable_players(
+            &self,
+            _: &str,
+        ) -> Vec<crate::app::match_report::ports::AlignablePlayerDto> {
+            Vec::new()
         }
     }
 

@@ -63,7 +63,11 @@ impl StaffVm {
 }
 
 pub enum BannerCtaVm {
-    Print,
+    /// Mène à la page « Imprimer » (carte 595), qui remplace le `window.print()`
+    /// de la fiche.
+    Print {
+        href: String,
+    },
     Navigate {
         label: String,
         href: String,
@@ -168,7 +172,9 @@ impl BannerVm {
         let mut banner = Self::pour_etat(team, space_id, app_routes)?;
         if !peut_editer {
             // Seule l'impression survit : elle n'agit sur rien.
-            banner.ctas.retain(|cta| matches!(cta, BannerCtaVm::Print));
+            banner
+                .ctas
+                .retain(|cta| matches!(cta, BannerCtaVm::Print { .. }));
         }
         Some(banner)
     }
@@ -221,7 +227,12 @@ impl BannerVm {
                 icon: "✅".into(),
                 title: "Équipe prête à jouer.".into(),
                 detail: "Aucune action requise avant le prochain match.".into(),
-                ctas: vec![BannerCtaVm::RosterEdit, BannerCtaVm::Print],
+                ctas: vec![
+                    BannerCtaVm::RosterEdit,
+                    BannerCtaVm::Print {
+                        href: app_routes.teams.team_print(space_id, &team_id),
+                    },
+                ],
             }),
             (Enrolled, Some(MatchReporting)) => {
                 let href = team
@@ -717,7 +728,7 @@ mod tests {
                 banniere
                     .ctas
                     .iter()
-                    .any(|c| matches!(c, BannerCtaVm::Print)),
+                    .any(|c| matches!(c, BannerCtaVm::Print { .. })),
                 "le bouton d'impression reste pour tout le monde"
             );
             assert_eq!(banniere.title, avec.title, "le texte ne change pas");
@@ -751,7 +762,7 @@ mod tests {
         banniere
             .ctas
             .iter()
-            .filter(|c| !matches!(c, BannerCtaVm::Print))
+            .filter(|c| !matches!(c, BannerCtaVm::Print { .. }))
             .count()
     }
 

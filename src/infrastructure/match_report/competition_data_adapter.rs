@@ -1,8 +1,9 @@
 use crate::app::competitions::domain::competition_options::CompetitionOptions;
 use crate::app::competitions::domain::competition_repository_port::ICompetitionRepository;
+use crate::app::competitions::domain::match_day::MatchDay;
 use crate::app::competitions::domain::match_day_repository_port::IMatchDayRepository;
 use crate::app::competitions::domain::season_repository_port::{
-    ISeasonRepository, SeasonRepositoryError,
+    ISeasonRepository, SeasonFull, SeasonRepositoryError,
 };
 use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::competitions::use_cases::admin::add_match_use_case::{self, AddMatchError};
@@ -170,12 +171,23 @@ impl ICompetitionDataPort for CompetitionDataAdapter {
         let sid = SeasonId::try_new(season_id).ok()?;
         let season = self.season_repo.find_full(&sid).await.ok()??;
         let round = self.match_day_repo.find_by_id(round_id).await.ok()??;
-        Some(RoundContextDto {
-            competition_name: season.competition_name,
-            season_name: season.season_name,
-            round_name: round.name.to_string(),
-        })
+        round_context(&sid, season, &round)
     }
+}
+
+/// Le contexte de la journée imprimée, **si elle appartient à la saison** :
+/// `round_id` vient de l'URL, où `space_scope` ne le voit pas. Une journée
+/// d'une autre saison — ou d'un autre espace — imprimerait son nom sous ma
+/// compétition, et dirait qu'elle existe.
+fn round_context(sid: &SeasonId, season: SeasonFull, round: &MatchDay) -> Option<RoundContextDto> {
+    if !round.belongs_to(sid) {
+        return None;
+    }
+    Some(RoundContextDto {
+        competition_name: season.competition_name,
+        season_name: season.season_name,
+        round_name: round.name.to_string(),
+    })
 }
 
 /// La spec du coup de pouce pour ce roster : **le prix débité**, celui qui part
@@ -219,6 +231,52 @@ mod tests {
     use super::*;
     use crate::app::competitions::domain::competition_options::AutoriseHorsCalendrier;
     use crate::app::references::io::repository::in_memory_reference_repository::InMemoryReferenceRepository;
+
+    // ── La journée de la feuille de match (carte 608) ────────────────────────
+
+    fn saison(sid: &SeasonId) -> SeasonFull {
+        SeasonFull {
+            season_id: sid.to_string(),
+            season_name: "Saison 1".into(),
+            status: "running".into(),
+            competition_id: "c".into(),
+            competition_name: "Ligue".into(),
+            rules: None,
+            structure: None,
+        }
+    }
+
+    fn journee(sid: &SeasonId) -> MatchDay {
+        use crate::app::competitions::domain::match_day::{
+            MatchDayName, MatchDayPosition, MatchDayType,
+        };
+        use crate::app::shared_kernel::bloodbowl::ids::MatchId;
+        MatchDay {
+            id: MatchId::new(),
+            season_id: sid.clone(),
+            name: MatchDayName::try_new("Journée 3".to_string()).unwrap(),
+            day_type: MatchDayType::FixedDate,
+            date_start: None,
+            date_end: None,
+            position: MatchDayPosition::try_new(3).unwrap(),
+            pairings: vec![],
+        }
+    }
+
+    #[test]
+    fn la_journee_de_la_saison_donne_son_contexte() {
+        let sid = SeasonId::new();
+        let ctx = round_context(&sid, saison(&sid), &journee(&sid)).unwrap();
+        assert_eq!(ctx.round_name, "Journée 3");
+        assert_eq!(ctx.competition_name, "Ligue");
+    }
+
+    /// La journée forgée dans l'URL : ni son nom, ni le fait qu'elle existe.
+    #[test]
+    fn une_journee_d_une_autre_saison_ne_donne_rien() {
+        let sid = SeasonId::new();
+        assert!(round_context(&sid, saison(&sid), &journee(&SeasonId::new())).is_none());
+    }
 
     // ── La garde de création (carte 550) ─────────────────────────────────────
 

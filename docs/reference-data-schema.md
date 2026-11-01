@@ -10,7 +10,7 @@ démonstration complet et fonctionnel est fourni dans `assets/references.example
 
 ## Règles générales
 
-- **Neuf fichiers sont obligatoires**, aux noms exacts listés ci-dessous. Un
+- **Douze fichiers sont obligatoires**, aux noms exacts listés ci-dessous. Un
   fichier manquant ou mal formé fait échouer le démarrage avec un message
   nommant le fichier fautif.
 - Le suffixe `_fr` des noms de fichiers est historique : il n'existe aucun
@@ -31,9 +31,22 @@ démonstration complet et fonctionnel est fourni dans `assets/references.example
 | `staff_fr.json` | `{ "staff": [...] }` | personnel d'équipe |
 | `special_rules_fr.json` | `{ "special_rules": [...] }` | règles spéciales de roster |
 | `leagues_fr.json` | `{ "leagues": [...] }` | ligues d'origine |
+| `keywords_fr.json` | `{ "keywords": [...] }` | mots-clefs des postes, et ceux qu'on peut haïr |
+| `improvement_values.json` | `{ "improvement_values": {...} }` | hausse de valeur d'un joueur par amélioration |
+| `spp_rules.json` | `{ "<barème>": [...] }` (clés = noms de barème) | SPP par action, `normal` et un barème par règle spéciale qui en change |
 
-`spp_rules.json` est également présent dans le jeu d'exemple mais **n'est pas
-chargé** par le moteur : c'est une préparation pour une évolution à venir.
+Cette liste en annonçait neuf, et disait `spp_rules.json` « non chargé » : le
+chargeur (`in_memory_reference_repository.rs`, `lire`) en exige douze, et
+`spp_rules.json` donne leur barème aux rosters. Corrigé avec la carte 604.
+
+Un fichier est **optionnel** :
+
+| Fichier | Racine JSON | Contenu |
+|---|---|---|
+| `match_reminders_fr.json` | `{ "mvp", "fans", "weather" }` | rappels imprimés sur la feuille de match (cf. ci-dessous) |
+
+Absent, le corpus charge et les rappels sont vides ; présent mais mal formé, le
+démarrage échoue comme pour un fichier obligatoire.
 
 ---
 
@@ -150,6 +163,28 @@ et les omet sur les suivants, pour documenter les deux comportements.
 | `description` | string | oui | texte affiché |
 
 ---
+
+## `match_reminders_fr.json` — optionnel
+
+Les rappels que la feuille de match imprimée porte (épic E16) : des règles de
+jeu que kreek ne code pas, et que le dépôt ne contient donc pas
+(`CONTRIBUTING.md`). Chaque ligue fournit les siennes.
+
+| Champ | Type | Imprimé |
+|---|---|---|
+| `mvp` | texte, facultatif | la règle de désignation du MVP |
+| `fans` | texte, facultatif | l'évolution des fans dévoués après le match |
+| `weather` | liste de libellés, facultative | une case à cocher par météo ; vide, une ligne à remplir |
+
+```json
+{
+  "mvp": "Chaque coach désigne trois joueurs ayant joué ; un D3 désigne le MVP de l'équipe.",
+  "fans": "Le vainqueur gagne un fan dévoué sur 4+ au D6 ; le perdant en perd un sur 1 ou 2.",
+  "weather": ["Grand Soleil", "Vent des Cimes", "Ciel Clément", "Brume Épaisse", "Grêle de Cailloux"]
+}
+```
+
+Les valeurs ci-dessus sont celles, fictives, du jeu de démonstration.
 
 ## Identifiants attendus par le moteur
 

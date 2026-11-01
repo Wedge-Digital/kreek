@@ -1,5 +1,12 @@
 pub mod path {
     pub const PLAYERS_BY_TEAM_WIDGET: &str = "/app/{space_id}/players/by-team/{team_id}/widget";
+    /// Le tableau des joueurs d'une fiche imprimée, en lecture seule (carte 598).
+    pub const PLAYERS_BY_TEAM_PRINT: &str = "/app/{space_id}/players/by-team/{team_id}/print";
+    /// L'annexe des compétences d'une impression (carte 606). La seconde équipe
+    /// est dans le chemin, contrôlée par `space_scope` (carte 594).
+    pub const PRINT_SKILLS: &str = "/app/{space_id}/players/print/skills/{team_id}";
+    pub const PRINT_SKILLS_WITH: &str =
+        "/app/{space_id}/players/print/skills/{team_id}/with/{other_team_id}";
     pub const PLAYERS_ROSTER_UPDATE: &str = "/app/{space_id}/players/by-team/{team_id}/roster";
     /// Le panneau des journaliers recrutables, composé par la page de
     /// recrutement de `teams`. Son état — qui est recrutable, et pourquoi les
@@ -79,6 +86,25 @@ impl Routes {
         path::PLAYERS_BY_TEAM_WIDGET
             .replace("{space_id}", space_id)
             .replace("{team_id}", team_id)
+    }
+
+    pub fn players_by_team_print(&self, space_id: &str, team_id: &str) -> String {
+        path::PLAYERS_BY_TEAM_PRINT
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn print_skills(&self, space_id: &str, team_id: &str) -> String {
+        path::PRINT_SKILLS
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+    }
+
+    pub fn print_skills_with(&self, space_id: &str, team_id: &str, other_team_id: &str) -> String {
+        path::PRINT_SKILLS_WITH
+            .replace("{space_id}", space_id)
+            .replace("{team_id}", team_id)
+            .replace("{other_team_id}", other_team_id)
     }
 
     pub fn update_roster(&self, space_id: &str, team_id: &str) -> String {
