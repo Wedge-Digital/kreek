@@ -15,13 +15,19 @@
 
 use crate::app::competitions::domain::draw::{pair, DrawInput, MatchesPlayed, PlayedMeetings};
 use crate::app::competitions::domain::group_repository_port::{GroupWithTeams, IGroupRepository};
-use crate::app::competitions::domain::match_day::{DrawRules, MatchDay};
+use crate::app::competitions::domain::match_day::{DrawRules, MatchDay, Pairing};
 use crate::app::competitions::domain::match_day_repository_port::{
-    IMatchDayRepository, MatchDayRepositoryError,
+    IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection,
 };
 use crate::app::competitions::ports::{ITeamInfoPort, TeamInfoDto};
-use crate::app::competitions::use_cases::admin::team_enrollment::load_enrolled_teams;
+use crate::app::competitions::use_cases::admin::pairing_created::{
+    emit_pairing_created, PairingLocation,
+};
+use crate::app::competitions::use_cases::admin::team_enrollment::{
+    build_new_pairing_projection, load_enrolled_teams,
+};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::common::services::event_bus::event_bus::EventBus;
 use std::collections::{HashMap, HashSet};
 
 pub fn build_forbidden_pairs(
@@ -169,6 +175,41 @@ async fn load_groups(
         position: 0,
         team_ids: team_display.keys().cloned().collect(),
     }])
+}
+
+// ── L'écriture commune ───────────────────────────────────────────────────────
+
+/// Un seul `save_pairings` pour la journée (R14), **puis** les annonces :
+/// jamais d'événement pour une rencontre que la transaction aurait annulée.
+// arch:no-instrument — écriture commune : ses appelants (generate_pairings, confirm_draw) sont les use cases instrumentés
+pub async fn write_round(
+    ctx: &DrawContext,
+    pairings: &[Pairing],
+    location: PairingLocation<'_>,
+    match_day_repo: &dyn IMatchDayRepository,
+    event_bus: &EventBus,
+) -> Result<(), MatchDayRepositoryError> {
+    if pairings.is_empty() {
+        return Ok(());
+    }
+    let rows: Vec<(Pairing, NewPairingProjection)> = pairings
+        .iter()
+        .map(|p| (p.clone(), projection_of(p, ctx)))
+        .collect();
+    match_day_repo
+        .save_pairings(location.round_id, &rows)
+        .await?;
+    for (pairing, projection) in &rows {
+        emit_pairing_created(event_bus, location, pairing, projection);
+    }
+    Ok(())
+}
+
+pub fn projection_of(pairing: &Pairing, ctx: &DrawContext) -> NewPairingProjection {
+    let season_id = ctx.match_day.season_id.to_string();
+    let home = pairing.home_team_id.to_string();
+    let away = pairing.away_team_id.to_string();
+    build_new_pairing_projection(&home, &away, &season_id, &ctx.match_day, &ctx.teams)
 }
 
 /// Le `DrawInput` d'une poule : ses équipes, l'historique de la saison, les

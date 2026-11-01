@@ -45,10 +45,10 @@ rencontres écrites · Plague Bringers exemptée · Dwarf Giants absente" }`. Re
 
 ## Checklist
 
-- [ ] Use case, handler, route ; « Écrire au calendrier » de 617 actif
-- [ ] Toast de succès
-- [ ] Tests du use case : écriture et émission sur un tirage valide ; chaque
+- [x] Use case, handler, route ; « Écrire au calendrier » de 617 actif
+- [x] Toast de succès
+- [x] Tests du use case : écriture et émission sur un tirage valide ; chaque
       refus de `accept_draw` relayé sans écriture ni émission ;
       `PairingsAlreadyExist` du dépôt relayé ; **aucune émission si l'écriture
       échoue** ; les absentes déduites
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `make lint`, `make check-arch`, `make test`

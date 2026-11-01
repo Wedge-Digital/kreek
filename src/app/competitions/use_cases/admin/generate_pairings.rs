@@ -3,17 +3,16 @@ use crate::app::competitions::domain::error::DomainError;
 use crate::app::competitions::domain::group_repository_port::IGroupRepository;
 use crate::app::competitions::domain::match_day::Pairing;
 use crate::app::competitions::domain::match_day_repository_port::{
-    IMatchDayRepository, MatchDayRepositoryError, NewPairingProjection,
+    IMatchDayRepository, MatchDayRepositoryError,
 };
 use crate::app::competitions::ports::ITeamInfoPort;
 use crate::app::competitions::use_cases::admin::draw::draw_input::{
-    draw_rules, load_draw_context, parse_team_ids, pool_input, DrawContext, DrawDeps, DrawLoadError,
+    draw_rules, load_draw_context, parse_team_ids, pool_input, write_round, DrawContext, DrawDeps,
+    DrawLoadError,
 };
-use crate::app::competitions::use_cases::admin::pairing_created::{
-    emit_pairing_created, PairingLocation,
-};
+use crate::app::competitions::use_cases::admin::pairing_created::PairingLocation;
 use crate::app::competitions::use_cases::admin::team_enrollment::{
-    build_new_pairing_projection, filter_enrolled_team_ids, resolve_team_names,
+    filter_enrolled_team_ids, resolve_team_names,
 };
 use crate::app::shared_kernel::bloodbowl::ids::PairingId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
@@ -189,38 +188,6 @@ fn to_pairings(proposals: &[DrawProposal]) -> (Vec<Pairing>, Vec<TeamId>) {
     (pairings, exempted)
 }
 
-/// Un seul `save_pairings` pour la journée (R14), **puis** les annonces :
-/// jamais d'événement pour une rencontre que la transaction aurait annulée.
-async fn write_round(
-    ctx: &DrawContext,
-    pairings: &[Pairing],
-    location: PairingLocation<'_>,
-    match_day_repo: &dyn IMatchDayRepository,
-    event_bus: &EventBus,
-) -> Result<(), GenerateError> {
-    if pairings.is_empty() {
-        return Ok(());
-    }
-    let rows: Vec<(Pairing, NewPairingProjection)> = pairings
-        .iter()
-        .map(|p| (p.clone(), projection_of(p, ctx)))
-        .collect();
-    match_day_repo
-        .save_pairings(location.round_id, &rows)
-        .await?;
-    for (pairing, projection) in &rows {
-        emit_pairing_created(event_bus, location, pairing, projection);
-    }
-    Ok(())
-}
-
-fn projection_of(pairing: &Pairing, ctx: &DrawContext) -> NewPairingProjection {
-    let season_id = ctx.match_day.season_id.to_string();
-    let home = pairing.home_team_id.to_string();
-    let away = pairing.away_team_id.to_string();
-    build_new_pairing_projection(&home, &away, &season_id, &ctx.match_day, &ctx.teams)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,7 +197,9 @@ mod tests {
     use crate::app::competitions::domain::match_day::{
         MatchDay, MatchDayName, MatchDayPosition, MatchDayType,
     };
-    use crate::app::competitions::domain::match_day_repository_port::PairingDisplayDto;
+    use crate::app::competitions::domain::match_day_repository_port::{
+        NewPairingProjection, PairingDisplayDto,
+    };
     use crate::app::competitions::ports::TeamInfoDto;
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
     use async_trait::async_trait;

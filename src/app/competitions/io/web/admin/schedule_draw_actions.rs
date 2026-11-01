@@ -8,14 +8,18 @@ use crate::app::competitions::domain::draw::History;
 use crate::app::competitions::io::web::admin::schedule_draw_widget::{
     check_access, AdminScope, ErrorResult,
 };
+use crate::app::competitions::use_cases::admin::draw::confirm_draw_use_case::{
+    self, ConfirmDrawCommand, ConfirmDrawError, ConfirmOutcome,
+};
 use crate::app::competitions::use_cases::admin::draw::draw_candidates_service::Candidate;
 use crate::app::competitions::use_cases::admin::draw::draw_input::DrawDeps;
 use crate::app::competitions::use_cases::admin::draw::preview_draw_use_case::{
     self, DrawPreview, GroupPreview, PreviewDrawCommand, PreviewDrawError, PreviewPairing,
 };
 use crate::app::routes::AppRoutes;
-use crate::app::shared_kernel::bloodbowl::ids::{MatchId, SeasonId};
+use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -24,7 +28,7 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use axum_extra::extract::Form;
 use rand::SeedableRng;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct PreviewDrawForm {
@@ -269,6 +273,139 @@ fn preview_refused(e: PreviewDrawError) -> Response {
         .into_response()
 }
 
+// ── L'écriture ───────────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct ConfirmDrawForm {
+    pub round_id: String,
+    /// `home_id:away_id`, une par rencontre de l'aperçu.
+    #[serde(default)]
+    pub pairings: Vec<String>,
+    /// Une par poule impaire.
+    #[serde(default)]
+    pub exempted: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct SuccessResult {
+    success: String,
+}
+
+pub async fn post_draw_confirm(
+    Path((space_id, competition_id, season_id)): Path<(String, String, String)>,
+    State(state): State<AppState>,
+    auth_session: AuthSession,
+    Form(form): Form<ConfirmDrawForm>,
+) -> Response {
+    let scope = AdminScope {
+        space_id: &space_id,
+        competition_id: &competition_id,
+        season_id: &season_id,
+    };
+    if let Err(refus) = check_access(&auth_session, &scope, &form.round_id, &state).await {
+        return refus;
+    }
+    let Some(cmd) = confirm_command_of(&form, &scope) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    match confirm(cmd, &state).await {
+        Ok(outcome) => draw_written(&outcome),
+        Err(e) => confirm_refused(e),
+    }
+}
+
+/// Chaque couple est découpé et ses deux identifiants validés : un couple
+/// illisible est une requête mal formée.
+fn confirm_command_of(
+    form: &ConfirmDrawForm,
+    scope: &AdminScope<'_>,
+) -> Option<ConfirmDrawCommand> {
+    Some(ConfirmDrawCommand {
+        round_id: MatchId::try_new(&form.round_id).ok()?,
+        season_id: SeasonId::try_new(scope.season_id).ok()?,
+        competition_id: CompetitionId::try_new(scope.competition_id).ok()?,
+        space_id: SpaceId::try_new(scope.space_id).ok()?,
+        pairings: form
+            .pairings
+            .iter()
+            .map(|p| couple_of(p))
+            .collect::<Option<_>>()?,
+        exempted: form
+            .exempted
+            .iter()
+            .map(|id| TeamId::try_new(id).ok())
+            .collect::<Option<_>>()?,
+    })
+}
+
+fn couple_of(raw: &str) -> Option<(TeamId, TeamId)> {
+    let (home, away) = raw.split_once(':')?;
+    Some((TeamId::try_new(home).ok()?, TeamId::try_new(away).ok()?))
+}
+
+async fn confirm(
+    cmd: ConfirmDrawCommand,
+    state: &AppState,
+) -> Result<ConfirmOutcome, ConfirmDrawError> {
+    let deps = DrawDeps {
+        match_day_repo: state.competitions.match_day_repository.as_ref(),
+        group_repo: state.competitions.group_repository.as_ref(),
+        team_port: state.competitions.team_info_port.as_ref(),
+    };
+    confirm_draw_use_case::execute(cmd, &deps, &state.competitions.event_bus).await
+}
+
+/// `scheduleChanged` recharge la journée, qui montre ses rencontres ; le toast
+/// dit ce qui a été écrit.
+fn draw_written(outcome: &ConfirmOutcome) -> Response {
+    let mut response = Json(SuccessResult {
+        success: success_message(outcome),
+    })
+    .into_response();
+    response
+        .headers_mut()
+        .insert("HX-Trigger", "scheduleChanged".parse().unwrap());
+    response
+}
+
+/// « 5 rencontres écrites · Plague Bringers exemptée · Dwarf Giants absente ».
+pub fn success_message(outcome: &ConfirmOutcome) -> String {
+    let written = match outcome.written {
+        1 => "1 rencontre écrite".to_string(),
+        n => format!("{n} rencontres écrites"),
+    };
+    let named = |names: &[String], one: &str, many: &str| match names.len() {
+        0 => None,
+        1 => Some(format!("{} {one}", names[0])),
+        _ => Some(format!("{} {many}", names.join(", "))),
+    };
+    [
+        Some(written),
+        named(&outcome.exempted_names, "exemptée", "exemptées"),
+        named(&outcome.absent_names, "absente", "absentes"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" · ")
+}
+
+fn confirm_refused(e: ConfirmDrawError) -> Response {
+    let message = match e {
+        ConfirmDrawError::RoundNotFound => return StatusCode::NOT_FOUND.into_response(),
+        ConfirmDrawError::IsRestDay => "Une journée de repos ne reçoit pas de rencontres.".to_string(),
+        ConfirmDrawError::PairingsAlreadyExist => {
+            "Des rencontres ont été ajoutées à cette journée depuis le tirage. Rien n'a été écrit — rechargez la journée pour voir son état.".to_string()
+        }
+        ConfirmDrawError::Refused(refus) => format!("Rien n'a été écrit : {refus}"),
+        ConfirmDrawError::Repository(msg) => {
+            tracing::error!("post_draw_confirm : {msg}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    (StatusCode::CONFLICT, Json(ErrorResult { error: message })).into_response()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,6 +427,40 @@ mod tests {
             times: MeetingCount(times),
             last_round: MatchDayName::try_new("J1".to_string()).unwrap(),
         }
+    }
+
+    #[test]
+    fn the_success_message_names_exempted_and_absent_teams() {
+        let outcome = ConfirmOutcome {
+            written: 5,
+            exempted_names: vec!["Plague Bringers".to_string()],
+            absent_names: vec!["Dwarf Giants".to_string(), "Lizard Kings".to_string()],
+        };
+
+        assert_eq!(
+            success_message(&outcome),
+            "5 rencontres écrites · Plague Bringers exemptée · Dwarf Giants, Lizard Kings absentes"
+        );
+    }
+
+    #[test]
+    fn a_single_pairing_says_so() {
+        let outcome = ConfirmOutcome {
+            written: 1,
+            exempted_names: vec![],
+            absent_names: vec![],
+        };
+
+        assert_eq!(success_message(&outcome), "1 rencontre écrite");
+    }
+
+    #[test]
+    fn a_couple_is_read_as_two_team_ids() {
+        let (a, b) = (TeamId::new(), TeamId::new());
+
+        assert_eq!(couple_of(&format!("{a}:{b}")), Some((a, b)));
+        assert_eq!(couple_of("pas-un-couple"), None);
+        assert_eq!(couple_of(&format!("{a}:illisible")), None);
     }
 
     #[test]

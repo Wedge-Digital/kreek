@@ -66,6 +66,11 @@ window.handleScheduleActionResponse = function (xhrLike) {
         return false;
     }
 
+    // L'appariement des présents (E18) dit ce qu'il a écrit.
+    if (data.success) {
+        window.kreekToast(data.success, 'success');
+    }
+
     var messages = [];
     if (data.skipped_teams && data.skipped_teams.length) {
         messages.push("Équipe(s) non enrôlée(s) ignorée(s) : " + data.skipped_teams.join(', '));

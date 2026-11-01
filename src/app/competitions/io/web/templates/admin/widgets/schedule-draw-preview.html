@@ -1,6 +1,7 @@
 {# L'appariement des présents (E18), étape 2 : l'aperçu du tirage. Rien n'est
    écrit. Les champs cachés portent les présentes (« Retirer au sort »), et les
-   rencontres et exemptées que l'écriture (carte 618) relira. #}
+   rencontres et exemptées que « Écrire au calendrier » rend au serveur, qui
+   revérifie tout. #}
 <div class="schedule-draw" hx-disinherit="*">
 
   <div class="draw-step-head">
@@ -75,8 +76,14 @@
               hx-target="closest .round-detail-content"
               hx-swap="innerHTML"
               hx-on::after-request="if (event.detail.xhr.status >= 400) window.handleScheduleActionResponse(event.detail.xhr)">↺ Retirer au sort</button>
-      {# Rendu désactivé : la carte 618 le branche sur l'écriture. #}
-      <button type="button" class="btn-primary-sm" disabled>✓ Écrire au calendrier</button>
+      {# La réponse est du JSON : rien à swapper. `scheduleChanged` (en-tête de
+         la réponse) recharge la journée, le toast dit ce qui a été écrit. #}
+      <button type="button" class="btn-primary-sm"
+              hx-post="{{ app_routes.competitions.admin_schedule_draw_confirm(space_id, competition_id, season_id) }}"
+              hx-include="closest .schedule-draw"
+              hx-vals='{"round_id": "{{ draw.round_id }}"}'
+              hx-swap="none"
+              hx-on::after-request="window.handleScheduleActionResponse(event.detail.xhr)">✓ Écrire au calendrier</button>
     </div>
   </div>
 </div>

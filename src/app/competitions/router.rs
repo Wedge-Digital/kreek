@@ -11,7 +11,9 @@ use crate::app::competitions::io::web::admin::schedule_actions::{
     delete_match, delete_round, post_add_match, post_add_rest, post_add_round, post_clear_all,
     post_clear_round_pairings, post_generate_all, post_generate_round_pairings, put_update_round,
 };
-use crate::app::competitions::io::web::admin::schedule_draw_actions::post_draw_preview;
+use crate::app::competitions::io::web::admin::schedule_draw_actions::{
+    post_draw_confirm, post_draw_preview,
+};
 use crate::app::competitions::io::web::admin::schedule_draw_widget::get_draw_widget;
 use crate::app::competitions::io::web::admin::schedule_tab::schedule_tab;
 use crate::app::competitions::io::web::admin::schedule_widgets::{
@@ -205,6 +207,10 @@ pub fn router() -> Router<AppState> {
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_DRAW_PREVIEW,
             post(post_draw_preview),
+        )
+        .route(
+            path::COMPETITION_ADMIN_SCHEDULE_DRAW_CONFIRM,
+            post(post_draw_confirm),
         )
         .route(
             path::COMPETITION_ADMIN_SCHEDULE_GENERATE_ALL,
