@@ -1,6 +1,8 @@
 # E21 — Le mode de saisie et l'après-match en séquence
 
-**État :** `to_be_refined` — 9 cartes à écrire. Découpage validé le 2026-11-01. Née le 2026-11-01 des maquettes
+**État :** `to_be_refined` — 9 cartes, 631 à 639 ; la 634 attend une décision
+(le démarreur admin non coach). Découpage et cadrage validés le 2026-11-01.
+**Cadrage :** `docs/specs/saisie-mobile/E21-cadrage.md`. Née le 2026-11-01 des maquettes
 mobiles. Dépend de E19.
 
 **Maquettes :** `app-mobile-parcours.html`, sections 3 et 3A.
@@ -41,15 +43,15 @@ Ce que l'épic change, partout :
 
 | # | Intitulé | Apport |
 |---|---|---|
-| — | Le mode de saisie entre dans l'agrégat | nouvel événement portant le mode et le démarreur, colonne de projection ; tout compte rendu existant se rejoue en « Je saisis tout », son démarreur étant le `confirmed_by` de `SelectionConfirmed` |
-| — | « Qui saisit ? » au démarrage | la carte sur l'écran de sélection, ordinateur et mobile |
-| — | Démarrer depuis le calendrier sans sélection | `from_pairing` confirme les équipes de l'appariement et pose le mode ; la confirmation émet toujours `MatchReportConfirmed` |
-| — | L'autre coach suit en lecture seule | en « Je saisis tout », seul celui qui a démarré écrit — et les admins ; l'autre voit le match sans bouton de saisie. Vaut aussi pour la dépublication et la correction : seul le démarreur corrige |
-| — | Le journal des deux camps | le widget journal lit les deux camps, avec « saisi par » ; ✕ seulement sur ce qu'on peut supprimer. La projection `match_report_actions` ne stocke pas l'auteur : colonne `recorded_by`, remplie depuis l'event store |
-| — | Le match en direct | l'écran du journal, « Nouvelle action » demande l'équipe puis ouvre l'étape 3 ou 4 ; ouverte depuis le journal, la page d'action ne garde que « Retour au journal » |
-| — | L'étape MVP, saisie manuelle | une étape après le match, domicile puis visiteur ; un MVP par camp au tour 16 — règle des nouvelles saisies, jamais du rejeu ; le bouton ⭐ disparaît ; l'indicateur passe à cinq étapes |
-| — | Le tirage au sort du MVP | six joueurs désignés, tirage côté serveur par un port d'aléa, désignés conservés dans l'événement, résultat définitif |
-| — | Les tests e2e du nouveau parcours | `match_report_helpers.py` en « Je saisis tout », et les quatre tests qui saisissent le MVP comme une action |
+| 631 | Le mode de saisie entre dans l'agrégat | nouvel événement portant le mode et le démarreur, colonne de projection ; tout compte rendu existant se rejoue en « Je saisis tout », son démarreur étant le `confirmed_by` de `SelectionConfirmed` |
+| 632 | « Qui saisit ? » au démarrage | la carte sur l'écran de sélection, ordinateur et mobile |
+| 633 | Démarrer depuis le calendrier sans sélection | `from_pairing` confirme les équipes de l'appariement et pose le mode ; la confirmation émet toujours `MatchReportConfirmed` |
+| 634 | L'autre coach suit en lecture seule | en « Je saisis tout », seul celui qui a démarré écrit — et les admins ; l'autre voit le match sans bouton de saisie. Vaut aussi pour la dépublication et la correction : seul le démarreur corrige |
+| 635 | Le journal des deux camps | le widget journal lit les deux camps, avec « saisi par » ; ✕ seulement sur ce qu'on peut supprimer. La projection `match_report_actions` ne stocke pas l'auteur : colonne `recorded_by`, remplie depuis l'event store |
+| 636 | Le match en direct | l'écran du journal, « Nouvelle action » demande l'équipe puis ouvre l'étape 3 ou 4 ; ouverte depuis le journal, la page d'action ne garde que « Retour au journal » |
+| 637 | L'étape MVP, saisie manuelle | une étape après le match, domicile puis visiteur ; un MVP par camp au tour 16 — règle des nouvelles saisies, jamais du rejeu ; le bouton ⭐ disparaît ; l'indicateur passe à cinq étapes |
+| 638 | Le tirage au sort du MVP | six joueurs désignés, tirage côté serveur par un port d'aléa, désignés conservés dans l'événement, résultat définitif |
+| 639 | Les tests e2e du nouveau parcours | le parcours complet en « Je saisis tout » ; les tests cassés par une carte sont migrés dans celle-ci — sept fichiers saisissent le MVP comme une action (637), pas quatre |
 
 ## Ce qui commande l'ordre
 
