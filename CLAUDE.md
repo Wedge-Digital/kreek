@@ -439,7 +439,7 @@ commit suivant.
 | Commande | Contenu | Job CI |
 |---|---|---|
 | `make lint` | `cargo fmt --check`, `cargo clippy` | `qualite` |
-| `make check-arch` | axes 2 à 18 (cf. `scripts/check-arch.sh`) | `qualite` |
+| `make check-arch` | axes 2 à 19 (cf. `scripts/check-arch.sh`) | `qualite` |
 | `make audit` | `cargo audit --deny warnings` | `audit` |
 | `make test` | tests unitaires et d'intégration | `unit` |
 | `make e2e` | suite Playwright complète | `e2e` |
@@ -760,7 +760,8 @@ Use case ──► DomainEvent (bus interne BC)
 3. Le publisher publie l'app event sur l'`app_event_bus`
 
 **Conséquences** :
-- L'`app_event_bus` n'est **jamais** passé en paramètre d'un use case
+- L'`app_event_bus` n'est **jamais** passé en paramètre d'un use case —
+  verrouillé par l'axe 19 de `check-arch` (carte 352)
 - Un handler n'émet **jamais** d'app event directement — il émet un domain event sur le bus interne du BC
 - Pour ajouter un nouvel app event, il faut d'abord un domain event correspondant dans l'enum du BC, puis un mapping dans `to_app_event()`
 - Le publisher est le **seul point de conversion** domain event → app event dans le BC

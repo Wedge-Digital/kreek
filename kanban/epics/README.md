@@ -55,7 +55,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E15 — Recruter un journalier](ready_to_be_done/E15-recruter-un-journalier.md) | `ready_to_be_done` · 0/6 | 6 |
 | [E16 — Imprimer la feuille d'équipe](done/E16-imprimer-la-feuille-d-equipe.md) | `done` · 17/17 | 17 |
 | [E18 — Appariement des présents](done/E18-appariement-des-presents.md) | `done` · 8/8 | 8 |
-| [E19 — Saisie du compte rendu : droits et robustesse](to_be_refined/E19-saisie-du-compte-rendu-droits-et-robustesse.md) | `to_be_refined` | 5 |
+| [E19 — Saisie du compte rendu : droits et robustesse](done/E19-saisie-du-compte-rendu-droits-et-robustesse.md) | `done` · 5/5 | 5 |
 | [E20 — Coups de pouce : le panier et l'annulation](to_be_refined/E20-coups-de-pouce-panier-et-annulation.md) | `to_be_refined` | 5 |
 | [E21 — Le mode de saisie et l'après-match en séquence](to_be_refined/E21-mode-de-saisie-et-apres-match-en-sequence.md) | `to_be_refined` | 9 |
 | [E22 — Le mode « Chacun son équipe »](to_be_refined/E22-mode-chacun-son-equipe.md) | `to_be_refined` | 10 |

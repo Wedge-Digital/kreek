@@ -1,6 +1,6 @@
 # E19 — Saisie du compte rendu : droits et robustesse
 
-**État :** `to_be_refined` — 5 cartes, 4 faites (621 à 624) : 621 à 624, et 352 (à raffiner). Découpage
+**État :** close le 2026-11-01 — 5 cartes, 5 faites (621 à 624, 352). Découpage
 et cadrage validés le 2026-11-01.
 **Cadrage :** `docs/specs/saisie-mobile/E19-cadrage.md`
 Née le 2026-11-01 de l'analyse d'impact des maquettes mobiles
@@ -66,6 +66,12 @@ indépendants entre eux et de la garde.
   620, sans épic.
 
 ## Terminé quand
+
+**Constaté à la clôture (2026-11-01)** : le 403 d'un tiers et « publié par »
+le sont en e2e (`test_match_report_access.py`, `test_match_report_recap.py`).
+Le 409 d'un conflit ne l'est **qu'en tests unitaires** — aucun e2e ne provoque
+deux écritures entrelacées, et le rechargement par `HX-Refresh` n'a pas été
+observé dans un navigateur. Clôture acceptée avec cette réserve.
 
 Un membre de l'espace qui n'est ni l'un des deux coachs ni admin reçoit un 403
 sur toute écriture d'un compte rendu, constaté par un test e2e. Deux écritures

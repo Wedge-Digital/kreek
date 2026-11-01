@@ -3,11 +3,10 @@ use crate::app::match_report::domain::match_report_repository_port::{
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::ports::ITeamDataPort;
-use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::ids::{CoachId, EventId};
-use crate::common::services::event_bus::app_event_publication::publier;
+use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -45,7 +44,7 @@ pub async fn execute(
     cmd: UpdateMatchSelectionCommand,
     repo: &dyn IMatchReportRepository,
     team_data: &dyn ITeamDataPort,
-    app_event_bus: &EventBus,
+    event_bus: &EventBus,
 ) -> Result<MatchReportId, UpdateMatchSelectionError> {
     let mr_id_str = cmd.match_report_id.to_string();
 
@@ -95,37 +94,15 @@ pub async fn execute(
         ));
     }
 
-    let space_id = draft.space_id.to_string();
-    let home_id = draft.home_team_id.to_string();
-    let away_id = draft.away_team_id.to_string();
-    let pairing_id = draft.pairing_id.clone();
-
     let (pre_match, confirm_event) = draft.confirm_selection(cmd.confirmed_by);
 
     repo.append(&mr_id_str, &confirm_event, pre_match.version - 1)
         .await
         .map_err(UpdateMatchSelectionError::from_repository)?;
 
-    // Émission directe depuis un use case — `CLAUDE.md` l'interdit : un app
-    // event doit naître d'un domain event, converti par le publisher. Le
-    // publisher de `match_report` ne traite pas `MatchReportConfirmed`, d'où ce
-    // court-circuit. Il passe par `publier` pour au moins entrer dans le
-    // journal ; le correctif architectural fait l'objet de la carte 352.
-    publier(
-        app_event_bus,
-        MatchReportAppEvent::MatchReportConfirmed {
-            event_id: EventId::new(),
-            match_report_id: mr_id_str,
-            home_team_id: home_id,
-            away_team_id: away_id,
-            space_id,
-            pairing_id,
-            season_id: pre_match.season_id.to_string(),
-            round_id: pre_match.round_id.to_string(),
-            competition_id: pre_match.competition_id.to_string(),
-        }
-        .to_enveloppe(),
-    );
+    // Le domain event, sur le bus du BC : c'est le publisher qui en fait
+    // `MatchReportConfirmed` pour `teams` et `competitions` (carte 352).
+    emettre(event_bus, confirm_event.to_enveloppe(&mr_id_str));
 
     Ok(cmd.match_report_id)
 }

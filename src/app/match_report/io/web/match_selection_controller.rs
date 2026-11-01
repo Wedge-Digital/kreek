@@ -344,7 +344,7 @@ pub async fn create_match_report(
             &mr_id,
             user.id,
             state.match_report.match_report_repo.as_ref(),
-            &state.app_event_bus,
+            &state.match_report.event_bus,
         )
         .await
         {
@@ -515,7 +515,7 @@ async fn creer_le_rapport(
     match create_match_report_use_case::execute(
         cmd,
         state.match_report.match_report_repo.as_ref(),
-        &state.app_event_bus,
+        &state.match_report.event_bus,
     )
     .await
     {
@@ -625,7 +625,7 @@ pub async fn update_match_selection(
         cmd,
         state.match_report.match_report_repo.as_ref(),
         state.match_report.team_data.as_ref(),
-        &state.app_event_bus,
+        &state.match_report.event_bus,
     )
     .await
     {

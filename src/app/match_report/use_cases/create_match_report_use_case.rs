@@ -2,11 +2,10 @@ use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
-use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::ids::{CoachId, EventId, SpaceId};
-use crate::common::services::event_bus::app_event_publication::publier;
+use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+use crate::common::services::event_bus::domain_event_publication::emettre;
 use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
@@ -32,7 +31,7 @@ pub enum CreateMatchReportError {
 pub async fn execute(
     cmd: CreateMatchReportCommand,
     repo: &dyn IMatchReportRepository,
-    app_event_bus: &EventBus,
+    event_bus: &EventBus,
 ) -> Result<MatchReportId, CreateMatchReportError> {
     // **Plus de déduplication ici** (carte 555).
     //
@@ -81,7 +80,7 @@ pub async fn execute(
     // dans quel état il récupère la main — et une confirmation de trop répond
     // `409`, ce que la suite e2e a montré sur une trentaine de tests.
     if cmd.origin == MatchReportOrigin::Manual {
-        confirm_draft(draft, cmd.created_by, repo, app_event_bus).await?;
+        confirm_draft(draft, cmd.created_by, repo, event_bus).await?;
     }
 
     Ok(id)
@@ -105,7 +104,7 @@ pub async fn confirmer_si_brouillon(
     match_report_id: &str,
     confirmed_by: CoachId,
     repo: &dyn IMatchReportRepository,
-    app_event_bus: &EventBus,
+    event_bus: &EventBus,
 ) -> Result<(), CreateMatchReportError> {
     let state = repo
         .find_by_id(match_report_id)
@@ -114,9 +113,7 @@ pub async fn confirmer_si_brouillon(
         .ok_or_else(|| CreateMatchReportError::Repository("rapport introuvable".into()))?;
 
     match state {
-        MatchReportState::Draft(draft) => {
-            confirm_draft(draft, confirmed_by, repo, app_event_bus).await
-        }
+        MatchReportState::Draft(draft) => confirm_draft(draft, confirmed_by, repo, event_bus).await,
         _ => Ok(()),
     }
 }
@@ -125,39 +122,18 @@ async fn confirm_draft(
     draft: MatchReportDraft,
     confirmed_by: CoachId,
     repo: &dyn IMatchReportRepository,
-    app_event_bus: &EventBus,
+    event_bus: &EventBus,
 ) -> Result<(), CreateMatchReportError> {
     let mr_id_str = draft.id.to_string();
-    let space_id = draft.space_id.to_string();
-    let home_id = draft.home_team_id.to_string();
-    let away_id = draft.away_team_id.to_string();
-
     let (pre_match, confirm_event) = draft.confirm_selection(confirmed_by);
 
     repo.append(&mr_id_str, &confirm_event, pre_match.version - 1)
         .await
         .map_err(|e| CreateMatchReportError::Repository(e.to_string()))?;
 
-    // Émission directe depuis un use case — `CLAUDE.md` l'interdit : un app
-    // event doit naître d'un domain event, converti par le publisher. Le
-    // publisher de `match_report` ne traite pas `MatchReportConfirmed`, d'où ce
-    // court-circuit. Il passe par `publier` pour au moins entrer dans le
-    // journal ; le correctif architectural fait l'objet de la carte 352.
-    publier(
-        app_event_bus,
-        MatchReportAppEvent::MatchReportConfirmed {
-            event_id: EventId::new(),
-            match_report_id: mr_id_str,
-            home_team_id: home_id,
-            away_team_id: away_id,
-            space_id,
-            pairing_id: pre_match.pairing_id.clone(),
-            season_id: pre_match.season_id.to_string(),
-            round_id: pre_match.round_id.to_string(),
-            competition_id: pre_match.competition_id.to_string(),
-        }
-        .to_enveloppe(),
-    );
+    // Le domain event, sur le bus du BC : c'est le publisher qui en fait
+    // `MatchReportConfirmed` pour `teams` et `competitions` (carte 352).
+    emettre(event_bus, confirm_event.to_enveloppe(&mr_id_str));
     Ok(())
 }
 
@@ -315,6 +291,32 @@ mod tests {
         assert!(
             matches!(state, MatchReportState::PreMatch(_)),
             "état : {state:?}"
+        );
+    }
+
+    /// La confirmation sort par le **bus du BC**, en domain event : c'est le
+    /// publisher qui en fait `MatchReportConfirmed` (carte 352). Le bus reçu
+    /// ici est le bus interne — le use case ne connaît plus l'autre.
+    #[tokio::test]
+    async fn the_confirmation_is_emitted_as_a_domain_event() {
+        let repo = FakeMatchReportRepo::default();
+        let bus = new_bus();
+        let mut rx = bus.subscribe();
+
+        execute(sample_cmd(MatchReportOrigin::Manual), &repo, &bus)
+            .await
+            .unwrap();
+
+        let types: Vec<String> = std::iter::from_fn(|| rx.try_recv().ok())
+            .map(|envelope| envelope.event_type)
+            .collect();
+        assert!(
+            types.iter().any(|t| t == "SelectionConfirmed"),
+            "émis : {types:?}"
+        );
+        assert!(
+            !types.iter().any(|t| t == "MatchReportConfirmed"),
+            "émis : {types:?}"
         );
     }
 

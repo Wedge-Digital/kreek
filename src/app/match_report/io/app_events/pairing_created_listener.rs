@@ -10,8 +10,10 @@ use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
-pub fn init(app_event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
-    let bus = app_event_bus.clone();
+/// `event_bus`, le bus du BC : le rapport créé y émet ses domain events, que le
+/// publisher convertit — jamais d'émission directe vers les autres BCs (carte 352).
+pub fn init(app_event_bus: &EventBus, event_bus: &EventBus, repo: Arc<dyn IMatchReportRepository>) {
+    let bus = event_bus.clone();
     let mut rx = app_event_bus.subscribe();
     spawn_listener(module_path!(), async move {
         loop {

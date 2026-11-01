@@ -1,4 +1,5 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
+use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
@@ -108,6 +109,9 @@ async fn aiguiller(
                 team_data,
             )
             .await
+        }
+        MatchReportDomainEvent::SelectionConfirmed { .. } => {
+            handle_confirmed(match_report_id, app_event_bus, repo).await
         }
         MatchReportDomainEvent::MatchReportUnpublished { .. } => {
             handle_unpublished(match_report_id, app_event_bus, repo).await
@@ -347,6 +351,40 @@ async fn handle_published(
 /// La relecture attend ici `ReadyToPublish` et non `Published` : c'est l'état
 /// dans lequel la dépublication vient de laisser le rapport. Exiger `Published`
 /// ferait échouer toutes les compensations en silence, avec un simple `warn!`.
+/// La sélection confirmée sort du BC (carte 352) : `teams` y pose le verrou de
+/// saisie, `competitions` passe le match « en cours ». L'événement se construit
+/// sur l'agrégat relu, qui garde tout en avant-match — comme pour la
+/// publication — plutôt que d'alourdir un domain event persisté.
+async fn handle_confirmed(
+    match_report_id: &str,
+    app_event_bus: &EventBus,
+    repo: &dyn IMatchReportRepository,
+) {
+    match repo.find_by_id(match_report_id).await {
+        Ok(Some(MatchReportState::PreMatch(pm))) => {
+            publier(app_event_bus, build_confirmed_event(match_report_id, &pm));
+        }
+        Ok(_) => log_unexpected_state(match_report_id, "PreMatch"),
+        Err(e) => log_reread_error(match_report_id, e),
+    }
+}
+
+/// Le même contenu que les use cases publiaient eux-mêmes avant la carte 352.
+fn build_confirmed_event(match_report_id: &str, pm: &MatchReportPreMatch) -> EventEnvelope {
+    MatchReportAppEvent::MatchReportConfirmed {
+        event_id: EventId::new(),
+        match_report_id: match_report_id.to_string(),
+        home_team_id: pm.home_team_id.to_string(),
+        away_team_id: pm.away_team_id.to_string(),
+        space_id: pm.space_id.to_string(),
+        pairing_id: pm.pairing_id.clone(),
+        season_id: pm.season_id.to_string(),
+        round_id: pm.round_id.to_string(),
+        competition_id: pm.competition_id.to_string(),
+    }
+    .to_enveloppe()
+}
+
 async fn handle_unpublished(
     match_report_id: &str,
     app_event_bus: &EventBus,
@@ -1121,5 +1159,45 @@ mod player_impact_tests {
             &[vedette()],
         );
         assert!(events.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod confirmed_event_tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::pre_match;
+    use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
+
+    /// Ce que les use cases publiaient eux-mêmes avant la carte 352 : les mêmes
+    /// champs, lus sur l'avant-match relu.
+    #[test]
+    fn the_confirmed_event_carries_what_teams_and_competitions_read() {
+        let pm = pre_match();
+
+        let envelope = build_confirmed_event("mr-1", &pm);
+
+        let event: MatchReportAppEvent = serde_json::from_value(envelope.payload).unwrap();
+        let MatchReportAppEvent::MatchReportConfirmed {
+            match_report_id,
+            home_team_id,
+            away_team_id,
+            space_id,
+            pairing_id,
+            season_id,
+            round_id,
+            competition_id,
+            ..
+        } = event
+        else {
+            panic!("MatchReportConfirmed attendu");
+        };
+        assert_eq!(match_report_id, "mr-1");
+        assert_eq!(home_team_id, pm.home_team_id.to_string());
+        assert_eq!(away_team_id, pm.away_team_id.to_string());
+        assert_eq!(space_id, pm.space_id.to_string());
+        assert_eq!(pairing_id, pm.pairing_id);
+        assert_eq!(season_id, pm.season_id.to_string());
+        assert_eq!(round_id, pm.round_id.to_string());
+        assert_eq!(competition_id, pm.competition_id.to_string());
     }
 }

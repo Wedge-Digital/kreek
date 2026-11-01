@@ -686,6 +686,23 @@ echo -e "${BOLD}Axe 18 · Événements domaine — aucun déclaré sans être é
 if axe18=$(python3 scripts/arch/evenements_fantomes.py 2>&1); then print_pass; else print_fail "$axe18"; fi
 echo ""
 
+# ── Axe 19 : pas de bus d'app events dans un use case ───────────────────────
+#
+# `CLAUDE.md` : un use case émet un **domain event** sur le bus de son BC ; seul
+# le publisher, couche IO, le convertit en app event. L'axe 12 vérifie le geste
+# (`publier()` plutôt qu'un `.send(` nu), pas la **couche** qui le fait : deux
+# use cases de `match_report` publiaient eux-mêmes `MatchReportConfirmed` en
+# passant par `publier()`, et l'axe 12 était vert. La carte 352 les a remis dans
+# la règle ; cet axe empêche qu'on y revienne.
+#
+# Commentaires exclus : un use case peut dire qu'il ne s'en sert pas, et
+# `spaces` le dit.
+echo -e "${BOLD}Axe 19 · Pas d'app_event_bus dans les use cases${RESET}"
+axe19=$(grep -rn 'app_event_bus' src/app/*/use_cases --include='*.rs' 2>/dev/null \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)
+if [ -n "$axe19" ]; then print_fail "$axe19"; else print_pass; fi
+echo ""
+
 
 if [ "$EXIT_CODE" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ Toutes les vérifications bloquantes passent${RESET}"
