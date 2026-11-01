@@ -1,0 +1,43 @@
+# Une erreur JavaScript à l'ouverture du recrutement
+
+**Priorité : moyenne** — un test e2e est rouge ; l'effet pour l'utilisateur
+reste à établir
+**Trouvée par :** la suite e2e complète lancée pour la carte 622 (2026-11-01).
+Sans rapport avec elle : la 622 ne touche que les routes du compte rendu.
+
+## Le symptôme
+
+`test_recruitment_phase.py::test_01_banniere_ouvre_le_catalogue` échoue, seul
+comme dans la suite : la fixture `_fail_on_console_errors` de `conftest.py`
+relève une erreur de page.
+
+```
+TypeError: Cannot read properties of null (reading 'addEventListener')
+    at HTMLScriptElement.<anonymous> (<anonymous>:54:53)
+```
+
+Le parcours : la fiche équipe en phase de recrutement, puis le clic sur le
+bouton du bandeau (`.state-banner--phase .state-banner-cta`), qui échange
+`#app-content` par htmx (`hx-get`, `hx-push-url`) pour ouvrir le catalogue.
+
+## Ce qu'on sait, et ce qu'on ne sait pas
+
+- `<anonymous>` : c'est un script **inline exécuté par htmx** au moment de
+  l'échange, ligne 54 de ce script.
+- Ce n'est **pas** le script du bandeau de `teams-team-detail.html`, qui se
+  protège (`if (!declencher) return;`).
+- Les gabarits du recrutement (`teams-recruitment.html`,
+  `widgets/recruitment-catalog.html`) n'appellent pas `addEventListener`.
+- Reste à trouver le script : un `pageerror` de Playwright ne donne pas sa
+  source. Piste — écouter `htmx:beforeSwap` et lister les `<script>` du
+  fragment reçu, ou chercher dans les gabarits que la page compose ceux dont la
+  54ᵉ ligne d'un `<script>` porte un `addEventListener`.
+- L'impression de la feuille d'équipe (E16, `ecd68304`), fusionnée récemment, a
+  ajouté des scripts à la fiche équipe : première piste à vérifier.
+
+## Ce qu'il faut faire
+
+1. Identifier le script, et le parcours réel qui le déclenche.
+2. Dire si un utilisateur voit quelque chose de cassé, ou si seule la console
+   proteste.
+3. Corriger : le script ne s'exécute que là où son élément existe.
