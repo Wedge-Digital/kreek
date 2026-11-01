@@ -1,8 +1,9 @@
 //! Le corps du POST de la phase 1 sur un rapport existant (carte 564).
 //!
-//! Quand la sélection est figée, le formulaire n'a plus aucun champ : le
-//! navigateur envoie un corps **vide**. L'extraction doit l'accepter — c'est le
-//! handler qui décide alors de reprendre les équipes du brouillon.
+//! L'écran « Qui saisit ? » d'un match du calendrier (carte 633) n'a aucun
+//! champ d'équipe : le navigateur n'envoie que le mode, voire un corps
+//! **vide**. L'extraction doit l'accepter — le brouillon démarre alors avec ses
+//! propres équipes.
 
 use crate::app::match_report::io::web::match_selection_controller::UpdateMatchSelectionForm;
 use axum::body::Body;

@@ -80,6 +80,7 @@ CLASSE_ATTENDUE = {
     "admin-calendrier": ".competition-admin-schedule",
     "admin-resume": ".new-competition-phase-5",
     "rapport-selection": ".match-report-step1",
+    "rapport-mode": ".entry-mode-card",
     "rapport-prematch": ".match-report-pre-match",
     "rapport-actions": ".match-report-actions",
     "rapport-step5": ".match-report-step5",
@@ -218,7 +219,10 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         "widget-inducement-selector": f"{BASE}/references/inducement-selector",
         "widget-customisation":  f"{a}/players/{joueur}/widgets/customisation" if joueur else None,
         # ── rapports de match ────────────────────────────────────────────
-        "rapport-selection":     f"{a}/match-report/{rapport_brouillon}" if rapport_brouillon else None,
+        # Un brouillon du calendrier s'ouvre sur « Qui saisit ? » (carte 633) ;
+        # la sélection ne se voit plus que hors calendrier, sur `/new`.
+        "rapport-selection":     f"{a}/match-report/new",
+        "rapport-mode":          f"{a}/match-report/{rapport_brouillon}" if rapport_brouillon else None,
         "rapport-prematch":      f"{a}/match-report/{rapport_prematch}/step2" if rapport_prematch else None,
         "rapport-actions":       f"{a}/match-report/{rapport_prematch}/step3" if rapport_prematch else None,
         "rapport-step5":         f"{a}/match-report/{rapport_pret}/step5" if rapport_pret else None,

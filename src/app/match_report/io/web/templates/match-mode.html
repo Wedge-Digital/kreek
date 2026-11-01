@@ -1,0 +1,31 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+
+{# Carte 633 — le démarrage d'un match du calendrier : le match, « Qui
+   saisit ? » (carte 632), et « Commencer → ». Pas de sélection d'équipes : un
+   match du calendrier garde les siennes (R4 de l'épic E21).
+
+   Ouvrir cette page ne confirme rien (R3) : seul le bouton démarre le match.
+   Le formulaire n'envoie que le mode ; le POST confirme les équipes du
+   brouillon. #}
+<div class="mr-container">
+
+  <div class="mr-header">
+    <div class="mr-header-icon">&#127944;</div>
+    <div class="mr-header-title">Commencer le match</div>
+    <div class="mr-header-sub">{{ summary.home_team_name }} – {{ summary.away_team_name }} · {{ summary.competition_name }}, {{ summary.round_name }}</div>
+  </div>
+
+  <form method="post" action="{{ form_action }}">
+
+    {% include "match_report/entry-mode-card.html" %}
+
+    <div class="mr-actions">
+      <a href="javascript:history.back()" class="btn-outline-sm">&#8592; Retour</a>
+      <button type="submit" class="btn-primary-sm">Commencer &#8594;</button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

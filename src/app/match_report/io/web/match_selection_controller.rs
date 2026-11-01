@@ -1,10 +1,11 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
+use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{EntryMode, MatchReportOrigin};
 use crate::app::match_report::io::web::write_conflict::conflict_response;
-use crate::app::match_report::ports::CreationAppariementError;
-use crate::app::match_report::use_cases::match_report_access_service::{
-    est_administrateur, AccesRapportDeps,
+use crate::app::match_report::ports::{
+    CreationAppariementError, ICompetitionDataPort, ITeamDataPort,
 };
 use crate::app::match_report::use_cases::{
     create_match_report_use_case, update_match_selection_use_case,
@@ -33,25 +34,9 @@ pub struct MatchSelectionTemplate {
     pub is_prefilled: bool,
     pub error_message: Option<String>,
     pub form_action: String,
-    /// La sélection est figée (carte 550) : les deux widgets cèdent la place
-    /// aux quatre noms en clair. `None` quand elle reste modifiable.
-    pub lecture_seule: Option<SelectionFigeeVm>,
     /// La valeur que porte l'option « Je saisis tout » de la carte « Qui
     /// saisit ? » (carte 632) — celle que `read_entry_mode` relit.
     pub solo_entry_value: &'static str,
-}
-
-/// Ce que la phase 1 montre quand elle ne se modifie plus.
-///
-/// **Des noms, pas des identifiants.** Un ULID n'apprend rien au coach, et le
-/// remplacer par un widget désactivé aurait obligé deux autres BCs à porter un
-/// mode dont ils n'ont besoin nulle part ailleurs.
-pub struct SelectionFigeeVm {
-    pub competition_name: String,
-    pub season_name: String,
-    pub round_name: String,
-    pub home_team_name: String,
-    pub away_team_name: String,
 }
 
 impl IntoResponse for MatchSelectionTemplate {
@@ -61,6 +46,38 @@ impl IntoResponse for MatchSelectionTemplate {
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
+}
+
+/// Le démarrage d'un match du calendrier (carte 633) : le match, la carte
+/// « Qui saisit ? » de la carte 632, et « Commencer → ». Pas de sélection
+/// d'équipes — un match du calendrier garde les siennes (R4).
+#[derive(Template)]
+#[template(path = "match-mode.html")]
+pub struct MatchModeTemplate {
+    pub app_routes: AppRoutes,
+    pub form_action: String,
+    pub summary: MatchSummaryVm,
+    /// Cf. `MatchSelectionTemplate::solo_entry_value`.
+    pub solo_entry_value: &'static str,
+}
+
+impl IntoResponse for MatchModeTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
+/// Le match qu'on s'apprête à démarrer.
+///
+/// **Des noms, pas des identifiants.** Un ULID n'apprend rien au coach.
+pub struct MatchSummaryVm {
+    pub competition_name: String,
+    pub round_name: String,
+    pub home_team_name: String,
+    pub away_team_name: String,
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -134,62 +151,49 @@ pub async fn from_pairing(
     Redirect::to(&url).into_response()
 }
 
-/// La sélection est-elle figée pour cet utilisateur, et si oui que montrer ?
+/// Les ports que lit l'écran d'un rapport existant.
 ///
-/// `Some(..)` seulement quand **les deux** conditions tiennent : la compétition
-/// interdit les matchs hors calendrier, et l'utilisateur n'en est pas
-/// administrateur. Un admin garde ses widgets, et une compétition qui autorise
-/// ne fige personne.
+/// **Aucun ne confirme** (carte 633, R3) : ouvrir le lien d'un match ne
+/// verrouille rien et ne le passe pas « en cours ». Le dépôt n'y sert qu'à
+/// lire l'état.
+pub(crate) struct EditPagePorts<'a> {
+    pub repo: &'a dyn IMatchReportRepository,
+    pub competition_data: &'a dyn ICompetitionDataPort,
+    pub team_data: &'a dyn ITeamDataPort,
+}
+
+/// Le match d'un brouillon, en noms.
 ///
 /// Les quatre noms sont résolus par les ports qui existent déjà —
 /// `find_round_context` pour la compétition et la journée, `find_team_info` pour
 /// les deux équipes. Un nom manquant devient l'identifiant : mieux qu'une case
 /// vide, et le problème se voit.
-#[allow(clippy::too_many_arguments)]
-async fn selection_figee(
-    state: &AppState,
-    user: &crate::app::auth::domain::user::User,
-    space_id: &str,
-    comp_id: &str,
-    season_id: &str,
-    round_id: &str,
-    home_id: &str,
-    away_id: &str,
-) -> Option<SelectionFigeeVm> {
-    let comp = state.match_report.competition_data.as_ref();
-    if comp.autorise_hors_calendrier(season_id).await {
-        return None;
-    }
+async fn match_summary(ports: &EditPagePorts<'_>, draft: &MatchReportDraft) -> MatchSummaryVm {
+    let (comp_id, round_id) = (draft.competition_id.to_string(), draft.round_id.to_string());
+    let (home_id, away_id) = (
+        draft.home_team_id.to_string(),
+        draft.away_team_id.to_string(),
+    );
+    let season_id = draft.season_id.to_string();
+    let contexte = ports
+        .competition_data
+        .find_round_context(&season_id, &round_id)
+        .await;
+    let teams = ports.team_data;
+    let (home, away) = tokio::join!(
+        teams.find_team_info(&home_id),
+        teams.find_team_info(&away_id)
+    );
 
-    let deps = AccesRapportDeps::from_state(state);
-    if est_administrateur(&deps, user, space_id, comp_id).await {
-        return None;
-    }
-
-    let contexte = comp.find_round_context(season_id, round_id).await;
-    let teams = state.match_report.team_data.as_ref();
-    let (home, away) = tokio::join!(teams.find_team_info(home_id), teams.find_team_info(away_id));
-
-    Some(SelectionFigeeVm {
+    MatchSummaryVm {
         competition_name: contexte
             .as_ref()
             .map(|c| c.competition_name.clone())
-            .unwrap_or_else(|| comp_id.to_string()),
-        season_name: contexte
-            .as_ref()
-            .map(|c| c.season_name.clone())
-            .unwrap_or_else(|| season_id.to_string()),
-        round_name: contexte
-            .as_ref()
-            .map(|c| c.round_name.clone())
-            .unwrap_or_else(|| round_id.to_string()),
-        home_team_name: home
-            .map(|t| t.team_name)
-            .unwrap_or_else(|| home_id.to_string()),
-        away_team_name: away
-            .map(|t| t.team_name)
-            .unwrap_or_else(|| away_id.to_string()),
-    })
+            .unwrap_or(comp_id),
+        round_name: contexte.map(|c| c.round_name).unwrap_or(round_id),
+        home_team_name: home.map(|t| t.team_name).unwrap_or(home_id),
+        away_team_name: away.map(|t| t.team_name).unwrap_or(away_id),
+    }
 }
 
 pub async fn new_match_report(
@@ -213,9 +217,6 @@ pub async fn new_match_report(
         is_prefilled: false,
         error_message: None,
         form_action,
-        // Jamais figée : la garde de `create_match_report` interdit déjà d'y
-        // arriver quand la compétition refuse le hors-calendrier.
-        lecture_seule: None,
         solo_entry_value: EntryMode::SoloEntry.as_str(),
     }
     .into_response()
@@ -226,69 +227,98 @@ pub async fn edit_match_report(
     Path((space_id, match_report_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let Some(user) = auth_session.user else {
+    if auth_session.user.is_none() {
         return StatusCode::UNAUTHORIZED.into_response();
+    }
+    let ports = EditPagePorts {
+        repo: state.match_report.match_report_repo.as_ref(),
+        competition_data: state.match_report.competition_data.as_ref(),
+        team_data: state.match_report.team_data.as_ref(),
     };
+    edit_page(&ports, &space_id, &match_report_id).await
+}
 
-    let mr_state = match state
-        .match_report
-        .match_report_repo
-        .find_by_id(&match_report_id)
-        .await
-    {
-        Ok(Some(s)) => s,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("edit_match_report find_by_id {match_report_id}: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+/// L'aiguillage d'un rapport existant selon son état.
+///
+/// Un brouillon du calendrier mène à « Qui saisit ? » (carte 633) ; un
+/// brouillon hors calendrier, s'il en reste d'avant la carte 552, garde la
+/// sélection.
+pub(crate) async fn edit_page(
+    ports: &EditPagePorts<'_>,
+    space_id: &str,
+    match_report_id: &str,
+) -> Response {
+    let mr_state = match load_state(ports.repo, match_report_id).await {
+        Ok(s) => s,
+        Err(refus) => return refus,
     };
-
+    let routes = AppRoutes::default().match_report;
     match mr_state {
-        MatchReportState::Draft(draft) => {
-            let comp_id = draft.competition_id.to_string();
-            let season_id = draft.season_id.to_string();
-            let round_id = draft.round_id.to_string();
-            let home_id = draft.home_team_id.to_string();
-            let away_id = draft.away_team_id.to_string();
-
-            let form_action = AppRoutes::default()
-                .match_report
-                .edit_match_report(&space_id, &match_report_id);
-
-            let lecture_seule = selection_figee(
-                &state, &user, &space_id, &comp_id, &season_id, &round_id, &home_id, &away_id,
-            )
-            .await;
-
-            MatchSelectionTemplate {
-                app_routes: Default::default(),
-                widget_url: build_widget_url_prefilled(&space_id, &comp_id, &season_id, &round_id),
-                team_widget_url: build_team_widget_url_prefilled(
-                    &space_id, &season_id, &home_id, &away_id,
-                ),
-                space_id,
-                is_prefilled: true,
-                error_message: None,
-                form_action,
-                lecture_seule,
-                solo_entry_value: EntryMode::SoloEntry.as_str(),
-            }
-            .into_response()
+        MatchReportState::Draft(draft) if draft.keeps_its_teams() => {
+            match_mode_page(ports, space_id, &draft).await
         }
-        MatchReportState::PreMatch(_pm) => {
-            let url = format!("/app/{}/match-report/{}/step2", space_id, match_report_id);
-            Redirect::to(&url).into_response()
+        MatchReportState::Draft(draft) => selection_page(space_id, &draft),
+        MatchReportState::PreMatch(_) => {
+            Redirect::to(&routes.step2(space_id, match_report_id)).into_response()
         }
         MatchReportState::ReadyToPublish(_) => {
-            let url = AppRoutes::default()
-                .match_report
-                .step5(&space_id, &match_report_id);
-            Redirect::to(&url).into_response()
+            Redirect::to(&routes.step5(space_id, match_report_id)).into_response()
         }
         MatchReportState::Cancelled(_) => StatusCode::GONE.into_response(),
         MatchReportState::Published(_) => StatusCode::CONFLICT.into_response(),
     }
+}
+
+async fn load_state(
+    repo: &dyn IMatchReportRepository,
+    match_report_id: &str,
+) -> Result<MatchReportState, Response> {
+    match repo.find_by_id(match_report_id).await {
+        Ok(Some(s)) => Ok(s),
+        Ok(None) => Err(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!("edit_match_report find_by_id {match_report_id}: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
+    }
+}
+
+async fn match_mode_page(
+    ports: &EditPagePorts<'_>,
+    space_id: &str,
+    draft: &MatchReportDraft,
+) -> Response {
+    MatchModeTemplate {
+        app_routes: Default::default(),
+        form_action: AppRoutes::default()
+            .match_report
+            .edit_match_report(space_id, &draft.id.to_string()),
+        summary: match_summary(ports, draft).await,
+        solo_entry_value: EntryMode::SoloEntry.as_str(),
+    }
+    .into_response()
+}
+
+fn selection_page(space_id: &str, draft: &MatchReportDraft) -> Response {
+    let comp_id = draft.competition_id.to_string();
+    let season_id = draft.season_id.to_string();
+    let round_id = draft.round_id.to_string();
+    let home_id = draft.home_team_id.to_string();
+    let away_id = draft.away_team_id.to_string();
+
+    MatchSelectionTemplate {
+        app_routes: Default::default(),
+        widget_url: build_widget_url_prefilled(space_id, &comp_id, &season_id, &round_id),
+        team_widget_url: build_team_widget_url_prefilled(space_id, &season_id, &home_id, &away_id),
+        space_id: space_id.to_string(),
+        is_prefilled: true,
+        error_message: None,
+        form_action: AppRoutes::default()
+            .match_report
+            .edit_match_report(space_id, &draft.id.to_string()),
+        solo_entry_value: EntryMode::SoloEntry.as_str(),
+    }
+    .into_response()
 }
 
 // ── POST form ────────────────────────────────────────────────────────────────
@@ -307,8 +337,8 @@ pub struct CreateMatchReportForm {
 /// Le corps du POST de la phase 1 sur un rapport **existant**.
 ///
 /// Distinct de `CreateMatchReportForm`, et ses deux champs sont facultatifs
-/// (carte 564) : quand la sélection est figée, le gabarit n'affiche que des
-/// noms, et le formulaire part **vide**. Exiger les cinq champs de la création
+/// (carte 564) : l'écran « Qui saisit ? » d'un match du calendrier (carte 633)
+/// n'a aucun champ d'équipe, et le formulaire n'envoie que le mode. Exiger les cinq champs de la création
 /// faisait échouer l'extraction avant le handler — `missing field
 /// competition_id` — alors même que ces valeurs auraient été ignorées. Le coach
 /// ne pouvait plus commencer son rapport.
@@ -517,7 +547,6 @@ fn formulaire_en_erreur(space_id: &str, message: String) -> Response {
         is_prefilled: false,
         error_message: Some(message),
         form_action: AppRoutes::default().match_report.new_match_report(space_id),
-        lecture_seule: None,
         solo_entry_value: EntryMode::SoloEntry.as_str(),
     };
     (StatusCode::UNPROCESSABLE_ENTITY, gabarit).into_response()
@@ -587,53 +616,13 @@ async fn creer_le_rapport(
     }
 }
 
-/// Les deux équipes qui partent réellement dans la commande.
+/// Démarre un rapport existant : la confirmation de sa sélection, avec le mode
+/// choisi par celui qui démarre.
 ///
-/// Celles du formulaire, sauf quand la sélection est figée pour cet utilisateur
-/// (carte 550) : ce sont alors celles déjà enregistrées. Le rapport doit être en
-/// `Draft` pour qu'on en soit là — les autres états ne passent pas par ce POST.
-///
-/// `None` quand la sélection n'est pas figée et que le formulaire n'a pas porté
-/// les deux équipes : il n'y a rien à confirmer.
-async fn equipes_retenues(
-    state: &AppState,
-    user: &crate::app::auth::domain::user::User,
-    space_id: &str,
-    match_report_id: &str,
-    form: &UpdateMatchSelectionForm,
-) -> Option<(String, String)> {
-    let saisies = form.home_team_id.clone().zip(form.away_team_id.clone());
-
-    let Ok(Some(MatchReportState::Draft(draft))) = state
-        .match_report
-        .match_report_repo
-        .find_by_id(match_report_id)
-        .await
-    else {
-        return saisies;
-    };
-
-    let figee = selection_figee(
-        state,
-        user,
-        space_id,
-        &draft.competition_id.to_string(),
-        &draft.season_id.to_string(),
-        &draft.round_id.to_string(),
-        &draft.home_team_id.to_string(),
-        &draft.away_team_id.to_string(),
-    )
-    .await;
-
-    match figee {
-        Some(_) => Some((
-            draft.home_team_id.to_string(),
-            draft.away_team_id.to_string(),
-        )),
-        None => saisies,
-    }
-}
-
+/// Pour un match du calendrier, **les équipes envoyées sont ignorées**, pour
+/// tous, admin compris (carte 633, R4) — c'est le domaine qui en décide, par
+/// `MatchReportDraft::keeps_its_teams`. Ignorer plutôt que refuser : un corps
+/// trafiqué produit alors exactement ce qu'aurait produit un corps honnête.
 pub async fn update_match_selection(
     auth_session: AuthSession,
     Path((space_id, match_report_id)): Path<(String, String)>,
@@ -643,64 +632,73 @@ pub async fn update_match_selection(
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let Ok(entry_mode) = read_entry_mode(form.entry_mode.as_deref()) else {
-        return StatusCode::BAD_REQUEST.into_response();
+    let cmd = match build_update_command(&match_report_id, &form, user.id) {
+        Ok(cmd) => cmd,
+        Err(refus) => return refus,
     };
-
-    // Carte 550 — la garde **n'interdit rien, elle ignore**. Un non-admin sur une
-    // compétition qui refuse le hors-calendrier confirme la sélection telle
-    // qu'elle est en base ; les deux équipes envoyées par le formulaire sont
-    // écartées.
-    //
-    // Ignorer plutôt que refuser : le POST reste le seul chemin de `Draft` vers
-    // `PreMatch`, donc le refuser empêcherait le coach de commencer son rapport.
-    // Et un corps trafiqué produit alors exactement ce qu'aurait produit un
-    // corps honnête — rien à mettre en mots à l'écran.
-    let Some((home_saisi, away_saisi)) =
-        equipes_retenues(&state, &user, &space_id, &match_report_id, &form).await
-    else {
-        return StatusCode::BAD_REQUEST.into_response();
-    };
-
-    let cmd = update_match_selection_use_case::UpdateMatchSelectionCommand {
-        match_report_id: match MatchReportId::try_new(&match_report_id) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        home_team_id: match TeamId::try_new(&home_saisi) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        away_team_id: match TeamId::try_new(&away_saisi) {
-            Ok(id) => id,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-        },
-        confirmed_by: user.id,
-        entry_mode,
-    };
-
-    match update_match_selection_use_case::execute(
+    let result = update_match_selection_use_case::execute(
         cmd,
         state.match_report.match_report_repo.as_ref(),
         state.match_report.team_data.as_ref(),
         &state.match_report.event_bus,
     )
-    .await
-    {
-        Ok(_mr_id) => {
-            let url = format!("/app/{}/match-report/{}/step2", space_id, match_report_id);
-            Redirect::to(&url).into_response()
-        }
-        Err(update_match_selection_use_case::UpdateMatchSelectionError::SameTeam) => {
-            StatusCode::BAD_REQUEST.into_response()
-        }
-        Err(update_match_selection_use_case::UpdateMatchSelectionError::TeamNotAvailable(tid)) => {
+    .await;
+    update_response(result, &space_id, &match_report_id)
+}
+
+/// Le parsing du POST, et rien d'autre : le mode d'abord, refusé en 400 avant
+/// tout effet s'il est inconnu (carte 632).
+pub(crate) fn build_update_command(
+    match_report_id: &str,
+    form: &UpdateMatchSelectionForm,
+    confirmed_by: crate::app::shared_kernel::identity::ids::CoachId,
+) -> Result<update_match_selection_use_case::UpdateMatchSelectionCommand, Response> {
+    let mauvaise_requete = || StatusCode::BAD_REQUEST.into_response();
+    let entry_mode = read_entry_mode(form.entry_mode.as_deref()).map_err(|_| mauvaise_requete())?;
+    Ok(
+        update_match_selection_use_case::UpdateMatchSelectionCommand {
+            match_report_id: MatchReportId::try_new(match_report_id)
+                .map_err(|_| mauvaise_requete())?,
+            requested_teams: requested_teams(form).map_err(|_| mauvaise_requete())?,
+            confirmed_by,
+            entry_mode,
+        },
+    )
+}
+
+/// Les deux équipes du formulaire, quand il les porte toutes les deux. Le use
+/// case décide si elles comptent.
+fn requested_teams(form: &UpdateMatchSelectionForm) -> Result<Option<(TeamId, TeamId)>, ()> {
+    let (Some(home), Some(away)) = (&form.home_team_id, &form.away_team_id) else {
+        return Ok(None);
+    };
+    let home = TeamId::try_new(home).map_err(|_| ())?;
+    let away = TeamId::try_new(away).map_err(|_| ())?;
+    Ok(Some((home, away)))
+}
+
+/// Deux « Commencer » simultanés : le second échoue sur la version, ou trouve
+/// le match déjà démarré — 409 et rechargement dans les deux cas, et il arrive
+/// sur l'état du match (cartes 623, 631, 633).
+fn update_response(
+    result: Result<MatchReportId, update_match_selection_use_case::UpdateMatchSelectionError>,
+    space_id: &str,
+    match_report_id: &str,
+) -> Response {
+    use update_match_selection_use_case::UpdateMatchSelectionError as E;
+    match result {
+        Ok(_) => Redirect::to(
+            &AppRoutes::default()
+                .match_report
+                .step2(space_id, match_report_id),
+        )
+        .into_response(),
+        Err(E::SameTeam) => StatusCode::BAD_REQUEST.into_response(),
+        Err(E::TeamNotAvailable(tid)) => {
             tracing::warn!("update_match_selection: team {tid} not available");
             StatusCode::CONFLICT.into_response()
         }
-        Err(update_match_selection_use_case::UpdateMatchSelectionError::Conflict) => {
-            conflict_response()
-        }
+        Err(E::Conflict | E::NotInDraftPhase) => conflict_response(),
         Err(e) => {
             tracing::error!("update_match_selection: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -734,5 +732,117 @@ mod entry_mode_tests {
     #[test]
     fn a_missing_field_defaults_to_solo_entry() {
         assert_eq!(read_entry_mode(None), Ok(EntryMode::SoloEntry));
+    }
+}
+
+/// Carte 633 — démarrer depuis le calendrier sans sélection.
+#[cfg(test)]
+mod start_from_schedule_tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::{
+        PlainCompetition, ReadyTeams, RecordingRepository,
+    };
+    use crate::app::shared_kernel::identity::ids::CoachId;
+
+    fn draft(origin: MatchReportOrigin) -> MatchReportDraft {
+        MatchReportDraft::create(
+            MatchReportId::new(),
+            SpaceId::new(),
+            CompetitionId::new(),
+            SeasonId::new(),
+            RoundId::new(),
+            TeamId::new(),
+            TeamId::new(),
+            CoachId::new(),
+            origin,
+            None,
+        )
+        .expect("deux équipes distinctes")
+        .0
+    }
+
+    /// Ouvre la page d'un brouillon ; rend le statut, le corps, et le nombre
+    /// d'événements appendus entre-temps.
+    async fn open(origin: MatchReportOrigin) -> (StatusCode, String, usize) {
+        let d = draft(origin);
+        let mr_id = d.id.to_string();
+        let repo = RecordingRepository::holding(MatchReportState::Draft(d));
+        let ports = EditPagePorts {
+            repo: &repo,
+            competition_data: &PlainCompetition,
+            team_data: &ReadyTeams,
+        };
+        let response = edit_page(&ports, "space", &mr_id).await;
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("corps lisible");
+        let body = String::from_utf8(bytes.to_vec()).expect("UTF-8");
+        (status, body, repo.appended().len())
+    }
+
+    /// R3 : ouvrir le lien d'un match du calendrier montre « Qui saisit ? »,
+    /// sans sélection d'équipes, et **ne confirme rien**.
+    #[tokio::test]
+    async fn opening_a_scheduled_draft_shows_the_mode_and_confirms_nothing() {
+        let (status, body, appended) = open(MatchReportOrigin::Pairing).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("Qui saisit ce match ?"), "{body}");
+        assert!(body.contains("Commencer le match"), "{body}");
+        assert!(
+            !body.contains("teams-container"),
+            "pas de sélection d'équipes"
+        );
+        assert_eq!(appended, 0, "le GET ne doit rien écrire");
+    }
+
+    /// Un brouillon hors calendrier d'avant la carte 552 garde la sélection.
+    #[tokio::test]
+    async fn opening_a_manual_draft_keeps_the_selection() {
+        let (status, body, appended) = open(MatchReportOrigin::Manual).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("teams-container"), "{body}");
+        assert_eq!(appended, 0);
+    }
+
+    fn form(home: Option<&str>, away: Option<&str>) -> UpdateMatchSelectionForm {
+        UpdateMatchSelectionForm {
+            home_team_id: home.map(str::to_string),
+            away_team_id: away.map(str::to_string),
+            entry_mode: None,
+        }
+    }
+
+    /// Le formulaire de « Qui saisit ? » n'a pas de champ d'équipe : la
+    /// commande part sans, et le brouillon démarre avec les siennes.
+    #[test]
+    fn a_post_without_teams_requests_none() {
+        let mr_id = MatchReportId::new().to_string();
+        let cmd = build_update_command(&mr_id, &form(None, None), CoachId::new())
+            .unwrap_or_else(|_| panic!("le corps sans équipes doit être accepté"));
+        assert!(cmd.requested_teams.is_none());
+    }
+
+    /// Des équipes envoyées passent dans la commande : c'est le use case qui
+    /// les écarte pour un match du calendrier (cf. ses tests).
+    #[test]
+    fn a_post_with_teams_passes_them_to_the_use_case() {
+        let (home, away) = (TeamId::new().to_string(), TeamId::new().to_string());
+        let mr_id = MatchReportId::new().to_string();
+        let cmd = build_update_command(&mr_id, &form(Some(&home), Some(&away)), CoachId::new())
+            .unwrap_or_else(|_| panic!("deux équipes valides doivent être acceptées"));
+        assert!(cmd.requested_teams.is_some());
+    }
+
+    /// Deux « Commencer » simultanés : le second, qui trouve le match déjà
+    /// démarré, reçoit 409 et recharge la page.
+    #[test]
+    fn a_second_start_is_a_conflict() {
+        let response = update_response(
+            Err(update_match_selection_use_case::UpdateMatchSelectionError::NotInDraftPhase),
+            "space",
+            "mr",
+        );
+        assert_eq!(response.status(), StatusCode::CONFLICT);
     }
 }

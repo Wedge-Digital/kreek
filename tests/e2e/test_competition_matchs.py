@@ -7,6 +7,7 @@ Les scénarios testés ici couvrent :
 - S1 / S2 : comportement partagé (onglet actif par défaut, switch onglet)
 - R1, R8  : onglet Résultats (clic + URL directe)
 - C1, C6  : onglet Calendrier (clic + URL directe)
+- C7      : une ligne du calendrier démarre le match (« Qui saisit ? », carte 633)
 
 Les scénarios de scroll (R6/R7/C5) et de données spécifiques (R2–R5, C2–C4)
 sont couverts unitairement dans les controllers Rust (format_date_range, etc.)
@@ -245,7 +246,9 @@ def paired_competition(browser, space_id):
 def test_c7_clic_ligne_calendrier_ouvre_la_saisie_du_rapport(
     page: Page, paired_competition, console_errors
 ):
-    """C7 — Une ligne de calendrier mène à la phase 1 de la saisie du rapport."""
+    """C7 — Une ligne de calendrier mène à « Qui saisit ? », et « Commencer »
+    mène droit à l'avant-match (carte 633) : plus de sélection d'équipes pour
+    un match déjà au calendrier."""
     base = BASE_URL
     url = f"{_detail_url(base, paired_competition)}/calendrier"
     page.goto(url, wait_until="load")
@@ -256,7 +259,13 @@ def test_c7_clic_ligne_calendrier_ouvre_la_saisie_du_rapport(
     with page.expect_navigation(wait_until="load"):
         row_link.click()
 
-    # /match-report/pairing/<id> redirige vers l'édition du rapport…
+    # /match-report/pairing/<id> redirige vers le rapport…
     expect(page).to_have_url(re.compile(r"/match-report/[^/]+$"))
-    # …dont l'étape 1 est active.
-    expect(page.locator(".mr-step--active")).to_have_text("1")
+    # …qui demande qui saisit, sans proposer de choisir les équipes.
+    expect(page.locator(".entry-mode-card")).to_contain_text("Qui saisit ce match ?")
+    expect(page.locator("#teams-container")).to_have_count(0)
+
+    with page.expect_navigation(wait_until="load"):
+        page.get_by_role("button", name="Commencer").click()
+
+    expect(page).to_have_url(re.compile(r"/match-report/[^/]+/step2$"))

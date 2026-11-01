@@ -121,8 +121,8 @@
 # L'option « hors calendrier » et ses trois effets (carte 550). `web` n'est pas
 # un BC de la carte, mais le test regarde le menu — il dépend donc aussi de
 # `spaces`, qui porte l'appartenance lue par `app_menu`. `match_report` est une
-# dépendance **dure** : la garde de création et la phase 1 en lecture seule y
-# vivent.
+# dépendance **dure** : la garde de création et le démarrage sans sélection
+# d'un match du calendrier (carte 633) y vivent.
 "test_competition_hors_calendrier" = ["competitions", "auth", "teams", "spaces",
                                       "references", "match_report"]
 # compétition. Une régression dans l'un ou l'autre BC doit le réveiller.
@@ -166,7 +166,8 @@
                                      "references", "ranking", "spaces", "match_report"]
 
 # ── Onglets de la page compétition ───────────────────────────────────────────
-# match_report : la ligne de calendrier ouvre la saisie du rapport.
+# match_report : la ligne de calendrier ouvre « Qui saisit ? », et « Commencer »
+# démarre le match (carte 633) — `teams` en vérifie la disponibilité.
 "test_competition_matchs" = ["competitions", "match_report", "teams", "players",
                              "team_creation", "references", "ranking", "spaces"]
 
@@ -448,14 +449,10 @@
 # test n'exerce pas.
 "test_accueil_derniers_resultats" = ["news", "competitions", "match_report", "teams", "players",
                                      "references", "team_creation", "spaces", "spp_calculator"]
-# La phase 1 d'un rapport en édition (carte 565) : la page de `match_report`
-# compose le widget de compétition (`competitions`) et celui des équipes
-# (`teams`) ; la fixture traverse la même construction que ci-dessus.
-"test_match_selection_edition" = ["match_report", "competitions", "teams", "auth", "spaces",
-                                  "references", "team_creation"]
 # « Qui saisit ? » au démarrage (carte 632) : la carte vit dans la phase 1 de
 # `match_report`, et le démarrage d'un brouillon du calendrier passe par
-# `teams` (disponibilité) ; la fixture traverse la même construction.
+# `teams` (disponibilité) ; la fixture traverse la même construction. Depuis la
+# carte 633, un brouillon du calendrier s'ouvre sur cette seule carte.
 "test_match_report_entry_mode" = ["match_report", "competitions", "teams", "auth", "spaces",
                                   "references", "team_creation"]
 

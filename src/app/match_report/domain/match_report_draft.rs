@@ -53,6 +53,14 @@ impl MatchReportDraft {
         Ok((draft, event))
     }
 
+    /// Un match du calendrier **garde ses équipes** (règle R4 de l'épic E21,
+    /// carte 633) : seul le déplacement admin le change, jamais la sélection.
+    /// Un brouillon né hors calendrier — il n'en reste plus depuis la carte
+    /// 552, qui le confirme à la création — garde, lui, sa sélection.
+    pub fn keeps_its_teams(&self) -> bool {
+        self.origin == MatchReportOrigin::Pairing
+    }
+
     pub fn update_selection(
         &self,
         home_team_id: TeamId,
@@ -148,5 +156,39 @@ impl MatchReportDraft {
             },
             _ => unreachable!("apply_selection_updated appelé avec un mauvais event"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn draft(origin: MatchReportOrigin) -> MatchReportDraft {
+        MatchReportDraft::create(
+            MatchReportId::new(),
+            SpaceId::new(),
+            CompetitionId::new(),
+            SeasonId::new(),
+            RoundId::new(),
+            TeamId::new(),
+            TeamId::new(),
+            CoachId::new(),
+            origin,
+            None,
+        )
+        .expect("deux équipes distinctes")
+        .0
+    }
+
+    /// R4 : un match du calendrier ne change plus d'équipes par la sélection.
+    #[test]
+    fn a_scheduled_draft_keeps_its_teams() {
+        assert!(draft(MatchReportOrigin::Pairing).keeps_its_teams());
+    }
+
+    /// Un brouillon hors calendrier d'avant la carte 552 garde sa sélection.
+    #[test]
+    fn a_manual_draft_does_not_keep_its_teams() {
+        assert!(!draft(MatchReportOrigin::Manual).keeps_its_teams());
     }
 }

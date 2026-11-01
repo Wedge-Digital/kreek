@@ -43,11 +43,11 @@ reste.
 
 ## Checklist
 
-- [ ] `match-mode.html` rendu pour un brouillon du calendrier
-- [ ] POST `/{id}` : équipes du brouillon, mode du formulaire
-- [ ] Ce qui ne sert plus dans le contrôleur de sélection : consommateurs listés, puis retiré
-- [ ] Tests unitaires : le GET ne confirme rien ; le POST ignore des équipes envoyées
-- [ ] E2E : `test_competition_matchs.py` C7 migré — la ligne du calendrier mène à « Qui saisit ? », « Commencer » mène à l'avant-match
-- [ ] Mesure sur dump : brouillons `Manual` restants
-- [ ] `tests/impact-map.toml` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `match-mode.html` rendu pour un brouillon du calendrier
+- [x] POST `/{id}` : équipes du brouillon, mode du formulaire
+- [x] Ce qui ne sert plus dans le contrôleur de sélection : consommateurs listés, puis retiré
+- [x] Tests unitaires : le GET ne confirme rien ; le POST ignore des équipes envoyées
+- [x] E2E : `test_competition_matchs.py` C7 migré — la ligne du calendrier mène à « Qui saisit ? », « Commencer » mène à l'avant-match
+- [x] Mesure sur dump : brouillons `Manual` restants
+- [x] `tests/impact-map.toml` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

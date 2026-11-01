@@ -249,7 +249,10 @@ def test_la_creation_manuelle_est_refusee_quand_l_option_est_decochee(
     _regler(space_id, competition, True)
 
 
-# ══ 4 · La phase 1 en lecture seule ═══════════════════════════════════════════
+# ══ 4 · Les équipes d'un match du calendrier ne changent pas ══════════════════
+#
+# Depuis la carte 633, c'est vrai pour tous, admin compris, quel que soit le
+# réglage : un match du calendrier s'ouvre sur « Qui saisit ? », sans sélection.
 
 
 def test_un_post_trafique_ne_change_pas_les_equipes(space_id, competition):
@@ -316,7 +319,8 @@ def test_un_membre_simple_commence_son_rapport_depuis_la_phase_figee(
 ):
     """**Le vrai bouton, pas un POST forgé** (carte 564).
 
-    En lecture seule, le formulaire n'a plus aucun champ et part vide. Le
+    Le formulaire n'a aucun champ d'équipe : depuis la carte 633, un match du
+    calendrier s'ouvre sur « Qui saisit ? », qui n'envoie que le mode. Le
     serveur exigeait les cinq champs de la création, et répondait `missing
     field competition_id` : le coach ne pouvait plus commencer son rapport. Le
     test précédent ne le voyait pas, parce qu'il envoie un corps complet.
@@ -327,7 +331,8 @@ def test_un_membre_simple_commence_son_rapport_depuis_la_phase_figee(
 
     _en_membre_simple(page)
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}", wait_until="load")
-    expect(page.locator(".mr-figee").first).to_be_visible(timeout=15000)
+    expect(page.locator(".entry-mode-card")).to_be_visible(timeout=15000)
+    expect(page.locator("#teams-container")).to_have_count(0)
 
     page.get_by_role("button", name="Commencer").click()
 
