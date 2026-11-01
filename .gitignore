@@ -60,3 +60,6 @@ assets/references/
 
 # Fichiers de travail du canevas de design — sources des planches, pas du produit.
 .design/
+
+# Les worktrees des agents de Claude Code : des copies de travail, jamais du code à suivre.
+.claude/worktrees/
