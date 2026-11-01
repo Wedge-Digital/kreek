@@ -30,7 +30,7 @@ Reprend l'algorithme de tirage de la branche `sondage-presence`
 
 ## Avancement
 
-Spec de la page : `calendrier/`. Épic : `E18`, cartes 595 à 602.
+Spec de la page : `calendrier/`. Épic : `E18`, cartes 612 à 619.
 
 | Page | Maquette | Front | Back | DTOs | Use cases | Domaine | Intégration | Cartes |
 |---|---|---|---|---|---|---|---|---|

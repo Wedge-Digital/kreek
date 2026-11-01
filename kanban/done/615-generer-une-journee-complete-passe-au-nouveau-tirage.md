@@ -1,6 +1,6 @@
 # « Générer une journée complète » passe au nouveau tirage
 
-**Épic :** E18 — Appariement des présents · **Ordre :** 4 · **Dépend de :** 595, 596, 597
+**Épic :** E18 — Appariement des présents · **Ordre :** 4 · **Dépend de :** 612, 613, 614
 **Conception :** `docs/specs/appariement-des-presents/calendrier/05-use-cases.md` (§ chargement commun, § 4)
 
 ## Le défaut corrigé
@@ -48,7 +48,7 @@ vide (R9).
 
 | Élément | Consommateurs | Remplacé par |
 |---|---|---|
-| `generate_round_pairings`, `normalize_pair` et leurs tests | `generate_pairings.rs` seul | `draw::draw` et ses tests (595) |
+| `generate_round_pairings`, `normalize_pair` et leurs tests | `generate_pairings.rs` seul | `draw::draw` et ses tests (612) |
 | `build_played_set`, `generate_and_save_group_pairings` | locaux | `draw_input.rs`, `save_pairings` |
 | `emit_pairing_created` | local | `pairing_created.rs` |
 

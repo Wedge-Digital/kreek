@@ -8,7 +8,7 @@
 Doter le BC `competitions` d'un algorithme de tirage juste : apparier le plus
 d'équipes possible, rejouer le moins et le plus anciennement, exempter celle qui
 a le plus joué, ne jamais opposer deux équipes d'un même coach, et départager au
-sort. Aucun appelant à cette étape — la carte 598 le branche.
+sort. Aucun appelant à cette étape — la carte 615 le branche.
 
 ## Ce qui est repris, et comment
 
@@ -59,5 +59,5 @@ aucune poule n'en a deux.
       l'aléa
 - [x] Tests de `draw_pools` : poule à un présent sans rencontre ; aucune poule
       tirable → `NotEnoughPresent`
-- [x] `generate_round_pairings` **n'est pas touché** ici (carte 598)
+- [x] `generate_round_pairings` **n'est pas touché** ici (carte 615)
 - [x] `make lint`, `make check-arch`, `make test`

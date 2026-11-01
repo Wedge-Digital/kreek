@@ -41,5 +41,5 @@ Les doublures de test de `IMatchDayRepository` gagnent la méthode.
 - [x] Doublures de test mises à jour
 - [x] `test_save_pairings.rs` : tout est écrit ; journée pourvue refusée ; un
       refus n'écrit rien
-- [x] Aucun appelant à cette étape — la carte 598 le branche
+- [x] Aucun appelant à cette étape — la carte 615 le branche
 - [x] `make lint`, `make check-arch`, `make test`

@@ -5,7 +5,7 @@ match hors l'exemptée. C'est la régression du défaut de l'ancien tirage
 (`generate_round_pairings`), qui préférait renvoyer une équipe chez elle
 plutôt que de programmer une revanche.
 
-Les scénarios 1 à 8 — l'appariement des présents — arrivent avec la carte 602.
+Les scénarios 1 à 8 — l'appariement des présents — arrivent avec la carte 619.
 
 **Ce qui n'est pas testé : l'aléa.** On vérifie que chaque présente joue, pas
 qui joue contre qui : un test qui dépendrait du tirage échouerait une fois sur

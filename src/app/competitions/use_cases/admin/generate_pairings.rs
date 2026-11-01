@@ -544,7 +544,7 @@ mod tests {
         assert_eq!(outcome.skipped_group_names, vec!["Poule 1".to_string()]);
     }
 
-    // ── Le nouveau tirage (épic E18, carte 598) ──────────────────────────────
+    // ── Le nouveau tirage (épic E18, carte 615) ──────────────────────────────
 
     fn team(coach: &str) -> TeamInfoDto {
         let id = TeamId::new().to_string();

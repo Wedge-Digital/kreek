@@ -1,6 +1,6 @@
 # Écrire le tirage au calendrier
 
-**Épic :** E18 — Appariement des présents · **Ordre :** 7 · **Dépend de :** 600
+**Épic :** E18 — Appariement des présents · **Ordre :** 7 · **Dépend de :** 617
 **Conception :** `docs/specs/appariement-des-presents/calendrier/04-dtos.md` (§ 3),
 `05-use-cases.md` (§ 3), `07-integration.md`
 
@@ -45,7 +45,7 @@ rencontres écrites · Plague Bringers exemptée · Dwarf Giants absente" }`. Re
 
 ## Checklist
 
-- [ ] Use case, handler, route ; « Écrire au calendrier » de 600 actif
+- [ ] Use case, handler, route ; « Écrire au calendrier » de 617 actif
 - [ ] Toast de succès
 - [ ] Tests du use case : écriture et émission sur un tirage valide ; chaque
       refus de `accept_draw` relayé sans écriture ni émission ;

@@ -1,13 +1,13 @@
 # Les tests e2e de l'appariement des présents
 
-**Épic :** E18 — Appariement des présents · **Ordre :** 8 · **Dépend de :** 601
+**Épic :** E18 — Appariement des présents · **Ordre :** 8 · **Dépend de :** 618
 **Conception :** `docs/specs/appariement-des-presents/calendrier/07-integration.md` (Tests e2e)
 
 ## Objectif
 
 Tenir le parcours entier dans un navigateur, de la journée vide aux rencontres
 écrites. Le scénario n°9 — « Générer une journée complète » — est livré par la
-carte 598.
+carte 615.
 
 ## Les scénarios — `tests/e2e/test_schedule_draw.py`
 

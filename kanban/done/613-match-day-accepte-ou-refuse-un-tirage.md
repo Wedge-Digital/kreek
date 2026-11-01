@@ -1,6 +1,6 @@
 # MatchDay accepte ou refuse un tirage
 
-**Épic :** E18 — Appariement des présents · **Ordre :** 2 · **Dépend de :** 595
+**Épic :** E18 — Appariement des présents · **Ordre :** 2 · **Dépend de :** 612
 **Conception :** `docs/specs/appariement-des-presents/calendrier/06-domaine.md` (§ 2, § 4)
 
 ## Objectif
@@ -52,7 +52,7 @@ Les messages `#[error(...)]` sont ceux que l'organisateur lira en toast :
 « Halfling Legends n'est plus inscrite à la compétition », etc. Les identifiants
 sont des `TeamId` ; les noms sont résolus par le handler.
 
-**`pairings` reste `pub`** — encapsulation hors périmètre, carte 594.
+**`pairings` reste `pub`** — encapsulation hors périmètre, carte 611.
 
 ## Checklist
 

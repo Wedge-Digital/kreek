@@ -1,6 +1,6 @@
 # L'aperçu du tirage
 
-**Épic :** E18 — Appariement des présents · **Ordre :** 6 · **Dépend de :** 599
+**Épic :** E18 — Appariement des présents · **Ordre :** 6 · **Dépend de :** 616
 **Conception :** `docs/specs/appariement-des-presents/calendrier/04-dtos.md` (§ 2),
 `05-use-cases.md` (§ 2)
 **Maquette :** `assets/rawpages/html/app-competition-admin-schedule-draw.html`, état 3
@@ -40,14 +40,14 @@ revanche n'a pas pu être évitée » — le tirage n'en garde que d'inévitable
 exemptée avec son nombre de matchs, absentes ; « Rien n'est écrit au calendrier
 tant que vous n'avez pas validé ». Champs cachés `team_ids` (pour « Retirer au
 sort », qui renvoie le même formulaire), `pairings` (`home_id:away_id`) et
-`exempted` (pour la carte 601). « ← Modifier les présents » rouvre l'étape 599
-avec `absent=…`. « ✓ Écrire au calendrier » est présent, inactif jusqu'à la 601.
+`exempted` (pour la carte 618). « ← Modifier les présents » rouvre l'étape 616
+avec `absent=…`. « ✓ Écrire au calendrier » est présent, inactif jusqu'à la 618.
 
 **Route** — `admin_schedule_draw_preview`.
 
 ## Checklist
 
-- [ ] Use case, handler, VMs, gabarit, route ; « Tirer au sort » de 599 actif
+- [ ] Use case, handler, VMs, gabarit, route ; « Tirer au sort » de 616 actif
 - [ ] « Retirer au sort » et « Modifier les présents »
 - [ ] `hx-on::after-request` → `handleScheduleActionResponse` sur les refus
 - [ ] Tests du use case : rien n'est écrit (doublure de dépôt sans écriture) ;

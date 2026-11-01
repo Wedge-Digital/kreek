@@ -62,7 +62,7 @@ indépendants entre eux et de la garde.
 - **« Validé par »**, par camp : E22 — en « Je saisis tout », valider et
   publier ne font qu'un.
 - **Les journaliers d'un match sans coups de pouce** : sortis de l'épic, carte
-  603, sans épic.
+  620, sans épic.
 
 ## Terminé quand
 

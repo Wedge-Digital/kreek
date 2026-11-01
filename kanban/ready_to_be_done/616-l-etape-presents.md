@@ -1,6 +1,6 @@
 # L'étape « Présents »
 
-**Épic :** E18 — Appariement des présents · **Ordre :** 5 · **Dépend de :** 598
+**Épic :** E18 — Appariement des présents · **Ordre :** 5 · **Dépend de :** 615
 **Conception :** `docs/specs/appariement-des-presents/calendrier/02-front.md`,
 `04-dtos.md` (§ 1), `07-integration.md`
 **Maquette :** `assets/rawpages/html/app-competition-admin-schedule-draw.html`, état 2
@@ -10,7 +10,7 @@
 Sur une journée vide du Calendrier, « Faire les appariements » ouvre la liste
 des équipes inscrites, poule par poule, toutes cochées (R2). L'organisateur
 décoche les absentes. Le bouton « Tirer au sort » est rendu, désactivé : la carte
-600 le branche.
+617 le branche.
 
 ## Conception
 
@@ -22,7 +22,7 @@ pub async fn load(round_id: &MatchId, season_id: &SeasonId, deps: &DrawDeps<'_>)
     -> Result<DrawCandidates, DrawCandidatesError>;
 ```
 
-`load_draw_context` (598), `can_receive_draw()`, puis par poule les inscrites
+`load_draw_context` (615), `can_receive_draw()`, puis par poule les inscrites
 avec leur nombre de matchs joués (`build_matches_played`).
 
 **Handler** — `io/web/admin/schedule_draw_widget.rs` : `get_draw_widget`,

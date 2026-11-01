@@ -23,7 +23,7 @@ de saison.
 
 ## État
 
-4/8 : le tirage vit dans `domain/draw.rs` (595), `MatchDay` le vérifie (596), `save_pairings` écrit une journée d'un bloc (597), et « Générer une journée complète » s'en sert (598). Il reste 599 à 602.
+4/8 : le tirage vit dans `domain/draw.rs` (612), `MatchDay` le vérifie (613), `save_pairings` écrit une journée d'un bloc (614), et « Générer une journée complète » s'en sert (615). Il reste 616 à 619.
 
 L'algorithme de tirage est **repris** de la branche `sondage-presence`, où il a
 été écrit, mesuré et testé ; le reste de la branche — sondage par e-mail,
@@ -35,22 +35,22 @@ plus de vingt lignes, dix-huit fichiers en conflit avec `main`.
 
 | # | Intitulé | Apport |
 |---|---|---|
-| 595 | Le tirage rejoint le domaine | `domain/draw.rs`, repris et renommé |
-| 596 | MatchDay accepte ou refuse un tirage | `can_receive_draw`, `accept_draw` |
-| 597 | Écrire une journée d'un bloc | `save_pairings`, atomique sous verrou |
-| 598 | « Générer une journée complète » passe au nouveau tirage | le défaut de `main` corrigé |
-| 599 | L'étape « Présents » | l'écran des équipes à cocher |
-| 600 | L'aperçu du tirage | tirer sans écrire, retirer au sort |
-| 601 | Écrire le tirage au calendrier | revérifier, écrire, annoncer |
-| 602 | Les tests e2e de l'appariement des présents | le parcours dans un navigateur |
+| 612 | Le tirage rejoint le domaine | `domain/draw.rs`, repris et renommé |
+| 613 | MatchDay accepte ou refuse un tirage | `can_receive_draw`, `accept_draw` |
+| 614 | Écrire une journée d'un bloc | `save_pairings`, atomique sous verrou |
+| 615 | « Générer une journée complète » passe au nouveau tirage | le défaut de `main` corrigé |
+| 616 | L'étape « Présents » | l'écran des équipes à cocher |
+| 617 | L'aperçu du tirage | tirer sans écrire, retirer au sort |
+| 618 | Écrire le tirage au calendrier | revérifier, écrire, annoncer |
+| 619 | Les tests e2e de l'appariement des présents | le parcours dans un navigateur |
 
 ## Ce qui commande l'ordre
 
-**598 passe avant l'écran.** Elle répare « Générer les rencontres » et se livre
+**615 passe avant l'écran.** Elle répare « Générer les rencontres » et se livre
 seule, avant tout le reste ; elle pose aussi le chargement commun et l'émission
-partagée que 599 à 601 réutilisent.
+partagée que 616 à 618 réutilisent.
 
-595 et 597 sont indépendantes. 599, 600 et 601 forment une chaîne dont chaque
+612 et 614 sont indépendantes. 616, 617 et 618 forment une chaîne dont chaque
 maillon est livrable : les présents s'ouvrent avant que l'aperçu existe,
 l'aperçu se voit avant que l'écriture existe.
 
@@ -61,7 +61,7 @@ l'aperçu se voit avant que l'écriture existe.
   branche `sondage-presence`, laissé de côté.
 - **Retoucher l'aperçu à la main** (R6) : on retire au sort, ou l'on corrige
   après écriture comme aujourd'hui.
-- **L'encapsulation de `MatchDay`** : carte 594, sans épic.
+- **L'encapsulation de `MatchDay`** : carte 611, sans épic.
 
 ## Terminé quand
 
