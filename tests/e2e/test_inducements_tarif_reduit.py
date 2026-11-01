@@ -27,7 +27,7 @@ import requests
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
-from match_report_helpers import create_draft, ensure_pre_match
+from match_report_helpers import create_draft, ensure_pre_match, pass_topdog_first
 
 RENFORT = "DEMO_RENFORT_TEMPORAIRE"
 PLEIN_TARIF = 20
@@ -111,6 +111,10 @@ def achat_ctx(browser, space_id):
     mr_id = create_draft(space_id, full, full["round_ids"][0], avec, temoin)
     ensure_pre_match(space_id, mr_id, full, full["round_ids"][0], avec, temoin)
     _ouvrir_les_coups_de_pouce(space_id, mr_id)
+    # Le favori choisit d'abord (carte 627, R9) : si l'équipe testée est
+    # l'outsider, le témoin passe avant elle. Passer ne dépense rien, son
+    # budget reste celui qu'elle avait sans lui.
+    pass_topdog_first(space_id, mr_id, avec)
     _acheter(space_id, mr_id, avec)
 
     return {"mr_id": mr_id, "avec": avec, "temoin": temoin}

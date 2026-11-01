@@ -1,6 +1,6 @@
 # E20 — Coups de pouce : le panier et l'annulation
 
-**État :** `en_cours` — 5 cartes, 626 à 630 ; 2 faites (626, 629). Découpage et cadrage validés le
+**État :** `en_cours` — 5 cartes, 626 à 630 ; 3 faites (626, 627, 629). Découpage et cadrage validés le
 2026-11-01. **Cadrage :** `docs/specs/saisie-mobile/E20-cadrage.md`
 Née le 2026-11-01 des maquettes
 mobiles. Indépendante du mode de saisie : elle vaut sur ordinateur comme sur

@@ -223,6 +223,7 @@ impl MatchReportPreMatch {
         opponent_star_uids: &[InducementId],
         recorded_by: CoachId,
     ) -> Result<(Self, Vec<MatchReportDomainEvent>), DomainError> {
+        self.check_inducements_open_for(team_id)?;
         validate_purchases(purchases, allowed_specs, opponent_star_uids, budget)?;
         let purchase_list = build_purchase_list(purchases, allowed_specs)?;
         let events = build_inducement_events(team_id, &purchase_list, allowed_specs, recorded_by);
@@ -230,6 +231,48 @@ impl MatchReportPreMatch {
         set_inducements_for(&mut updated, team_id, purchase_list);
         updated.version += events.len() as u64;
         Ok((updated, events))
+    }
+
+    /// R1 : l'équipe a validé ses coups de pouce depuis la dernière
+    /// annulation — achats ou « Passer », qui enregistre une liste vide.
+    pub fn has_recorded_inducements(&self, team_id: &TeamId) -> bool {
+        self.inducements_for(team_id).is_some()
+    }
+
+    /// R2 puis R9 : l'équipe peut-elle encore enregistrer ses coups de pouce ?
+    ///
+    /// Une équipe qui a validé ne rachète plus ; l'outsider attend que le favori
+    /// ait validé. R9 ne regarde que les nouveaux envois : un outsider qui avait
+    /// acheté avant le favori garde ses achats.
+    ///
+    /// R2 passe avant la question des valeurs d'équipe : un `ReadyToPublish`
+    /// converti par `into_pre_match()` n'en porte pas, et doit être refusé
+    /// pour ce qu'il est.
+    pub fn check_inducements_open_for(&self, team_id: &TeamId) -> Result<(), DomainError> {
+        if self.has_recorded_inducements(team_id) {
+            return Err(DomainError::InducementsAlreadyRecorded);
+        }
+        if self.home_team_value.is_none() || self.away_team_value.is_none() {
+            return Err(DomainError::TeamValuesNotRecorded);
+        }
+        let topdog = self.topdog_team_id();
+        if team_id != topdog && !self.has_recorded_inducements(topdog) {
+            return Err(DomainError::TopdogHasNotChosen);
+        }
+        Ok(())
+    }
+
+    /// L'équipe dont c'est le tour de choisir (R7, R9) : le favori tant qu'il
+    /// n'a pas validé, puis l'outsider. Quand les deux ont validé, le favori —
+    /// en attendant le récapitulatif de la carte 628.
+    pub fn inducements_turn(&self) -> &TeamId {
+        let topdog = self.topdog_team_id();
+        let underdog = self.underdog_team_id();
+        if self.has_recorded_inducements(topdog) && !self.has_recorded_inducements(underdog) {
+            underdog
+        } else {
+            topdog
+        }
     }
 
     fn inducements_for(&self, team_id: &TeamId) -> Option<&Vec<InducementPurchase>> {
@@ -1905,5 +1948,183 @@ mod tests {
         let mut pm = make_pm(1100, 1000);
         pm.home_inducements = Some(vec![]);
         assert!(pm.cancel_inducements(CoachId::new()).is_ok());
+    }
+
+    // ── carte 627 : des achats validés ne se modifient plus ──────────────────
+
+    /// Enregistre un achat vide — « Passer » — pour l'équipe donnée.
+    fn pass(
+        pm: &MatchReportPreMatch,
+        team_id: &TeamId,
+    ) -> Result<MatchReportPreMatch, DomainError> {
+        pm.record_inducements(team_id, &[], 0, &[], &[], CoachId::new())
+            .map(|(updated, _)| updated)
+    }
+
+    /// Un achat de 50 kPo pour l'équipe donnée.
+    fn buy(pm: &MatchReportPreMatch, team_id: &TeamId) -> Result<MatchReportPreMatch, DomainError> {
+        let specs = vec![spec("BRIBE", 2, 50, false)];
+        let purchases = [(InducementId("BRIBE".into()), 1)];
+        pm.record_inducements(team_id, &purchases, 1_000, &specs, &[], CoachId::new())
+            .map(|(updated, _)| updated)
+    }
+
+    #[test]
+    fn passer_vaut_validation() {
+        let pm = make_pm(1100, 1000);
+        let home = pm.home_team_id.clone();
+        assert!(!pm.has_recorded_inducements(&home));
+        assert!(pass(&pm, &home).unwrap().has_recorded_inducements(&home));
+    }
+
+    /// R2 : un second envoi est refusé, avant toute validation d'achat — même
+    /// un panier hors budget répond « déjà validé ».
+    #[test]
+    fn racheter_apres_un_achat_est_refuse() {
+        let pm = make_pm(1100, 1000);
+        let home = pm.home_team_id.clone();
+        let pm = buy(&pm, &home).unwrap();
+        assert_eq!(
+            buy(&pm, &home).unwrap_err(),
+            DomainError::InducementsAlreadyRecorded
+        );
+        let over_budget = pm.record_inducements(
+            &home,
+            &[(InducementId("BRIBE".into()), 1)],
+            0,
+            &[spec("BRIBE", 2, 50, false)],
+            &[],
+            CoachId::new(),
+        );
+        assert_eq!(
+            over_budget.unwrap_err(),
+            DomainError::InducementsAlreadyRecorded
+        );
+    }
+
+    #[test]
+    fn racheter_apres_passer_est_refuse() {
+        let pm = make_pm(1100, 1000);
+        let home = pm.home_team_id.clone();
+        let pm = pass(&pm, &home).unwrap();
+        assert_eq!(
+            buy(&pm, &home).unwrap_err(),
+            DomainError::InducementsAlreadyRecorded
+        );
+    }
+
+    /// Un `ReadyToPublish` reconverti — il n'a plus de valeurs d'équipe — est
+    /// refusé pour ce qu'il est : des achats validés.
+    #[test]
+    fn racheter_depuis_un_ready_to_publish_est_refuse() {
+        let pm = validated_both_sides();
+        let home = pm.home_team_id.clone();
+        let (ready, _) = pm.record_post_match(
+            MatchGain::try_new(10).unwrap(),
+            MatchGain::try_new(10).unwrap(),
+            NoStallingBonuses::default(),
+            FanFactorMod::try_new(0).unwrap(),
+            FanFactorMod::try_new(0).unwrap(),
+            None,
+            None,
+            CoachId::new(),
+        );
+        let reconverted = ready.into_pre_match();
+        assert_eq!(
+            pass(&reconverted, &home).unwrap_err(),
+            DomainError::InducementsAlreadyRecorded
+        );
+    }
+
+    #[test]
+    fn l_autre_equipe_achete_toujours() {
+        let pm = make_pm(1100, 1000);
+        let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
+        let pm = buy(&pm, &home).unwrap();
+        let pm = buy(&pm, &away).unwrap();
+        assert!(pm.has_recorded_inducements(&away));
+    }
+
+    /// R9 : l'outsider attend le favori.
+    #[test]
+    fn l_outsider_est_refuse_avant_le_favori() {
+        let pm = make_pm(1100, 1000);
+        let away = pm.away_team_id.clone();
+        assert_eq!(
+            pass(&pm, &away).unwrap_err(),
+            DomainError::TopdogHasNotChosen
+        );
+    }
+
+    /// R9 suit le favori, pas le domicile : favori à l'extérieur, c'est le
+    /// domicile qui attend.
+    #[test]
+    fn le_domicile_outsider_attend_le_favori_exterieur() {
+        let pm = make_pm(1000, 1100);
+        let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
+        assert_eq!(
+            buy(&pm, &home).unwrap_err(),
+            DomainError::TopdogHasNotChosen
+        );
+        assert!(buy(&pass(&pm, &away).unwrap(), &home).is_ok());
+    }
+
+    #[test]
+    fn l_outsider_est_admis_apres_un_achat_du_favori() {
+        let pm = make_pm(1100, 1000);
+        let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
+        assert!(pass(&buy(&pm, &home).unwrap(), &away).is_ok());
+    }
+
+    #[test]
+    fn l_outsider_est_admis_apres_passer_du_favori() {
+        let pm = make_pm(1100, 1000);
+        let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
+        assert!(buy(&pass(&pm, &home).unwrap(), &away).is_ok());
+    }
+
+    /// Données de production : un outsider qui a acheté avant le favori garde
+    /// ses achats, et le favori choisit encore les siens.
+    #[test]
+    fn le_favori_achete_encore_apres_un_outsider_premier() {
+        let mut pm = make_pm(1100, 1000);
+        pm.away_inducements = Some(vec![achat(30, 1)]);
+        let home = pm.home_team_id.clone();
+        let updated = buy(&pm, &home).unwrap();
+        assert_eq!(updated.away_inducements, Some(vec![achat(30, 1)]));
+    }
+
+    /// Après l'annulation (626), le favori rachète, puis l'outsider.
+    #[test]
+    fn apres_une_annulation_on_rachete_favori_d_abord() {
+        let (pm, _) = validated_both_sides()
+            .cancel_inducements(CoachId::new())
+            .unwrap();
+        let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
+        assert_eq!(
+            pass(&pm, &away).unwrap_err(),
+            DomainError::TopdogHasNotChosen
+        );
+        let pm = buy(&pm, &home).unwrap();
+        assert!(pass(&pm, &away).is_ok());
+    }
+
+    #[test]
+    fn le_tour_passe_du_favori_a_l_outsider() {
+        let pm = make_pm(1100, 1000);
+        let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
+        assert_eq!(pm.inducements_turn(), &home);
+        let pm = pass(&pm, &home).unwrap();
+        assert_eq!(pm.inducements_turn(), &away);
+        let pm = pass(&pm, &away).unwrap();
+        assert_eq!(pm.inducements_turn(), &home, "en attendant la carte 628");
+    }
+
+    /// R7 : l'outsider qui a validé seul, avant le favori, renvoie au favori.
+    #[test]
+    fn le_tour_revient_au_favori_quand_l_outsider_a_valide_seul() {
+        let mut pm = make_pm(1100, 1000);
+        pm.away_inducements = Some(vec![]);
+        assert_eq!(pm.inducements_turn(), &pm.home_team_id);
     }
 }

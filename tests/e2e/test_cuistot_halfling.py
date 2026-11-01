@@ -31,7 +31,7 @@ import requests
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
-from match_report_helpers import create_draft, ensure_pre_match
+from match_report_helpers import create_draft, ensure_pre_match, pass_topdog_first
 
 CUISTOT = "HALFLING_MASTER_CHEF"
 PLEIN_TARIF = 300
@@ -99,6 +99,11 @@ def cuistot_ctx(browser, space_id):
     # plafonné à sa petite monnaie plus 50 kPo : lui faire acheter un cuistot à
     # 300 ferait dépendre le test d'un équilibre de valeurs d'équipe, pas du
     # tarif. Le plein tarif appliqué est couvert par le test de l'adapter.
+    #
+    # Le favori choisit d'abord (carte 627, R9) : si le halfling est
+    # l'outsider, le témoin **passe** avant lui — sans rien dépenser, donc sans
+    # changer la petite monnaie du halfling.
+    pass_topdog_first(space_id, mr_id, halfling)
     _acheter_le_cuistot(space_id, mr_id, halfling)
 
     return {"space_id": space_id, "mr_id": mr_id, "halfling": halfling, "temoin": temoin}

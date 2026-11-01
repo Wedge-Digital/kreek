@@ -60,18 +60,18 @@ avant le favori garde ses achats.
 
 ## Checklist
 
-- [ ] `has_recorded_inducements`, le refus du domaine
-- [ ] `AlreadyRecorded`, 409 et son message ; `refus_d_achat` le nomme
-- [ ] La redirection du GET
-- [ ] Tests unitaires : racheter après un achat, après « Passer », depuis un
+- [x] `has_recorded_inducements`, le refus du domaine
+- [x] `AlreadyRecorded`, 409 et son message ; `refus_d_achat` le nomme
+- [x] La redirection du GET
+- [x] Tests unitaires : racheter après un achat, après « Passer », depuis un
       `ReadyToPublish` ; l'autre équipe achète toujours ; après une annulation
       (626), on rachète
-- [ ] R9 : le refus de l'outsider avant le favori, 409, et la redirection du GET ;
+- [x] R9 : le refus de l'outsider avant le favori, 409, et la redirection du GET ;
       tests unitaires : l'outsider refusé avant le favori, admis après un achat
       comme après « Passer »
-- [ ] `test_inducements_restreints`, `test_inducements_tarif_reduit` et
+- [x] `test_inducements_restreints`, `test_inducements_tarif_reduit` et
       `test_cuistot_halfling` font passer le favori d'abord quand l'équipe visée
       est l'outsider
-- [ ] `test_cart_footer_visible` rendu indépendant du passage du favori dans le
+- [x] `test_cart_footer_visible` rendu indépendant du passage du favori dans le
       même module (cf. fiche § 6)
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

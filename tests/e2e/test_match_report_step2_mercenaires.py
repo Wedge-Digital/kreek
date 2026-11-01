@@ -28,16 +28,23 @@ _TEAM_ID_RE = re.compile(r"/inducements/([0-9A-Z]{26})")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _create_pre_match(space_id: str, ctx: dict, home_idx: int, away_idx: int) -> str:
+def _create_pre_match(
+    space_id: str, ctx: dict, home_idx: int, away_idx: int, round_id: str | None = None
+) -> str:
     """Crée un match report — origine Manual, auto-confirmée en PreMatch en
-    un seul appel (cf. create_match_report_use_case::execute)."""
-    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], ctx["round_id"], ctx["teams"][home_idx], ctx["teams"][away_idx])
+    un seul appel (cf. create_match_report_use_case::execute).
+
+    Le même couple sur la même journée **rouvre** le rapport existant :
+    `round_id` en donne un neuf à un test qui ne doit pas hériter d'achats déjà
+    validés (carte 627)."""
+    round_id = round_id or ctx["round_id"]
+    liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], round_id, ctx["teams"][home_idx], ctx["teams"][away_idx])
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={
             "competition_id": ctx["competition_id"],
             "season_id": ctx["season_id"],
-            "round_id": ctx["round_id"],
+            "round_id": round_id,
             "home_team_id": ctx["teams"][home_idx],
             "away_team_id": ctx["teams"][away_idx],
         },
@@ -71,6 +78,7 @@ def merco_ctx(browser, space_id):
         "competition_id": full["competition_id"],
         "season_id": full["season_id"],
         "round_id": full["round_ids"][0],
+        "round_ids": full["round_ids"],
         "teams": full["team_ids"],
     }
 
@@ -333,8 +341,13 @@ def test_un_mercenaire_sur_un_poste_a_seize_exemplaires_survit(page: Page, space
     démonstration place au-dessus de dix. Le serveur, lui, ne les filtre pas —
     la production le prouve. Poster directement reproduit donc le cas réel sans
     déplacer les plafonds du corpus, dont plusieurs tests dépendent.
+
+    **Sa propre journée** : TC-MERC-09 valide déjà les coups de pouce du même
+    couple sur la première, et un rapport validé n'en accepte plus (carte 627).
     """
-    mr_id = _create_pre_match(space_id, merco_ctx, home_idx=2, away_idx=3)
+    mr_id = _create_pre_match(
+        space_id, merco_ctx, home_idx=2, away_idx=3, round_id=merco_ctx["round_ids"][1]
+    )
     location = _advance_to_inducements(space_id, mr_id)
     if "/inducements/" not in location:
         pytest.skip("Pas de page inducements pour cette compétition")

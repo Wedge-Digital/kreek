@@ -90,6 +90,11 @@ pub enum RecordInducementsError {
     TreasuryUnavailable(String),
     TierRulesUnavailable(String),
     UnauthorizedInducement(String),
+    /// L'équipe a déjà validé — achats ou « Passer » (carte 627, R2). Un état,
+    /// pas une saisie invalide : distinct de `Domain(..)` pour être un 409.
+    AlreadyRecorded,
+    /// L'outsider envoie avant que le favori ait validé (carte 627, R9).
+    TopdogFirst,
     Domain(DomainError),
     /// Une autre écriture est passée entre le chargement et l'append (carte 623).
     Conflict,
@@ -99,6 +104,16 @@ pub enum RecordInducementsError {
 }
 
 impl RecordInducementsError {
+    /// Les refus d'état de la carte 627 sortent de `Domain(..)`.
+    fn from_domain(e: DomainError) -> Self {
+        match e {
+            DomainError::InducementsAlreadyRecorded => Self::AlreadyRecorded,
+            DomainError::TopdogHasNotChosen => Self::TopdogFirst,
+            DomainError::TeamValuesNotRecorded => Self::TeamValuesNotRecorded,
+            other => Self::Domain(other),
+        }
+    }
+
     /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
     fn from_repository(e: RepositoryError) -> Self {
         match e {
@@ -130,19 +145,11 @@ pub async fn execute(
 ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
     let mr_id = cmd.match_report_id.to_string();
     let mut pm = load_pre_match(repo, &mr_id).await?;
-    if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
-        let home_id = pm.home_team_id.to_string();
-        let away_id = pm.away_team_id.to_string();
-        let (home_raw, away_raw) = tokio::join!(
-            team_data.find_team_value(&home_id),
-            team_data.find_team_value(&away_id),
-        );
-        pm.home_team_value = home_raw.and_then(|v| TeamValue::try_new(v).ok());
-        pm.away_team_value = away_raw.and_then(|v| TeamValue::try_new(v).ok());
-        if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
-            return Err(RecordInducementsError::TeamValuesNotRecorded);
-        }
-    }
+    resolve_team_values(&mut pm, team_data).await?;
+    // Avant tout contrôle d'achat : une équipe qui a validé, ou l'outsider qui
+    // devance le favori, est refusée pour ce qu'elle est (carte 627).
+    pm.check_inducements_open_for(&cmd.team_id)
+        .map_err(RecordInducementsError::from_domain)?;
     let tier = fetch_tier_rules(&pm, &cmd.team_id, team_data, competition_data).await?;
     validate_purchase_uids(&cmd.purchases, &tier)?;
     let roster_positions = team_data
@@ -166,7 +173,7 @@ pub async fn execute(
             &opponent_star_uids,
             cmd.recorded_by,
         )
-        .map_err(RecordInducementsError::Domain)?;
+        .map_err(RecordInducementsError::from_domain)?;
     persist_and_init(
         &mr_id,
         events,
@@ -183,6 +190,28 @@ pub async fn execute(
 }
 
 // ── Validation helpers ────────────────────────────────────────────────────────
+
+/// Un `ReadyToPublish` reconverti n'a pas de valeurs d'équipe : on les relit.
+async fn resolve_team_values(
+    pm: &mut MatchReportPreMatch,
+    team_data: &dyn ITeamDataPort,
+) -> Result<(), RecordInducementsError> {
+    if pm.home_team_value.is_some() && pm.away_team_value.is_some() {
+        return Ok(());
+    }
+    let home_id = pm.home_team_id.to_string();
+    let away_id = pm.away_team_id.to_string();
+    let (home_raw, away_raw) = tokio::join!(
+        team_data.find_team_value(&home_id),
+        team_data.find_team_value(&away_id),
+    );
+    pm.home_team_value = home_raw.and_then(|v| TeamValue::try_new(v).ok());
+    pm.away_team_value = away_raw.and_then(|v| TeamValue::try_new(v).ok());
+    if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
+        return Err(RecordInducementsError::TeamValuesNotRecorded);
+    }
+    Ok(())
+}
 
 async fn load_pre_match(
     repo: &dyn IMatchReportRepository,
@@ -590,10 +619,129 @@ mod tests {
 #[cfg(test)]
 mod conflict_tests {
     use super::*;
+    use crate::app::match_report::domain::events::MatchReportDomainEvent;
+    use crate::app::match_report::domain::value_objects::{
+        FanFactorMod, MatchGain, NoStallingBonuses,
+    };
     use crate::app::match_report::use_cases::test_doubles::{
         pre_match, ConflictingRepository, KnownPlayers, PlainCompetition, ReadyTeams,
+        RecordingRepository,
     };
     use crate::common::services::event_bus::event_bus::new_bus;
+
+    fn pass_command(team_id: TeamId) -> RecordInducementsCommand {
+        RecordInducementsCommand {
+            match_report_id: MatchReportId::new(),
+            team_id,
+            purchases: vec![],
+            mercenary_purchases: vec![],
+            recorded_by: CoachId::new(),
+        }
+    }
+
+    async fn run(
+        repo: &dyn IMatchReportRepository,
+        team_id: TeamId,
+    ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
+        let cmd = pass_command(team_id);
+        let bus = new_bus();
+        execute(
+            cmd,
+            repo,
+            &ReadyTeams,
+            &PlainCompetition,
+            &KnownPlayers,
+            &bus,
+        )
+        .await
+    }
+
+    /// Carte 627, R2 : le favori a passé, il ne renvoie rien — 409, et rien
+    /// n'est écrit.
+    #[tokio::test]
+    async fn une_equipe_qui_a_valide_est_refusee() {
+        let mut pm = pre_match();
+        pm.home_inducements = Some(vec![]);
+        let home = pm.home_team_id.clone();
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pm));
+        let result = run(&repo, home).await;
+        assert!(
+            matches!(result, Err(RecordInducementsError::AlreadyRecorded)),
+            "{result:?}"
+        );
+        assert!(repo.appended().is_empty());
+    }
+
+    /// R2 vaut depuis un `ReadyToPublish`, que le use case reconvertit.
+    #[tokio::test]
+    async fn une_equipe_qui_a_valide_est_refusee_apres_l_etape_5() {
+        let mut pm = pre_match();
+        pm.home_inducements = Some(vec![]);
+        let home = pm.home_team_id.clone();
+        let (ready, _) = pm.record_post_match(
+            MatchGain::try_new(10).unwrap(),
+            MatchGain::try_new(10).unwrap(),
+            NoStallingBonuses::default(),
+            FanFactorMod::try_new(0).unwrap(),
+            FanFactorMod::try_new(0).unwrap(),
+            None,
+            None,
+            CoachId::new(),
+        );
+        let repo = RecordingRepository::holding(MatchReportState::ReadyToPublish(ready));
+        let result = run(&repo, home).await;
+        assert!(
+            matches!(result, Err(RecordInducementsError::AlreadyRecorded)),
+            "{result:?}"
+        );
+    }
+
+    /// R9 : l'outsider avant le favori — à valeurs égales, le favori est le
+    /// domicile.
+    #[tokio::test]
+    async fn l_outsider_est_refuse_avant_le_favori() {
+        let pm = pre_match();
+        let away = pm.away_team_id.clone();
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pm));
+        let result = run(&repo, away).await;
+        assert!(
+            matches!(result, Err(RecordInducementsError::TopdogFirst)),
+            "{result:?}"
+        );
+        assert!(repo.appended().is_empty());
+    }
+
+    /// Le favori a passé : l'outsider enregistre. La doublure ne rend l'état
+    /// qu'une fois, l'initialisation des joueurs temporaires qui suit échoue ;
+    /// ce qui compte est l'`InducementsRecorded` appendu.
+    #[tokio::test]
+    async fn l_outsider_est_admis_apres_le_favori() {
+        let mut pm = pre_match();
+        pm.home_inducements = Some(vec![]);
+        let away = pm.away_team_id.clone();
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pm));
+        let _ = run(&repo, away.clone()).await;
+        assert!(matches!(
+            repo.appended().first(),
+            Some(MatchReportDomainEvent::InducementsRecorded { team_id, .. }) if team_id == &away
+        ));
+    }
+
+    #[test]
+    fn les_refus_d_etat_sortent_de_domain() {
+        assert!(matches!(
+            RecordInducementsError::from_domain(DomainError::InducementsAlreadyRecorded),
+            RecordInducementsError::AlreadyRecorded
+        ));
+        assert!(matches!(
+            RecordInducementsError::from_domain(DomainError::TopdogHasNotChosen),
+            RecordInducementsError::TopdogFirst
+        ));
+        assert!(matches!(
+            RecordInducementsError::from_domain(DomainError::StarPlayerLimitExceeded),
+            RecordInducementsError::Domain(_)
+        ));
+    }
 
     #[tokio::test]
     async fn un_conflit_d_ecriture_est_relaye() {

@@ -46,6 +46,12 @@ pub enum DomainError {
     MatchAlreadyStarted,
     /// Aucune des deux équipes n'a validé ses coups de pouce (carte 626).
     NoInducementsToCancel,
+    /// L'équipe a déjà validé ses coups de pouce — achats ou « Passer » : ils
+    /// ne se changent plus que par l'annulation (carte 627, R2).
+    InducementsAlreadyRecorded,
+    /// L'outsider envoie ses achats avant que le favori ait validé les siens :
+    /// son budget se calculerait sans les dépenses du favori (carte 627, R9).
+    TopdogHasNotChosen,
 }
 
 impl fmt::Display for DomainError {
@@ -63,6 +69,13 @@ impl fmt::Display for DomainError {
             ),
             Self::NoInducementsToCancel => {
                 write!(f, "aucune équipe n'a encore validé ses coups de pouce")
+            }
+            Self::InducementsAlreadyRecorded => write!(
+                f,
+                "Les coups de pouce de cette équipe sont validés. Pour les changer, annulez ceux des deux équipes."
+            ),
+            Self::TopdogHasNotChosen => {
+                write!(f, "Le favori choisit ses coups de pouce en premier.")
             }
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),

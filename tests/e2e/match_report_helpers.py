@@ -81,6 +81,32 @@ def ensure_inducements(space_id, mr_id):
         location = resp.headers.get("Location", "")
 
 
+def pass_topdog_first(space_id, mr_id, team_id):
+    """Fait passer le favori si `team_id` est l'outsider — carte 627, R9.
+
+    Le favori choisit ses coups de pouce en premier : tant qu'il n'a pas
+    validé, l'outsider est refusé en 409. Le favori se lit par la page de
+    l'outsider, qui redirige vers la sienne ; une page servie sans
+    redirection dit que `team_id` peut acheter, et rien n'est fait.
+
+    À appeler **avant** l'achat de `team_id`, sur un rapport où elle n'a pas
+    encore validé : sinon la redirection mène à l'autre équipe (R7).
+    """
+    url = f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/inducements/{team_id}"
+    resp = requests.get(url, allow_redirects=False)
+    if resp.status_code not in (302, 303):
+        return
+    topdog_url = f"{BASE_URL}{resp.headers['Location']}"
+    passed = requests.post(
+        topdog_url,
+        data={"intent": "pass", "selection": "[]", "mercenaries": "[]"},
+        allow_redirects=False,
+    )
+    assert passed.status_code in (302, 303), (
+        f"le favori n'a pas pu passer : {passed.status_code}\n{passed.text[:200]}"
+    )
+
+
 def record_action_api(space_id, mr_id, side, player_id, turn, action_type):
     endpoint = "step3" if side == "home" else "step4"
     resp = requests.post(

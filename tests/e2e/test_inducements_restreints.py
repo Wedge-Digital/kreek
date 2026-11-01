@@ -24,7 +24,7 @@ import pytest
 import requests
 
 from competition_lifecycle import BASE_URL, build_full_competition
-from match_report_helpers import create_draft, ensure_pre_match
+from match_report_helpers import create_draft, ensure_pre_match, pass_topdog_first
 
 GUERISSEUR = "DEMO_GUERISSEUR_ITINERANT"  # restreint au staff APOTHECARY
 MASSEUR = "DEMO_MASSEUR_DOUTEUX"  # restreint au roster DEMO_GRANIT
@@ -68,7 +68,13 @@ def test_la_restriction_par_roster_marche_toujours():
 
 @pytest.fixture(scope="module")
 def match_ctx(browser, space_id):
-    """Un match entre une équipe sans droit à l'apothicaire et une avec."""
+    """Deux équipes : une sans droit à l'apothicaire, une avec.
+
+    **Un rapport par test d'achat, sur deux journées.** Le favori choisit ses
+    coups de pouce en premier (carte 627, R9), et une équipe qui a validé ne
+    rachète plus (R2). Sur un seul rapport, faire passer le favori pour l'un
+    des deux tests l'empêcherait d'acheter dans l'autre.
+    """
     full = build_full_competition(
         browser,
         space_id,
@@ -77,19 +83,29 @@ def match_ctx(browser, space_id):
         roster_uids=[SANS_APOTHICAIRE, AVEC_APOTHICAIRE],
     )
     sans, avec = full["team_ids"][0], full["team_ids"][1]
+    return {"space_id": space_id, "full": full, "sans": sans, "avec": avec}
 
-    mr_id = create_draft(space_id, full, full["round_ids"][0], sans, avec)
-    ensure_pre_match(space_id, mr_id, full, full["round_ids"][0], sans, avec)
+
+def _ouvrir_un_rapport(match_ctx, round_idx: int) -> str:
+    """Un rapport sans contre avec, jusqu'à la page des coups de pouce."""
+    space_id, full = match_ctx["space_id"], match_ctx["full"]
+    round_id = full["round_ids"][round_idx]
+    sans, avec = match_ctx["sans"], match_ctx["avec"]
+    mr_id = create_draft(space_id, full, round_id, sans, avec)
+    ensure_pre_match(space_id, mr_id, full, round_id, sans, avec)
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2",
         data={"home_fan_roll": "2", "away_fan_roll": "3"},
         allow_redirects=False,
     )
     assert resp.status_code in (302, 303), f"facteur fans : {resp.status_code}"
-    return {"space_id": space_id, "mr_id": mr_id, "sans": sans, "avec": avec}
+    return mr_id
 
 
 def _acheter(space_id: str, mr_id: str, team_id: str, uid: str):
+    # Le favori choisit d'abord (carte 627, R9) : si l'équipe visée est
+    # l'outsider, le favori passe avant elle — sinon le refus serait un 409.
+    pass_topdog_first(space_id, mr_id, team_id)
     return requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/inducements/{team_id}",
         data={
@@ -106,9 +122,8 @@ def test_l_achat_refuse_un_coup_de_pouce_auquel_l_equipe_n_a_pas_droit(match_ctx
     requête, elle, se forge : la liste des coups de pouce autorisés que le
     domaine reçoit ne l'excluait pas.
     """
-    resp = _acheter(
-        match_ctx["space_id"], match_ctx["mr_id"], match_ctx["sans"], GUERISSEUR
-    )
+    mr_id = _ouvrir_un_rapport(match_ctx, round_idx=0)
+    resp = _acheter(match_ctx["space_id"], mr_id, match_ctx["sans"], GUERISSEUR)
     # 422 : un refus du domaine est une saisie invalide, pas une panne. Le coup
     # de pouce n'est pas dans la liste autorisée, donc `UnknownInducement`.
     assert resp.status_code == 422, (
@@ -120,9 +135,8 @@ def test_l_achat_refuse_un_coup_de_pouce_auquel_l_equipe_n_a_pas_droit(match_ctx
 def test_l_achat_accepte_le_coup_de_pouce_auquel_l_equipe_a_droit(match_ctx):
     """Le témoin du précédent : sans lui, un refus général passerait pour un
     droit correctement appliqué."""
-    resp = _acheter(
-        match_ctx["space_id"], match_ctx["mr_id"], match_ctx["avec"], GUERISSEUR
-    )
+    mr_id = _ouvrir_un_rapport(match_ctx, round_idx=1)
+    resp = _acheter(match_ctx["space_id"], mr_id, match_ctx["avec"], GUERISSEUR)
     assert resp.status_code in (200, 302, 303), (
         f"achat refusé à une équipe qui y a droit : {resp.status_code}"
     )

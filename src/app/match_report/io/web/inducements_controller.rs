@@ -1,4 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::match_report::domain::error::DomainError;
+use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{RosterPositionUid, TeamValue};
 use crate::app::match_report::io::web::write_conflict::conflict_response;
@@ -91,16 +93,8 @@ async fn build_vm(
     routes: &AppRoutes,
 ) -> Result<InducementsTemplate, Response> {
     let mut pm = load_pre_match_vm(repo, &mr_id.to_string()).await?;
-    if pm.home_team_value.is_none() || pm.away_team_value.is_none() {
-        let home_id = pm.home_team_id.to_string();
-        let away_id = pm.away_team_id.to_string();
-        let (home_raw, away_raw) = tokio::join!(
-            team_data.find_team_value(&home_id),
-            team_data.find_team_value(&away_id),
-        );
-        pm.home_team_value = home_raw.and_then(|v| TeamValue::try_new(v).ok());
-        pm.away_team_value = away_raw.and_then(|v| TeamValue::try_new(v).ok());
-    }
+    fill_team_values(&mut pm, team_data).await;
+    redirect_unless_turn_of(&pm, &team_id, routes, space_id, &mr_id.to_string())?;
     let team_info = team_data
         .find_team_info(&team_id.to_string())
         .await
@@ -150,11 +144,45 @@ async fn build_vm(
     })
 }
 
+/// Un `ReadyToPublish` reconverti n'a pas de valeurs d'équipe : on les relit.
+async fn fill_team_values(pm: &mut MatchReportPreMatch, team_data: &dyn ITeamDataPort) {
+    if pm.home_team_value.is_some() && pm.away_team_value.is_some() {
+        return;
+    }
+    let home_id = pm.home_team_id.to_string();
+    let away_id = pm.away_team_id.to_string();
+    let (home_raw, away_raw) = tokio::join!(
+        team_data.find_team_value(&home_id),
+        team_data.find_team_value(&away_id),
+    );
+    pm.home_team_value = home_raw.and_then(|v| TeamValue::try_new(v).ok());
+    pm.away_team_value = away_raw.and_then(|v| TeamValue::try_new(v).ok());
+}
+
+/// `303` vers la page de l'équipe dont c'est le tour (carte 627) : l'outsider
+/// attend le favori (R9), l'équipe qui a validé seule renvoie à l'autre (R7).
+/// Le domaine dit qui choisit ; le contrôleur n'en fait qu'une adresse.
+fn redirect_unless_turn_of(
+    pm: &MatchReportPreMatch,
+    team_id: &TeamId,
+    routes: &AppRoutes,
+    space_id: &str,
+    match_report_id: &str,
+) -> Result<(), Response> {
+    let turn = pm.inducements_turn();
+    if turn == team_id {
+        return Ok(());
+    }
+    let url = routes
+        .match_report
+        .inducements(space_id, match_report_id, &turn.to_string());
+    Err(Redirect::to(&url).into_response())
+}
+
 async fn load_pre_match_vm(
     repo: &dyn crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository,
     mr_id: &str,
-) -> Result<crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch, Response>
-{
+) -> Result<MatchReportPreMatch, Response> {
     let state = repo
         .find_by_id(mr_id)
         .await
@@ -310,11 +338,23 @@ pub async fn post_inducements(
 /// autorisée les coups de pouce auxquels l'équipe n'a pas droit, en a fait un
 /// chemin normal — et la CI a répondu 500.
 ///
+/// `AlreadyRecorded` et `TopdogFirst` (carte 627) sont des **409** : la saisie
+/// n'est pas invalide, c'est l'état du compte rendu qui l'interdit. Leur
+/// message est celui du domaine.
+///
 /// Les variantes restantes sont nommées une par une : une panne de lecture ou
 /// d'écriture est bien un 500, et un joker aurait laissé le prochain refus y
 /// retomber en silence.
 fn refus_d_achat(erreur: &RecordInducementsError) -> Option<(StatusCode, String)> {
     match erreur {
+        RecordInducementsError::AlreadyRecorded => Some((
+            StatusCode::CONFLICT,
+            DomainError::InducementsAlreadyRecorded.to_string(),
+        )),
+        RecordInducementsError::TopdogFirst => Some((
+            StatusCode::CONFLICT,
+            DomainError::TopdogHasNotChosen.to_string(),
+        )),
         RecordInducementsError::Domain(e) => {
             Some((StatusCode::UNPROCESSABLE_ENTITY, e.to_string()))
         }
@@ -381,7 +421,7 @@ fn parse_purchases(selection_json: &str) -> Vec<InducementPurchaseCmd> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::match_report::domain::error::DomainError;
+    use crate::app::match_report::use_cases::test_doubles::pre_match;
 
     fn statut(erreur: RecordInducementsError) -> Option<StatusCode> {
         refus_d_achat(&erreur).map(|(s, _)| s)
@@ -421,5 +461,50 @@ mod tests {
             statut(RecordInducementsError::Repository("base".into())),
             None
         );
+    }
+
+    /// Carte 627 : des achats validés, ou l'outsider qui devance le favori —
+    /// un état, pas une saisie invalide.
+    #[test]
+    fn les_refus_d_etat_rendent_409_et_disent_quoi_faire() {
+        let (statut, message) =
+            refus_d_achat(&RecordInducementsError::AlreadyRecorded).expect("un refus");
+        assert_eq!(statut, StatusCode::CONFLICT);
+        assert_eq!(
+            message,
+            "Les coups de pouce de cette équipe sont validés. Pour les changer, annulez ceux des deux équipes."
+        );
+        let (statut, message) =
+            refus_d_achat(&RecordInducementsError::TopdogFirst).expect("un refus");
+        assert_eq!(statut, StatusCode::CONFLICT);
+        assert_eq!(message, "Le favori choisit ses coups de pouce en premier.");
+    }
+
+    fn redirect_target(pm: &MatchReportPreMatch, team_id: &TeamId) -> Option<String> {
+        redirect_unless_turn_of(pm, team_id, &AppRoutes::default(), "SP", "MR")
+            .err()
+            .map(|r| {
+                assert_eq!(r.status(), StatusCode::SEE_OTHER);
+                r.headers()["location"].to_str().unwrap().to_string()
+            })
+    }
+
+    /// R9 : l'outsider dont le favori n'a pas validé est renvoyé chez lui.
+    #[test]
+    fn l_outsider_est_renvoye_vers_le_favori() {
+        let pm = pre_match();
+        let target = redirect_target(&pm, &pm.away_team_id).expect("une redirection");
+        assert!(target.ends_with(&pm.home_team_id.to_string()), "{target}");
+        assert_eq!(redirect_target(&pm, &pm.home_team_id), None);
+    }
+
+    /// R7 : le favori qui a validé est renvoyé vers l'outsider.
+    #[test]
+    fn le_favori_qui_a_valide_est_renvoye_vers_l_outsider() {
+        let mut pm = pre_match();
+        pm.home_inducements = Some(vec![]);
+        let target = redirect_target(&pm, &pm.home_team_id).expect("une redirection");
+        assert!(target.ends_with(&pm.away_team_id.to_string()), "{target}");
+        assert_eq!(redirect_target(&pm, &pm.away_team_id), None);
     }
 }

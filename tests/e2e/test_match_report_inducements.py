@@ -259,9 +259,19 @@ def test_pass_discards_pending_selection(page: Page, space_id, inducements_ctx):
     )
 
 
-def test_cart_footer_visible(page: Page, space_id, inducements_mr):
-    """Footer cart sticky visible avec bouton Valider."""
-    loc = inducements_mr["redirect_location"]
+def test_cart_footer_visible(page: Page, space_id, inducements_ctx):
+    """Footer cart sticky visible avec bouton Valider.
+
+    **Sur son propre rapport** (journée 4, équipes jamais réunies ailleurs) :
+    celui de `inducements_mr` a vu passer son favori dans
+    `test_topdog_pass_redirects_to_underdog`, et sa page ne s'ouvrait plus que
+    par la redirection vers l'outsider (carte 627, R7) — le test passait par
+    accident, et dépendait de l'ordre d'exécution.
+    """
+    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=0, away_idx=3, round_idx=3)
+    resp = _post_fan_factor(space_id, mr_id)
+    assert resp.status_code in (302, 303), f"fan factor POST: {resp.status_code}"
+    loc = resp.headers.get("Location", "")
     if "/inducements/" not in loc:
         pytest.skip("Pas de page inducements pour cette compétition")
 
@@ -271,10 +281,18 @@ def test_cart_footer_visible(page: Page, space_id, inducements_mr):
     expect(page.locator("button[name='intent'][value='validate']")).to_be_visible()
 
 
-def test_cart_unfolds_and_removes_an_inducement(page: Page, space_id, inducements_mr):
+def test_cart_unfolds_and_removes_an_inducement(page: Page, space_id, inducements_ctx):
     """Carte 629 : le panier se déplie, liste un coup de pouce commun, et son ✕
-    le retire — le sélecteur, qui garde les quantités, revient à 0."""
-    loc = inducements_mr["redirect_location"]
+    le retire — le sélecteur, qui garde les quantités, revient à 0.
+
+    **Sur son propre rapport** (journée 5, équipes 1 et 3, jamais réunies
+    ailleurs dans ce fichier), pour la même raison que `test_cart_footer_visible` :
+    sur `inducements_mr`, le favori a déjà passé (carte 627).
+    """
+    mr_id = _create_pre_match(space_id, inducements_ctx, home_idx=1, away_idx=3, round_idx=4)
+    resp = _post_fan_factor(space_id, mr_id)
+    assert resp.status_code in (302, 303), f"fan factor POST: {resp.status_code}"
+    loc = resp.headers.get("Location", "")
     if "/inducements/" not in loc:
         pytest.skip("Pas de page inducements pour cette compétition")
 
