@@ -57,9 +57,9 @@ deux équipes ont validé montrent le récapitulatif dès la livraison.
 
 ## Checklist
 
-- [ ] `can_cancel_inducements()` et ses tests
-- [ ] Le service d'hydratation du récapitulatif et ses tests sur doublures
-- [ ] Le gabarit, la confirmation dans la page, le lien de coup d'envoi
-- [ ] La redirection de la seconde validation, si retenue ;
+- [x] `can_cancel_inducements()` et ses tests
+- [x] Le service d'hydratation du récapitulatif et ses tests sur doublures
+- [x] Le gabarit, la confirmation dans la page, le lien de coup d'envoi
+- [x] La redirection de la seconde validation, si retenue ;
       `test_underdog_pass_redirects_to_step3` suit
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

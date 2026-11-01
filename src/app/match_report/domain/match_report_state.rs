@@ -25,6 +25,17 @@ pub enum MatchReportState {
 }
 
 impl MatchReportState {
+    /// Le récapitulatif des coups de pouce propose-t-il l'annulation (carte
+    /// 628, R3) ? En avant-match seulement, et si le domaine l'accepterait.
+    pub fn can_cancel_inducements(&self) -> bool {
+        match self {
+            Self::PreMatch(pm) => pm.can_cancel_inducements(),
+            Self::Draft(_) | Self::ReadyToPublish(_) | Self::Published(_) | Self::Cancelled(_) => {
+                false
+            }
+        }
+    }
+
     /// L'espace du rapport, quel que soit son état.
     ///
     /// `None` pour un rapport annulé : cet état ne garde que son identifiant et
@@ -138,15 +149,19 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             (
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::InducementsRecorded {
-                    team_id, purchases, ..
+                    team_id,
+                    purchases,
+                    recorded_by,
                 },
             ) => {
                 let mut updated = pm;
                 updated.star_engagements.retain(|(tid, _)| tid != team_id);
                 if team_id == &updated.home_team_id {
                     updated.home_inducements = Some(purchases.clone());
+                    updated.home_inducements_recorded_by = Some(*recorded_by);
                 } else {
                     updated.away_inducements = Some(purchases.clone());
+                    updated.away_inducements_recorded_by = Some(*recorded_by);
                 }
                 updated.version += 1;
                 MatchReportState::PreMatch(updated)
@@ -314,15 +329,19 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
                 MatchReportDomainEvent::InducementsRecorded {
-                    team_id, purchases, ..
+                    team_id,
+                    purchases,
+                    recorded_by,
                 },
             ) => {
                 let mut updated = rtp;
                 updated.star_engagements.retain(|(tid, _)| tid != team_id);
                 if team_id == &updated.home_team_id {
                     updated.home_inducements = Some(purchases.clone());
+                    updated.home_inducements_recorded_by = Some(*recorded_by);
                 } else {
                     updated.away_inducements = Some(purchases.clone());
+                    updated.away_inducements_recorded_by = Some(*recorded_by);
                 }
                 updated.version += 1;
                 MatchReportState::ReadyToPublish(updated)
@@ -1640,5 +1659,40 @@ mod tests {
             rehydrate(events).unwrap_err(),
             DomainError::InvalidEventSequence
         );
+    }
+
+    // ── carte 628 : le récapitulatif ─────────────────────────────────────
+
+    /// Décision 5 : l'auteur se reconstruit au rejeu, et l'annulation l'efface.
+    #[test]
+    fn rehydrate_garde_l_auteur_de_la_validation_puis_l_efface() {
+        let (mut events, coach_id) = avant_match_valide();
+        let MatchReportState::PreMatch(pm) = rehydrate(events.clone()).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(pm.home_inducements_recorded_by, Some(coach_id));
+        assert_eq!(pm.away_inducements_recorded_by, None);
+        events.push(MatchReportDomainEvent::InducementsCancelled {
+            cancelled_by: coach_id,
+        });
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(pm.home_inducements_recorded_by, None);
+    }
+
+    /// L'auteur survit au passage en `ReadyToPublish`, qui ne propose jamais
+    /// l'annulation (R3).
+    #[test]
+    fn l_auteur_survit_a_l_etape_5_qui_ne_propose_plus_l_annulation() {
+        let (mut events, coach_id) = avant_match_valide();
+        assert!(rehydrate(events.clone()).unwrap().can_cancel_inducements());
+        events.push(post_match_event(coach_id));
+        let state = rehydrate(events).unwrap();
+        assert!(!state.can_cancel_inducements());
+        let MatchReportState::ReadyToPublish(rtp) = state else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(rtp.home_inducements_recorded_by, Some(coach_id));
     }
 }

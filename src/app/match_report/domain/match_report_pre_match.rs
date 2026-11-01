@@ -8,7 +8,7 @@ use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, EntryMode, FanFactorMod,
     InducementMaxQty, InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain,
-    MatchReportOrigin, TeamSide, TeamValue, TempPlayer, TempPlayerKind,
+    MatchReportOrigin, PurchaseKind, TeamSide, TeamValue, TempPlayer, TempPlayerKind,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -51,12 +51,25 @@ pub struct MatchReportPreMatch {
     pub away_team_value: Option<TeamValue>,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
+    /// Qui a validé les coups de pouce de chaque camp (carte 628, décision 5) :
+    /// posé au rejeu de `InducementsRecorded`, effacé par
+    /// `InducementsCancelled`. Le récapitulatif en tire son « par … ».
+    pub home_inducements_recorded_by: Option<CoachId>,
+    pub away_inducements_recorded_by: Option<CoachId>,
     pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
     pub home_actions: Vec<MatchAction>,
     pub away_actions: Vec<MatchAction>,
     pub version: u64,
+}
+
+/// Où en sont les coups de pouce (cartes 627 et 628) : une équipe a la main,
+/// ou les deux ont validé et la page devient le récapitulatif (R6).
+#[derive(Debug, PartialEq, Eq)]
+pub enum InducementsTurn<'a> {
+    Team(&'a TeamId),
+    BothRecorded,
 }
 
 impl MatchReportPreMatch {
@@ -228,7 +241,7 @@ impl MatchReportPreMatch {
         let purchase_list = build_purchase_list(purchases, allowed_specs)?;
         let events = build_inducement_events(team_id, &purchase_list, allowed_specs, recorded_by);
         let mut updated = self.clone();
-        set_inducements_for(&mut updated, team_id, purchase_list);
+        set_inducements_for(&mut updated, team_id, purchase_list, recorded_by);
         updated.version += events.len() as u64;
         Ok((updated, events))
     }
@@ -263,15 +276,59 @@ impl MatchReportPreMatch {
     }
 
     /// L'équipe dont c'est le tour de choisir (R7, R9) : le favori tant qu'il
-    /// n'a pas validé, puis l'outsider. Quand les deux ont validé, le favori —
-    /// en attendant le récapitulatif de la carte 628.
-    pub fn inducements_turn(&self) -> &TeamId {
+    /// n'a pas validé, puis l'outsider. Quand les deux ont validé, plus
+    /// personne : c'est le récapitulatif (R6, carte 628).
+    pub fn inducements_turn(&self) -> InducementsTurn<'_> {
         let topdog = self.topdog_team_id();
         let underdog = self.underdog_team_id();
-        if self.has_recorded_inducements(topdog) && !self.has_recorded_inducements(underdog) {
-            underdog
+        match (
+            self.has_recorded_inducements(topdog),
+            self.has_recorded_inducements(underdog),
+        ) {
+            (true, true) => InducementsTurn::BothRecorded,
+            (true, false) => InducementsTurn::Team(underdog),
+            (false, _) => InducementsTurn::Team(topdog),
+        }
+    }
+
+    /// R3 et R4, en question : le récapitulatif ne propose l'annulation que si
+    /// le domaine l'accepterait (carte 628). L'état `PreMatch` est garanti par
+    /// le type ; un `ReadyToPublish` ne la propose jamais.
+    pub fn can_cancel_inducements(&self) -> bool {
+        self.check_inducements_cancellable().is_ok()
+    }
+
+    /// Ce que les achats de cette équipe coûtent, au prix du catalogue — le
+    /// total que le récapitulatif rapporte au budget (carte 628).
+    pub fn inducements_total_for(&self, team_id: &TeamId) -> u32 {
+        self.purchases_for(team_id)
+            .iter()
+            .map(|p| p.total_cost())
+            .sum()
+    }
+
+    /// Qui a validé les coups de pouce de cette équipe (décision 5).
+    pub fn inducements_recorded_by(&self, team_id: &TeamId) -> Option<CoachId> {
+        if team_id == &self.home_team_id {
+            self.home_inducements_recorded_by
         } else {
-            topdog
+            self.away_inducements_recorded_by
+        }
+    }
+
+    /// La nature d'un achat de cette équipe (décision 6) : un mercenaire se
+    /// lit à son identifiant, une vedette à son engagement.
+    pub fn purchase_kind(&self, team_id: &TeamId, purchase: &InducementPurchase) -> PurchaseKind {
+        if let Some(kind) = purchase.mercenary_kind() {
+            return kind;
+        }
+        let engaged = self
+            .star_engagements
+            .iter()
+            .any(|(tid, uid)| tid == team_id && uid == &purchase.uid);
+        match engaged {
+            true => PurchaseKind::StarPlayer,
+            false => PurchaseKind::Inducement,
         }
     }
 
@@ -330,6 +387,8 @@ impl MatchReportPreMatch {
     pub(crate) fn apply_inducements_cancelled(mut self) -> Self {
         self.home_inducements = None;
         self.away_inducements = None;
+        self.home_inducements_recorded_by = None;
+        self.away_inducements_recorded_by = None;
         self.star_engagements.clear();
         self.version += 1;
         self
@@ -590,6 +649,8 @@ impl MatchReportPreMatch {
             away_team_value: None,
             home_inducements: None,
             away_inducements: None,
+            home_inducements_recorded_by: None,
+            away_inducements_recorded_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
@@ -778,11 +839,14 @@ fn set_inducements_for(
     pm: &mut MatchReportPreMatch,
     team_id: &TeamId,
     purchases: Vec<InducementPurchase>,
+    recorded_by: CoachId,
 ) {
     if team_id == &pm.home_team_id {
         pm.home_inducements = Some(purchases);
+        pm.home_inducements_recorded_by = Some(recorded_by);
     } else {
         pm.away_inducements = Some(purchases);
+        pm.away_inducements_recorded_by = Some(recorded_by);
     }
 }
 
@@ -821,6 +885,8 @@ mod tests {
             away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
             home_inducements: None,
             away_inducements: None,
+            home_inducements_recorded_by: None,
+            away_inducements_recorded_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
@@ -2113,11 +2179,11 @@ mod tests {
     fn le_tour_passe_du_favori_a_l_outsider() {
         let pm = make_pm(1100, 1000);
         let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
-        assert_eq!(pm.inducements_turn(), &home);
+        assert_eq!(pm.inducements_turn(), InducementsTurn::Team(&home));
         let pm = pass(&pm, &home).unwrap();
-        assert_eq!(pm.inducements_turn(), &away);
+        assert_eq!(pm.inducements_turn(), InducementsTurn::Team(&away));
         let pm = pass(&pm, &away).unwrap();
-        assert_eq!(pm.inducements_turn(), &home, "en attendant la carte 628");
+        assert_eq!(pm.inducements_turn(), InducementsTurn::BothRecorded);
     }
 
     /// R7 : l'outsider qui a validé seul, avant le favori, renvoie au favori.
@@ -2125,6 +2191,92 @@ mod tests {
     fn le_tour_revient_au_favori_quand_l_outsider_a_valide_seul() {
         let mut pm = make_pm(1100, 1000);
         pm.away_inducements = Some(vec![]);
-        assert_eq!(pm.inducements_turn(), &pm.home_team_id);
+        assert_eq!(
+            pm.inducements_turn(),
+            InducementsTurn::Team(&pm.home_team_id)
+        );
+    }
+
+    // ── carte 628 : le récapitulatif ─────────────────────────────────────────
+
+    /// R3 en question : permis en avant-match sans action vivante, refusé
+    /// après une action, rendu après sa suppression.
+    #[test]
+    fn l_annulation_se_propose_tant_qu_aucune_action_ne_vit() {
+        let pm = validated_both_sides();
+        assert!(pm.can_cancel_inducements());
+        let (pm, _) = make_action(&pm, TeamSide::Home);
+        assert!(!pm.can_cancel_inducements());
+        let (pm, _) = pm
+            .delete_action(&ActionId("act-01".into()), CoachId::new())
+            .unwrap();
+        assert!(pm.can_cancel_inducements());
+    }
+
+    /// R4 : rien de validé, rien à proposer.
+    #[test]
+    fn l_annulation_ne_se_propose_pas_sans_validation() {
+        assert!(!make_pm(1100, 1000).can_cancel_inducements());
+    }
+
+    /// Décision 5 : l'auteur de chaque validation est gardé, camp par camp,
+    /// et l'annulation l'efface.
+    #[test]
+    fn l_auteur_de_chaque_validation_est_garde_puis_efface() {
+        let pm = make_pm(1100, 1000);
+        let (home, away) = (pm.home_team_id.clone(), pm.away_team_id.clone());
+        let (favori, outsider) = (CoachId::new(), CoachId::new());
+        let (pm, _) = pm
+            .record_inducements(&home, &[], 0, &[], &[], favori)
+            .unwrap();
+        let (pm, _) = pm
+            .record_inducements(&away, &[], 0, &[], &[], outsider)
+            .unwrap();
+        assert_eq!(pm.inducements_recorded_by(&home), Some(favori));
+        assert_eq!(pm.inducements_recorded_by(&away), Some(outsider));
+        let (pm, _) = pm.cancel_inducements(CoachId::new()).unwrap();
+        assert_eq!(pm.inducements_recorded_by(&home), None);
+        assert_eq!(pm.inducements_recorded_by(&away), None);
+    }
+
+    /// Décision 6 : la nature d'un achat, sans que le port en dise rien.
+    #[test]
+    fn la_nature_d_un_achat() {
+        let mut pm = make_pm(1100, 1000);
+        let home = pm.home_team_id.clone();
+        pm.star_engagements
+            .push((home.clone(), InducementId("STAR_X".into())));
+        let with_uid = |uid: &str| InducementPurchase {
+            uid: InducementId(uid.into()),
+            ..achat(10, 1)
+        };
+        assert_eq!(
+            pm.purchase_kind(&home, &with_uid("BRIBE")),
+            PurchaseKind::Inducement
+        );
+        assert_eq!(
+            pm.purchase_kind(&home, &with_uid("STAR_X")),
+            PurchaseKind::StarPlayer
+        );
+        assert_eq!(
+            pm.purchase_kind(&home, &with_uid("MERCO:pos-a:lvl1")),
+            PurchaseKind::Mercenary {
+                position_uid: "pos-a".into(),
+                skilled: true
+            }
+        );
+        assert_eq!(
+            pm.purchase_kind(&home, &with_uid("MERCO:pos-a:base")),
+            PurchaseKind::Mercenary {
+                position_uid: "pos-a".into(),
+                skilled: false
+            }
+        );
+        let away = pm.away_team_id.clone();
+        assert_eq!(
+            pm.purchase_kind(&away, &with_uid("STAR_X")),
+            PurchaseKind::Inducement,
+            "la vedette engagée par l'autre camp n'est pas la sienne"
+        );
     }
 }

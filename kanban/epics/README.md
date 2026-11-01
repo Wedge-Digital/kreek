@@ -56,7 +56,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E16 — Imprimer la feuille d'équipe](done/E16-imprimer-la-feuille-d-equipe.md) | `done` · 17/17 | 17 |
 | [E18 — Appariement des présents](done/E18-appariement-des-presents.md) | `done` · 8/8 | 8 |
 | [E19 — Saisie du compte rendu : droits et robustesse](done/E19-saisie-du-compte-rendu-droits-et-robustesse.md) | `done` · 5/5 | 5 |
-| [E20 — Coups de pouce : le panier et l'annulation](en_cours/E20-coups-de-pouce-panier-et-annulation.md) | `en_cours` · 3/5 | 5 |
+| [E20 — Coups de pouce : le panier et l'annulation](en_cours/E20-coups-de-pouce-panier-et-annulation.md) | `en_cours` · 4/5 | 5 |
 | [E21 — Le mode de saisie et l'après-match en séquence](en_cours/E21-mode-de-saisie-et-apres-match-en-sequence.md) | `en_cours` · 3/9 | 9 |
 | [E22 — Le mode « Chacun son équipe »](to_be_refined/E22-mode-chacun-son-equipe.md) | `to_be_refined` | 10 |
 | [E23 — Le temps réel : connexions, présence et notifications](to_be_refined/E23-temps-reel-connexions-et-notifications.md) | `to_be_refined` | 6 |

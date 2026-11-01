@@ -1,0 +1,91 @@
+{% extends "app-layout.html" %}
+
+{% block content %}
+
+<!-- Récapitulatif des coups de pouce (carte 628) : les deux équipes ont
+     validé. On ne retouche plus un achat isolé : on annule tout, et l'on
+     recommence par le favori. -->
+<div class="mr-container match-report-inducements" x-data="{ confirming: false }">
+
+  <!-- Header -->
+  <div class="mr-header">
+    <div class="mr-header-icon">&#128722;</div>
+    <div class="mr-header-title">Coups de pouce</div>
+    <div class="mr-header-sub">Achats terminés pour les deux équipes</div>
+  </div>
+
+  <!-- Étapes -->
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">2</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
+  </div>
+
+  {% for side in sides %}
+  <div class="mr-card mr-recap-side">
+    <div class="mr-recap-title-row">
+      <div class="mr-banner mr-recap-banner">
+        <div class="mr-banner-logo">{{ side.initials }}</div>
+        <div>
+          <div class="mr-banner-name">{{ side.team_name }}</div>
+          <div class="mr-banner-label">{{ side.role_label }}</div>
+        </div>
+      </div>
+      <span class="mr-recap-status">Terminé &#10003;</span>
+    </div>
+    {% if side.lines.is_empty() %}
+    <div class="mr-recap-empty">Aucun coup de pouce</div>
+    {% else %}
+    <div class="mr-cart-merco-list mr-recap-list">
+      {% for line in side.lines %}
+      <div class="mr-cart-merco-item">
+        <div class="mr-cart-merco-info">
+          <div class="mr-cart-merco-name">{{ line.name }}</div>
+          <div class="mr-cart-merco-type">{{ line.kind_label }}</div>
+        </div>
+        <div class="mr-cart-merco-price">{{ line.price }} kPo</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="mr-recap-total">
+      <span class="text-tiny">{{ side.recorded_by_label }}</span>
+      <span><b>{{ side.spent }}</b> / {{ side.budget }} kPo</span>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="mr-recap-actions" x-show="!confirming">
+    <a class="btn btn-primary-blue btn-md" href="{{ kickoff_url }}">Coup d'envoi &#8594; Match</a>
+    {% if can_cancel %}
+    <button type="button" class="btn btn-text mr-recap-cancel" @click="confirming = true">
+      Annuler les coups de pouce
+    </button>
+    {% endif %}
+  </div>
+
+  {% if can_cancel %}
+  <!-- Confirmation dans la page, à la place des boutons : pas de fenêtre du
+       navigateur. -->
+  <div class="mr-recap-confirm" x-show="confirming" x-cloak>
+    <div class="mr-recap-confirm-title">Annuler tous les coups de pouce ?</div>
+    <div class="text-tiny">
+      Les achats des <b>deux équipes</b> sont effacés. On recommence par le favori,
+      {{ topdog_name }} ; {{ underdog_name }} rachète ensuite avec un budget recalculé.
+    </div>
+    <div class="mr-nav-row">
+      <button type="button" class="btn-outline-sm" @click="confirming = false">Garder</button>
+      <button type="button" class="btn-primary-sm mr-recap-confirm-cancel"
+              hx-post="{{ cancel_url }}">Oui, tout annuler</button>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

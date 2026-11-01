@@ -33,6 +33,9 @@ pub struct MatchReportPublished {
     pub away_dedicated_fans: DedicatedFans,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
+    /// Gardés pour qu'un rapport dépublié retrouve son « par … » (carte 628).
+    pub home_inducements_recorded_by: Option<CoachId>,
+    pub away_inducements_recorded_by: Option<CoachId>,
     /// Figés au pré-match : l'écart de valeur d'équipe qui les détermine n'est
     /// plus connu à ce stade.
     pub home_inducement_spending: InducementSpending,
@@ -108,6 +111,8 @@ impl MatchReportPublished {
             away_dedicated_fans: self.away_dedicated_fans,
             home_inducements: self.home_inducements.clone(),
             away_inducements: self.away_inducements.clone(),
+            home_inducements_recorded_by: self.home_inducements_recorded_by,
+            away_inducements_recorded_by: self.away_inducements_recorded_by,
             home_inducement_spending: self.home_inducement_spending,
             away_inducement_spending: self.away_inducement_spending,
             star_engagements: self.star_engagements.clone(),
@@ -154,6 +159,8 @@ impl MatchReportPublished {
             away_dedicated_fans: rtp.away_dedicated_fans,
             home_inducements: rtp.home_inducements.clone(),
             away_inducements: rtp.away_inducements.clone(),
+            home_inducements_recorded_by: rtp.home_inducements_recorded_by,
+            away_inducements_recorded_by: rtp.away_inducements_recorded_by,
             home_inducement_spending: rtp.home_inducement_spending,
             away_inducement_spending: rtp.away_inducement_spending,
             star_engagements: rtp.star_engagements.clone(),
@@ -205,6 +212,8 @@ mod unpublish_tests {
             away_dedicated_fans: DedicatedFans::default(),
             home_inducements: None,
             away_inducements: None,
+            home_inducements_recorded_by: None,
+            away_inducements_recorded_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],

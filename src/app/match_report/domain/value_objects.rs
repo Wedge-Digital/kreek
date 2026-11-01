@@ -164,6 +164,35 @@ impl InducementPurchase {
     pub fn total_cost(&self) -> u32 {
         self.unit_cost.into_inner() * self.qty.into_inner() as u32
     }
+
+    /// Un mercenaire s'achète sous `MERCO:{poste}:{niveau}` ; `None` pour tout
+    /// autre achat.
+    pub fn mercenary_kind(&self) -> Option<PurchaseKind> {
+        let mut parts = self.uid.0.splitn(3, ':');
+        if parts.next() != Some("MERCO") {
+            return None;
+        }
+        let position_uid = parts.next().unwrap_or_default().to_string();
+        let skilled = parts.next() == Some("lvl1");
+        Some(PurchaseKind::Mercenary {
+            position_uid,
+            skilled,
+        })
+    }
+}
+
+/// La nature d'un achat, telle que le récapitulatif la nomme (carte 628,
+/// décision 6) : coup de pouce, vedette engagée, ou mercenaire — celui de
+/// niveau 1 porte une compétence de plus.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PurchaseKind {
+    Inducement,
+    StarPlayer,
+    /// Le poste est lu de l'identifiant d'achat, pour l'affichage seulement.
+    Mercenary {
+        position_uid: String,
+        skilled: bool,
+    },
 }
 
 #[derive(Debug, Clone)]

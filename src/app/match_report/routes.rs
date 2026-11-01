@@ -104,6 +104,14 @@ impl Routes {
             .replace("{team_id}", team_id)
     }
 
+    /// L'annulation des coups de pouce (carte 626), appelée du récapitulatif
+    /// (carte 628).
+    pub fn cancel_inducements(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_CANCEL_INDUCEMENTS
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
     pub fn step3(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_STEP3
             .replace("{space_id}", space_id)

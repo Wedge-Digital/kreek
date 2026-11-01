@@ -361,6 +361,8 @@ mod tests {
             away_dedicated_fans: DedicatedFans::default(),
             home_inducements: None,
             away_inducements: None,
+            home_inducements_recorded_by: None,
+            away_inducements_recorded_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],

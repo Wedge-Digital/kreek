@@ -1,5 +1,8 @@
 use crate::app::match_report::domain::value_objects::{
-    ActionPlayer, InjuryType, MatchAction, MatchActionType,
+    ActionPlayer, InjuryType, MatchAction, MatchActionType, PurchaseKind,
+};
+use crate::app::match_report::use_cases::inducements_recap_service::{
+    RecapLine, RecapSide, RecordedBy,
 };
 
 // ── Récap — VMs pur domaine (from_domain / all_from_domain) ───────────────────
@@ -260,5 +263,154 @@ pub fn action_player_key(player: &ActionPlayer) -> String {
     match player {
         ActionPlayer::Regular(player_id) => player_id.to_string(),
         ActionPlayer::Temp(temp_id) => temp_id.0.clone(),
+    }
+}
+
+// ── Récapitulatif des coups de pouce (carte 628) ──────────────────────────────
+
+/// Un camp au récapitulatif : tout vient du service d'hydratation, donc du
+/// domaine — la vue ne fait que nommer.
+pub struct RecapSideVm {
+    pub team_name: String,
+    pub initials: String,
+    pub role_label: &'static str,
+    pub lines: Vec<RecapLineVm>,
+    pub spent: u32,
+    pub budget: u32,
+    /// « par vous », « par Morgane » ; vide quand l'auteur est inconnu.
+    pub recorded_by_label: String,
+}
+
+pub struct RecapLineVm {
+    pub name: String,
+    pub kind_label: &'static str,
+    pub price: u32,
+}
+
+impl RecapSideVm {
+    pub fn from_recap(side: &RecapSide) -> Self {
+        Self {
+            initials: team_initials(&side.team_name),
+            team_name: side.team_name.clone(),
+            role_label: match side.is_topdog {
+                true => "Favori · achète en premier",
+                false => "Outsider · achète en second",
+            },
+            lines: side.lines.iter().map(RecapLineVm::from_recap).collect(),
+            spent: side.spent,
+            budget: side.budget,
+            recorded_by_label: match &side.recorded_by {
+                Some(RecordedBy::Viewer) => "par vous".to_string(),
+                Some(RecordedBy::Coach(name)) => format!("par {name}"),
+                None => String::new(),
+            },
+        }
+    }
+}
+
+impl RecapLineVm {
+    fn from_recap(line: &RecapLine) -> Self {
+        Self {
+            name: match line.qty {
+                0 | 1 => line.name.clone(),
+                qty => format!("{} ×{qty}", line.name),
+            },
+            kind_label: match line.kind {
+                PurchaseKind::Inducement => "Coup de pouce",
+                PurchaseKind::StarPlayer => "Star",
+                PurchaseKind::Mercenary { skilled: true, .. } => "Mercenaire Niv. 1",
+                PurchaseKind::Mercenary { skilled: false, .. } => "Mercenaire",
+            },
+            price: line.total_cost,
+        }
+    }
+}
+
+/// Les initiales d'une équipe, pour son logo de remplacement.
+pub fn team_initials(team_name: &str) -> String {
+    team_name
+        .split_whitespace()
+        .filter_map(|w| w.chars().next())
+        .take(2)
+        .collect::<String>()
+        .to_uppercase()
+}
+
+#[cfg(test)]
+mod recap_tests {
+    use super::*;
+
+    fn side(recorded_by: Option<RecordedBy>, lines: Vec<RecapLine>) -> RecapSide {
+        RecapSide {
+            team_id: "T".into(),
+            team_name: "Nains de Fer".into(),
+            is_topdog: true,
+            lines,
+            spent: 145,
+            budget: 510,
+            recorded_by,
+        }
+    }
+
+    fn line(name: &str, qty: u8, kind: PurchaseKind) -> RecapLine {
+        RecapLine {
+            name: name.into(),
+            qty,
+            kind,
+            total_cost: 30,
+        }
+    }
+
+    #[test]
+    fn un_camp_se_nomme_et_vouvoie_son_lecteur() {
+        let vm = RecapSideVm::from_recap(&side(Some(RecordedBy::Viewer), vec![]));
+        assert_eq!(vm.initials, "ND");
+        assert_eq!(vm.role_label, "Favori · achète en premier");
+        assert_eq!(vm.recorded_by_label, "par vous");
+        let vm = RecapSideVm::from_recap(&side(Some(RecordedBy::Coach("Morgane".into())), vec![]));
+        assert_eq!(vm.recorded_by_label, "par Morgane");
+        assert_eq!(
+            RecapSideVm::from_recap(&side(None, vec![])).recorded_by_label,
+            ""
+        );
+    }
+
+    #[test]
+    fn chaque_ligne_dit_sa_nature_et_sa_quantite() {
+        let lines = vec![
+            line("Chariot de Vivres", 2, PurchaseKind::Inducement),
+            line("Morg", 1, PurchaseKind::StarPlayer),
+            line(
+                "Bloqueur nain",
+                1,
+                PurchaseKind::Mercenary {
+                    position_uid: "p".into(),
+                    skilled: true,
+                },
+            ),
+            line(
+                "Bloqueur nain",
+                1,
+                PurchaseKind::Mercenary {
+                    position_uid: "p".into(),
+                    skilled: false,
+                },
+            ),
+        ];
+        let vm = RecapSideVm::from_recap(&side(None, lines));
+        let rendered: Vec<_> = vm
+            .lines
+            .iter()
+            .map(|l| (l.name.as_str(), l.kind_label))
+            .collect();
+        assert_eq!(
+            rendered,
+            [
+                ("Chariot de Vivres ×2", "Coup de pouce"),
+                ("Morg", "Star"),
+                ("Bloqueur nain", "Mercenaire Niv. 1"),
+                ("Bloqueur nain", "Mercenaire"),
+            ]
+        );
     }
 }

@@ -1,10 +1,17 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::match_report::context::MatchReportContext;
 use crate::app::match_report::domain::error::DomainError;
-use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_pre_match::{
+    InducementsTurn, MatchReportPreMatch,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{RosterPositionUid, TeamValue};
+use crate::app::match_report::io::web::view_models::{team_initials, RecapSideVm};
 use crate::app::match_report::io::web::write_conflict::conflict_response;
-use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
+use crate::app::match_report::ports::ITeamDataPort;
+use crate::app::match_report::use_cases::inducements_recap_service::{
+    self, InducementsRecap, RecapPorts,
+};
 use crate::app::match_report::use_cases::record_inducements_use_case::RecordInducementsError;
 use crate::app::match_report::use_cases::record_inducements_use_case::{
     self, InducementPurchaseCmd, MercenaryLevel, MercenaryPurchaseCmd, RecordInducementsCommand,
@@ -14,6 +21,7 @@ use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -51,55 +59,73 @@ impl IntoResponse for InducementsTemplate {
 
 // ── GET ───────────────────────────────────────────────────────────────────────
 
+/// `GET /inducements/{team_id}` : la page de choix de l'équipe dont c'est le
+/// tour, une redirection vers elle (R7, R9), ou — les deux ayant validé — le
+/// récapitulatif des deux camps, quel que soit `team_id` (R6, carte 628).
 pub async fn get_inducements(
     auth_session: AuthSession,
     Path((space_id, match_report_id, team_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
-) -> impl IntoResponse {
-    if auth_session.user.is_none() {
+) -> Response {
+    let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
-    }
-    let mr_id = match MatchReportId::try_new(&match_report_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
-    let team_id_vo = match TeamId::try_new(&team_id) {
-        Ok(id) => id,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    let (mr_id, team_id) = match parse_path_ids(&match_report_id, &team_id) {
+        Ok(ids) => ids,
+        Err(r) => return r,
     };
-    match build_vm(
-        mr_id,
-        team_id_vo,
-        &space_id,
-        state.match_report.match_report_repo.as_ref(),
-        state.match_report.team_data.as_ref(),
-        state.match_report.competition_data.as_ref(),
-        &AppRoutes::default(),
-    )
-    .await
-    {
-        Ok(tpl) => tpl.into_response(),
-        Err(e) => e,
+    let page = PageRequest {
+        space_id: &space_id,
+        mr_id: &mr_id,
+        viewer: user.id,
+        routes: AppRoutes::default(),
+    };
+    match render_page(&page, &team_id, &state.match_report).await {
+        Ok(response) | Err(response) => response,
     }
 }
 
+/// Ce que toute variante de la page a besoin de savoir de la requête.
+struct PageRequest<'a> {
+    space_id: &'a str,
+    mr_id: &'a MatchReportId,
+    viewer: CoachId,
+    routes: AppRoutes,
+}
+
+async fn render_page(
+    page: &PageRequest<'_>,
+    team_id: &TeamId,
+    ctx: &MatchReportContext,
+) -> Result<Response, Response> {
+    let state = load_state(ctx.match_report_repo.as_ref(), &page.mr_id.to_string()).await?;
+    let can_cancel = state.can_cancel_inducements();
+    let mut pm = into_pre_match(state)?;
+    fill_team_values(&mut pm, ctx.team_data.as_ref()).await;
+    let mr_id = page.mr_id.to_string();
+    redirect_unless_turn_of(&pm, team_id, &page.routes, page.space_id, &mr_id)?;
+    if pm.inducements_turn() == InducementsTurn::BothRecorded {
+        return Ok(recap_page(page, &pm, can_cancel, ctx).await.into_response());
+    }
+    let tpl = build_vm(&pm, team_id, page.space_id, ctx, &page.routes).await?;
+    Ok(tpl.into_response())
+}
+
 async fn build_vm(
-    mr_id: MatchReportId,
-    team_id: TeamId,
+    pm: &MatchReportPreMatch,
+    team_id: &TeamId,
     space_id: &str,
-    repo: &dyn crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository,
-    team_data: &dyn ITeamDataPort,
-    competition_data: &dyn ICompetitionDataPort,
+    ctx: &MatchReportContext,
     routes: &AppRoutes,
 ) -> Result<InducementsTemplate, Response> {
-    let mut pm = load_pre_match_vm(repo, &mr_id.to_string()).await?;
-    fill_team_values(&mut pm, team_data).await;
-    redirect_unless_turn_of(&pm, &team_id, routes, space_id, &mr_id.to_string())?;
+    let mr_id = pm.id.clone();
+    let team_data = ctx.team_data.as_ref();
     let team_info = team_data
         .find_team_info(&team_id.to_string())
         .await
         .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
-    let tier = competition_data
+    let tier = ctx
+        .competition_data
         .find_tier_rules_for_roster(&pm.season_id.to_string(), &team_info.roster_id)
         .await
         .unwrap_or_default();
@@ -107,8 +133,8 @@ async fn build_vm(
         .find_team_treasury(&team_id.to_string())
         .await
         .unwrap_or(0);
-    let budget = pm.inducement_budget_for(&team_id, treasury);
-    let is_topdog = pm.topdog_team_id() == &team_id;
+    let budget = pm.inducement_budget_for(team_id, treasury);
+    let is_topdog = pm.topdog_team_id() == team_id;
     let selector_url = build_selector_url(routes, &tier, &team_info.roster_id);
     let mercenary_url =
         routes
@@ -118,13 +144,7 @@ async fn build_vm(
         routes
             .match_report
             .inducements(space_id, &mr_id.to_string(), &team_id.to_string());
-    let initials = team_info
-        .team_name
-        .split_whitespace()
-        .filter_map(|w| w.chars().next())
-        .take(2)
-        .collect::<String>()
-        .to_uppercase();
+    let initials = team_initials(&team_info.team_name);
     Ok(InducementsTemplate {
         app_routes: *routes,
         space_id: space_id.to_string(),
@@ -161,7 +181,9 @@ async fn fill_team_values(pm: &mut MatchReportPreMatch, team_data: &dyn ITeamDat
 
 /// `303` vers la page de l'équipe dont c'est le tour (carte 627) : l'outsider
 /// attend le favori (R9), l'équipe qui a validé seule renvoie à l'autre (R7).
-/// Le domaine dit qui choisit ; le contrôleur n'en fait qu'une adresse.
+/// Quand les deux ont validé, aucune redirection : chaque adresse sert le
+/// récapitulatif (R6, carte 628). Le domaine dit qui choisit ; le contrôleur
+/// n'en fait qu'une adresse.
 fn redirect_unless_turn_of(
     pm: &MatchReportPreMatch,
     team_id: &TeamId,
@@ -169,29 +191,95 @@ fn redirect_unless_turn_of(
     space_id: &str,
     match_report_id: &str,
 ) -> Result<(), Response> {
-    let turn = pm.inducements_turn();
-    if turn == team_id {
-        return Ok(());
-    }
+    let turn = match pm.inducements_turn() {
+        InducementsTurn::Team(turn) if turn != team_id => turn,
+        InducementsTurn::Team(_) | InducementsTurn::BothRecorded => return Ok(()),
+    };
     let url = routes
         .match_report
         .inducements(space_id, match_report_id, &turn.to_string());
     Err(Redirect::to(&url).into_response())
 }
 
-async fn load_pre_match_vm(
+async fn load_state(
     repo: &dyn crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository,
     mr_id: &str,
-) -> Result<MatchReportPreMatch, Response> {
-    let state = repo
-        .find_by_id(mr_id)
+) -> Result<MatchReportState, Response> {
+    repo.find_by_id(mr_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
+        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())
+}
+
+fn into_pre_match(state: MatchReportState) -> Result<MatchReportPreMatch, Response> {
     match state {
         MatchReportState::PreMatch(pm) => Ok(pm),
         MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
         _ => Err(StatusCode::CONFLICT.into_response()),
+    }
+}
+
+// ── Récapitulatif (carte 628) ─────────────────────────────────────────────────
+
+#[derive(Template)]
+#[template(path = "inducements-recap.html")]
+pub struct InducementsRecapTemplate {
+    pub app_routes: AppRoutes,
+    /// Le favori d'abord.
+    pub sides: Vec<RecapSideVm>,
+    pub topdog_name: String,
+    pub underdog_name: String,
+    pub kickoff_url: String,
+    /// R3, posé par le domaine : sans lui, ni bouton ni confirmation.
+    pub can_cancel: bool,
+    pub cancel_url: String,
+}
+
+impl IntoResponse for InducementsRecapTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+}
+
+async fn recap_page(
+    page: &PageRequest<'_>,
+    pm: &MatchReportPreMatch,
+    can_cancel: bool,
+    ctx: &MatchReportContext,
+) -> InducementsRecapTemplate {
+    let ports = RecapPorts {
+        team_data: ctx.team_data.as_ref(),
+        coach_data: ctx.coach_data.as_ref(),
+        catalog: ctx.reference_catalog.as_ref(),
+    };
+    let recap = inducements_recap_service::build(pm, page.viewer, &ports).await;
+    recap_template(page, recap, can_cancel)
+}
+
+fn recap_template(
+    page: &PageRequest<'_>,
+    recap: InducementsRecap,
+    can_cancel: bool,
+) -> InducementsRecapTemplate {
+    let sides: Vec<RecapSideVm> = recap.sides.iter().map(RecapSideVm::from_recap).collect();
+    let name_of = |i: usize| {
+        sides
+            .get(i)
+            .map(|s| s.team_name.clone())
+            .unwrap_or_default()
+    };
+    let (mr_id, routes) = (page.mr_id.to_string(), &page.routes.match_report);
+    InducementsRecapTemplate {
+        app_routes: page.routes,
+        topdog_name: name_of(0),
+        underdog_name: name_of(1),
+        kickoff_url: routes.step3(page.space_id, &mr_id),
+        can_cancel,
+        cancel_url: routes.cancel_inducements(page.space_id, &mr_id),
+        sides,
     }
 }
 
@@ -292,10 +380,14 @@ pub async fn post_inducements(
             );
             Redirect::to(&url).into_response()
         }
-        Ok(RecordInducementsOutcome::RedirectToStep3) => {
-            let url = AppRoutes::default()
-                .match_report
-                .step3(&space_id, &match_report_id);
+        // Décision 4 (carte 628) : la seconde validation mène au récapitulatif,
+        // que sert la page des coups de pouce elle-même (R6).
+        Ok(RecordInducementsOutcome::RedirectToRecap) => {
+            let url = AppRoutes::default().match_report.inducements(
+                &space_id,
+                &match_report_id,
+                &team_id,
+            );
             Redirect::to(&url).into_response()
         }
         Err(record_inducements_use_case::RecordInducementsError::NotFound) => {
@@ -421,6 +513,7 @@ fn parse_purchases(selection_json: &str) -> Vec<InducementPurchaseCmd> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::match_report::use_cases::inducements_recap_service::RecapSide;
     use crate::app::match_report::use_cases::test_doubles::pre_match;
 
     fn statut(erreur: RecordInducementsError) -> Option<StatusCode> {
@@ -506,5 +599,62 @@ mod tests {
         let target = redirect_target(&pm, &pm.home_team_id).expect("une redirection");
         assert!(target.ends_with(&pm.away_team_id.to_string()), "{target}");
         assert_eq!(redirect_target(&pm, &pm.away_team_id), None);
+    }
+
+    /// R6 (carte 628) : les deux ont validé, chaque adresse sert le
+    /// récapitulatif — plus aucune redirection.
+    #[test]
+    fn les_deux_ayant_valide_aucune_redirection() {
+        let mut pm = pre_match();
+        pm.home_inducements = Some(vec![]);
+        pm.away_inducements = Some(vec![]);
+        assert_eq!(redirect_target(&pm, &pm.home_team_id), None);
+        assert_eq!(redirect_target(&pm, &pm.away_team_id), None);
+        assert_eq!(pm.inducements_turn(), InducementsTurn::BothRecorded);
+    }
+
+    fn recap_side(name: &str, is_topdog: bool) -> RecapSide {
+        RecapSide {
+            team_id: name.into(),
+            team_name: name.into(),
+            is_topdog,
+            lines: vec![],
+            spent: 0,
+            budget: 0,
+            recorded_by: None,
+        }
+    }
+
+    fn rendered_recap(can_cancel: bool) -> String {
+        let mr_id = MatchReportId::new();
+        let page = PageRequest {
+            space_id: "SP",
+            mr_id: &mr_id,
+            viewer: CoachId::new(),
+            routes: AppRoutes::default(),
+        };
+        let recap = InducementsRecap {
+            sides: vec![
+                recap_side("Nains de Fer", true),
+                recap_side("London Rats", false),
+            ],
+        };
+        recap_template(&page, recap, can_cancel).render().unwrap()
+    }
+
+    /// R3 : sans le feu vert du domaine, ni bouton ni confirmation ; le coup
+    /// d'envoi mène toujours à l'étape 3.
+    #[test]
+    fn l_annulation_ne_s_affiche_que_si_le_domaine_la_permet() {
+        let with = rendered_recap(true);
+        assert!(with.contains("Annuler les coups de pouce"));
+        assert!(with.contains("/cancel-inducements"));
+        assert!(with.contains("Oui, tout annuler"));
+        assert!(with.contains("/step3"));
+        assert!(with.contains("Aucun coup de pouce"));
+        let without = rendered_recap(false);
+        assert!(!without.contains("Annuler les coups de pouce"));
+        assert!(!without.contains("/cancel-inducements"));
+        assert!(without.contains("/step3"));
     }
 }

@@ -3,11 +3,11 @@
 Scénarios couverts :
 - GET page inducements → header équipe + bannière budget + widget chargé
 - Bouton "Passer" (TopDog) → redirect vers page Underdog
-- Bouton "Passer" (Underdog) → redirect vers step3
+- Bouton "Passer" (Underdog) → récapitulatif des deux camps (carte 628)
 - Bouton "Passer" soumet toujours un panier vide, même si des items sont sélectionnés
 - Sélection dépasse budget → bouton Valider désactivé
 - TopDog valide des achats → redirect vers page Underdog
-- Underdog valide ses achats → redirect vers step3
+- Underdog valide ses achats → récapitulatif des deux camps (carte 628)
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée.
 """
@@ -205,8 +205,10 @@ def test_topdog_pass_redirects_to_underdog(page: Page, space_id, inducements_mr)
         )
 
 
-def test_underdog_pass_redirects_to_step3(page: Page, space_id, underdog_inducements_location):
-    """Underdog clique 'Passer' → redirect vers step3 (toujours, quel que soit l'état du TopDog)."""
+def test_underdog_pass_redirects_to_recap(page: Page, space_id, underdog_inducements_location):
+    """Underdog clique 'Passer' → le récapitulatif des deux camps (carte 628,
+    décision 4), servi par la page des coups de pouce elle-même ; le coup
+    d'envoi y mène à step3."""
     loc = underdog_inducements_location
     if "/inducements/" not in loc:
         pytest.skip("Pas de page inducements Underdog pour cette compétition")
@@ -216,9 +218,14 @@ def test_underdog_pass_redirects_to_step3(page: Page, space_id, underdog_inducem
     with page.expect_navigation(wait_until="load"):
         page.locator("button[name='intent'][value='pass']").click()
 
-    assert "/step3" in page.url, (
+    assert "/inducements/" in page.url, (
         f"Redirect inattendu depuis 'Passer' Underdog : {page.url!r}"
     )
+    expect(page.locator(".mr-header-sub")).to_have_text("Achats terminés pour les deux équipes")
+    expect(page.locator(".mr-recap-side")).to_have_count(2)
+    expect(page.locator(".mr-recap-empty")).to_have_count(2)
+    kickoff = page.get_by_role("link", name="Coup d'envoi → Match")
+    expect(kickoff).to_have_attribute("href", re.compile(r"/step3$"))
 
 
 def test_pass_discards_pending_selection(page: Page, space_id, inducements_ctx):

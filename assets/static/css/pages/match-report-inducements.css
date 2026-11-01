@@ -206,6 +206,45 @@
 .match-report-inducements .mr-cart-actions .btn-primary-sm,
 .match-report-inducements.mr-cart-actions .btn-primary-sm { flex: 2; text-align: center; padding: 10px; }
 
+/* ── Récapitulatif des deux camps (carte 628) ──
+   Les lignes reprennent celles du panier (`mr-cart-merco-*`). */
+.match-report-inducements .mr-recap-side { gap: var(--p1); }
+.match-report-inducements .mr-recap-title-row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--p1);
+}
+.match-report-inducements .mr-recap-banner {
+  padding: 0; background: none; box-shadow: none; min-width: 0;
+}
+.match-report-inducements .mr-recap-status {
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  border-radius: 20px; padding: 3px 10px;
+  background: rgba(98, 149, 132, 0.15); color: var(--green);
+}
+.match-report-inducements .mr-recap-list { max-height: none; border-bottom: none; }
+.match-report-inducements .mr-recap-empty {
+  font-size: var(--text-tiny); color: var(--dark-3);
+}
+.match-report-inducements .mr-recap-total {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: var(--text-small); color: var(--dark-1);
+  border-top: 1px solid var(--dark-5); padding-top: 8px;
+}
+.match-report-inducements .mr-recap-actions {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.match-report-inducements .mr-recap-cancel { color: var(--red); }
+.match-report-inducements .mr-recap-confirm {
+  display: flex; flex-direction: column; gap: 8px; padding: var(--p1);
+  background: var(--white); border-left: 4px solid var(--red); border-radius: 12px;
+}
+.match-report-inducements .mr-recap-confirm-title {
+  font-weight: 700; font-size: var(--text-small); color: var(--dark-1);
+}
+.match-report-inducements .mr-recap-confirm .mr-nav-row { margin-top: 0; }
+.match-report-inducements .mr-recap-confirm-cancel {
+  background: var(--red); border-color: var(--red);
+}
+
 /* ── Responsive mobile ── */
 @media (max-width: 768px) {
   .match-report-inducements .mr-container,

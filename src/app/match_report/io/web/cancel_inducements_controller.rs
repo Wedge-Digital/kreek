@@ -65,13 +65,23 @@ fn error_response(match_report_id: &str, e: CancelInducementsError) -> Response 
     match refusal(&e) {
         Some((status, message)) => {
             tracing::warn!(match_report_id, erreur = ?e, "annulation des coups de pouce refusée");
-            (status, message).into_response()
+            refused(status, message)
         }
         None => {
             tracing::error!(match_report_id, erreur = ?e, "post_cancel_inducements");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+/// Un refus de l'état du match (409) recharge la page : htmx n'échange rien
+/// sur une erreur, et le clic resterait sans effet visible. Rechargé, le
+/// récapitulatif montre l'état qui a refusé — sans le bouton d'annuler.
+fn refused(status: StatusCode, message: String) -> Response {
+    if status == StatusCode::CONFLICT {
+        return (status, [("HX-Refresh", "true")], message).into_response();
+    }
+    (status, message).into_response()
 }
 
 /// Le statut et le message d'une annulation refusée — `None` pour une panne.
@@ -95,6 +105,17 @@ fn refusal(e: &CancelInducementsError) -> Option<(StatusCode, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_refusal_of_the_match_state_reloads_the_page() {
+        let response = refused(StatusCode::CONFLICT, "refusé".to_string());
+        assert_eq!(
+            response.headers().get("HX-Refresh").map(|v| v.as_bytes()),
+            Some(&b"true"[..])
+        );
+        let not_found = refused(StatusCode::NOT_FOUND, "introuvable".to_string());
+        assert!(not_found.headers().get("HX-Refresh").is_none());
+    }
     use crate::app::match_report::domain::error::DomainError;
 
     fn status(e: CancelInducementsError) -> Option<StatusCode> {

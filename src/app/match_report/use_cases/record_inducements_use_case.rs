@@ -78,8 +78,12 @@ pub struct RecordInducementsCommand {
 
 #[derive(Debug)]
 pub enum RecordInducementsOutcome {
-    RedirectToInducements { next_team_id: String },
-    RedirectToStep3,
+    RedirectToInducements {
+        next_team_id: String,
+    },
+    /// La seconde validation mène au récapitulatif des deux camps (carte
+    /// 628, décision 4), servi par la page des coups de pouce elle-même (R6).
+    RedirectToRecap,
 }
 
 #[derive(Debug)]
@@ -482,7 +486,7 @@ fn route_outcome(pm: &MatchReportPreMatch, team_id: &TeamId) -> RecordInducement
             next_team_id: pm.underdog_team_id().to_string(),
         }
     } else {
-        RecordInducementsOutcome::RedirectToStep3
+        RecordInducementsOutcome::RedirectToRecap
     }
 }
 
@@ -568,6 +572,8 @@ mod tests {
             away_team_value: Some(TeamValue::try_new(away_tv).unwrap()),
             home_inducements: None,
             away_inducements: None,
+            home_inducements_recorded_by: None,
+            away_inducements_recorded_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
@@ -589,11 +595,11 @@ mod tests {
     }
 
     #[test]
-    fn route_outcome_sends_underdog_to_step3() {
+    fn route_outcome_sends_underdog_to_recap() {
         let pm = make_pm(1000, 900);
         assert!(matches!(
             route_outcome(&pm, pm.underdog_team_id()),
-            RecordInducementsOutcome::RedirectToStep3
+            RecordInducementsOutcome::RedirectToRecap
         ));
     }
 

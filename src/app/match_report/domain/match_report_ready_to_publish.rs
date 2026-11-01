@@ -33,6 +33,10 @@ pub struct MatchReportReadyToPublish {
     pub away_dedicated_fans: DedicatedFans,
     pub home_inducements: Option<Vec<InducementPurchase>>,
     pub away_inducements: Option<Vec<InducementPurchase>>,
+    /// Qui a validé les coups de pouce de chaque camp (carte 628), venu de
+    /// l'avant-match et gardé au rejeu.
+    pub home_inducements_recorded_by: Option<CoachId>,
+    pub away_inducements_recorded_by: Option<CoachId>,
     /// Ce que les coups de pouce coûtent à chaque trésorerie. Figé ici, parce
     /// que l'écart de valeur d'équipe qui sert à le calculer ne survit pas au
     /// pré-match.
@@ -130,6 +134,8 @@ impl MatchReportReadyToPublish {
             away_dedicated_fans: pm.away_dedicated_fans,
             home_inducements: pm.home_inducements.clone(),
             away_inducements: pm.away_inducements.clone(),
+            home_inducements_recorded_by: pm.home_inducements_recorded_by,
+            away_inducements_recorded_by: pm.away_inducements_recorded_by,
             home_inducement_spending: InducementSpending::new(
                 pm.treasury_spending_for(&pm.home_team_id),
             ),
@@ -178,6 +184,8 @@ impl MatchReportReadyToPublish {
             away_team_value: None,
             home_inducements: self.home_inducements,
             away_inducements: self.away_inducements,
+            home_inducements_recorded_by: self.home_inducements_recorded_by,
+            away_inducements_recorded_by: self.away_inducements_recorded_by,
             star_engagements: self.star_engagements,
             home_temp_players: self.home_temp_players,
             away_temp_players: self.away_temp_players,
@@ -266,6 +274,8 @@ mod tests {
             away_dedicated_fans: DedicatedFans::default(),
             home_inducements: None,
             away_inducements: None,
+            home_inducements_recorded_by: None,
+            away_inducements_recorded_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],

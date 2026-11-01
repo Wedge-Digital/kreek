@@ -212,6 +212,8 @@ mod tests {
             away_team_value: Some(TeamValue::try_new(1000).unwrap()),
             home_inducements: None,
             away_inducements: None,
+            home_inducements_recorded_by: None,
+            away_inducements_recorded_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
