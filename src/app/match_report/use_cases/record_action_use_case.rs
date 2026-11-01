@@ -1,5 +1,7 @@
 use crate::app::match_report::domain::error::DomainError;
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, HatredKeyword, MatchActionType, TeamSide, TempPlayerId, TurnNumber,
@@ -40,7 +42,19 @@ pub enum RecordActionError {
     /// mot-clef a été refusé sans dire lequel, et le premier corpus incomplet
     /// coûterait une investigation.
     UnknownKeyword(String),
+    /// Une autre écriture est passée entre le chargement et l'append (carte 623).
+    Conflict,
     Repository(String),
+}
+
+impl RecordActionError {
+    /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
 }
 
 /// Réunit le choix du coach et ce que ce choix valait au moment présent.
@@ -88,7 +102,7 @@ pub async fn execute(
     let state = repo
         .find_by_id(&mr_id)
         .await
-        .map_err(|e| RecordActionError::Repository(e.to_string()))?;
+        .map_err(RecordActionError::from_repository)?;
     let pm = match state.ok_or(RecordActionError::NotFound)? {
         MatchReportState::PreMatch(pm) => pm,
         MatchReportState::ReadyToPublish(rtp) => rtp.into_pre_match(),
@@ -117,7 +131,7 @@ pub async fn execute(
     };
     repo.append(&mr_id, &event, pm.version)
         .await
-        .map_err(|e| RecordActionError::Repository(e.to_string()))?;
+        .map_err(RecordActionError::from_repository)?;
     Ok(outcome)
 }
 
@@ -448,5 +462,45 @@ mod tests {
             result,
             Err(RecordActionError::TempPlayerNotFound(_))
         ));
+    }
+}
+
+#[cfg(test)]
+mod conflict_tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::{
+        pre_match, ConflictingRepository, KnownPlayers,
+    };
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+
+    struct NoKeywords;
+
+    impl IKeywordCatalogPort for NoKeywords {
+        fn list_hateable(&self) -> Vec<crate::app::match_report::ports::KeywordDto> {
+            vec![]
+        }
+        fn find_hateable(&self, _: &str) -> Option<crate::app::match_report::ports::KeywordDto> {
+            None
+        }
+    }
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let cmd = RecordActionCommand {
+            match_report_id: MatchReportId::new(),
+            team_side: TeamSide::Home,
+            turn: TurnNumber::try_new(1).unwrap(),
+            player: ActionPlayer::Regular(PlayerId::new()),
+            action: MatchActionType::Touchdown,
+            hatred: None,
+            recorded_by: CoachId::new(),
+        };
+        let resultat = execute(cmd, &repo, &KnownPlayers, &NoKeywords).await;
+        assert!(
+            matches!(resultat, Err(RecordActionError::Conflict)),
+            "{:?}",
+            resultat.err()
+        );
     }
 }

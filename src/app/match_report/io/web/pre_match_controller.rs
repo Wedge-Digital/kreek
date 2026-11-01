@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans};
+use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::use_cases::record_fan_factor_use_case;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -233,6 +234,7 @@ pub async fn post_pre_match(
         Err(record_fan_factor_use_case::RecordFanFactorError::NotInPreMatchPhase) => {
             StatusCode::CONFLICT.into_response()
         }
+        Err(record_fan_factor_use_case::RecordFanFactorError::Conflict) => conflict_response(),
         Err(e) => {
             tracing::error!("post_pre_match: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

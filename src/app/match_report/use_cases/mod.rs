@@ -13,5 +13,7 @@ pub mod record_action_use_case;
 pub mod record_fan_factor_use_case;
 pub mod record_inducements_use_case;
 pub mod record_post_match_use_case;
+#[cfg(test)]
+pub mod test_doubles;
 pub mod unpublish_match_report_use_case;
 pub mod update_match_selection_use_case;

@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{RosterPositionUid, TeamValue};
+use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
 use crate::app::match_report::use_cases::record_inducements_use_case::RecordInducementsError;
 use crate::app::match_report::use_cases::record_inducements_use_case::{
@@ -275,6 +276,7 @@ pub async fn post_inducements(
         Err(record_inducements_use_case::RecordInducementsError::NotInPreMatchPhase) => {
             StatusCode::CONFLICT.into_response()
         }
+        Err(record_inducements_use_case::RecordInducementsError::Conflict) => conflict_response(),
         Err(e) => match refus_d_achat(&e) {
             Some((statut, message)) => {
                 tracing::warn!(
@@ -326,6 +328,7 @@ fn refus_d_achat(erreur: &RecordInducementsError) -> Option<(StatusCode, String)
         | RecordInducementsError::TreasuryUnavailable(_)
         | RecordInducementsError::TierRulesUnavailable(_)
         | RecordInducementsError::Repository(_)
+        | RecordInducementsError::Conflict
         | RecordInducementsError::InvalidMercenaryPosition(_)
         | RecordInducementsError::PlayerCountUnavailable(_) => None,
     }

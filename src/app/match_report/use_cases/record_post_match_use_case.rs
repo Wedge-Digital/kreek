@@ -1,4 +1,6 @@
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
@@ -27,7 +29,19 @@ pub enum RecordPostMatchOutcome {
 pub enum RecordPostMatchError {
     NotFound,
     NotInCompatibleState,
+    /// Une autre écriture est passée entre le chargement et l'append (carte 623).
+    Conflict,
     Internal(String),
+}
+
+impl RecordPostMatchError {
+    /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Internal`.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Internal(other.to_string()),
+        }
+    }
 }
 
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
@@ -40,7 +54,7 @@ pub async fn execute(
     let state = repo
         .find_by_id(&mr_id)
         .await
-        .map_err(|e| RecordPostMatchError::Internal(e.to_string()))?
+        .map_err(RecordPostMatchError::from_repository)?
         .ok_or(RecordPostMatchError::NotFound)?;
 
     let (updated_version, event) = match state {
@@ -79,7 +93,31 @@ pub async fn execute(
 
     repo.append(&mr_id, &event, updated_version - 1)
         .await
-        .map_err(|e| RecordPostMatchError::Internal(e.to_string()))?;
+        .map_err(RecordPostMatchError::from_repository)?;
 
     Ok(RecordPostMatchOutcome::Success)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::{pre_match, ConflictingRepository};
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let cmd = RecordPostMatchCommand {
+            match_report_id: MatchReportId::new(),
+            home_gain: MatchGain::try_new(10_000).unwrap(),
+            away_gain: MatchGain::try_new(10_000).unwrap(),
+            no_stalling_bonuses: NoStallingBonuses::default(),
+            home_fan_mod: FanFactorMod::try_new(0).unwrap(),
+            away_fan_mod: FanFactorMod::try_new(0).unwrap(),
+            summary_title: None,
+            summary_body: None,
+            recorded_by: CoachId::new(),
+        };
+        let resultat = execute(cmd, &repo).await;
+        assert!(matches!(resultat, Err(RecordPostMatchError::Conflict)));
+    }
 }

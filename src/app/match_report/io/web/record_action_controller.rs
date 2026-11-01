@@ -4,7 +4,10 @@ use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, HatredKeyword, InjuryType, MatchActionType, SequelStat, TeamSide,
     TempPlayerId, TurnNumber,
 };
-use crate::app::match_report::use_cases::delete_action_use_case::{self, DeleteActionCommand};
+use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::use_cases::delete_action_use_case::{
+    self, DeleteActionCommand, DeleteActionError,
+};
 use crate::app::match_report::use_cases::record_action_use_case::{
     self, RecordActionCommand, RecordActionError,
 };
@@ -116,6 +119,7 @@ async fn post_action(
                 .body(axum::body::Body::empty())
                 .unwrap()
         }
+        Err(RecordActionError::Conflict) => conflict_response(),
         Err(e) => match refus_client(&e) {
             Some(motif) => {
                 tracing::warn!("action refusée : {motif} ({e:?})");
@@ -191,6 +195,7 @@ pub async fn delete_action(
             .header("HX-Trigger", r#"{"actionDeleted": {}}"#)
             .body(axum::body::Body::empty())
             .unwrap(),
+        Err(DeleteActionError::Conflict) => conflict_response(),
         Err(e) => {
             tracing::error!("delete_action: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

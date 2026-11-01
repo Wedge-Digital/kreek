@@ -24,7 +24,7 @@ Aucune. Le conflit est déjà refusé ; seule la réponse change.
 
 ## Checklist
 
-- [ ] `Conflict` dans chaque erreur de use case d'écriture, alimenté par `ConcurrentWrite`
-- [ ] La conversion commune, appelée par chaque contrôleur concerné
-- [ ] Tests unitaires : chaque use case relaie `Conflict` ; la conversion rend 409 et `HX-Refresh`
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `Conflict` dans chaque erreur de use case d'écriture, alimenté par `ConcurrentWrite`
+- [x] La conversion commune, appelée par chaque contrôleur concerné
+- [x] Tests unitaires : chaque use case relaie `Conflict` ; la conversion rend 409 et `HX-Refresh`
+- [x] `make lint`, `make check-arch`, `make test`

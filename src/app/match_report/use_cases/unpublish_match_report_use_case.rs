@@ -1,7 +1,9 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
@@ -22,7 +24,19 @@ pub enum UnpublishMatchReportError {
     NotFound,
     NotPublished,
     NotEligible(CorrectionBlocker),
+    /// Une autre écriture est passée entre le chargement et l'append (carte 623).
+    Conflict,
     Repository(String),
+}
+
+impl UnpublishMatchReportError {
+    /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
 }
 
 /// Ramène un rapport publié en état corrigeable.
@@ -63,7 +77,7 @@ async fn persist_and_announce(
 ) -> Result<(), UnpublishMatchReportError> {
     repo.append(mr_id, event, version)
         .await
-        .map_err(|e| UnpublishMatchReportError::Repository(e.to_string()))?;
+        .map_err(UnpublishMatchReportError::from_repository)?;
     emettre(bus, event.to_enveloppe(mr_id));
     Ok(())
 }
@@ -91,7 +105,7 @@ async fn load_published(
     let state = repo
         .find_by_id(mr_id)
         .await
-        .map_err(|e| UnpublishMatchReportError::Repository(e.to_string()))?
+        .map_err(UnpublishMatchReportError::from_repository)?
         .ok_or(UnpublishMatchReportError::NotFound)?;
 
     match state {
@@ -514,5 +528,29 @@ mod tests {
 
         let envelope = rx.try_recv().expect("un événement doit être publié");
         assert_eq!(envelope.event_type, "MatchReportUnpublished");
+    }
+
+    /// Carte 623 — l'event store refuse l'append : le use case le dit, et
+    /// n'annonce rien sur le bus.
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye_sans_rien_emettre() {
+        use crate::app::match_report::use_cases::test_doubles::ConflictingRepository;
+        let repo = ConflictingRepository::holding(published_state());
+        let bus = new_bus();
+        let mut rx = bus.subscribe();
+
+        let result = execute(
+            command(),
+            &repo,
+            &FakeTeamData {
+                in_improvement: true,
+            },
+            &FakePlayerData { spp_spent: false },
+            &bus,
+        )
+        .await;
+
+        assert!(matches!(result, Err(UnpublishMatchReportError::Conflict)));
+        assert!(rx.try_recv().is_err(), "rien ne doit être émis");
     }
 }

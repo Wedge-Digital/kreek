@@ -20,6 +20,11 @@ Le parcours : la fiche équipe en phase de recrutement, puis le clic sur le
 bouton du bandeau (`.state-banner--phase .state-banner-cta`), qui échange
 `#app-content` par htmx (`hx-get`, `hx-push-url`) pour ouvrir le catalogue.
 
+**Un second parcours** (e2e de la carte 623, 2026-11-01) :
+`test_team_print_page.py::test_le_bouton_de_la_fiche_mene_a_la_page` lève la
+même erreur en quittant la fiche équipe par le bouton « Imprimer ». Le point
+commun : un échange htmx **qui part de la fiche équipe**.
+
 ## Ce qu'on sait, et ce qu'on ne sait pas
 
 - `<anonymous>` : c'est un script **inline exécuté par htmx** au moment de

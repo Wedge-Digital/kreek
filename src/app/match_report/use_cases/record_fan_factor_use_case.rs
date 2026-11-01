@@ -1,5 +1,7 @@
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, TeamValue};
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
@@ -27,7 +29,19 @@ pub enum RecordFanFactorError {
     NotFound,
     NotInPreMatchPhase,
     TeamValueUnavailable(String),
+    /// Une autre écriture est passée entre le chargement et l'append (carte 623).
+    Conflict,
     Repository(String),
+}
+
+impl RecordFanFactorError {
+    /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
 }
 
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
@@ -46,7 +60,7 @@ pub async fn execute(
     let version_before = updated.version - events.len() as u64;
     repo.append_many(&mr_id, events, version_before)
         .await
-        .map_err(|e| RecordFanFactorError::Repository(e.to_string()))?;
+        .map_err(RecordFanFactorError::from_repository)?;
     determine_outcome(&updated, team_data, competition_data).await
 }
 
@@ -72,7 +86,7 @@ async fn load_pre_match(
     let state = repo
         .find_by_id(mr_id)
         .await
-        .map_err(|e| RecordFanFactorError::Repository(e.to_string()))?
+        .map_err(RecordFanFactorError::from_repository)?
         .ok_or(RecordFanFactorError::NotFound)?;
     match state {
         MatchReportState::PreMatch(pm) => Ok(pm),
@@ -147,5 +161,31 @@ async fn determine_outcome(
         })
     } else {
         Ok(RecordFanFactorOutcome::RedirectToStep3)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::{
+        pre_match, ConflictingRepository, PlainCompetition, ReadyTeams,
+    };
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let cmd = RecordFanFactorCommand {
+            match_report_id: MatchReportId::new(),
+            home_fan_roll: D3Roll::try_new(2).unwrap(),
+            away_fan_roll: D3Roll::try_new(2).unwrap(),
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
+            recorded_by: CoachId::new(),
+        };
+        let resultat = execute(cmd, &repo, &ReadyTeams, &PlainCompetition).await;
+        assert!(
+            matches!(resultat, Err(RecordFanFactorError::Conflict)),
+            "{resultat:?}"
+        );
     }
 }

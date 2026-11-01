@@ -1,5 +1,7 @@
 use crate::app::match_report::domain::error::DomainError;
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::ActionId;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -17,7 +19,19 @@ pub enum DeleteActionError {
     NotFound,
     NotInPreMatchPhase,
     Domain(DomainError),
+    /// Une autre écriture est passée entre le chargement et l'append (carte 623).
+    Conflict,
     Repository(String),
+}
+
+impl DeleteActionError {
+    /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
 }
 
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
@@ -29,7 +43,7 @@ pub async fn execute(
     let state = repo
         .find_by_id(&mr_id)
         .await
-        .map_err(|e| DeleteActionError::Repository(e.to_string()))?;
+        .map_err(DeleteActionError::from_repository)?;
     let pm = match state.ok_or(DeleteActionError::NotFound)? {
         MatchReportState::PreMatch(pm) => pm,
         MatchReportState::ReadyToPublish(rtp) => rtp.into_pre_match(),
@@ -42,7 +56,7 @@ pub async fn execute(
     repo.append(&mr_id, &event, pm.version)
         .await
         .map(|_| ())
-        .map_err(|e| DeleteActionError::Repository(e.to_string()))
+        .map_err(DeleteActionError::from_repository)
 }
 
 #[cfg(test)]
@@ -116,5 +130,43 @@ mod tests {
         let (pm, _) = make_pm_with_action();
         let result = pm.delete_action(&ActionId("UNKNOWN".into()), CoachId::new());
         assert!(matches!(result, Err(DomainError::ActionNotFound(_))));
+    }
+}
+
+#[cfg(test)]
+mod conflict_tests {
+    use super::*;
+    use crate::app::match_report::domain::value_objects::{
+        ActionPlayer, MatchActionType, TeamSide, TurnNumber,
+    };
+    use crate::app::match_report::use_cases::test_doubles::{pre_match, ConflictingRepository};
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let action_id = ActionId("ACT01".into());
+        let (pm, _) = pre_match()
+            .record_action(
+                TeamSide::Home,
+                TurnNumber::try_new(1).unwrap(),
+                ActionPlayer::Regular(PlayerId::new()),
+                MatchActionType::Touchdown,
+                "Joueur".into(),
+                String::new(),
+                action_id.clone(),
+                CoachId::new(),
+            )
+            .expect("action de test valide");
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pm));
+        let cmd = DeleteActionCommand {
+            match_report_id: MatchReportId::new(),
+            action_id,
+            deleted_by: CoachId::new(),
+        };
+        let resultat = execute(cmd, &repo).await;
+        assert!(
+            matches!(resultat, Err(DeleteActionError::Conflict)),
+            "{resultat:?}"
+        );
     }
 }

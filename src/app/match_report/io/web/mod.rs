@@ -11,3 +11,4 @@ pub mod step5_controller;
 pub mod tests;
 pub mod view_models;
 pub mod widgets;
+pub mod write_conflict;

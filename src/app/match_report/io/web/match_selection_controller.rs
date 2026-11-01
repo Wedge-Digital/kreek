@@ -1,6 +1,7 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::CreationAppariementError;
 use crate::app::match_report::use_cases::match_report_access_service::{
     est_administrateur, AccesRapportDeps,
@@ -638,6 +639,9 @@ pub async fn update_match_selection(
         Err(update_match_selection_use_case::UpdateMatchSelectionError::TeamNotAvailable(tid)) => {
             tracing::warn!("update_match_selection: team {tid} not available");
             StatusCode::CONFLICT.into_response()
+        }
+        Err(update_match_selection_use_case::UpdateMatchSelectionError::Conflict) => {
+            conflict_response()
         }
         Err(e) => {
             tracing::error!("update_match_selection: {e:?}");

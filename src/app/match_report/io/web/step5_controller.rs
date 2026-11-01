@@ -2,6 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
+use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::use_cases::record_post_match_use_case;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -363,6 +364,7 @@ pub async fn post_step5(
         Err(record_post_match_use_case::RecordPostMatchError::NotInCompatibleState) => {
             StatusCode::CONFLICT.into_response()
         }
+        Err(record_post_match_use_case::RecordPostMatchError::Conflict) => conflict_response(),
         Err(e) => {
             tracing::error!("post_step5: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

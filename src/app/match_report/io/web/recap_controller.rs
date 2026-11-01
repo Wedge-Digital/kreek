@@ -14,6 +14,7 @@ use crate::app::match_report::io::web::builders::{
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm,
 };
+use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::correction_eligibility_service;
@@ -516,6 +517,7 @@ fn publish_response(
         Err(PublishMatchReportError::NotFound) => StatusCode::NOT_FOUND.into_response(),
         Err(PublishMatchReportError::AlreadyPublished) => StatusCode::CONFLICT.into_response(),
         Err(PublishMatchReportError::Cancelled) => StatusCode::GONE.into_response(),
+        Err(PublishMatchReportError::Conflict) => conflict_response(),
         Err(PublishMatchReportError::Repository(e)) => {
             tracing::error!("post_publish: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -568,6 +570,7 @@ fn unpublish_response(result: Result<(), UnpublishMatchReportError>) -> Response
         Err(UnpublishMatchReportError::NotFound) | Err(UnpublishMatchReportError::NotPublished) => {
             StatusCode::NOT_FOUND.into_response()
         }
+        Err(UnpublishMatchReportError::Conflict) => conflict_response(),
         Err(UnpublishMatchReportError::Repository(e)) => {
             tracing::error!("post_unpublish: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

@@ -1,4 +1,6 @@
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
     TeamSide, TempPlayer, TempPlayerId, TempPlayerKind,
@@ -25,7 +27,21 @@ pub enum InitTempPlayersError {
     NotInPreMatchPhase,
     JourneymanPositionUnavailable(String),
     PlayerCountUnavailable(String),
+    /// Une autre écriture est passée entre le chargement et l'append (carte
+    /// 623). Les coups de pouce appellent ce use case juste après leur propre
+    /// append : son conflit doit leur remonter comme tel.
+    Conflict,
     Repository(String),
+}
+
+impl InitTempPlayersError {
+    /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
 }
 
 /// **Les deux événements sont émis sur le bus interne**, et pas seulement
@@ -65,7 +81,7 @@ pub async fn execute(
     let version = pm.version;
     repo.append(&mr_id, &event, version)
         .await
-        .map_err(|e| InitTempPlayersError::Repository(e.to_string()))?;
+        .map_err(InitTempPlayersError::from_repository)?;
     emettre(bus, event.to_enveloppe(&mr_id));
     Ok(())
 }
@@ -80,7 +96,7 @@ async fn load_pm(
     let state = repo
         .find_by_id(mr_id)
         .await
-        .map_err(|e| InitTempPlayersError::Repository(e.to_string()))?
+        .map_err(InitTempPlayersError::from_repository)?
         .ok_or(InitTempPlayersError::NotFound)?;
     match state {
         MatchReportState::PreMatch(pm) => Ok(pm),
@@ -111,7 +127,7 @@ async fn reset_if_needed(
     let version = updated.version - 1;
     repo.append(mr_id, &reset_event, version)
         .await
-        .map_err(|e| InitTempPlayersError::Repository(e.to_string()))?;
+        .map_err(InitTempPlayersError::from_repository)?;
     // Le retrait franchit la frontière comme la naissance : sans lui, un
     // repassage sur l'écran des coups de pouce laisserait des journaliers
     // orphelins dans l'effectif.
@@ -470,4 +486,29 @@ async fn collect_journeymen(
             display_name: None,
         })
         .collect())
+}
+
+#[cfg(test)]
+mod conflict_tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::{
+        pre_match, ConflictingRepository, KnownPlayers, ReadyTeams,
+    };
+    use crate::common::services::event_bus::event_bus::new_bus;
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let pm = pre_match();
+        let team_id = pm.home_team_id.clone();
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pm));
+        let cmd = InitTempPlayersCommand {
+            match_report_id: MatchReportId::new(),
+            team_id,
+        };
+        let resultat = execute(cmd, &repo, &ReadyTeams, &KnownPlayers, &new_bus()).await;
+        assert!(
+            matches!(resultat, Err(InitTempPlayersError::Conflict)),
+            "{resultat:?}"
+        );
+    }
 }

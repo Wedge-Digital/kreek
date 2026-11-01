@@ -1,6 +1,8 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
     AllowedInducementSpec, IsStarPlayer, RosterPositionUid, TeamValue,
@@ -10,7 +12,7 @@ use crate::app::match_report::ports::{
     TierRulesDto,
 };
 use crate::app::match_report::use_cases::init_temp_players_use_case::{
-    self, InitTempPlayersCommand,
+    self, InitTempPlayersCommand, InitTempPlayersError,
 };
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -89,9 +91,30 @@ pub enum RecordInducementsError {
     TierRulesUnavailable(String),
     UnauthorizedInducement(String),
     Domain(DomainError),
+    /// Une autre écriture est passée entre le chargement et l'append (carte 623).
+    Conflict,
     Repository(String),
     InvalidMercenaryPosition(RosterPositionUid),
     PlayerCountUnavailable(String),
+}
+
+impl RecordInducementsError {
+    /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
+
+    /// L'initialisation des joueurs temporaires appende à son tour : son
+    /// conflit est celui des coups de pouce, pas une panne.
+    fn from_init_temp_players(e: InitTempPlayersError) -> Self {
+        match e {
+            InitTempPlayersError::Conflict => Self::Conflict,
+            other => Self::Repository(format!("{other:?}")),
+        }
+    }
 }
 
 // ── Execute ───────────────────────────────────────────────────────────────────
@@ -168,7 +191,7 @@ async fn load_pre_match(
     let state = repo
         .find_by_id(mr_id)
         .await
-        .map_err(|e| RecordInducementsError::Repository(e.to_string()))?
+        .map_err(RecordInducementsError::from_repository)?
         .ok_or(RecordInducementsError::NotFound)?;
     match state {
         MatchReportState::PreMatch(pm) => Ok(pm),
@@ -395,7 +418,7 @@ async fn persist_and_init(
     let version_before = version_after - events.len() as u64;
     repo.append_many(mr_id, events, version_before)
         .await
-        .map_err(|e| RecordInducementsError::Repository(e.to_string()))?;
+        .map_err(RecordInducementsError::from_repository)?;
     init_temp_players_use_case::execute(
         InitTempPlayersCommand {
             match_report_id,
@@ -407,7 +430,7 @@ async fn persist_and_init(
         bus,
     )
     .await
-    .map_err(|e| RecordInducementsError::Repository(format!("{e:?}")))
+    .map_err(RecordInducementsError::from_init_temp_players)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -559,5 +582,55 @@ mod tests {
                 "expected RedirectToInducements even with both carts recorded, got {other:?}"
             ),
         }
+    }
+}
+
+#[cfg(test)]
+mod conflict_tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::{
+        pre_match, ConflictingRepository, KnownPlayers, PlainCompetition, ReadyTeams,
+    };
+    use crate::common::services::event_bus::event_bus::new_bus;
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let pm = pre_match();
+        let team_id = pm.home_team_id.clone();
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pm));
+        let cmd = RecordInducementsCommand {
+            match_report_id: MatchReportId::new(),
+            team_id,
+            purchases: vec![],
+            mercenary_purchases: vec![],
+            recorded_by: CoachId::new(),
+        };
+        let resultat = execute(
+            cmd,
+            &repo,
+            &ReadyTeams,
+            &PlainCompetition,
+            &KnownPlayers,
+            &new_bus(),
+        )
+        .await;
+        assert!(
+            matches!(resultat, Err(RecordInducementsError::Conflict)),
+            "{resultat:?}"
+        );
+    }
+
+    /// L'initialisation des joueurs temporaires appende après les coups de
+    /// pouce : son conflit doit rester un conflit, pas devenir une panne.
+    #[test]
+    fn le_conflit_des_joueurs_temporaires_reste_un_conflit() {
+        assert!(matches!(
+            RecordInducementsError::from_init_temp_players(InitTempPlayersError::Conflict),
+            RecordInducementsError::Conflict
+        ));
+        assert!(matches!(
+            RecordInducementsError::from_init_temp_players(InitTempPlayersError::NotFound),
+            RecordInducementsError::Repository(_)
+        ));
     }
 }

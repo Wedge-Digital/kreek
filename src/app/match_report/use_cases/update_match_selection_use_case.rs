@@ -1,4 +1,6 @@
-use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::match_report_repository_port::{
+    IMatchReportRepository, RepositoryError,
+};
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
@@ -22,7 +24,20 @@ pub enum UpdateMatchSelectionError {
     NotInDraftPhase,
     SameTeam,
     TeamNotAvailable(String),
+    /// Une autre écriture est passée entre le chargement et l'append (carte 623).
+    Conflict,
     Repository(String),
+}
+
+impl UpdateMatchSelectionError {
+    /// `ConcurrentWrite` garde son sens : sans cette conversion, il devenait un
+    /// `Repository` comme un autre, et le contrôleur rendait 500 (carte 623).
+    fn from_repository(e: RepositoryError) -> Self {
+        match e {
+            RepositoryError::ConcurrentWrite => Self::Conflict,
+            other => Self::Repository(other.to_string()),
+        }
+    }
 }
 
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
@@ -37,7 +52,7 @@ pub async fn execute(
     let state = repo
         .find_by_id(&mr_id_str)
         .await
-        .map_err(|e| UpdateMatchSelectionError::Repository(e.to_string()))?
+        .map_err(UpdateMatchSelectionError::from_repository)?
         .ok_or(UpdateMatchSelectionError::NotFound)?;
 
     let mut draft = match state {
@@ -55,7 +70,7 @@ pub async fn execute(
 
         repo.append(&mr_id_str, &event, updated.version - 1)
             .await
-            .map_err(|e| UpdateMatchSelectionError::Repository(e.to_string()))?;
+            .map_err(UpdateMatchSelectionError::from_repository)?;
 
         draft = updated;
     }
@@ -89,7 +104,7 @@ pub async fn execute(
 
     repo.append(&mr_id_str, &confirm_event, pre_match.version - 1)
         .await
-        .map_err(|e| UpdateMatchSelectionError::Repository(e.to_string()))?;
+        .map_err(UpdateMatchSelectionError::from_repository)?;
 
     // Émission directe depuis un use case — `CLAUDE.md` l'interdit : un app
     // event doit naître d'un domain event, converti par le publisher. Le
@@ -113,4 +128,66 @@ pub async fn execute(
     );
 
     Ok(cmd.match_report_id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
+    use crate::app::match_report::domain::value_objects::MatchReportOrigin;
+    use crate::app::match_report::use_cases::test_doubles::{ConflictingRepository, ReadyTeams};
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
+    use crate::app::shared_kernel::identity::ids::SpaceId;
+    use crate::common::services::event_bus::event_bus::new_bus;
+
+    fn draft() -> MatchReportDraft {
+        MatchReportDraft {
+            id: MatchReportId::new(),
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: TeamId::new(),
+            away_team_id: TeamId::new(),
+            created_by: CoachId::new(),
+            origin: MatchReportOrigin::Manual,
+            pairing_id: None,
+            version: 1,
+        }
+    }
+
+    async fn run(draft: MatchReportDraft, home: TeamId, away: TeamId) -> UpdateMatchSelectionError {
+        let repo = ConflictingRepository::holding(MatchReportState::Draft(draft));
+        let cmd = UpdateMatchSelectionCommand {
+            match_report_id: MatchReportId::new(),
+            home_team_id: home,
+            away_team_id: away,
+            confirmed_by: CoachId::new(),
+        };
+        execute(cmd, &repo, &ReadyTeams, &new_bus())
+            .await
+            .expect_err("l'append doit échouer")
+    }
+
+    /// Sélection inchangée : le seul append est celui de la confirmation.
+    #[tokio::test]
+    async fn un_conflit_sur_la_confirmation_est_relaye() {
+        let d = draft();
+        let (home, away) = (d.home_team_id.clone(), d.away_team_id.clone());
+        let erreur = run(d, home, away).await;
+        assert!(
+            matches!(erreur, UpdateMatchSelectionError::Conflict),
+            "{erreur:?}"
+        );
+    }
+
+    /// Sélection changée : le premier append, celui du changement, échoue.
+    #[tokio::test]
+    async fn un_conflit_sur_le_changement_d_equipes_est_relaye() {
+        let erreur = run(draft(), TeamId::new(), TeamId::new()).await;
+        assert!(
+            matches!(erreur, UpdateMatchSelectionError::Conflict),
+            "{erreur:?}"
+        );
+    }
 }
