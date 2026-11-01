@@ -369,6 +369,21 @@ impl IMatchReportRepository for MatchReportRepository {
         Ok(row.map(|r| r.0))
     }
 
+    async fn find_access_scope(
+        &self,
+        match_report_id: &str,
+    ) -> Result<Option<(String, String, String)>, RepositoryError> {
+        let row: Option<(String, String, String)> = sqlx::query_as(
+            "SELECT competition_id, home_team_id, away_team_id FROM match_report_proj \
+             WHERE match_report_id = $1",
+        )
+        .bind(match_report_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+        Ok(row)
+    }
+
     async fn find_team_ids(
         &self,
         match_report_id: &str,

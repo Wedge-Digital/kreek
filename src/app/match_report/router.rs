@@ -1,4 +1,5 @@
 use crate::app::match_report::io::web::actions_step_controller::{get_step3, get_step4};
+use crate::app::match_report::io::web::garde_saisie::garde_saisie;
 use crate::app::match_report::io::web::inducements_controller::{
     get_inducements, post_inducements,
 };
@@ -35,11 +36,28 @@ use crate::app::match_report::io::web::widgets::turn_selector_widget::{
 use crate::app::match_report::routes::path;
 use crate::state::AppState;
 use axum::{
+    middleware::from_fn_with_state,
     routing::{delete, get, post},
     Router,
 };
 
-pub fn router() -> Router<AppState> {
+/// Deux groupes, et la frontière entre eux est une décision (carte 622).
+///
+/// `routes_de_saisie()` porte l'écriture d'un compte rendu et les écrans qui
+/// la préparent : `garde_saisie` y est posée **une fois** — admins et coachs
+/// des deux équipes — et couvre du même coup ce qu'on ajoutera au groupe.
+///
+/// `routes_ouvertes()` garde ce qui n'en relève pas : le hors-calendrier, les
+/// feuilles imprimables, l'arrivée depuis le calendrier, et le récapitulatif,
+/// qui se garde lui-même (`is_authorized`).
+///
+/// **`router` prend l'état**, comme celui de `teams` : `from_fn_with_state`
+/// exige une valeur à la construction.
+pub fn router(state: AppState) -> Router<AppState> {
+    routes_ouvertes().merge(routes_de_saisie().route_layer(from_fn_with_state(state, garde_saisie)))
+}
+
+fn routes_ouvertes() -> Router<AppState> {
     Router::new()
         // L'impression (épic E16) : lecture seule.
         .route(path::PRINT_INDUCEMENTS, get(get_print_inducements))
@@ -56,11 +74,18 @@ pub fn router() -> Router<AppState> {
             path::MATCH_REPORT_NEW,
             get(new_match_report).post(create_match_report),
         )
+        .route(path::MATCH_REPORT_FROM_PAIRING, get(from_pairing))
+        .route(path::MATCH_REPORT_RECAP, get(get_recap))
+        .route(path::MATCH_REPORT_RECAP_PUBLISH, post(post_publish))
+        .route(path::MATCH_REPORT_RECAP_UNPUBLISH, post(post_unpublish))
+}
+
+fn routes_de_saisie() -> Router<AppState> {
+    Router::new()
         .route(
             path::MATCH_REPORT_EDIT,
             get(edit_match_report).post(update_match_selection),
         )
-        .route(path::MATCH_REPORT_FROM_PAIRING, get(from_pairing))
         .route(
             path::MATCH_REPORT_STEP2,
             get(get_pre_match).post(post_pre_match),
@@ -68,6 +93,10 @@ pub fn router() -> Router<AppState> {
         .route(
             path::MATCH_REPORT_INDUCEMENTS,
             get(get_inducements).post(post_inducements),
+        )
+        .route(
+            path::MATCH_REPORT_MERCENARY_SELECTOR,
+            get(get_mercenary_selector),
         )
         .route(path::MATCH_REPORT_STEP3, get(get_step3))
         .route(path::MATCH_REPORT_STEP4, get(get_step4))
@@ -101,11 +130,4 @@ pub fn router() -> Router<AppState> {
         .route(path::MATCH_REPORT_STEP3_ACTIONS, post(post_action_step3))
         .route(path::MATCH_REPORT_STEP4_ACTIONS, post(post_action_step4))
         .route(path::MATCH_REPORT_ACTION, delete(delete_action))
-        .route(
-            path::MATCH_REPORT_MERCENARY_SELECTOR,
-            get(get_mercenary_selector),
-        )
-        .route(path::MATCH_REPORT_RECAP, get(get_recap))
-        .route(path::MATCH_REPORT_RECAP_PUBLISH, post(post_publish))
-        .route(path::MATCH_REPORT_RECAP_UNPUBLISH, post(post_unpublish))
 }

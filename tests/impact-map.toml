@@ -235,6 +235,8 @@
 # Le tirage des journées (épic E18) : `domain/draw.rs` et le Calendrier de
 # l'admin, dans `competitions`. Les autres BCs sont traversés par la
 # construction des cinq équipes enrôlées, comme pour l'invariant de journée.
+"test_match_report_access" = ["match_report", "competitions", "teams", "team_creation",
+                              "spaces", "references"]
 "test_schedule_draw" = ["competitions", "teams", "team_creation", "spaces",
                         "references"]
 

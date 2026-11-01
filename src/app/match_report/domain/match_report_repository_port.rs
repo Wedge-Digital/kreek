@@ -59,6 +59,14 @@ pub trait IMatchReportRepository: Send + Sync {
         match_report_id: &str,
     ) -> Result<Option<MatchReportState>, RepositoryError>;
 
+    /// Ce qu'il faut pour décider de l'accès au rapport : `(compétition,
+    /// domicile, extérieur)`. Lu sur la projection, comme `find_space_id` : la
+    /// garde des routes de saisie le demande à chaque requête.
+    async fn find_access_scope(
+        &self,
+        match_report_id: &str,
+    ) -> Result<Option<(String, String, String)>, RepositoryError>;
+
     /// Les deux équipes du rapport : `(domicile, extérieur)`.
     ///
     /// Lue sur la projection pour la même raison que `find_space_id` :

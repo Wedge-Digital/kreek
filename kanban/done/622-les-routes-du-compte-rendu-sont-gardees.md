@@ -36,9 +36,9 @@ mesure préalable (2026-11-01).
 
 ## Checklist
 
-- [ ] Le garde, et son appel sur chaque route du tableau
-- [ ] Tests unitaires du garde : admin, coach, tiers, rapport introuvable
-- [ ] E2E : un membre simple (`X-Bypass-Auth-Profile: simple`) refusé sur une
+- [x] Le garde, et son appel sur chaque route du tableau
+- [x] Tests unitaires du garde : admin, coach, tiers, rapport introuvable
+- [x] E2E : un membre simple (`X-Bypass-Auth-Profile: simple`) refusé sur une
       écriture et sur un écran de saisie ; la suite existante reste verte
-- [ ] `tests/impact-map.toml` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `tests/impact-map.toml` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

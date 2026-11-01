@@ -201,6 +201,13 @@ mod tests {
         async fn find_by_id(&self, _: &str) -> Result<Option<MatchReportState>, RepositoryError> {
             Ok(self.state.lock().unwrap().take())
         }
+        async fn find_access_scope(
+            &self,
+            _: &str,
+        ) -> Result<Option<(String, String, String)>, RepositoryError> {
+            Ok(None)
+        }
+
         async fn find_team_ids(
             &self,
             _: &str,

@@ -182,6 +182,13 @@ mod tests {
 
     #[async_trait]
     impl IMatchReportRepository for FakeMatchReportRepo {
+        async fn find_access_scope(
+            &self,
+            _: &str,
+        ) -> Result<Option<(String, String, String)>, RepositoryError> {
+            Ok(None)
+        }
+
         async fn find_team_ids(
             &self,
             _: &str,
