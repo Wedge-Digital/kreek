@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1b · Coups de pouce — terminés — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container match-report-inducements">
+  <div class="mr-header">
+    <div class="mr-header-icon">🛒</div>
+    <div class="mr-header-title">Coups de pouce</div>
+    <div class="mr-header-sub">Achats terminés pour les deux équipes</div>
+  </div>
+  <div class="mr-steps">
+    <div class="mr-step mr-step--active">1</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">2</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
+  </div>
+
+  <!-- NOUVEAU. Une fois les deux équipes passées, la page de choix laisse place
+       à ce récapitulatif (même route, /inducements/{team_id}). On ne retouche
+       plus un achat isolé : on annule tout, et l'on recommence par le favori.
+       Les lignes sont celles du panier réel (.mr-cart-merco-item). -->
+  <div class="mr-card">
+    <div class="mb-title-row">
+      <div class="mr-banner mb-banner--flat">
+        <div class="mr-banner-logo">NF</div>
+        <div><div class="mr-banner-name">Nains de Fer</div><div class="mr-banner-label">Favori · achète en premier</div></div>
+      </div>
+      <span class="mb-status mb-status--done">Terminé ✓</span>
+    </div>
+    <div class="mr-cart-merco-list">
+        <div class="mr-cart-merco-item"><div class="mr-cart-merco-info"><div class="mr-cart-merco-name">Chariot de Vivres ×2</div><div class="mr-cart-merco-type">Commun</div></div><div class="mr-cart-merco-price">30 kPo</div></div>
+        <div class="mr-cart-merco-item"><div class="mr-cart-merco-info"><div class="mr-cart-merco-name">Masseur Douteux</div><div class="mr-cart-merco-type">Commun</div></div><div class="mr-cart-merco-price">30 kPo</div></div>
+        <div class="mr-cart-merco-item"><div class="mr-cart-merco-info"><div class="mr-cart-merco-name">Bloqueur nain</div><div class="mr-cart-merco-type">Mercenaire Niv. 1</div></div><div class="mr-cart-merco-price">85 kPo</div></div>
+    </div>
+    <div class="mb-ind-total"><span class="text-tiny">par toi</span><span><b>145</b> / 510 kPo</span></div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mb-title-row">
+      <div class="mr-banner mb-banner--flat">
+        <div class="mr-banner-logo">LR</div>
+        <div><div class="mr-banner-name">London Rats</div><div class="mr-banner-label">Outsider · achète en second</div></div>
+      </div>
+      <span class="mb-status mb-status--done">Terminé ✓</span>
+    </div>
+    <div class="mr-cart-merco-list">
+        <div class="mr-cart-merco-item"><div class="mr-cart-merco-info"><div class="mr-cart-merco-name">Arbitre Complaisant</div><div class="mr-cart-merco-type">Commun</div></div><div class="mr-cart-merco-price">50 kPo</div></div>
+        <div class="mr-cart-merco-item"><div class="mr-cart-merco-info"><div class="mr-cart-merco-name">Guérisseur Itinérant</div><div class="mr-cart-merco-type">Commun</div></div><div class="mr-cart-merco-price">40 kPo</div></div>
+    </div>
+    <div class="mb-ind-total"><span class="text-tiny">par Morgane</span><span><b>90</b> / 200 kPo</span></div>
+  </div>
+
+  <div class="mb-live-actions">
+    <a class="btn btn-primary-blue btn-md" href="app-mobile-solo-live.html">Coup d'envoi → Match</a>
+    <a class="btn btn-text mb-danger-link" href="app-mobile-inducements-cancel.html">Annuler les coups de pouce</a>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

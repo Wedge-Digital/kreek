@@ -272,3 +272,14 @@
   border: 1px solid var(--dark-5); background: var(--white); color: var(--dark-2);
 }
 .mb-cart-list .mr-qty-value { min-width: 16px; text-align: center; font-weight: 700; font-size: var(--text-tiny); }
+
+/* Coups de pouce terminés : un camp par carte, son bandeau à plat. */
+.mr-banner.mb-banner--flat { padding: 0; background: none; box-shadow: none; }
+.mb-ind-total { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--text-small); color: var(--dark-1); border-top: 1px solid var(--dark-5); padding-top: 8px; }
+/* L'annulation : le rouge du bouton de suppression réel (.btn-danger-sm). */
+.btn.mb-danger-link { color: var(--red); }
+.mb-confirm {
+  display: flex; flex-direction: column; gap: 8px; padding: var(--p1);
+  background: var(--white); border-left: 4px solid var(--red); border-radius: 12px;
+}
+.btn-primary-sm.mb-danger-btn { background: var(--red); border-color: var(--red); }
