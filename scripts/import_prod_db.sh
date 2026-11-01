@@ -85,7 +85,9 @@ fi
 # ── Le dump ──────────────────────────────────────────────────────────────────
 echo ""
 echo "  ${gras}1/4${nul}  Lecture de la production…"
+ouvrir_tunnel_si_besoin "$SOURCE_PROFILE"
 dumper_production "$SOURCE_URL" "$SOURCE_HOTE"
+fermer_tunnel
 
 # ── La cible ─────────────────────────────────────────────────────────────────
 echo "  ${gras}2/4${nul}  Remise à zéro de la cible…"

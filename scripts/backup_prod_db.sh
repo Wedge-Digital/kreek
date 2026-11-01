@@ -31,7 +31,9 @@ echo "  ${gras}Sauvegarder la base de production${nul}"
 echo ""
 echo "     Source  : $(sans_secret "$SOURCE_URL")"
 echo ""
+ouvrir_tunnel_si_besoin "$SOURCE_PROFILE"
 dumper_production "$SOURCE_URL" "$SOURCE_HOTE"
+fermer_tunnel
 
 echo ""
 echo "  ${vert}${gras}✓${nul} Production sauvegardée."
