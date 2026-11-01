@@ -601,14 +601,20 @@ impl Search {
             .map(|&i| input.teams[i])
     }
 
+    /// Reçoit l'équipe au plus petit identifiant — la première inscrite. C'est
+    /// la règle de l'ancien tirage (`normalize_pair`), que la recherche ne doit
+    /// pas changer : sans elle, l'ordre de parcours décidait qui reçoit.
     fn pairings(&self, input: &DrawInput) -> Vec<ProposedPairing> {
         self.best
             .pairs
             .iter()
-            .map(|&(i, j)| ProposedPairing {
-                home: input.teams[i],
-                away: input.teams[j],
-                history: input.history.history(&input.teams[i], &input.teams[j]),
+            .map(|&(i, j)| {
+                let (home, away) = pair(&input.teams[i], &input.teams[j]);
+                ProposedPairing {
+                    home,
+                    away,
+                    history: input.history.history(&home, &away),
+                }
             })
             .collect()
     }
@@ -671,6 +677,21 @@ mod tests {
     ///
     /// Vérifié avant correction, sur la fonction en service :
     /// `obtenu : [("team-1", "team-4")]` — une rencontre au lieu de deux.
+    #[test]
+    fn the_smaller_id_always_plays_at_home() {
+        let input = input_of(teams(6));
+        for s in 0..30 {
+            for r in draw(&input, &mut seed(s)).pairings {
+                assert!(
+                    r.home.to_string() < r.away.to_string(),
+                    "graine {s} : {} reçoit {}",
+                    r.away,
+                    r.home
+                );
+            }
+        }
+    }
+
     #[test]
     fn four_teams_three_pairs_played_give_two_pairings() {
         let mut input = input_of(teams(4));

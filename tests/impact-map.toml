@@ -232,6 +232,12 @@
 "test_invariant_journee" = ["competitions", "teams", "team_creation", "spaces",
                             "references"]
 
+# Le tirage des journées (épic E18) : `domain/draw.rs` et le Calendrier de
+# l'admin, dans `competitions`. Les autres BCs sont traversés par la
+# construction des cinq équipes enrôlées, comme pour l'invariant de journée.
+"test_schedule_draw" = ["competitions", "teams", "team_creation", "spaces",
+                        "references"]
+
 # Coups de pouce et trésorerie : le seul test qui achète réellement des
 # inducements. `teams` y est vérifié, pas traversé — c'est sa trésorerie et son
 # grand livre qui sont contrôlés, des deux côtés du match.

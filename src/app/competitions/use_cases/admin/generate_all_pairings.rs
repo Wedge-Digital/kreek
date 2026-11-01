@@ -95,18 +95,21 @@ mod tests {
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
     use crate::app::shared_kernel::bloodbowl::team::TeamId;
     use async_trait::async_trait;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
+    use std::sync::Mutex;
 
-    struct FakeMatchDayRepo(HashMap<String, MatchDay>);
+    /// Les journées de la saison. `save_pairings` y écrit : chaque journée
+    /// générée devient l'historique de la suivante, comme en base.
+    struct FakeMatchDayRepo(Mutex<HashMap<String, MatchDay>>);
     #[async_trait]
     impl IMatchDayRepository for FakeMatchDayRepo {
         async fn find_by_season(&self, _: &str) -> Result<Vec<MatchDay>, MatchDayRepositoryError> {
-            let mut days: Vec<MatchDay> = self.0.values().cloned().collect();
+            let mut days: Vec<MatchDay> = self.0.lock().unwrap().values().cloned().collect();
             days.sort_by_key(|d| d.position.into_inner());
             Ok(days)
         }
         async fn find_by_id(&self, id: &str) -> Result<Option<MatchDay>, MatchDayRepositoryError> {
-            Ok(self.0.get(id).cloned())
+            Ok(self.0.lock().unwrap().get(id).cloned())
         }
         async fn save_match_day(&self, _: &MatchDay) -> Result<(), MatchDayRepositoryError> {
             Ok(())
@@ -116,12 +119,16 @@ mod tests {
         }
         async fn save_pairings(
             &self,
-            _: &str,
-            _: &[(
+            round_id: &str,
+            pairings: &[(
                 Pairing,
                 crate::app::competitions::domain::match_day_repository_port::NewPairingProjection,
             )],
         ) -> Result<(), MatchDayRepositoryError> {
+            let mut days = self.0.lock().unwrap();
+            let day = days.get_mut(round_id).expect("journée connue");
+            day.pairings
+                .extend(pairings.iter().map(|(pairing, _)| pairing.clone()));
             Ok(())
         }
         async fn save_pairing(
@@ -239,7 +246,9 @@ mod tests {
         TeamInfoDto {
             team_id: id.into(),
             team_name: format!("Team {id}"),
-            coach_id: String::new(),
+            // Un coach par équipe : un `coach_id` commun les rendrait toutes
+            // « du même coach », et R4 interdirait toute rencontre.
+            coach_id: format!("coach-{id}"),
             coach_name: String::new(),
             roster_name: String::new(),
             logo_url: None,
@@ -274,7 +283,7 @@ mod tests {
         let mut days = HashMap::new();
         days.insert(empty_day.id.to_string(), empty_day);
         days.insert(filled_day.id.to_string(), filled_day);
-        let match_day_repo = FakeMatchDayRepo(days);
+        let match_day_repo = FakeMatchDayRepo(Mutex::new(days));
         let group_repo = FakeGroupRepo;
         let team_port = FakeTeamInfoPort(vec![dto(home), dto(away)]);
         let event_bus = crate::common::services::event_bus::event_bus::new_bus();
@@ -292,5 +301,48 @@ mod tests {
         .expect("ne doit pas échouer globalement à cause d'une journée déjà pourvue");
 
         assert_eq!(outcome.skipped_round_names, vec!["Journée 1".to_string()]);
+    }
+
+    /// R12 — « Générer toutes les rencontres » passe par le même tirage :
+    /// quatre équipes sur trois journées font un tour complet, sans équipe sur
+    /// le banc ni revanche — ce que l'ancien tirage glouton ne garantissait pas.
+    #[tokio::test]
+    async fn generating_the_season_uses_the_same_draw() {
+        let teams: Vec<String> = (0..4).map(|_| TeamId::new().to_string()).collect();
+        let days: HashMap<String, MatchDay> = (0..3)
+            .map(|position| day(position, vec![]))
+            .map(|d| (d.id.to_string(), d))
+            .collect();
+        let match_day_repo = FakeMatchDayRepo(Mutex::new(days));
+        let team_port = FakeTeamInfoPort(teams.iter().map(|id| dto(id)).collect());
+        let event_bus = crate::common::services::event_bus::event_bus::new_bus();
+
+        execute(
+            "s1",
+            "c1",
+            "sp1",
+            &match_day_repo,
+            &FakeGroupRepo,
+            &team_port,
+            &event_bus,
+        )
+        .await
+        .expect("la saison se génère");
+
+        let season = match_day_repo.find_by_season("s1").await.unwrap();
+        let mut met = HashSet::new();
+        for round in &season {
+            assert_eq!(
+                round.pairings.len(),
+                2,
+                "{} : une équipe sur le banc",
+                round.name
+            );
+            for p in &round.pairings {
+                let pair =
+                    crate::app::competitions::domain::draw::pair(&p.home_team_id, &p.away_team_id);
+                assert!(met.insert(pair), "revanche programmée en {}", round.name);
+            }
+        }
     }
 }

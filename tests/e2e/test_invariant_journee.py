@@ -1,9 +1,10 @@
 """Une équipe joue au plus un match par journée (carte 551).
 
 La règle existait déjà — mais comme détail de l'algorithme de tirage, dans le
-`used: HashSet` de `generate_round_pairings`. Elle ne protégeait que ce
-chemin-là : `add_match_use_case`, par lequel un commissaire ajoute une rencontre
-à la main, ne vérifiait que l'enrôlement des deux équipes.
+`used: HashSet` de `generate_round_pairings` (remplacé depuis par
+`domain/draw.rs`, épic E18). Elle ne protégeait que ce chemin-là :
+`add_match_use_case`, par lequel un commissaire ajoute une rencontre à la main,
+ne vérifiait que l'enrôlement des deux équipes.
 
 **Ces tests exercent le chemin de l'admin**, celui qui était troué. Les tests
 unitaires du domaine et du use case couvrent la règle ; ceux-ci vérifient

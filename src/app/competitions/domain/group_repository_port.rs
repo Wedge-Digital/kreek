@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+#[derive(Clone)]
 pub struct GroupWithTeams {
     pub group_id: String,
     pub group_name: String,
