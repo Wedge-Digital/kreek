@@ -60,13 +60,13 @@ la publication. Les journaliers retirés sortent de `players` par
 
 ## Checklist
 
-- [ ] `InducementsCancelled`, son `type_name`, son rejeu
-- [ ] `cancel_inducements` et ses deux refus
-- [ ] Le use case, instrumenté, qui émet les trois événements
-- [ ] Le bras de projection
-- [ ] La route, dans le groupe gardé
-- [ ] Tests unitaires : annulation des deux camps, petite monnaie revenue à
+- [x] `InducementsCancelled`, son `type_name`, son rejeu
+- [x] `cancel_inducements` et ses deux refus
+- [x] Le use case, instrumenté, qui émet les trois événements
+- [x] Le bras de projection
+- [x] La route, dans le groupe gardé
+- [x] Tests unitaires : annulation des deux camps, petite monnaie revenue à
       l'écart de valeur, refus avec une action, permis après sa suppression,
       refus sans achat, rejeu, séquence invalide en `ReadyToPublish`, journaliers
       nommés, conflit
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `make lint`, `make check-arch`, `make test`

@@ -97,6 +97,12 @@ pub enum MatchReportDomainEvent {
         purchases: Vec<InducementPurchase>,
         recorded_by: CoachId,
     },
+    /// Les coups de pouce des deux équipes sont effacés : on recommence par le
+    /// favori (carte 626). Les joueurs temporaires ne passent pas par lui : un
+    /// `TempPlayersReset` par camp le suit dans le même append.
+    InducementsCancelled {
+        cancelled_by: CoachId,
+    },
     StarPlayerEngaged {
         team_id: TeamId,
         star_player_uid: InducementId,
@@ -189,6 +195,7 @@ impl MatchReportDomainEvent {
             Self::MatchReportCancelled { .. } => "MatchReportCancelled",
             Self::TeamValuesRecorded { .. } => "TeamValuesRecorded",
             Self::InducementsRecorded { .. } => "InducementsRecorded",
+            Self::InducementsCancelled { .. } => "InducementsCancelled",
             Self::StarPlayerEngaged { .. } => "StarPlayerEngaged",
             Self::TempPlayersInitialized { .. } => "TempPlayersInitialized",
             Self::TempPlayersReset { .. } => "TempPlayersReset",

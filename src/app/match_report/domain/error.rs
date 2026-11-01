@@ -40,6 +40,12 @@ pub enum DomainError {
     CorrectionNotAllowed(CorrectionBlocker),
     /// Un rapport annulé n'a plus de journée à changer (carte 557).
     ReportCancelled,
+    /// Des actions de match sont enregistrées : les coups de pouce ne
+    /// s'annulent plus, les joueurs temporaires qu'elles désignent
+    /// disparaîtraient (carte 626).
+    MatchAlreadyStarted,
+    /// Aucune des deux équipes n'a validé ses coups de pouce (carte 626).
+    NoInducementsToCancel,
 }
 
 impl fmt::Display for DomainError {
@@ -51,6 +57,13 @@ impl fmt::Display for DomainError {
             Self::SameTeam => write!(f, "les deux équipes doivent être différentes"),
             Self::InvalidEventSequence => write!(f, "séquence d'événements invalide"),
             Self::ReportCancelled => write!(f, "le rapport est annulé"),
+            Self::MatchAlreadyStarted => write!(
+                f,
+                "le match a commencé : les coups de pouce ne s'annulent plus une fois une action enregistrée"
+            ),
+            Self::NoInducementsToCancel => {
+                write!(f, "aucune équipe n'a encore validé ses coups de pouce")
+            }
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),
             Self::BudgetExceeded { spent, budget } => {

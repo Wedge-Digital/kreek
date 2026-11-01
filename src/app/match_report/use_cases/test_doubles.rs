@@ -99,6 +99,89 @@ impl IMatchReportRepository for ConflictingRepository {
     }
 }
 
+/// Rend l'état confié au premier `find_by_id`, accepte tout append et garde les
+/// événements reçus, pour qu'un test lise ce que le use case a écrit (carte 626).
+pub struct RecordingRepository {
+    state: Mutex<Option<MatchReportState>>,
+    appended: Mutex<Vec<MatchReportDomainEvent>>,
+}
+
+impl RecordingRepository {
+    pub fn holding(state: MatchReportState) -> Self {
+        Self {
+            state: Mutex::new(Some(state)),
+            appended: Mutex::new(vec![]),
+        }
+    }
+
+    /// Les événements appendus, dans l'ordre.
+    pub fn appended(&self) -> Vec<MatchReportDomainEvent> {
+        self.appended.lock().unwrap().clone()
+    }
+}
+
+#[async_trait]
+impl IMatchReportRepository for RecordingRepository {
+    async fn append(
+        &self,
+        _: &str,
+        event: &MatchReportDomainEvent,
+        version: u64,
+    ) -> Result<u64, RepositoryError> {
+        self.appended.lock().unwrap().push(event.clone());
+        Ok(version + 1)
+    }
+    async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_by_id(&self, _: &str) -> Result<Option<MatchReportState>, RepositoryError> {
+        Ok(self.state.lock().unwrap().take())
+    }
+    async fn find_team_ids(&self, _: &str) -> Result<Option<(String, String)>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_access_scope(
+        &self,
+        _: &str,
+    ) -> Result<Option<(String, String, String)>, RepositoryError> {
+        Ok(None)
+    }
+    async fn append_many(
+        &self,
+        _: &str,
+        events: Vec<MatchReportDomainEvent>,
+        version: u64,
+    ) -> Result<u64, RepositoryError> {
+        let count = events.len() as u64;
+        self.appended.lock().unwrap().extend(events);
+        Ok(version + count)
+    }
+    async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_phases_by_pairings(
+        &self,
+        _: &[String],
+    ) -> Result<Vec<(String, String)>, RepositoryError> {
+        Ok(vec![])
+    }
+    async fn find_id_by_round_and_teams(
+        &self,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_actions_by_match_and_side(
+        &self,
+        _: &str,
+        _: TeamSide,
+    ) -> Result<Vec<MatchActionRow>, RepositoryError> {
+        Ok(vec![])
+    }
+}
+
 /// Un avant-match dont les valeurs d'équipe sont déjà saisies.
 pub fn pre_match() -> MatchReportPreMatch {
     MatchReportPreMatch {

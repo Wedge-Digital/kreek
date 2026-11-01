@@ -143,6 +143,12 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 updated.version += 1;
                 MatchReportState::PreMatch(updated)
             }
+            // `PreMatch` seulement (carte 626, R3) : en `ReadyToPublish`, la
+            // dépense de trésorerie est figée, l'arête reste invalide.
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::InducementsCancelled { .. },
+            ) => MatchReportState::PreMatch(pm.apply_inducements_cancelled()),
             (
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::StarPlayerEngaged {
@@ -1365,5 +1371,77 @@ mod tests {
             state.reassign_round(nouvelle),
             Err(DomainError::ReportCancelled)
         ));
+    }
+
+    // ── carte 626 : annuler les coups de pouce ───────────────────────────
+
+    /// Un avant-match où le domicile a validé un achat et engagé une vedette.
+    fn avant_match_valide() -> (Vec<MatchReportDomainEvent>, CoachId) {
+        use crate::app::match_report::domain::value_objects::{
+            InducementCost, InducementPurchase, InducementQty,
+        };
+        use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+        let (mr_id, space_id, comp_id, season_id, round_id, home_id, away_id, coach_id) =
+            test_ids();
+        let star = InducementId("MORG".into());
+        let events = vec![
+            created_event(
+                mr_id,
+                space_id,
+                comp_id,
+                season_id,
+                round_id,
+                home_id.clone(),
+                away_id,
+                coach_id,
+            ),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: coach_id,
+            },
+            MatchReportDomainEvent::InducementsRecorded {
+                team_id: home_id.clone(),
+                purchases: vec![InducementPurchase {
+                    uid: star.clone(),
+                    qty: InducementQty::try_new(1).unwrap(),
+                    unit_cost: InducementCost::try_new(100).unwrap(),
+                }],
+                recorded_by: coach_id,
+            },
+            MatchReportDomainEvent::StarPlayerEngaged {
+                team_id: home_id,
+                star_player_uid: star,
+                recorded_by: coach_id,
+            },
+        ];
+        (events, coach_id)
+    }
+
+    #[test]
+    fn rehydrate_inducements_cancelled_efface_les_achats() {
+        let (mut events, coach_id) = avant_match_valide();
+        events.push(MatchReportDomainEvent::InducementsCancelled {
+            cancelled_by: coach_id,
+        });
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert!(pm.home_inducements.is_none());
+        assert!(pm.away_inducements.is_none());
+        assert!(pm.star_engagements.is_empty());
+        assert_eq!(pm.version, 5);
+    }
+
+    /// R3 : en `ReadyToPublish`, la dépense de trésorerie est figée.
+    #[test]
+    fn rehydrate_inducements_cancelled_apres_l_etape_5_est_invalide() {
+        let (mut events, coach_id) = avant_match_valide();
+        events.push(post_match_event(coach_id));
+        events.push(MatchReportDomainEvent::InducementsCancelled {
+            cancelled_by: coach_id,
+        });
+        assert_eq!(
+            rehydrate(events).unwrap_err(),
+            DomainError::InvalidEventSequence
+        );
     }
 }

@@ -1,4 +1,5 @@
 use crate::app::match_report::io::web::actions_step_controller::{get_step3, get_step4};
+use crate::app::match_report::io::web::cancel_inducements_controller::post_cancel_inducements;
 use crate::app::match_report::io::web::garde_saisie::garde_saisie;
 use crate::app::match_report::io::web::inducements_controller::{
     get_inducements, post_inducements,
@@ -93,6 +94,10 @@ fn routes_de_saisie() -> Router<AppState> {
         .route(
             path::MATCH_REPORT_INDUCEMENTS,
             get(get_inducements).post(post_inducements),
+        )
+        .route(
+            path::MATCH_REPORT_CANCEL_INDUCEMENTS,
+            post(post_cancel_inducements),
         )
         .route(
             path::MATCH_REPORT_MERCENARY_SELECTOR,

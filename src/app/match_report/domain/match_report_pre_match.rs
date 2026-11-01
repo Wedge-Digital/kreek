@@ -234,6 +234,65 @@ impl MatchReportPreMatch {
         }
     }
 
+    /// Efface les coups de pouce des **deux** équipes : on recommence par le
+    /// favori (carte 626, R3 à R5).
+    ///
+    /// Rend `InducementsCancelled`, puis un `TempPlayersReset` par camp qui a
+    /// des joueurs temporaires — c'est lui qui nomme les journaliers retirés,
+    /// et le chemin qui les sort de `players` est celui de la carte 455.
+    ///
+    /// La petite monnaie ne se recalcule nulle part : sans achats du favori,
+    /// `petty_cash` retombe d'elle-même sur l'écart de valeur.
+    pub fn cancel_inducements(
+        &self,
+        cancelled_by: CoachId,
+    ) -> Result<(Self, Vec<MatchReportDomainEvent>), DomainError> {
+        self.check_inducements_cancellable()?;
+        let mut updated = self.clone().apply_inducements_cancelled();
+        let mut events = vec![MatchReportDomainEvent::InducementsCancelled { cancelled_by }];
+        for team_id in [self.home_team_id.clone(), self.away_team_id.clone()] {
+            if updated.temp_players_of(&team_id).is_empty() {
+                continue;
+            }
+            let (next, reset) = updated.reset_temp_players(&team_id);
+            updated = next;
+            events.push(reset);
+        }
+        Ok((updated, events))
+    }
+
+    /// R3 et R4 : aucune action **vivante** — une action supprimée ne désigne
+    /// plus personne (décision du 2026-11-01) — et au moins une équipe qui a
+    /// validé. L'état `PreMatch` est garanti par le type.
+    fn check_inducements_cancellable(&self) -> Result<(), DomainError> {
+        if !self.home_actions.is_empty() || !self.away_actions.is_empty() {
+            return Err(DomainError::MatchAlreadyStarted);
+        }
+        let nobody_validated = self.inducements_for(&self.home_team_id).is_none()
+            && self.inducements_for(&self.away_team_id).is_none();
+        if nobody_validated {
+            return Err(DomainError::NoInducementsToCancel);
+        }
+        Ok(())
+    }
+
+    /// L'effet d'un `InducementsCancelled`, partagé par la commande et le
+    /// rejeu : achats et vedettes des deux équipes effacés.
+    pub(crate) fn apply_inducements_cancelled(mut self) -> Self {
+        self.home_inducements = None;
+        self.away_inducements = None;
+        self.star_engagements.clear();
+        self.version += 1;
+        self
+    }
+
+    fn temp_players_of(&self, team_id: &TeamId) -> &[TempPlayer] {
+        match team_id == &self.home_team_id {
+            true => &self.home_temp_players,
+            false => &self.away_temp_players,
+        }
+    }
+
     pub fn init_temp_players(
         &self,
         team_id: &TeamId,
@@ -1732,5 +1791,93 @@ mod tests {
                 ..
             } if !home_no_stalling_bonus.into_inner() && !away_no_stalling_bonus.into_inner()
         ));
+    }
+
+    // ── carte 626 : annuler les coups de pouce ───────────────────────────────
+
+    /// Domicile favori (1100 contre 1000) : il a acheté pour 50 kPo et aligné
+    /// un journalier ; l'outsider a validé aussi, avec une vedette.
+    fn validated_both_sides() -> MatchReportPreMatch {
+        let mut pm = make_pm(1100, 1000);
+        pm.home_inducements = Some(vec![achat(50, 1)]);
+        pm.away_inducements = Some(vec![]);
+        pm.star_engagements = vec![(pm.away_team_id.clone(), InducementId("MORG".into()))];
+        pm.home_temp_players = vec![make_journeyman(&pm)];
+        pm
+    }
+
+    #[test]
+    fn annuler_efface_les_achats_des_deux_camps() {
+        let pm = validated_both_sides();
+        let (updated, _) = pm.cancel_inducements(CoachId::new()).unwrap();
+        assert!(updated.home_inducements.is_none());
+        assert!(updated.away_inducements.is_none());
+        assert!(updated.star_engagements.is_empty());
+        assert!(updated.home_temp_players.is_empty());
+    }
+
+    /// R5 : sans achats du favori, la petite monnaie retombe sur l'écart de
+    /// valeur, et le budget de l'outsider baisse d'autant.
+    #[test]
+    fn annuler_ramene_la_petite_monnaie_a_l_ecart_de_valeur() {
+        let pm = validated_both_sides();
+        assert_eq!(pm.petty_cash(), 150);
+        let (updated, _) = pm.cancel_inducements(CoachId::new()).unwrap();
+        assert_eq!(updated.petty_cash(), 100);
+        let underdog = updated.away_team_id.clone();
+        assert_eq!(updated.inducement_budget_for(&underdog, 0), 100);
+    }
+
+    /// Un reset pour le seul camp qui a des joueurs temporaires, et il nomme
+    /// le journalier retiré.
+    #[test]
+    fn annuler_nomme_les_journaliers_retires() {
+        let pm = validated_both_sides();
+        let home = pm.home_team_id.clone();
+        let (updated, events) = pm.cancel_inducements(CoachId::new()).unwrap();
+        assert_eq!(events.len(), 2);
+        assert!(matches!(
+            events[0],
+            MatchReportDomainEvent::InducementsCancelled { .. }
+        ));
+        assert!(matches!(
+            &events[1],
+            MatchReportDomainEvent::TempPlayersReset { team_id, withdrawn }
+                if team_id == &home && withdrawn == &vec![TempPlayerId("tp-01".into())]
+        ));
+        assert_eq!(updated.version, pm.version + 2);
+    }
+
+    #[test]
+    fn annuler_est_refuse_apres_une_action() {
+        let (pm, _) = make_action(&validated_both_sides(), TeamSide::Away);
+        let result = pm.cancel_inducements(CoachId::new());
+        assert_eq!(result.unwrap_err(), DomainError::MatchAlreadyStarted);
+    }
+
+    /// Décision du 2026-11-01 : une action supprimée ne compte pas.
+    #[test]
+    fn annuler_est_permis_apres_la_suppression_de_l_action() {
+        let (pm, _) = make_action(&validated_both_sides(), TeamSide::Home);
+        let (pm, _) = pm
+            .delete_action(&ActionId("act-01".into()), CoachId::new())
+            .unwrap();
+        assert!(pm.cancel_inducements(CoachId::new()).is_ok());
+    }
+
+    /// R4 : personne n'a validé, rien à annuler.
+    #[test]
+    fn annuler_est_refuse_sans_aucune_validation() {
+        let pm = make_pm(1100, 1000);
+        let result = pm.cancel_inducements(CoachId::new());
+        assert_eq!(result.unwrap_err(), DomainError::NoInducementsToCancel);
+    }
+
+    /// « Passer » vaut validation : un achat vide s'annule.
+    #[test]
+    fn annuler_un_passer_est_permis() {
+        let mut pm = make_pm(1100, 1000);
+        pm.home_inducements = Some(vec![]);
+        assert!(pm.cancel_inducements(CoachId::new()).is_ok());
     }
 }

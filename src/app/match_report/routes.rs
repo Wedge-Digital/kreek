@@ -5,6 +5,10 @@ pub mod path {
     pub const MATCH_REPORT_STEP2: &str = "/app/{space_id}/match-report/{match_report_id}/step2";
     pub const MATCH_REPORT_INDUCEMENTS: &str =
         "/app/{space_id}/match-report/{match_report_id}/inducements/{team_id}";
+    /// Hors de `/inducements/…` : `/inducements/cancel` chevaucherait
+    /// `/inducements/{team_id}` (carte 626).
+    pub const MATCH_REPORT_CANCEL_INDUCEMENTS: &str =
+        "/app/{space_id}/match-report/{match_report_id}/cancel-inducements";
     pub const MATCH_REPORT_STEP3: &str = "/app/{space_id}/match-report/{match_report_id}/step3";
     pub const MATCH_REPORT_STEP4: &str = "/app/{space_id}/match-report/{match_report_id}/step4";
     pub const MATCH_REPORT_STEP5: &str = "/app/{space_id}/match-report/{match_report_id}/step5";

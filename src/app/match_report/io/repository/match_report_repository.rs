@@ -143,6 +143,21 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            // Carte 626 : les deux camps reviennent à « n'a pas validé ». Les
+            // joueurs temporaires suivent par leurs propres `TempPlayersReset`.
+            MatchReportDomainEvent::InducementsCancelled { .. } => {
+                sqlx::query(
+                    "UPDATE match_report_proj
+                     SET home_inducements = NULL, away_inducements = NULL,
+                         version = $2, updated_at = now()
+                     WHERE match_report_id = $1",
+                )
+                .bind(match_report_id)
+                .bind(version as i64)
+                .execute(&mut **tx)
+                .await
+                .map_err(RepositoryError::Database)?;
+            }
             MatchReportDomainEvent::StarPlayerEngaged { .. } => {}
             MatchReportDomainEvent::TempPlayersInitialized { team_id, players } => {
                 let json = serde_json::to_value(players).map_err(RepositoryError::Serialization)?;
