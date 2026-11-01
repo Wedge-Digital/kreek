@@ -47,10 +47,10 @@ avec `absent=…`. « ✓ Écrire au calendrier » est présent, inactif jusqu'�
 
 ## Checklist
 
-- [ ] Use case, handler, VMs, gabarit, route ; « Tirer au sort » de 616 actif
-- [ ] « Retirer au sort » et « Modifier les présents »
-- [ ] `hx-on::after-request` → `handleScheduleActionResponse` sur les refus
-- [ ] Tests du use case : rien n'est écrit (doublure de dépôt sans écriture) ;
+- [x] Use case, handler, VMs, gabarit, route ; « Tirer au sort » de 616 actif
+- [x] « Retirer au sort » et « Modifier les présents »
+- [x] `hx-on::after-request` → `handleScheduleActionResponse` sur les refus
+- [x] Tests du use case : rien n'est écrit (doublure de dépôt sans écriture) ;
       deux poules tirées séparément (R3) ; absentes exclues ; aucune poule
       tirable → `NotEnoughPresent` ; graine fixe → résultat reproductible
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `make lint`, `make check-arch`, `make test`

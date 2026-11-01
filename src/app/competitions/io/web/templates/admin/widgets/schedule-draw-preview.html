@@ -1,0 +1,82 @@
+{# L'appariement des présents (E18), étape 2 : l'aperçu du tirage. Rien n'est
+   écrit. Les champs cachés portent les présentes (« Retirer au sort »), et les
+   rencontres et exemptées que l'écriture (carte 618) relira. #}
+<div class="schedule-draw" hx-disinherit="*">
+
+  <div class="draw-step-head">
+    <div class="draw-steps">
+      <span class="draw-step draw-step--done"><span class="draw-step-num">✓</span><span class="draw-step-label">Présents</span></span>
+      <span class="draw-step-sep">›</span>
+      <span class="draw-step draw-step--current"><span class="draw-step-num">2</span><span class="draw-step-label">Aperçu du tirage</span></span>
+    </div>
+    <span class="draw-step-hint">Rien n'est écrit au calendrier tant que vous n'avez pas validé.</span>
+  </div>
+
+  <form class="draw-body">
+    {% for team_id in draw.present_ids %}
+    <input type="hidden" name="team_ids" value="{{ team_id }}">
+    {% endfor %}
+
+    {% for group in draw.groups %}
+    <div class="draw-group">
+      <div class="draw-group-head">
+        <span class="draw-group-title">{{ group.name }}</span>
+        <span class="draw-group-count"><strong>{{ group.pairings.len() }}</strong> rencontre{% if group.pairings.len() != 1 %}s{% endif %}</span>
+      </div>
+
+      {% for p in group.pairings %}
+      <input type="hidden" name="pairings" value="{{ p.home_id }}:{{ p.away_id }}">
+      <div class="draw-match">
+        <span class="draw-match-home">{{ p.home_name }}</span>
+        <span class="draw-match-vs">vs</span>
+        <span class="draw-match-away">{{ p.away_name }}</span>
+        <span class="draw-history {% if p.is_rematch %}draw-history--rematch{% else %}draw-history--new{% endif %}">{{ p.history_label }}</span>
+      </div>
+      {% endfor %}
+
+      {% if group.exempted.is_some() || !group.absent_names.is_empty() %}
+      <div class="draw-bench">
+        {% if let Some(bench) = group.exempted %}
+        <input type="hidden" name="exempted" value="{{ bench.team_id }}">
+        <span class="draw-bench-item"><span class="draw-bench-label">Exemptée</span> 🛌 {{ bench.name }} <span class="draw-bench-played">({{ bench.matches_played }} match{% if bench.matches_played != 1 %}s{% endif %})</span></span>
+        {% endif %}
+        {% for name in group.absent_names %}
+        <span class="draw-bench-item"><span class="draw-bench-label">Absente</span> {{ name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if group.has_rematch %}
+      <div class="draw-note draw-note--warn">
+        <span>↺</span>
+        <span>Une revanche n'a pas pu être évitée : toutes les autres combinaisons laissaient une équipe sans match.</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </form>
+
+  {# `round_id` en `hx-vals` : `#schedule-detail` pose le sien, dont ces
+     boutons héritent ; la clé locale le remplace (cf. 616). #}
+  <div class="draw-footer">
+    <div class="draw-footer-left">
+      <button type="button" class="btn-outline-sm"
+              hx-get="{{ app_routes.competitions.admin_schedule_draw(space_id, competition_id, season_id) }}"
+              hx-vals='{"round_id": "{{ draw.round_id }}", "absent": "{{ draw.absent_csv }}"}'
+              hx-target="closest .round-detail-content"
+              hx-swap="innerHTML"
+              hx-on::after-request="if (event.detail.xhr.status >= 400) window.handleScheduleActionResponse(event.detail.xhr)">← Modifier les présents</button>
+    </div>
+    <div class="draw-footer-right">
+      <button type="button" class="btn-outline-sm"
+              hx-post="{{ app_routes.competitions.admin_schedule_draw_preview(space_id, competition_id, season_id) }}"
+              hx-include="closest .schedule-draw"
+              hx-vals='{"round_id": "{{ draw.round_id }}"}'
+              hx-target="closest .round-detail-content"
+              hx-swap="innerHTML"
+              hx-on::after-request="if (event.detail.xhr.status >= 400) window.handleScheduleActionResponse(event.detail.xhr)">↺ Retirer au sort</button>
+      {# Rendu désactivé : la carte 618 le branche sur l'écriture. #}
+      <button type="button" class="btn-primary-sm" disabled>✓ Écrire au calendrier</button>
+    </div>
+  </div>
+</div>

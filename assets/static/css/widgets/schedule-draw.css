@@ -18,6 +18,7 @@
 }
 .schedule-draw .draw-step--current { color: var(--main-blue); }
 .schedule-draw .draw-step--current .draw-step-num { background: var(--main-blue); color: var(--white); }
+.schedule-draw .draw-step--done .draw-step-num { background: var(--green); color: var(--white); }
 .schedule-draw .draw-step-sep { color: var(--dark-4); }
 .schedule-draw .draw-step-hint { margin-left: auto; font-size: var(--text-tiny); color: var(--dark-3); }
 
@@ -62,7 +63,34 @@
   font-size: var(--text-tiny); line-height: 1.4;
 }
 .schedule-draw .draw-note--info { background: rgba(0,48,73,0.06); color: var(--main-blue); }
+.schedule-draw .draw-note--warn { background: rgba(255,107,53,0.10); color: #B54A1F; }
 .schedule-draw .draw-note--error { background: rgba(224,32,32,0.07); color: var(--red); }
+
+/* ── L'aperçu : les rencontres tirées ───────────────────────────────────── */
+.schedule-draw .draw-match {
+  display: flex; align-items: center;
+  padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--dark-6);
+}
+.schedule-draw .draw-match-home { flex: 1; text-align: right; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); padding-right: 12px; }
+.schedule-draw .draw-match-vs { min-width: 40px; text-align: center; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-4); }
+.schedule-draw .draw-match-away { flex: 1; font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); padding-left: 12px; }
+.schedule-draw .draw-history {
+  flex-shrink: 0; margin-left: 10px;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px;
+}
+.schedule-draw .draw-history--new { background: rgba(98,149,132,0.12); color: var(--green); }
+.schedule-draw .draw-history--rematch { background: rgba(255,107,53,0.12); color: #B54A1F; }
+
+/* L'exemptée et les absentes d'une poule */
+.schedule-draw .draw-bench {
+  display: flex; flex-wrap: wrap; gap: var(--p1);
+  font-size: var(--text-tiny); color: var(--dark-2);
+}
+.schedule-draw .draw-bench-item { display: flex; align-items: center; gap: 6px; }
+.schedule-draw .draw-bench-label { font-weight: 700; color: var(--dark-3); text-transform: uppercase; font-size: 10px; letter-spacing: 0.3px; }
+.schedule-draw .draw-bench-played { font-size: 11px; color: var(--dark-3); }
 
 /* ── Le pied ────────────────────────────────────────────────────────────── */
 .schedule-draw .draw-footer {
@@ -77,6 +105,8 @@
 @media (max-width: 768px) {
   .schedule-draw .draw-steps .draw-step-label { display: none; }
   .schedule-draw .draw-step-hint { display: none; }
+  .schedule-draw .draw-match { flex-wrap: wrap; row-gap: 6px; }
+  .schedule-draw .draw-history { margin-left: 0; width: 100%; text-align: center; }
   .schedule-draw .draw-footer { flex-direction: column-reverse; align-items: stretch; }
   .schedule-draw .draw-footer-left,
   .schedule-draw .draw-footer-right { justify-content: center; flex-wrap: wrap; }

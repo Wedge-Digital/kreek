@@ -10,6 +10,7 @@ use crate::app::competitions::use_cases::admin::draw::draw_candidates_service::{
     self, CandidateGroup, DrawCandidates, DrawCandidatesError,
 };
 use crate::app::competitions::use_cases::admin::draw::draw_input::DrawDeps;
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, Query, State};
@@ -109,6 +110,10 @@ pub fn parse_absent(raw: Option<&str>) -> HashSet<String> {
 #[derive(Template)]
 #[template(path = "admin/widgets/schedule-draw-presence.html")]
 pub struct DrawPresenceTemplate {
+    pub app_routes: AppRoutes,
+    pub space_id: String,
+    pub competition_id: String,
+    pub season_id: String,
     pub draw: DrawPresenceVm,
 }
 
@@ -144,20 +149,30 @@ pub async fn get_draw_widget(
         Ok(candidates) => {
             let absent = parse_absent(query.absent.as_deref());
             let draw = DrawPresenceVm::from_candidates(&query.round_id, &candidates, &absent);
-            DrawPresenceTemplate { draw }.into_response()
+            presence_template(&scope, draw).into_response()
         }
         Err(e) => candidates_refused(e),
     }
 }
 
-struct AdminScope<'a> {
-    space_id: &'a str,
-    competition_id: &'a str,
-    season_id: &'a str,
+fn presence_template(scope: &AdminScope<'_>, draw: DrawPresenceVm) -> DrawPresenceTemplate {
+    DrawPresenceTemplate {
+        app_routes: AppRoutes::default(),
+        space_id: scope.space_id.to_string(),
+        competition_id: scope.competition_id.to_string(),
+        season_id: scope.season_id.to_string(),
+        draw,
+    }
+}
+
+pub struct AdminScope<'a> {
+    pub space_id: &'a str,
+    pub competition_id: &'a str,
+    pub season_id: &'a str,
 }
 
 /// L'administration de la compétition, et une journée de cette saison.
-async fn check_access(
+pub async fn check_access(
     auth_session: &AuthSession,
     scope: &AdminScope<'_>,
     round_id: &str,
@@ -189,8 +204,8 @@ async fn load_candidates(
 }
 
 #[derive(Serialize)]
-struct ErrorResult {
-    error: String,
+pub struct ErrorResult {
+    pub error: String,
 }
 
 /// Un refus métier se dit en 409 et `{ error }`, que

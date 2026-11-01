@@ -5,6 +5,7 @@ pub mod groups_actions;
 pub mod groups_tab;
 pub mod groups_widgets;
 pub mod schedule_actions;
+pub mod schedule_draw_actions;
 pub mod schedule_draw_widget;
 pub mod schedule_tab;
 pub mod schedule_widgets;

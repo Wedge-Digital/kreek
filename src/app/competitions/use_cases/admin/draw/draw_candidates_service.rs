@@ -6,6 +6,7 @@
 
 use crate::app::competitions::domain::draw::MatchesPlayed;
 use crate::app::competitions::domain::error::DomainError;
+use crate::app::competitions::ports::TeamInfoDto;
 use crate::app::competitions::use_cases::admin::draw::draw_input::{
     build_matches_played, load_draw_context, DrawContext, DrawDeps, DrawLoadError,
 };
@@ -90,19 +91,24 @@ fn group_candidates(
     let mut teams: Vec<Candidate> = enrolled
         .iter()
         .filter_map(|id| ctx.teams.get(id))
-        .map(|info| Candidate {
-            team_id: info.team_id.clone(),
-            team_name: info.team_name.clone(),
-            coach_name: info.coach_name.clone(),
-            roster_name: info.roster_name.clone(),
-            matches_played: TeamId::try_new(&info.team_id)
-                .ok()
-                .and_then(|id| played.get(&id))
-                .map_or(0, |count| count.0),
-        })
+        .map(|info| candidate(info, played))
         .collect();
     teams.sort_by_key(|team| team.team_name.to_lowercase());
     teams
+}
+
+/// Une inscrite, telle que l'écran la nomme, avec son nombre de matchs.
+pub fn candidate(info: &TeamInfoDto, played: &HashMap<TeamId, MatchesPlayed>) -> Candidate {
+    Candidate {
+        team_id: info.team_id.clone(),
+        team_name: info.team_name.clone(),
+        coach_name: info.coach_name.clone(),
+        roster_name: info.roster_name.clone(),
+        matches_played: TeamId::try_new(&info.team_id)
+            .ok()
+            .and_then(|id| played.get(&id))
+            .map_or(0, |count| count.0),
+    }
 }
 
 #[cfg(test)]
@@ -112,7 +118,6 @@ mod tests {
     use crate::app::competitions::domain::match_day::{
         MatchDay, MatchDayName, MatchDayPosition, MatchDayType, Pairing,
     };
-    use crate::app::competitions::ports::TeamInfoDto;
     use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId, SeasonId};
 
     fn day(day_type: MatchDayType, pairings: Vec<Pairing>) -> MatchDay {

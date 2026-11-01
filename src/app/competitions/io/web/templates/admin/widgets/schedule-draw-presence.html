@@ -1,11 +1,18 @@
 {#- L'appariement des présents (E18), étape 1 : décocher les absentes.
     Rien n'est écrit ici. Les compteurs et les avertissements sont calculés
-    dans le navigateur ; le tirage parmi les cochées est la carte 617. -#}
+    dans le navigateur ; « Tirer au sort » poste les cochées à l'aperçu. -#}
 <div class="schedule-draw" hx-disinherit="*"
      x-data="{
        total: {{ draw.present_count() }},
-       sync() { this.total = this.$root.querySelectorAll('input[name=team_ids]:checked').length; }
+       drawable: false,
+       sync() {
+         this.total = this.$root.querySelectorAll('input[name=team_ids]:checked').length;
+         this.drawable = Array.from(this.$root.querySelectorAll('.draw-group')).some(function (g) {
+           return g.querySelectorAll('input[name=team_ids]:checked').length >= 2;
+         });
+       }
      }"
+     x-init="sync()"
      @change="sync()">
 
   <div class="draw-step-head">
@@ -74,8 +81,16 @@
     </div>
     <div class="draw-footer-right">
       <span class="draw-footer-note"><span x-text="total">{{ draw.present_count() }}</span> équipes présentes</span>
-      {#- Rendu désactivé : la carte 617 le branche sur l'aperçu. -#}
-      <button type="button" class="btn-primary-sm" disabled>🎲 Tirer au sort</button>
+      {# `round_id` en `hx-vals` : `#schedule-detail` pose le sien, dont ce
+         bouton hérite ; la clé locale le remplace (cf. 616). Fermé tant
+         qu'aucune poule n'a deux présentes (R10). #}
+      <button type="button" class="btn-primary-sm" :disabled="!drawable"
+              hx-post="{{ app_routes.competitions.admin_schedule_draw_preview(space_id, competition_id, season_id) }}"
+              hx-include="closest .schedule-draw"
+              hx-vals='{"round_id": "{{ draw.round_id }}"}'
+              hx-target="closest .round-detail-content"
+              hx-swap="innerHTML"
+              hx-on::after-request="if (event.detail.xhr.status >= 400) window.handleScheduleActionResponse(event.detail.xhr)">🎲 Tirer au sort</button>
     </div>
   </div>
 </div>

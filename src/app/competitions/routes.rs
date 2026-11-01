@@ -81,6 +81,8 @@ pub mod path {
     /// L'appariement des présents (E18) : l'étape « Présents ».
     pub const COMPETITION_ADMIN_SCHEDULE_DRAW: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/draw";
+    pub const COMPETITION_ADMIN_SCHEDULE_DRAW_PREVIEW: &str =
+        "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/draw/preview";
     pub const COMPETITION_ADMIN_SCHEDULE_GENERATE_ROUND: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin/schedule/generate-round";
     pub const COMPETITION_ADMIN_SCHEDULE_CLEAR_ROUND: &str =
@@ -311,6 +313,12 @@ impl Routes {
     }
     pub fn admin_schedule_draw(&self, sid: &str, cid: &str, season_id: &str) -> String {
         path::COMPETITION_ADMIN_SCHEDULE_DRAW
+            .replace("{space_id}", sid)
+            .replace("{competition_id}", cid)
+            .replace("{season_id}", season_id)
+    }
+    pub fn admin_schedule_draw_preview(&self, sid: &str, cid: &str, season_id: &str) -> String {
+        path::COMPETITION_ADMIN_SCHEDULE_DRAW_PREVIEW
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
