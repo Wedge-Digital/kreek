@@ -227,6 +227,11 @@ Directives de travail pour Claude Code sur ce projet.
     existant n'est pas renommé en masse, mais on le renomme quand on réécrit le
     code qui le porte.
 
+19. **L'interface vouvoie.** Les messages et libellés affichés à l'utilisateur
+    vouvoient (« Saisissez les informations de votre match »), **même quand une
+    maquette tutoie** : la maquette dit la mise en page, pas le ton. Décidé le
+    2026-11-01, sur la carte 632, pour rester cohérent avec l'existant.
+
 
 ---
 
