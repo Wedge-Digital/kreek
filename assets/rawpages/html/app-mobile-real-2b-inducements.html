@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1b · Coups de pouce — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<!-- Écran ACTUEL de l'application, capturé tel que rendu ; seuls les noms,
+     l'indicateur d'étapes (5 étapes) et les retouches décidées (cf. FIXES de
+     convert.py) ont été changés. -->
+
+          
+
+<div class="mr-container match-report-inducements" x-data="{
+       activeSection: 'common',
+       items: [],
+       totalCost: 0,
+       budget: 510,
+       mercenaryCart: [],
+       get mercenaryTotal() { return this.mercenaryCart.reduce((s, m) =&gt; s + m.cost, 0); },
+       get grandTotal() { return this.totalCost + this.mercenaryTotal; },
+       get overBudget() { return this.grandTotal &gt; this.budget; },
+       get selectionJson() {
+         return JSON.stringify(this.items.map(i =&gt; ({ uid: i.uid, name: i.name, qty: i.qty, unit_cost: i.unit_cost })));
+       },
+       get mercenaryJson() {
+         return JSON.stringify(this.mercenaryCart.map(m =&gt; ({ position_uid: m.position_uid, level: m.level })));
+       },
+       switchTab(tab) {
+         this.activeSection = tab;
+         if (tab !== 'merco') {
+           htmx.trigger(document.body, 'switchInducementTab', { tab });
+         } else {
+           htmx.trigger(document.body, 'mercenairesActivated', {});
+         }
+       }
+     }" @inducement-selection-changed.window="items = $event.detail.items; totalCost = $event.detail.total_cost" @mercenary-selection-changed.window="mercenaryCart = $event.detail.mercs">
+
+  <!-- Header -->
+  <div class="mr-header">
+    <div class="mr-header-icon">🛒</div>
+    <div class="mr-header-title">Coups de pouce</div>
+    <div class="mr-header-sub">Achetez des inducements pour rééquilibrer le match</div>
+  </div>
+
+  <!-- Étapes -->
+  <div class="mr-steps"><div class="mr-step mr-step--active">1</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">2</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">3</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">4</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">5</div></div>
+
+  <!-- Bannière équipe + budget -->
+  <div class="mr-budget-banner mr-team-banner">
+    <div class="mr-budget-team">
+      <div class="mr-budget-logo">NF</div>
+      <div class="mr-budget-info">
+        <div class="mr-budget-name">Nains de Fer</div>
+        <div class="mr-budget-label">TopDog — achète en premier</div>
+      </div>
+    </div>
+    <div class="mr-budget-amount">
+      <div class="mr-budget-value">510</div>
+      <div class="mr-budget-unit">kPo</div>
+    </div>
+  </div>
+
+  <!-- Tab bar — 4 onglets -->
+  <div class="mr-tabs">
+    <div class="mr-tab active" :class="{ active: activeSection === 'common' }" @click="switchTab('common')">Communs</div>
+    <div class="mr-tab" :class="{ active: activeSection === 'special' }" @click="switchTab('special')">Spéciaux</div>
+    <div class="mr-tab" :class="{ active: activeSection === 'stars' }" @click="switchTab('stars')">Stars</div>
+    <div class="mr-tab" :class="{ active: activeSection === 'merco' }" @click="switchTab('merco')">Mercenaires</div>
+  </div>
+
+  <!-- Zone widget inducement-selector (Communs / Spéciaux / Stars) -->
+  <div class="mr-selector-zone" x-show="activeSection !== 'merco'" hx-get="/references/inducement-selector?allowed_inducement_uids=DEMO_ARBITRE_COMPLAISANT,DEMO_CHARIOT_DE_VIVRES,DEMO_GUERISSEUR_ITINERANT,DEMO_MAGE_DES_BRUMES,DEMO_MASSEUR_DOUTEUX,DEMO_RENFORT_TEMPORAIRE,HALFLING_MASTER_CHEF&amp;allowed_star_player_uids=DEMO_ORVAL_LE_PATIENT,DEMO_SYLVE_AUX_MAINS_VIVES,DEMO_GRUMO_LE_TERNE&amp;roster_id=DEMO_GRANIT" hx-trigger="load" hx-target="this" hx-swap="innerHTML"><div class="inducement-selector" hx-disinherit="*" x-data="inducementSelector()" @switch-inducement-tab.window="activeTab = $event.detail.tab">
+
+  <!-- Communs -->
+  
+  <div class="mr-inducement-list" x-show="activeTab === 'common'">
+    
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('DEMO_ARBITRE_COMPLAISANT') &gt; 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Arbitre Complaisant</div>
+          <div class="mr-inducement-desc">Ferme les yeux sur la première action déloyale de l'équipe.</div>
+        </div>
+        <span class="mr-inducement-price">50 kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button" @click="decrement('DEMO_ARBITRE_COMPLAISANT')" :disabled="qty('DEMO_ARBITRE_COMPLAISANT') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_ARBITRE_COMPLAISANT')">0</span>
+          <button class="mr-qty-btn" type="button" @click="increment('DEMO_ARBITRE_COMPLAISANT')" :disabled="qty('DEMO_ARBITRE_COMPLAISANT') &gt;= 1">+</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('DEMO_CHARIOT_DE_VIVRES') &gt; 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Chariot de Vivres</div>
+          <div class="mr-inducement-desc">Améliore l'endurance de l'équipe jusqu'à la fin de la rencontre.</div>
+        </div>
+        <span class="mr-inducement-price">15 kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button" @click="decrement('DEMO_CHARIOT_DE_VIVRES')" :disabled="qty('DEMO_CHARIOT_DE_VIVRES') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_CHARIOT_DE_VIVRES')">0</span>
+          <button class="mr-qty-btn" type="button" @click="increment('DEMO_CHARIOT_DE_VIVRES')" :disabled="qty('DEMO_CHARIOT_DE_VIVRES') &gt;= 5">+</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('DEMO_MAGE_DES_BRUMES') &gt; 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Mage des Brumes</div>
+          <div class="mr-inducement-desc">Modifie une fois par rencontre les conditions météorologiques.</div>
+        </div>
+        <span class="mr-inducement-price">60 kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button" @click="decrement('DEMO_MAGE_DES_BRUMES')" :disabled="qty('DEMO_MAGE_DES_BRUMES') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_MAGE_DES_BRUMES')">0</span>
+          <button class="mr-qty-btn" type="button" @click="increment('DEMO_MAGE_DES_BRUMES')" :disabled="qty('DEMO_MAGE_DES_BRUMES') &gt;= 1">+</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('DEMO_MASSEUR_DOUTEUX') &gt; 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Masseur Douteux</div>
+          <div class="mr-inducement-desc">Remet sur pied un joueur sonné, avec des résultats variables.</div>
+        </div>
+        <span class="mr-inducement-price">30 kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button" @click="decrement('DEMO_MASSEUR_DOUTEUX')" :disabled="qty('DEMO_MASSEUR_DOUTEUX') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_MASSEUR_DOUTEUX')">0</span>
+          <button class="mr-qty-btn" type="button" @click="increment('DEMO_MASSEUR_DOUTEUX')" :disabled="qty('DEMO_MASSEUR_DOUTEUX') &gt;= 2">+</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('DEMO_RENFORT_TEMPORAIRE') &gt; 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Renfort Temporaire</div>
+          <div class="mr-inducement-desc">Ajoute un remplaçant pour la durée de la rencontre. Moitié prix pour une équipe dont les hommes de base sont bon marché.</div>
+        </div>
+        <span class="mr-inducement-price">20 kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button" @click="decrement('DEMO_RENFORT_TEMPORAIRE')" :disabled="qty('DEMO_RENFORT_TEMPORAIRE') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_RENFORT_TEMPORAIRE')">0</span>
+          <button class="mr-qty-btn" type="button" @click="increment('DEMO_RENFORT_TEMPORAIRE')" :disabled="qty('DEMO_RENFORT_TEMPORAIRE') &gt;= 3">+</button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  
+
+  <!-- Spéciaux -->
+  
+  <div class="mr-inducement-list" x-show="activeTab === 'special'" style="display: none;">
+    
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('DEMO_GUERISSEUR_ITINERANT') &gt; 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Guérisseur Itinérant</div>
+          <div class="mr-inducement-desc">Soigne un joueur une fois par rencontre. Réservé aux équipes qui ont le droit d'engager un apothicaire.</div>
+        </div>
+        <span class="mr-inducement-price">40 kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button" @click="decrement('DEMO_GUERISSEUR_ITINERANT')" :disabled="qty('DEMO_GUERISSEUR_ITINERANT') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_GUERISSEUR_ITINERANT')">0</span>
+          <button class="mr-qty-btn" type="button" @click="increment('DEMO_GUERISSEUR_ITINERANT')" :disabled="qty('DEMO_GUERISSEUR_ITINERANT') &gt;= 1">+</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mr-inducement-card" :class="{ 'mr-inducement-card--selected': qty('HALFLING_MASTER_CHEF') &gt; 0 }">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Maitre cuisinier halfling</div>
+          <div class="mr-inducement-desc">Au debut de chaque mi-temps, lancez 3D6. Pour chaque 4+, gagnez +1 relance d'equipe et l'equipe adverse perd 1 relance d'equipe (minimum 0).</div>
+        </div>
+        <span class="mr-inducement-price">300 kPo</span>
+        <div class="mr-inducement-qty">
+          <button class="mr-qty-btn" type="button" @click="decrement('HALFLING_MASTER_CHEF')" :disabled="qty('HALFLING_MASTER_CHEF') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('HALFLING_MASTER_CHEF')">0</span>
+          <button class="mr-qty-btn" type="button" @click="increment('HALFLING_MASTER_CHEF')" :disabled="qty('HALFLING_MASTER_CHEF') &gt;= 1">+</button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  
+
+  <!-- Star Players -->
+  
+  <div class="mr-inducement-list" x-show="activeTab === 'stars'" style="display: none;">
+    
+    <div class="mr-inducement-card mr-inducement-card--star" :class="{ 'mr-inducement-card--selected': qty('DEMO_ORVAL_LE_PATIENT') &gt; 0 }" @click="toggleStar('DEMO_ORVAL_LE_PATIENT')">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Orval le Patient</div>
+          <div class="mr-inducement-desc">DEMO_GRANIT, DEMO_LANTERNE</div>
+        </div>
+        <span class="mr-inducement-price">180 kPo</span>
+        <div class="mr-inducement-qty" @click.stop="">
+          <button class="mr-qty-btn" type="button" @click.stop="decrement('DEMO_ORVAL_LE_PATIENT')" :disabled="qty('DEMO_ORVAL_LE_PATIENT') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_ORVAL_LE_PATIENT')">0</span>
+          <button class="mr-qty-btn" type="button" @click.stop="increment('DEMO_ORVAL_LE_PATIENT')" :disabled="qty('DEMO_ORVAL_LE_PATIENT') &gt;= 1">+</button>
+        </div>
+      </div>
+      <button class="mr-inducement-toggle" type="button" @click.stop="toggleStar('DEMO_ORVAL_LE_PATIENT')" x-text="openStars.has('DEMO_ORVAL_LE_PATIENT') ? 'Masquer les stats ▴' : 'Voir les stats ▾'">Voir les stats ▾</button>
+      <div class="mr-star-detail" x-show="openStars.has('DEMO_ORVAL_LE_PATIENT')" style="display: none;">
+        <div class="mr-star-stats">
+          <div class="mr-star-stat"><div class="mr-star-stat-label">MA</div><div class="mr-star-stat-value">6</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">ST</div><div class="mr-star-stat-value">4</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AG</div><div class="mr-star-stat-value">3+</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">PA</div><div class="mr-star-stat-value">5+</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AV</div><div class="mr-star-stat-value">10+</div></div>
+        </div>
+        
+        <div class="mr-star-skills"><strong>Compétences :</strong> APPUI_FERME, MASSE_INEBRANLABLE</div>
+        
+        
+        <div class="mr-star-power"><strong>Pierre Levée</strong> — Une fois par rencontre, Orval peut annuler un déplacement forcé qui le viserait.</div>
+        
+      </div>
+    </div>
+    
+    <div class="mr-inducement-card mr-inducement-card--star" :class="{ 'mr-inducement-card--selected': qty('DEMO_SYLVE_AUX_MAINS_VIVES') &gt; 0 }" @click="toggleStar('DEMO_SYLVE_AUX_MAINS_VIVES')">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Sylve aux Mains Vives</div>
+          <div class="mr-inducement-desc">DEMO_GRANIT, DEMO_ZEPHYR, DEMO_LANTERNE</div>
+        </div>
+        <span class="mr-inducement-price">210 kPo</span>
+        <div class="mr-inducement-qty" @click.stop="">
+          <button class="mr-qty-btn" type="button" @click.stop="decrement('DEMO_SYLVE_AUX_MAINS_VIVES')" :disabled="qty('DEMO_SYLVE_AUX_MAINS_VIVES') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_SYLVE_AUX_MAINS_VIVES')">0</span>
+          <button class="mr-qty-btn" type="button" @click.stop="increment('DEMO_SYLVE_AUX_MAINS_VIVES')" :disabled="qty('DEMO_SYLVE_AUX_MAINS_VIVES') &gt;= 1">+</button>
+        </div>
+      </div>
+      <button class="mr-inducement-toggle" type="button" @click.stop="toggleStar('DEMO_SYLVE_AUX_MAINS_VIVES')" x-text="openStars.has('DEMO_SYLVE_AUX_MAINS_VIVES') ? 'Masquer les stats ▴' : 'Voir les stats ▾'">Voir les stats ▾</button>
+      <div class="mr-star-detail" x-show="openStars.has('DEMO_SYLVE_AUX_MAINS_VIVES')" style="display: none;">
+        <div class="mr-star-stats">
+          <div class="mr-star-stat"><div class="mr-star-stat-label">MA</div><div class="mr-star-stat-value">8</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">ST</div><div class="mr-star-stat-value">2</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AG</div><div class="mr-star-stat-value">2+</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">PA</div><div class="mr-star-stat-value">3+</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AV</div><div class="mr-star-stat-value">8+</div></div>
+        </div>
+        
+        <div class="mr-star-skills"><strong>Compétences :</strong> RECEPTION_SURE, PAS_DE_COTE, SECOND_SOUFFLE</div>
+        
+        
+        <div class="mr-star-power"><strong>Course Portée</strong> — Sylve peut relancer sa première tentative de réception de chaque mi-temps.</div>
+        
+      </div>
+    </div>
+    
+    <div class="mr-inducement-card mr-inducement-card--star" :class="{ 'mr-inducement-card--selected': qty('DEMO_GRUMO_LE_TERNE') &gt; 0 }" @click="toggleStar('DEMO_GRUMO_LE_TERNE')">
+      <div class="mr-inducement-main">
+        <div class="mr-inducement-info">
+          <div class="mr-inducement-name">Grumo le Terne</div>
+          <div class="mr-inducement-desc">DEMO_GRANIT</div>
+        </div>
+        <span class="mr-inducement-price">120 kPo</span>
+        <div class="mr-inducement-qty" @click.stop="">
+          <button class="mr-qty-btn" type="button" @click.stop="decrement('DEMO_GRUMO_LE_TERNE')" :disabled="qty('DEMO_GRUMO_LE_TERNE') === 0" disabled="disabled">−</button>
+          <span class="mr-qty-value" x-text="qty('DEMO_GRUMO_LE_TERNE')">0</span>
+          <button class="mr-qty-btn" type="button" @click.stop="increment('DEMO_GRUMO_LE_TERNE')" :disabled="qty('DEMO_GRUMO_LE_TERNE') &gt;= 1">+</button>
+        </div>
+      </div>
+      <button class="mr-inducement-toggle" type="button" @click.stop="toggleStar('DEMO_GRUMO_LE_TERNE')" x-text="openStars.has('DEMO_GRUMO_LE_TERNE') ? 'Masquer les stats ▴' : 'Voir les stats ▾'">Voir les stats ▾</button>
+      <div class="mr-star-detail" x-show="openStars.has('DEMO_GRUMO_LE_TERNE')" style="display: none;">
+        <div class="mr-star-stats">
+          <div class="mr-star-stat"><div class="mr-star-stat-label">MA</div><div class="mr-star-stat-value">5</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">ST</div><div class="mr-star-stat-value">5</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AG</div><div class="mr-star-stat-value">5+</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">PA</div><div class="mr-star-stat-value">-</div></div>
+          <div class="mr-star-stat"><div class="mr-star-stat-label">AV</div><div class="mr-star-stat-value">11+</div></div>
+        </div>
+        
+        <div class="mr-star-skills"><strong>Compétences :</strong> LOURDAUD, MASSE_INEBRANLABLE</div>
+        
+        
+        <div class="mr-star-power"><strong>Élan Pesant</strong> — Grumo ne peut jamais recevoir le ballon, mais il déplace tout adversaire qu'il immobilise.</div>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+
+</div>
+</div>
+
+  <!-- Zone widget mercenary-selector (lazy) -->
+  <div class="mr-selector-zone" x-show="activeSection === 'merco'" hx-get="/app/01M45HJ7F8TWC4YCK26JWMR2EF/match-report/01M45MDK4QNZWASD6QH0BYYYRS/step2/01M45MDJMWMAGKRDWV92AF9QBJ/mercenaires" hx-trigger="mercenairesActivated from:body once" hx-target="this" hx-swap="innerHTML" style="display: none;">
+  </div>
+
+  <!-- Cart sticky footer -->
+  <form method="post" action="/app/01M45HJ7F8TWC4YCK26JWMR2EF/match-report/01M45MDK4QNZWASD6QH0BYYYRS/inducements/01M45MDJMWMAGKRDWV92AF9QBJ" class="mr-cart-footer">
+    <input type="hidden" name="selection" :value="selectionJson" value="[]">
+    <input type="hidden" name="mercenaries" :value="mercenaryJson" value="[]">
+    <div class="mr-cart-inner">
+
+      <!-- Liste mercenaires dans le panier -->
+      <template x-if="mercenaryCart.length &gt; 0">
+        <div class="mr-cart-merco-list">
+          <template x-for="(m, idx) in mercenaryCart" :key="idx">
+            <div class="mr-cart-merco-item">
+              <div class="mr-cart-merco-info">
+                <div class="mr-cart-merco-name" x-text="m.name"></div>
+                <div class="mr-cart-merco-type" x-text="m.level === 'lvl1' ? 'Mercenaire Niv. 1' : 'Mercenaire'"></div>
+              </div>
+              <div class="mr-cart-merco-price" x-text="m.cost + ' kPo'"></div>
+              <button class="mr-cart-merco-remove" type="button" @click="htmx.trigger(document.body, 'removeMercenaire', { idx })">✕</button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <div class="mr-cart-summary">
+        <div class="mr-cart-items" x-text="(items.length + mercenaryCart.length) === 0 ? 'Aucun coup de pouce sélectionné' : (items.length + mercenaryCart.length) + ' coup(s) de pouce sélectionné(s)'">Aucun coup de pouce sélectionné</div>
+        <div class="mr-cart-total">
+          <span class="mr-cart-total-value" :class="{ 'mr-cart-total-value--over': overBudget }" x-text="grandTotal">0</span>
+          <span class="mr-cart-total-unit">/ 510 kPo</span>
+        </div>
+      </div>
+
+      <div class="mr-cart-remaining mr-cart-remaining--over" x-show="overBudget" style="display: none;">
+        ⚠️ Budget dépassé de <span x-text="grandTotal - budget">-510</span> kPo
+      </div>
+
+      <div class="mr-cart-actions">
+        <button type="submit" name="intent" value="pass" class="btn-outline-sm">Passer</button>
+        <button type="submit" name="intent" value="validate" class="btn-primary-sm" :disabled="overBudget">
+          Valider les achats →
+        </button>
+      </div>
+
+    </div>
+  </form>
+
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

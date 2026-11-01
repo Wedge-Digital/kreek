@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parcours mobile — planche</title>
+  <link rel="stylesheet" href="app-styles.css">
+  <style>
+    /* La planche n'est pas un écran de l'application : elle présente les
+       écrans `app-mobile-*.html`, chacun dans une iframe de 375 px. C'est
+       l'iframe qui fait jouer les vraies media queries mobiles — à cette
+       largeur, `layout-app.css` bascule en en-tête et barre d'onglets. */
+    body { background: var(--dark-5); }
+    .board { max-width: 1700px; margin: 0 auto; padding: var(--p3) var(--p2) var(--p4); display: flex; flex-direction: column; gap: var(--p4); }
+    .board-intro { max-width: 900px; display: flex; flex-direction: column; gap: 8px; }
+    .flow { display: flex; flex-direction: column; gap: var(--p2); }
+    .flow-head { max-width: 900px; display: flex; flex-direction: column; gap: 6px; }
+    .frames { display: flex; flex-wrap: wrap; gap: var(--p2); align-items: flex-start; }
+    .shot { width: 391px; display: flex; flex-direction: column; gap: 10px; }
+    .shot-label { font-family: var(--font-title); font-weight: 700; font-size: var(--text-tiny); color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.3px; }
+    .phone { width: 391px; height: 776px; border: 8px solid var(--dark-0); border-radius: 32px; overflow: hidden; background: var(--dark-0); box-shadow: 0 12px 32px rgba(0,0,0,0.18); }
+    .phone iframe { width: 375px; height: 760px; border: 0; display: block; }
+    .shot ul { margin: 0; padding-left: 18px; font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.5; }
+    .open { font-size: var(--text-tiny); color: var(--link-blue); }
+    .mb-tag { font-family: var(--font-body); font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-left: 6px; background: var(--dark-5); color: var(--dark-2); letter-spacing: 0; }
+    .mb-tag--new { background: rgba(98,149,132,0.18); color: var(--green); }
+    .mb-tag--mod { background: rgba(255,107,53,0.14); color: var(--orange); }
+    @media (max-width: 768px) { .board { padding: var(--p1); } }
+  </style>
+</head>
+<body>
+<div class="board">
+
+  <div class="board-intro">
+    <div class="h2-gras">Parcours mobile — proposition v7</div>
+    <div class="text-small">Trois cas d'usage : trouver et consulter une équipe, retrouver et suivre ses matchs, conclure un match. Chaque écran est une page à part, habillée du <strong>vrai CSS de l'application</strong> ; seules les pièces neuves vivent dans <code>app-mobile.css</code>. La saisie unitaire des actions n'est pas redessinée.</div>
+    <div class="text-tiny">Barre d'onglets proposée : 🏠 Accueil (actualité + cartouche) · 🔍 Équipes · 🏈 Matchs · 🏆 Ligue · 👤 Moi. Aujourd'hui « Équipes » ouvre la création d'équipe et « Compte » déconnecte ; « Créer une équipe », l'espace et la déconnexion passent dans « Moi ».</div>
+  </div>
+
+  <section class="flow">
+    <div class="flow-head">
+      <div class="h4-gras">1 · L'accueil : un cartouche d'appel à l'action</div>
+      <div class="text-tiny">L'accueil reste le fil d'actualité. En tête, un cartouche porte l'action la plus utile du moment pour l'équipe du coach, dans cet ordre : <b>les évolutions à faire</b> après un match, sinon <b>le prochain match</b>. Le prochain match d'une équipe est sa première rencontre programmée non encore jouée ; il se saisit quelle que soit sa date, même s'il est prévu des semaines à l'avance.</div>
+    </div>
+    <div class="frames">
+      <div class="shot">
+        <div class="shot-label">1a · Le prochain match — et les notifications</div>
+        <div class="phone"><iframe src="app-mobile-home.html" title="Accueil — match à saisir"></iframe></div>
+        <ul>
+          <li>Le cartouche mène droit à la saisie : « Commencer le match » si rien n'est saisi, « Continuer » si la saisie a démarré.</li>
+          <li><b>Prototype</b> : les notifications arrivent en toast, poussées par SSE — « Saisie du match démarrée par Morgane », puis « Touchdown du 9 des London Rats saisi par Morgane ». Elles tournent en boucle.</li>
+        </ul>
+        <a class="open" href="app-mobile-home.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">1b · Des évolutions à faire</div>
+        <div class="phone"><iframe src="app-mobile-home-evolutions.html" title="Accueil — évolutions"></iframe></div>
+        <ul>
+          <li>Après un match, l'équipe à faire évoluer passe devant : progression et recrutement.</li>
+          <li>Un coach à plusieurs équipes : une ligne compacte pour chacune des autres.</li>
+        </ul>
+        <a class="open" href="app-mobile-home-evolutions.html">Ouvrir l'écran seul ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="flow">
+    <div class="flow-head">
+      <div class="h4-gras">2 · Trouver et consulter une équipe</div>
+      <div class="text-tiny">Il n'existe aucune recherche d'équipe, et la fiche affiche un tableau de 14 colonnes qui défile en largeur.</div>
+    </div>
+    <div class="frames">
+      <div class="shot">
+        <div class="shot-label">2a · Équipes, avant de taper</div>
+        <div class="phone"><iframe src="app-mobile-teams.html" title="Équipes"></iframe></div>
+        <ul><li>Mes équipes, puis toutes les équipes de l'espace.</li><li>La recherche porte sur l'espace courant seulement.</li></ul>
+        <a class="open" href="app-mobile-teams.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">2b · En tapant « mor »</div>
+        <div class="phone"><iframe src="app-mobile-teams-search.html" title="Recherche"></iframe></div>
+        <ul><li>Un seul champ cherche par <b>nom d'équipe ou de coach</b>, dans l'espace ; un coach trouvé ramène ses équipes.</li><li>Résultats filtrés à la frappe, groupés par motif.</li></ul>
+        <a class="open" href="app-mobile-teams-search.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">2c · Fiche équipe</div>
+        <div class="phone"><iframe src="app-mobile-team.html" title="Fiche équipe"></iframe></div>
+        <ul>
+          <li>L'en-tête réel, avec quatre chiffres clés à la place de la ligue et de la saison.</li>
+          <li>Une carte par joueur : rien ne défile en largeur ; compétences acquises en vert, absent signalé.</li>
+          <li>Les <b>blessures persistantes</b> sur la ligne du joueur, en rouge, comme la colonne « BP » d'aujourd'hui ; rien quand il n'en a pas.</li>
+        </ul>
+        <a class="open" href="app-mobile-team.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">2d · Fiche joueur</div>
+        <div class="phone"><iframe src="app-mobile-team-player.html" title="Fiche joueur"></iframe></div>
+        <ul>
+          <li>Une <b>page complète</b> : la fiche joueur réelle, avec ses caractéristiques, ses compétences, sa réserve de SPP, sa carrière et son historique.</li>
+          <li>« Faire évoluer » y sera le point d'entrée des évolutions du joueur.</li>
+        </ul>
+        <a class="open" href="app-mobile-team-player.html">Ouvrir l'écran seul ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="flow">
+    <div class="flow-head">
+      <div class="h4-gras">3 · Commencer un match : qui saisit ?</div>
+      <div class="text-tiny">Cinq étapes : <b>1</b> Avant-match · <b>2</b> Match · <b>3</b> MVP · <b>4</b> Gains et fans · <b>5</b> Validation, puis le récapitulatif. La sélection du match disparaît : le match vient du calendrier, « Commencer » mène droit à l'avant-match. Avant, celui qui commence choisit <b>le mode de saisie</b> : <b>« Je saisis tout »</b> (chemin A) ou <b>« Chacun son équipe »</b> (chemin B), qui coupe <b>tout</b> le parcours en deux. Deux coachs ne peuvent jamais modifier la même chose. Les écrans <b>actuels</b> sont capturés tels que l'application les rend ; les <b>modifiés</b> sont retouchés ; les <b>nouveaux</b> sont la proposition.</div>
+    </div>
+    <div class="frames">
+      <div class="shot">
+        <div class="shot-label">0 · Mes matchs <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-matches.html" title="0 · Mes matchs"></iframe></div>
+        <ul><li>Seul le prochain match de chaque équipe porte un bouton : « Commencer » ou « Continuer ». « Nouveau match » démarre un match hors calendrier.</li></ul>
+        <a class="open" href="app-mobile-matches.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">0b · Qui saisit ce match ? <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-match-mode.html" title="0b · Qui saisit ce match ?"></iframe></div>
+        <ul><li>Une seule question, posée par « Commencer » ; la réponse mène droit à l'avant-match (A1 ou B1). L'adversaire est prévenu par notification.</li><li>Le mode vaut pour tout le match. Il ne change plus une fois choisi.</li></ul>
+        <a class="open" href="app-mobile-match-mode.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">0c · L'adversaire a déjà commencé <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-match-mode-joined.html" title="0c · L'adversaire a déjà commencé"></iframe></div>
+        <ul><li>Le second coach n'a plus la question : on lui dit le mode choisi et où en est l'adversaire, puis il fait son propre avant-match.</li><li>Deux « Commencer » simultanés : le premier choix validé l'emporte, l'autre coach arrive ici.</li></ul>
+        <a class="open" href="app-mobile-match-mode-joined.html">Ouvrir l'écran seul ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="flow">
+    <div class="flow-head">
+      <div class="h4-gras">3A · Chemin « Je saisis tout »</div>
+      <div class="text-tiny">Un seul téléphone : le coach saisit les deux camps de bout en bout et publie seul. L'adversaire suit en lecture seule — rien n'est ouvert de son côté, donc aucune saisie concurrente.</div>
+    </div>
+    <div class="frames">
+      <div class="shot">
+        <div class="shot-label">A1 · Avant-match <span class="mb-tag">Actuel</span></div>
+        <div class="phone"><iframe src="app-mobile-real-2-pre-match.html" title="A1 · Avant-match"></iframe></div>
+        <ul><li>L'écran d'aujourd'hui : fan factor, journaliers et valeurs des deux équipes.</li></ul>
+        <a class="open" href="app-mobile-real-2-pre-match.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A1b · Coups de pouce <span class="mb-tag">Actuel</span></div>
+        <div class="phone"><iframe src="app-mobile-real-2b-inducements.html" title="A1b · Coups de pouce"></iframe></div>
+        <ul><li>L'écran d'aujourd'hui, équipe par équipe : la plus forte VE achète d'abord, puis l'autre.</li></ul>
+        <a class="open" href="app-mobile-real-2b-inducements.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A2 · Match en direct <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-solo-live.html" title="A2 · Match en direct"></iframe></div>
+        <ul><li>Le journal des deux camps ; toutes les actions sont les tiennes, toutes portent ✕.</li><li>L'adversaire suit en direct.</li></ul>
+        <a class="open" href="app-mobile-solo-live.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A2b · Nouvelle action : quelle équipe ? <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-match-new-action.html" title="A2b · Nouvelle action : quelle équipe ?"></iframe></div>
+        <ul><li>Propre à ce mode : on choisit d'abord l'équipe qui a réalisé l'action.</li></ul>
+        <a class="open" href="app-mobile-match-new-action.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A2c · Saisir une action <span class="mb-tag mb-tag--mod">Modifié</span></div>
+        <div class="phone"><iframe src="app-mobile-real-3b-actions.html" title="A2c · Saisir une action"></iframe></div>
+        <ul><li>La page de saisie d'aujourd'hui, pour l'équipe choisie.</li><li>Retouches : plus de bouton ⭐ MVP, un seul retour « ← Retour au journal ».</li></ul>
+        <a class="open" href="app-mobile-real-3b-actions.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A3 · MVP 1/2 : Nains de Fer <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-solo-mvp-home.html" title="A3 · MVP 1/2 : Nains de Fer"></iframe></div>
+        <ul><li>D'abord l'équipe à domicile. Tirage au sort (6 joueurs désignés) ou saisie manuelle.</li><li>« Tirer » reste fermé tant qu'il n'y a pas 6 joueurs.</li></ul>
+        <a class="open" href="app-mobile-solo-mvp-home.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A3 · MVP 1/2 : saisie manuelle <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-solo-mvp-home-manual.html" title="A3 · MVP 1/2 : saisie manuelle"></iframe></div>
+        <ul><li>L'autre mode : un seul joueur, choisi directement.</li></ul>
+        <a class="open" href="app-mobile-solo-mvp-home-manual.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A3 · MVP 1/2 : résultat <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-solo-mvp-home-drawn.html" title="A3 · MVP 1/2 : résultat"></iframe></div>
+        <ul><li>Le tirage crée une action du tour 16 dans le journal.</li><li>Suite : le MVP des London Rats.</li></ul>
+        <a class="open" href="app-mobile-solo-mvp-home-drawn.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A3 · MVP 2/2 : London Rats <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-solo-mvp-away.html" title="A3 · MVP 2/2 : London Rats"></iframe></div>
+        <ul><li>Puis l'équipe visiteur, même écran. Le MVP des Nains reste visible, replié en tête.</li></ul>
+        <a class="open" href="app-mobile-solo-mvp-away.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A4 · Gains et facteur de fans <span class="mb-tag">Actuel</span></div>
+        <div class="phone"><iframe src="app-mobile-real-5-step5.html" title="A4 · Gains et facteur de fans"></iframe></div>
+        <ul><li>L'étape d'aujourd'hui, inchangée : les deux camps.</li></ul>
+        <a class="open" href="app-mobile-real-5-step5.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A5 · Validation <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-solo-validate.html" title="A5 · Validation"></iframe></div>
+        <ul><li>Le journal du match, MVP compris. Une seule validation, qui publie.</li></ul>
+        <a class="open" href="app-mobile-solo-validate.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">A · L'adversaire suit le match <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-solo-follow.html" title="A · L'adversaire suit le match"></iframe></div>
+        <ul><li>Vu par Morgane quand Yann saisit tout : le journal en direct, aucun bouton de saisie.</li><li>Elle peut signaler une erreur ; le compte rendu lui arrive publié.</li></ul>
+        <a class="open" href="app-mobile-solo-follow.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">Récapitulatif publié <span class="mb-tag">Actuel</span></div>
+        <div class="phone"><iframe src="app-mobile-real-7-recap.html" title="Récapitulatif publié"></iframe></div>
+        <ul><li>Inchangé.</li></ul>
+        <a class="open" href="app-mobile-real-7-recap.html">Ouvrir l'écran seul ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="flow">
+    <div class="flow-head">
+      <div class="h4-gras">3B · Chemin « Chacun son équipe »</div>
+      <div class="text-tiny">Tout le parcours est coupé en deux : chaque coach fait, sur son téléphone, son avant-match (fan factor, coups de pouce), ses actions, puis son après-match (MVP, gains, fan factor) et sa validation. Ce qui est à l'autre s'affiche en lecture seule, en direct. Seule contrainte d'ordre : les coups de pouce, où la VE la plus forte achète d'abord. Le compte rendu se publie à la seconde validation.</div>
+    </div>
+    <div class="frames">
+      <div class="shot">
+        <div class="shot-label">B1 · Avant-match de mon équipe <span class="mb-tag mb-tag--mod">Modifié</span></div>
+        <div class="phone"><iframe src="app-mobile-duo-pre-match.html" title="B1 · Avant-match de mon équipe"></iframe></div>
+        <ul><li>L'écran d'aujourd'hui réduit à ton camp : ton D3 de fan factor ; celui de Morgane en lecture seule.</li><li>Journaliers et valeurs d'équipe restent affichés : ils se calculent seuls.</li></ul>
+        <a class="open" href="app-mobile-duo-pre-match.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">B1b · Mes coups de pouce <span class="mb-tag">Actuel</span></div>
+        <div class="phone"><iframe src="app-mobile-real-2b-inducements.html" title="B1b · Mes coups de pouce"></iframe></div>
+        <ul><li>L'écran d'aujourd'hui, déjà par équipe. Les Nains ont la plus forte VE : tu achètes en premier.</li></ul>
+        <a class="open" href="app-mobile-real-2b-inducements.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">B1b · L'adversaire attend <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-duo-wait.html" title="B1b · L'adversaire attend"></iframe></div>
+        <ul><li>Vu par Morgane : son budget dépend des dépenses de Yann, elle achète après lui.</li><li>Elle est prévenue, et sa page s'ouvre, dès qu'il a fini.</li></ul>
+        <a class="open" href="app-mobile-duo-wait.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">B2 · Match en direct <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-duo-live.html" title="B2 · Match en direct"></iframe></div>
+        <ul><li>Le journal des deux camps, par SSE ; chaque action dit qui l'a saisie. Seules tes actions portent ✕.</li><li>« ＋ Action des Nains de Fer » ouvre directement la saisie : pas de choix d'équipe.</li></ul>
+        <a class="open" href="app-mobile-duo-live.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">B2c · Saisir une action <span class="mb-tag mb-tag--mod">Modifié</span></div>
+        <div class="phone"><iframe src="app-mobile-real-3b-actions.html" title="B2c · Saisir une action"></iframe></div>
+        <ul><li>La même page qu'en A2c, toujours pour ton équipe.</li></ul>
+        <a class="open" href="app-mobile-real-3b-actions.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">B3 · MVP de mon équipe <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-duo-mvp.html" title="B3 · MVP de mon équipe"></iframe></div>
+        <ul><li>Ton MVP seulement, tirage ou saisie manuelle. L'état de l'adversaire s'affiche en bas.</li></ul>
+        <a class="open" href="app-mobile-duo-mvp.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">B4 · Gains et fans de mon équipe <span class="mb-tag mb-tag--mod">Modifié</span></div>
+        <div class="phone"><iframe src="app-mobile-duo-step5.html" title="B4 · Gains et fans de mon équipe"></iframe></div>
+        <ul><li>L'étape d'aujourd'hui réduite à ton camp ; celui de l'adversaire en lecture seule.</li><li>Le résumé : chacun écrit son paragraphe, les deux sont fusionnés dans le résumé du match.</li></ul>
+        <a class="open" href="app-mobile-duo-step5.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">B5 · Validation <span class="mb-tag mb-tag--new">Nouveau</span></div>
+        <div class="phone"><iframe src="app-mobile-duo-validate.html" title="B5 · Validation"></iframe></div>
+        <ul><li>Le journal du match. Chacun valide son camp ; la seconde validation publie.</li><li>Ici Morgane a validé la première.</li></ul>
+        <a class="open" href="app-mobile-duo-validate.html">Ouvrir l'écran seul ↗</a>
+      </div>
+      <div class="shot">
+        <div class="shot-label">Récapitulatif publié <span class="mb-tag">Actuel</span></div>
+        <div class="phone"><iframe src="app-mobile-real-7-recap.html" title="Récapitulatif publié"></iframe></div>
+        <ul><li>Inchangé.</li></ul>
+        <a class="open" href="app-mobile-real-7-recap.html">Ouvrir l'écran seul ↗</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche équipe — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="teams">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="team-page">
+  <div class="team-back-nav"><a class="team-back-link">← Équipes</a></div>
+
+  <!-- En-tête : le balisage de teams-team-detail.html, sans les quatre
+       métadonnées que les chiffres clés remplacent. -->
+  <div class="team-header">
+    <div class="team-header-logo">GO</div>
+    <div class="team-header-info">
+      <div class="team-header-top">
+        <div class="team-header-name">Gueules d'Ork</div>
+        <span class="team-status-badge team-status-badge--ready">Prête à jouer</span>
+      </div>
+      <div class="team-header-meta">
+        <div class="meta-item"><div class="meta-label">Roster</div><div class="meta-value">Orques</div></div>
+        <div class="meta-item"><div class="meta-label">Coach</div><div class="meta-value">Morgane</div></div>
+      </div>
+      <div class="mb-kpis">
+        <div class="mb-kpi"><div class="mb-kpi-value">1 090</div><div class="mb-kpi-label">VE</div></div>
+        <div class="mb-kpi"><div class="mb-kpi-value">45</div><div class="mb-kpi-label">Tréso</div></div>
+        <div class="mb-kpi"><div class="mb-kpi-value">4</div><div class="mb-kpi-label">Fans</div></div>
+        <div class="mb-kpi"><div class="mb-kpi-value">2-1-0</div><div class="mb-kpi-label">V-N-D</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="team-tab-zone">
+    <div class="tabs team-tabs">
+      <a class="tab active">Effectif</a>
+      <a class="tab">Matchs</a>
+      <a class="tab">Trésorerie</a>
+    </div>
+    <div id="team-tab-content">
+      <div class="mb-roster">
+        <div class="mb-player">
+          <div class="mr-player-chip-jersey">1</div>
+          <div class="mb-player-name">Grishnak <span class="mb-player-pos">· Blitzeur</span></div>
+          <span class="mb-player-spp">8 SPP</span>
+          <div class="mb-player-stats"><span class="mb-stat">MV <b>6</b></span><span class="mb-stat">FO <b>3</b></span><span class="mb-stat">AG <b>3+</b></span><span class="mb-stat">PA <b>4+</b></span><span class="mb-stat">AR <b>10+</b></span></div>
+          <div class="mb-player-skills"><span class="mb-skill">Blocage</span><span class="mb-skill mb-skill--new">Châtaigne</span></div>
+        </div>
+        <div class="mb-player">
+          <div class="mr-player-chip-jersey">2</div>
+          <div class="mb-player-name">Ugluk <span class="mb-player-pos">· Lanceur</span></div>
+          <span class="mb-player-spp">3 SPP</span>
+          <div class="mb-player-stats"><span class="mb-stat">MV <b>5</b></span><span class="mb-stat">FO <b>3</b></span><span class="mb-stat">AG <b>3+</b></span><span class="mb-stat">PA <b>3+</b></span><span class="mb-stat">AR <b>9+</b></span><span class="mb-stat mb-stat--bp" title="1 blessure persistante">🩹 <b>1</b> BP</span></div>
+          <div class="mb-player-skills"><span class="mb-skill">Passe</span><span class="mb-skill">Prise sûre</span></div>
+        </div>
+        <div class="mb-player mb-player--out">
+          <div class="mr-player-chip-jersey">5</div>
+          <div class="mb-player-name">Mauhur <span class="mb-player-pos">· Black Orc</span></div>
+          <span class="mb-player-flag">Absent J4</span>
+          <div class="mb-player-stats"><span class="mb-stat">MV <b>4</b></span><span class="mb-stat">FO <b>4</b></span><span class="mb-stat">AG <b>4+</b></span><span class="mb-stat">PA <b>6+</b></span><span class="mb-stat">AR <b>10+</b></span><span class="mb-stat mb-stat--bp" title="2 blessures persistantes">🩹 <b>2</b> BP</span></div>
+          <div class="mb-player-skills"><span class="mb-skill">Bagarreur</span><span class="mb-skill">Grosse brute</span></div>
+        </div>
+        <div class="mb-player">
+          <div class="mr-player-chip-jersey">7</div>
+          <div class="mb-player-name">Snaga <span class="mb-player-pos">· Gobelin</span></div>
+          <span class="mb-player-spp">0 SPP</span>
+          <div class="mb-player-stats"><span class="mb-stat">MV <b>6</b></span><span class="mb-stat">FO <b>2</b></span><span class="mb-stat">AG <b>3+</b></span><span class="mb-stat">PA <b>4+</b></span><span class="mb-stat">AR <b>8+</b></span></div>
+          <div class="mb-player-skills"><span class="mb-skill">Esquive</span><span class="mb-skill">Poids plume</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

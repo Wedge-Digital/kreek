@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5 · Validation — je saisis tout — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container match-report-step5">
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">5</div>
+  </div>
+
+  <div class="mr-score-banner">
+    <div class="mr-score-team">
+      <div class="mr-score-logo">NF</div>
+      <div class="mr-score-name">Nains de Fer</div>
+      
+    </div>
+    <div class="mr-score-center">
+      <div class="mr-score-nums"><span class="mr-score-value">2</span><span class="mr-score-sep">&#8212;</span><span class="mr-score-value">1</span></div>
+      <div class="mr-score-cas"><span class="mr-score-cas-num">1</span><span class="mr-score-cas-sep">&#8211;</span><span class="mr-score-cas-num">0</span></div>
+    </div>
+    <div class="mr-score-team">
+      <div class="mr-score-logo">LR</div>
+      <div class="mr-score-name">London Rats</div>
+      
+    </div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mr-log-title">Journal du match</div>
+    <div class="mr-log">
+      <div class="mr-log-entry mb-log--home"><div class="mr-log-turn">T16</div><div class="mr-log-icon">⭐</div><div class="mr-log-text"><strong>Balin</strong> — MVP<span class="mb-log-by">Nains de Fer · tiré parmi 6 désignés</span></div></div>
+      <div class="mr-log-entry mb-log--away"><div class="mr-log-turn">T16</div><div class="mr-log-icon">⭐</div><div class="mr-log-text"><strong>#9 Skrit</strong> — MVP<span class="mb-log-by">London Rats · tiré parmi 6 désignés</span></div></div>
+      <div class="mr-log-entry mb-log--away"><div class="mr-log-turn">T11</div><div class="mr-log-icon">🏈</div><div class="mr-log-text"><strong>#9 Skrit</strong> — Touchdown<span class="mb-log-by">London Rats · saisi par toi</span></div></div>
+      <div class="mr-log-entry mb-log--home"><div class="mr-log-turn">T10</div><div class="mr-log-icon">💥</div><div class="mr-log-text"><strong>Thorgrim</strong> — Sortie<span class="mb-log-by">Nains de Fer · saisi par toi</span></div></div>
+      <div class="mr-log-entry mb-log--away"><div class="mr-log-turn">T10</div><div class="mr-log-icon">🩹</div><div class="mr-log-text"><strong>Kriik</strong> — Blessé<span class="mb-log-by">London Rats · saisi par toi</span></div></div>
+      <div class="mr-log-entry mb-log--home"><div class="mr-log-turn">T7</div><div class="mr-log-icon">🏈</div><div class="mr-log-text"><strong>Borin</strong> — Touchdown<span class="mb-log-by">Nains de Fer · saisi par toi</span></div></div>
+      <div class="mr-log-entry mb-log--home"><div class="mr-log-turn">T6</div><div class="mr-log-icon">🎯</div><div class="mr-log-text"><strong>Durin</strong> — Passe réussie<span class="mb-log-by">Nains de Fer · saisi par toi</span></div></div>
+    </div>
+  </div>
+
+  <!-- Tu as tout saisi : ta validation vaut pour les deux camps et publie. -->
+  <div class="text-tiny">Tu as saisi les deux camps : ta validation publie le compte rendu. Morgane en est prévenue.</div>
+  <div class="mb-live-actions">
+    <a class="btn btn-primary-blue btn-md" href="app-mobile-real-7-recap.html">✓ Valider et publier</a>
+    <a class="btn btn-text" href="app-mobile-solo-live.html">← Corriger le journal</a>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

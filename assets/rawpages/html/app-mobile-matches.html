@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mes matchs — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches" data-toasts>
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mb-page">
+  <div class="mb-title-row"><div class="h3-gras">Mes matchs</div></div>
+  <div class="tabs"><a class="tab active">À jouer · 3</a><a class="tab">Joués</a></div>
+
+  <div class="mb-match mb-match--mine">
+    <div class="mb-match-meta"><span>Prochain match · Ligue de Condate · J4</span><span class="mb-match-due">avant le 14/12</span></div>
+    <div class="mb-card">
+    <div class="match-widget">
+      <div class="match-side match-side--home">
+        <div class="match-team-logo-sm match-team-logo-sm--initials">LE</div>
+        <div class="match-team-info"><div class="match-team-name">Lames d'Éther</div><div class="match-team-sub">Elfes · toi</div></div>
+      </div>
+      <div class="match-score-block"><div class="match-round">J4</div></div>
+      <div class="match-side match-side--away">
+        <div class="match-team-info match-team-info--right"><div class="match-team-name">Gueules d'Ork</div><div class="match-team-sub">Morgane · Orques</div></div>
+        <div class="match-team-logo-sm match-team-logo-sm--initials">GO</div>
+      </div>
+    </div>
+    </div>
+    <div class="mb-match-actions"><a class="btn btn-primary-blue btn-sm" href="app-mobile-match-mode.html">Commencer</a></div>
+  </div>
+
+  <div class="mb-match mb-match--mine">
+    <div class="mb-match-meta"><span>Prochain match · Ligue de Condate · J4</span><span class="mb-match-due">avant le 14/12</span></div>
+    <div class="mb-card">
+    <div class="match-widget match-widget--in-progress match-widget--clickable">
+      <div class="match-side match-side--home">
+        <div class="match-team-logo-sm match-team-logo-sm--initials">NF</div>
+        <div class="match-team-info"><div class="match-team-name">Nains de Fer</div><div class="match-team-sub">Nains · toi</div></div>
+      </div>
+      <div class="match-score-block">
+        <div class="match-in-progress-block"><div class="match-status-badge match-status-badge--in-progress">En cours · 2 – 1</div></div>
+      </div>
+      <div class="match-side match-side--away">
+        <div class="match-team-info match-team-info--right"><div class="match-team-name">London Rats</div><div class="match-team-sub">Morgane · Skavens</div></div>
+        <div class="match-team-logo-sm match-team-logo-sm--initials">LR</div>
+      </div>
+    </div>
+    </div>
+    <div class="mb-activity"><span class="mb-live-dot"></span>Morgane a saisi 3 actions · il y a 3 min</div>
+    <div class="mb-match-actions"><a class="btn btn-primary-blue btn-sm" href="app-mobile-match-mode-joined.html">Continuer</a></div>
+  </div>
+
+  <div class="mb-match">
+    <div class="mb-match-meta"><span>Coupe d'hiver · Tour 2</span><span>avant le 31/01</span></div>
+    <div class="mb-card">
+    <div class="match-widget">
+      <div class="match-side match-side--home">
+        <div class="match-team-logo-sm match-team-logo-sm--initials">NF</div>
+        <div class="match-team-info"><div class="match-team-name">Nains de Fer</div><div class="match-team-sub">Nains · toi</div></div>
+      </div>
+      <div class="match-score-block"><div class="match-round">T2</div></div>
+      <div class="match-side match-side--away">
+        <div class="match-team-info match-team-info--right"><div class="match-team-name">Faucons d'Altdorf</div><div class="match-team-sub">Claire · Humains</div></div>
+        <div class="match-team-logo-sm match-team-logo-sm--initials">FA</div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Hors calendrier : démarre un match qu'aucune journée ne prévoit. -->
+  <div class="mb-match-actions mb-new-match"><a class="btn btn-primary-blue btn-sm">Nouveau match</a></div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

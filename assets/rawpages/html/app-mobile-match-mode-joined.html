@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continuer — saisie déjà commencée — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches" data-toasts>
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container">
+  <div class="mr-header">
+    <div class="mr-header-icon">🏈</div>
+    <div class="mr-header-title">Continuer le match</div>
+    <div class="mr-header-sub">Nains de Fer – London Rats · Ligue de Condate, J4</div>
+  </div>
+
+  <!-- NOUVEAU. Le second coach arrive : le mode est déjà choisi, il n'a plus
+       la question. Les deux ont cliqué « Commencer » en même temps ? Le premier
+       qui valide son choix l'emporte, l'autre est conduit ici. Les achats de
+       coups de pouce restent ordonnés : la plus forte VE achète d'abord. -->
+  <div class="mb-notice">
+    <div class="mb-notice-title">Morgane a commencé la saisie il y a 2 min</div>
+    <div class="text-tiny">Elle a choisi <b>👥 Chacun son équipe</b> : tu saisis les Nains de Fer, elle les London Rats.</div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mr-card-title">Où en est le match</div>
+    <div class="mb-progress-row"><span class="mb-status mb-status--done">✓</span><span>Fan factor des London Rats</span><span class="text-tiny">Morgane</span></div>
+    <div class="mb-progress-row"><span class="mb-status mb-status--todo">…</span><span>Coups de pouce des London Rats</span><span class="text-tiny">après toi</span></div>
+    <div class="mb-progress-row"><span class="mb-status mb-status--todo">1</span><span><b>Ton avant-match</b></span><span class="text-tiny">à faire</span></div>
+  </div>
+
+  <div class="mb-live-actions">
+    <a class="btn btn-primary-blue btn-md" href="app-mobile-duo-pre-match.html">Faire mon avant-match →</a>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil — évolutions à faire — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="home">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="home-main app-news-feed mb-home">
+  <div class="mb-cta mb-cta--evolve">
+    <div class="mb-cta-kicker">Nains de Fer · après le match contre London Rats</div>
+    <div class="mb-cta-title">Ton équipe peut évoluer</div>
+    <div class="mb-cta-list">
+      <div class="mb-cta-item"><span>📈</span>2 joueurs peuvent progresser · Thorgrim (10 SPP), Balin (9 SPP)</div>
+      <div class="mb-cta-item"><span>🛒</span>115 kPo pour recruter</div>
+    </div>
+    <a class="btn btn-md mb-cta-btn">Faire évoluer l'équipe</a>
+  </div>
+  <!-- Un coach à plusieurs équipes : une ligne compacte par équipe suivante. -->
+  <div class="mb-cta-more">
+    <div class="mr-banner-logo">LE</div>
+    <div class="mb-row-main"><div class="mb-row-title">Lames d'Éther · prochain match</div><div class="mb-row-sub">contre Crânes Rouges · J5 · dans 7 semaines</div></div>
+    <span class="mb-row-chevron">›</span>
+  </div>
+  <!-- Le fil réel (news-feed.html), inchangé, sous le cartouche. -->
+  <div class="feed-header">
+    <div class="h3-gras">Actualités</div>
+    <div class="feed-header-actions">
+      <div class="filter-tabs">
+        <div class="filter-tab active">Tout</div>
+        <div class="filter-tab">Match Report</div>
+        <div class="filter-tab">Actualité</div>
+      </div>
+    </div>
+  </div>
+  <div class="news-feed" id="news-feed">
+    <div class="latest-news-card">
+      <div class="latest-news-img"></div>
+      <div class="latest-news-content">
+        <div class="latest-news-cat">Match Report</div>
+        <div class="latest-news-title">Les Crânes Rouges arrachent le nul face aux Faucons</div>
+        <div class="latest-news-desc">2 – 2 au terme d'une seconde mi-temps sanglante : trois sorties côté impérial.</div>
+        <div class="latest-news-footer"><div class="latest-news-meta"><div class="latest-news-date">📅 le 10/11</div><div class="latest-news-author">👤 par Yann</div></div></div>
+      </div>
+    </div>
+    <div class="latest-news-card">
+      <div class="latest-news-img"></div>
+      <div class="latest-news-content">
+        <div class="latest-news-cat">Actualité</div>
+        <div class="latest-news-title">La journée 4 est programmée</div>
+        <div class="latest-news-desc">Sept rencontres, à jouer avant le 14 décembre.</div>
+        <div class="latest-news-footer"><div class="latest-news-meta"><div class="latest-news-date">📅 le 08/11</div><div class="latest-news-author">👤 par Claire</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

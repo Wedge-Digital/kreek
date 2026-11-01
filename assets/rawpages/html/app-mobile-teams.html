@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Équipes — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="teams">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mb-page">
+  <div class="h3-gras">Équipes</div>
+  <div class="mb-search"><span class="mb-search-icon">🔍</span><input class="form-input" placeholder="Nom d'équipe ou de coach…"></div>
+  <div class="text-tiny">Dans l'espace Tribu Celtique</div>
+
+  <div class="mb-section-title">Mes équipes</div>
+  <div class="mb-rail">
+    <div class="team-card card-shadow">
+      <div class="team-card-logo"><span class="team-card-initials">LE</span></div>
+      <div class="team-card-name h6-gras">Lames d'Éther</div>
+      <div class="team-card-roster text-tiny text-dark-3">Elfes</div>
+    </div>
+    <div class="team-card card-shadow">
+      <div class="team-card-logo"><span class="team-card-initials">NF</span></div>
+      <div class="team-card-name h6-gras">Nains de Fer</div>
+      <div class="team-card-roster text-tiny text-dark-3">Nains</div>
+    </div>
+    <div class="team-card card-shadow">
+      <div class="team-card-logo"><span class="team-card-initials">+</span></div>
+      <div class="team-card-name h6-gras">Créer</div>
+      <div class="team-card-roster text-tiny text-dark-3">une équipe</div>
+    </div>
+  </div>
+
+  <div class="mb-section-title">Tout l'espace · 14 équipes</div>
+  <div class="mb-card">
+    <div class="mb-row"><div class="mr-banner-logo">CR</div><div class="mb-row-main"><div class="mb-row-title">Crânes Rouges</div><div class="mb-row-sub">Morts-vivants · Yann · Poule B</div></div><div class="mb-row-side">1 210 kPo</div></div>
+    <div class="mb-row"><div class="mr-banner-logo">FA</div><div class="mb-row-main"><div class="mb-row-title">Faucons d'Altdorf</div><div class="mb-row-sub">Humains · Claire · Poule A</div></div><div class="mb-row-side">1 000 kPo</div></div>
+    <div class="mb-row"><div class="mr-banner-logo">GO</div><div class="mb-row-main"><div class="mb-row-title">Gueules d'Ork</div><div class="mb-row-sub">Orques · Morgane · Poule A</div></div><div class="mb-row-side">1 090 kPo</div></div>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

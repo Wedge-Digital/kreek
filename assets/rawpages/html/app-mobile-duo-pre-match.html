@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1 · Avant-match — mon équipe — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<!-- Écran ACTUEL MODIFIÉ (chacun son équipe : le camp adverse en lecture seule) de l'application, capturé tel que rendu ; seuls les noms,
+     l'indicateur d'étapes (5 étapes) et les retouches décidées (cf. FIXES de
+     convert.py) ont été changés. -->
+
+          
+
+<div class="mr-container match-report-step1 match-report-pre-match" x-data="{
+       home: null, away: null,
+       // Vides tant que rien n'est enregistré ; sinon les jets du rapport. Ils
+       // valaient 2 en dur, si bien qu'un rapport vierge proposait un jet qu'on
+       // n'avait pas fait, et qu'un rapport saisi affichait 2 au lieu du sien.
+       homeRoll: '',
+       awayRoll: '',
+       // `parseInt('')` rend NaN : sans la garde, un champ vide affichait
+       // « NaN » à la place du total.
+       get homeTotal() { return this.home &amp;&amp; this.homeRoll !== '' ? this.home.dedicated_fans + parseInt(this.homeRoll) : '-'; },
+       get awayTotal() { return this.away &amp;&amp; this.awayRoll !== '' ? this.away.dedicated_fans + parseInt(this.awayRoll) : '-'; },
+       get tvDiff() {
+         if (!this.home || !this.away) return 0;
+         return Math.abs(this.home.ctv - this.away.ctv);
+       },
+       get richerTeamName() {
+         if (!this.home || !this.away || this.home.ctv === this.away.ctv) return null;
+         return this.home.ctv &gt; this.away.ctv ? this.home.team_name : this.away.team_name;
+       },
+       get poorerTeam() {
+         if (!this.home || !this.away) return null;
+         return this.home.ctv &lt; this.away.ctv ? this.home : this.away;
+       },
+       get richerTeam() {
+         if (!this.home || !this.away) return null;
+         return this.home.ctv &gt;= this.away.ctv ? this.home : this.away;
+       },
+       // La valeur, telle quelle. La version d'origine voulait une espace de
+       // milliers et **recomposait** le nombre depuis les milliers et les
+       // centaines — le chiffre des dizaines n'apparaissait dans aucune de ses
+       // deux branches, et 2075 s'affichait « 2 000 kPo ». Les vingt-six autres
+       // affichages de kPo de l'application impriment la valeur brute ; cet
+       // écran était le seul à formater, et le seul à se tromper.
+       //
+       // Le repli sur '…' reste : ces appels s'exécutent avant que les deux
+       // `fetch` aient répondu, et rendraient « null kPo » sans lui.
+       formatKpo(v) {
+         if (v === null || v === undefined) return '…';
+         return v + ' kPo';
+       },
+       journeymenCount(team) {
+         if (!team) return 0;
+         return team.available_player_count &gt;= 11 ? 0 : 11 - team.available_player_count;
+       },
+       async init() {
+         const [h, a] = await Promise.all([
+           fetch('/app/01M45HJ7F8TWC4YCK26JWMR2EF/team/widgets/match-context/json?team_id=01M45MDJMWMAGKRDWV92AF9QBJ').then(r =&gt; r.json()),
+           fetch('/app/01M45HJ7F8TWC4YCK26JWMR2EF/team/widgets/match-context/json?team_id=01M45MDJQJQ6PNY1GMBHG99A68').then(r =&gt; r.json()),
+         ]);
+         this.home = h;
+         this.away = a;
+       }
+     }">
+
+  <!-- Header -->
+  <div class="mr-header">
+    <div class="mr-header-icon">📋</div>
+    <div class="mr-header-title">Séquence d'avant-match</div>
+    <div class="mr-header-sub">Fan factor, journaliers, coups de pouce</div>
+  </div>
+
+  <!-- Steps -->
+  <div class="mr-steps"><div class="mr-step mr-step--active">1</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">2</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">3</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">4</div><div class="mr-step-line"></div><div class="mr-step mr-step--pending">5</div></div>
+
+  <!-- Match banner -->
+  <div class="mr-match-banner">
+    <div class="mr-match-team">
+      
+      <div class="mr-match-logo">NF</div>
+      
+      <div class="mr-match-name">Nains de Fer</div>
+      <div class="mr-match-coach"> · Nains</div>
+    </div>
+    <span class="mr-match-vs">VS</span>
+    <div class="mr-match-team">
+      
+      <div class="mr-match-logo">LR</div>
+      
+      <div class="mr-match-name">London Rats</div>
+      <div class="mr-match-coach"> · Skavens</div>
+    </div>
+  </div>
+
+  <form method="post" action="/app/01M45HJ7F8TWC4YCK26JWMR2EF/match-report/01M45MDK4QNZWASD6QH0BYYYRS/step2">
+
+    <!-- Fan factor -->
+    <div class="mr-card">
+      <div class="mr-card-title">🎲 Fan Factor</div>
+
+      
+
+      <div class="mr-fan-section">
+        <div class="mr-fan-row">
+          <span class="mr-fan-team">Nains de Fer</span>
+          <span class="mr-fan-dedicated">
+            Fans : <span x-text="home ? home.dedicated_fans : '…'">1</span>
+          </span>
+          <span class="mr-fan-plus">+</span>
+          <div class="mr-fan-dice">
+            <input type="number" class="mr-fan-dice-input" name="home_fan_roll" min="1" max="3" x-model="homeRoll" required="">
+            <span class="mr-fan-dice-label">D3</span>
+          </div>
+          <span class="mr-fan-equals">=</span>
+          <span class="mr-fan-total" x-text="homeTotal">-</span>
+        </div>
+
+        <div class="mb-done-row mb-done-row--wait"><span class="mb-status mb-status--done">✓</span><span class="mb-done-text"><b>London Rats</b> · 1 + 2 = 3, lancé par Morgane</span></div>
+      </div>
+    </div>
+
+    <!-- Journaliers -->
+    <div class="mr-card">
+      <div class="mr-card-title">👥 Journaliers</div>
+
+      <template x-if="home">
+        <div>
+          <template x-if="journeymenCount(home) === 0">
+            <div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">✅</span>
+              <span>
+                <strong x-text="home.team_name"></strong> — 
+                <span x-text="home.available_player_count"></span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          </template>
+          <template x-if="journeymenCount(home) &gt; 0">
+            <div class="mr-info-banner mr-info-banner--neutral">
+              <span class="mr-info-icon">+</span>
+              <span>
+                <strong x-text="home.team_name"></strong> — 
+                <span x-text="home.available_player_count"></span> joueurs,
+                <strong x-text="journeymenCount(home)"></strong> journalier(s) ajouté(s)
+                (<span x-text="home.journeyman_type"></span>).
+              </span>
+            </div>
+          </template>
+        </div>
+      </template><div>
+          <template x-if="journeymenCount(home) === 0">
+            <div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">✅</span>
+              <span>
+                <strong x-text="home.team_name"></strong> — 
+                <span x-text="home.available_player_count"></span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          </template><div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">✅</span>
+              <span>
+                <strong x-text="home.team_name">Nains de Fer</strong> — 
+                <span x-text="home.available_player_count">11</span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          <template x-if="journeymenCount(home) &gt; 0">
+            <div class="mr-info-banner mr-info-banner--neutral">
+              <span class="mr-info-icon">+</span>
+              <span>
+                <strong x-text="home.team_name"></strong> — 
+                <span x-text="home.available_player_count"></span> joueurs,
+                <strong x-text="journeymenCount(home)"></strong> journalier(s) ajouté(s)
+                (<span x-text="home.journeyman_type"></span>).
+              </span>
+            </div>
+          </template>
+        </div>
+
+      <template x-if="away">
+        <div>
+          <template x-if="journeymenCount(away) === 0">
+            <div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">✅</span>
+              <span>
+                <strong x-text="away.team_name"></strong> — 
+                <span x-text="away.available_player_count"></span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          </template>
+          <template x-if="journeymenCount(away) &gt; 0">
+            <div class="mr-info-banner mr-info-banner--neutral">
+              <span class="mr-info-icon">+</span>
+              <span>
+                <strong x-text="away.team_name"></strong> — 
+                <span x-text="away.available_player_count"></span> joueurs,
+                <strong x-text="journeymenCount(away)"></strong> journalier(s) ajouté(s)
+                (<span x-text="away.journeyman_type"></span>).
+              </span>
+            </div>
+          </template>
+        </div>
+      </template><div>
+          <template x-if="journeymenCount(away) === 0">
+            <div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">✅</span>
+              <span>
+                <strong x-text="away.team_name"></strong> — 
+                <span x-text="away.available_player_count"></span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          </template><div class="mr-info-banner mr-info-banner--ok">
+              <span class="mr-info-icon">✅</span>
+              <span>
+                <strong x-text="away.team_name">London Rats</strong> — 
+                <span x-text="away.available_player_count">11</span> joueurs, aucun journalier nécessaire.
+              </span>
+            </div>
+          <template x-if="journeymenCount(away) &gt; 0">
+            <div class="mr-info-banner mr-info-banner--neutral">
+              <span class="mr-info-icon">+</span>
+              <span>
+                <strong x-text="away.team_name"></strong> — 
+                <span x-text="away.available_player_count"></span> joueurs,
+                <strong x-text="journeymenCount(away)"></strong> journalier(s) ajouté(s)
+                (<span x-text="away.journeyman_type"></span>).
+              </span>
+            </div>
+          </template>
+        </div>
+
+      <template x-if="!home || !away">
+        <div class="mr-info-banner mr-info-banner--neutral">
+          <span class="mr-info-icon">…</span>
+          <span>Chargement des données d'équipe…</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- TV comparison -->
+    <div class="mr-card">
+      <div class="mr-card-title">⚖️ Valeurs d'équipe</div>
+      <div class="mr-tv-section">
+        <div class="mr-tv-row">
+          <span class="mr-tv-team">Nains de Fer</span>
+          <span class="mr-tv-value" x-text="formatKpo(home ? home.ctv : null)">550 kPo</span>
+        </div>
+        <div class="mr-tv-row">
+          <span class="mr-tv-team">London Rats</span>
+          <span class="mr-tv-value" x-text="formatKpo(away ? away.ctv : null)">495 kPo</span>
+        </div>
+        <template x-if="home &amp;&amp; away &amp;&amp; tvDiff === 0">
+          <div class="mr-tv-diff mr-tv-diff--equal">
+            <span>⚡</span>
+            <span>Valeurs d'équipe égales.</span>
+          </div>
+        </template>
+        <template x-if="home &amp;&amp; away &amp;&amp; tvDiff &gt; 0">
+          <div class="mr-tv-diff">
+            <span>⚠️</span>
+            <span>
+              Différence de <strong x-text="formatKpo(tvDiff)"></strong>
+              en faveur de <strong x-text="richerTeamName"></strong>.
+            </span>
+          </div>
+        </template><div class="mr-tv-diff">
+            <span>⚠️</span>
+            <span>
+              Différence de <strong x-text="formatKpo(tvDiff)">55 kPo</strong>
+              en faveur de <strong x-text="richerTeamName">Nains de Fer</strong>.
+            </span>
+          </div>
+      </div>
+    </div>
+
+    <!-- Inducements order -->
+    <div class="mr-card">
+      <div class="mr-card-title">🛒 Coups de pouce</div>
+      <template x-if="home &amp;&amp; away">
+        <div class="mr-inducements-summary">
+          <!-- Richer team goes first (buys with treasury only) -->
+          <div class="mr-inducement-team-row">
+            <div class="mr-inducement-team-info">
+              <div class="mr-inducement-team-name" x-text="richerTeam.team_name"></div>
+              <div class="mr-inducement-team-budget">
+                Budget : trésorerie (<span x-text="formatKpo(richerTeam.treasury)"></span> disponibles)
+              </div>
+            </div>
+            <span class="mr-inducement-order mr-inducement-order--first">1er</span>
+          </div>
+          <!-- Poorer team goes second (diff + rival spend + treasury) -->
+          <div class="mr-inducement-team-row">
+            <div class="mr-inducement-team-info">
+              <div class="mr-inducement-team-name" x-text="poorerTeam.team_name"></div>
+              <div class="mr-inducement-team-budget">
+                Budget : diff TV + dépenses adverses + <span x-text="formatKpo(poorerTeam.treasury)"></span> trésorerie
+              </div>
+            </div>
+            <span class="mr-inducement-order">2e</span>
+          </div>
+        </div>
+      </template><div class="mr-inducements-summary">
+          <!-- Richer team goes first (buys with treasury only) -->
+          <div class="mr-inducement-team-row">
+            <div class="mr-inducement-team-info">
+              <div class="mr-inducement-team-name" x-text="richerTeam.team_name">Nains de Fer</div>
+              <div class="mr-inducement-team-budget">
+                Budget : trésorerie (<span x-text="formatKpo(richerTeam.treasury)">510 kPo</span> disponibles)
+              </div>
+            </div>
+            <span class="mr-inducement-order mr-inducement-order--first">1er</span>
+          </div>
+          <!-- Poorer team goes second (diff + rival spend + treasury) -->
+          <div class="mr-inducement-team-row">
+            <div class="mr-inducement-team-info">
+              <div class="mr-inducement-team-name" x-text="poorerTeam.team_name">London Rats</div>
+              <div class="mr-inducement-team-budget">
+                Budget : diff TV + dépenses adverses + <span x-text="formatKpo(poorerTeam.treasury)">565 kPo</span> trésorerie
+              </div>
+            </div>
+            <span class="mr-inducement-order">2e</span>
+          </div>
+          <div class="text-tiny">Tu achètes en premier ; Morgane attend tes achats, son budget en dépend.
+          </div>
+        </div>
+      <template x-if="!home || !away">
+        <div class="mr-info-banner mr-info-banner--neutral">
+          <span class="mr-info-icon">…</span>
+          <span>Chargement des données d'équipe…</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- Actions -->
+    <div class="mr-actions">
+      <a href="/app/01M45HJ7F8TWC4YCK26JWMR2EF/match-report/01M45MDK4QNZWASD6QH0BYYYRS" class="btn-outline-sm">← Retour</a>
+      <a class="btn-primary-sm" href="app-mobile-real-2b-inducements.html">Mes coups de pouce →</a>
+    </div>
+
+  </form>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3 · MVP 2/2 — London Rats — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container">
+  <div class="mr-header">
+    <div class="mr-header-icon">⭐</div>
+    <div class="mr-header-title">Séquence d'après-match</div>
+    <div class="mr-header-sub">MVP · Nains de Fer 2 – 1 London Rats</div>
+  </div>
+
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
+  </div>
+
+  <!-- Le MVP déjà réglé reste visible, replié : on ne revient pas en
+       arrière pour le vérifier. -->
+  <div class="mb-done-row"><span class="mb-status mb-status--done">✓</span><span class="mb-done-text"><b>Nains de Fer</b> · Balin, tiré au sort</span></div>
+
+  <div class="mr-banner">
+    <div class="mr-banner-logo">LR</div>
+    <div>
+      <div class="mr-banner-name">London Rats</div>
+      <div class="mr-banner-label">Équipe visiteur · MVP 2 / 2</div>
+    </div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mr-card-title">Le MVP</div>
+    <div class="choice-group mb-choice">
+      <div class="choice-btn selected">🎲 Tirage au sort</div>
+      <div class="choice-btn">✋ Saisie manuelle</div>
+    </div>
+    <div class="mb-title-row"><div class="text-tiny">Désigne 6 joueurs qui ont joué : le MVP sera tiré au sort parmi eux. Il s'inscrit au journal comme une action du tour 16, qui rapporte 4 SPP.</div><span class="mb-status mb-status--done">6 / 6</span></div>
+    <div class="mb-mvp-list">
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">9</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Skrit</div><div class="mb-mvp-sub">Coureur d'égout · 1 touchdown</div></div><span class="mb-mvp-spp">7 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">3</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Kriik</div><div class="mb-mvp-sub">Vermine de choc</div></div><span class="mb-mvp-spp">2 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">6</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Snikch</div><div class="mb-mvp-sub">Lanceur</div></div><span class="mb-mvp-spp">4 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">1</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Queek</div><div class="mb-mvp-sub">Vermine de choc</div></div><span class="mb-mvp-spp">1 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">8</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Squeal</div><div class="mb-mvp-sub">Rat-ogre</div></div><span class="mb-mvp-spp">3 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">12</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Ratbag</div><div class="mb-mvp-sub">Vermine de choc</div></div><span class="mb-mvp-spp">0 SPP</span></button>
+    </div>
+    <div class="text-tiny">＋ 5 autres joueurs</div>
+  </div>
+
+  <div class="mr-nav-row">
+    <a class="btn-outline-sm" href="app-mobile-solo-mvp-home-drawn.html">← Nains de Fer</a>
+    <a class="btn-primary-sm" href="app-mobile-real-5-step5.html">🎲 Tirer le MVP</a>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

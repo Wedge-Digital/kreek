@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3 · MVP — mon équipe — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container">
+  <div class="mr-header">
+    <div class="mr-header-icon">⭐</div>
+    <div class="mr-header-title">Séquence d'après-match</div>
+    <div class="mr-header-sub">MVP · Nains de Fer 2 – 1 London Rats</div>
+  </div>
+
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
+  </div>
+
+  <div class="mr-banner">
+    <div class="mr-banner-logo">NF</div>
+    <div>
+      <div class="mr-banner-name">Nains de Fer</div>
+      <div class="mr-banner-label">Ton équipe</div>
+    </div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mr-card-title">Le MVP</div>
+    <div class="choice-group mb-choice">
+      <div class="choice-btn selected">🎲 Tirage au sort</div>
+      <div class="choice-btn">✋ Saisie manuelle</div>
+    </div>
+    <div class="mb-title-row"><div class="text-tiny">Désigne 6 joueurs qui ont joué : le MVP sera tiré au sort parmi eux. Il s'inscrit au journal comme une action du tour 16, qui rapporte 4 SPP.</div><span class="mb-status mb-status--done">6 / 6</span></div>
+    <div class="mb-mvp-list">
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">4</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Thorgrim</div><div class="mb-mvp-sub">Tueur de trolls · 1 sortie</div></div><span class="mb-mvp-spp">6 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">7</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Borin</div><div class="mb-mvp-sub">Coureur · 1 touchdown</div></div><span class="mb-mvp-spp">3 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">2</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Durin</div><div class="mb-mvp-sub">Lanceur · 1 passe</div></div><span class="mb-mvp-spp">2 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">9</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Balin</div><div class="mb-mvp-sub">Coureur</div></div><span class="mb-mvp-spp">5 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">11</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Nori</div><div class="mb-mvp-sub">Bloqueur</div></div><span class="mb-mvp-spp">1 SPP</span></button>
+      <button class="mr-player-chip active" type="button"><span class="mb-check">✓</span><div class="mr-player-chip-jersey">5</div><div class="mr-player-chip-info"><div class="mr-player-chip-name">Gimli</div><div class="mb-mvp-sub">Bloqueur</div></div><span class="mb-mvp-spp">0 SPP</span></button>
+    </div>
+    <div class="text-tiny">＋ 5 autres joueurs</div>
+  </div>
+
+  <!-- L'autre camp, en lecture seule : on sait où en est l'adversaire. -->
+  <div class="mb-done-row mb-done-row--wait"><span class="mb-status mb-status--todo"><span class="mb-live-dot"></span>en cours</span><span class="mb-done-text"><b>London Rats</b> · Morgane choisit son MVP</span></div>
+
+  <div class="mr-nav-row">
+    <a class="btn-outline-sm" href="app-mobile-duo-live.html">← Match</a>
+    <a class="btn-primary-sm" href="app-mobile-duo-step5.html">🎲 Tirer le MVP</a>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

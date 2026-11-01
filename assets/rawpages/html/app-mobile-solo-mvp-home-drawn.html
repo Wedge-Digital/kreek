@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3 · MVP 1/2 — Nains de Fer, tiré — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container">
+  <div class="mr-header">
+    <div class="mr-header-icon">⭐</div>
+    <div class="mr-header-title">Séquence d'après-match</div>
+    <div class="mr-header-sub">MVP · Nains de Fer 2 – 1 London Rats</div>
+  </div>
+
+  <div class="mr-steps">
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--done">&#10003;</div>
+    <div class="mr-step-line mr-step-line--done"></div>
+    <div class="mr-step mr-step--active">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
+  </div>
+
+  <div class="mr-banner">
+    <div class="mr-banner-logo">NF</div>
+    <div>
+      <div class="mr-banner-name">Nains de Fer</div>
+      <div class="mr-banner-label">Équipe à domicile · MVP 1 / 2</div>
+    </div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mr-card-title">Le MVP</div>
+    <div class="mb-mvp-winner">
+      <div class="mr-player-chip-jersey">9</div>
+      <div><div class="h5-gras">Balin</div><div class="text-tiny">Coureur · 5 → 9 SPP</div></div>
+      <span class="mb-mvp-star">⭐</span>
+    </div>
+    <div class="text-tiny">Tiré au sort parmi Thorgrim, Borin, Durin, Balin, Nori et Gimli. Le tirage est définitif.</div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mr-log-title">Ajouté au journal</div>
+    <div class="mr-log">
+      <div class="mr-log-entry mb-log--home"><div class="mr-log-turn">T16</div><div class="mr-log-icon">⭐</div><div class="mr-log-text"><strong>Balin</strong> — MVP<span class="mb-log-by">Nains de Fer · tiré parmi 6 désignés</span></div></div>
+    </div>
+  </div>
+
+  <div class="mr-nav-row">
+    <a class="btn-outline-sm" href="app-mobile-solo-live.html">← Match</a>
+    <a class="btn-primary-sm" href="app-mobile-solo-mvp-away.html">MVP des London Rats →</a>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

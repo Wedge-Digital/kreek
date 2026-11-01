@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1b · Coups de pouce — en attente de l'adversaire — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container">
+  <div class="mr-header">
+    <div class="mr-header-icon">🛒</div>
+    <div class="mr-header-title">Coups de pouce</div>
+    <div class="mr-header-sub">Achetez des inducements pour rééquilibrer le match</div>
+  </div>
+
+  <div class="mr-steps">
+    <div class="mr-step mr-step--active">1</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">2</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">3</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">4</div>
+    <div class="mr-step-line"></div>
+    <div class="mr-step mr-step--pending">5</div>
+  </div>
+
+  <!-- NOUVEAU. Vu par Morgane (London Rats, VE la plus faible) : son budget
+       dépend des dépenses de l'adversaire, elle achète donc après lui. La page
+       s'ouvre d'elle-même dès que ses achats sont enregistrés (SSE). -->
+  <div class="mb-notice">
+    <div class="mb-notice-title">Yann achète ses coups de pouce</div>
+    <div class="text-tiny">Ton budget — différence de VE, dépenses de Yann et trésorerie — dépend de ses achats : tu achèteras dès qu'il aura fini. Tu seras prévenue.</div>
+  </div>
+  <div class="mr-card">
+    <div class="mr-card-title">Ton avant-match</div>
+    <div class="mb-progress-row"><span class="mb-status mb-status--done">✓</span><span>Fan factor</span><span class="text-tiny">1 + 2 = 3</span></div>
+    <div class="mb-progress-row"><span class="mb-status mb-status--todo"><span class="mb-live-dot"></span>en cours</span><span>Coups de pouce des Nains de Fer</span><span class="text-tiny">Yann</span></div>
+    <div class="mb-progress-row"><span class="mb-status mb-status--todo">…</span><span>Tes coups de pouce</span><span class="text-tiny">après Yann</span></div>
+  </div>
+
+  <div class="mr-nav-row">
+    <a class="btn-outline-sm" href="app-mobile-duo-pre-match.html">← Avant-match</a>
+    <button class="btn-primary-sm" disabled>Mes coups de pouce</button>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

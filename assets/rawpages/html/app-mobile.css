@@ -1,0 +1,252 @@
+/* Parcours mobile — ce que l'application n'a pas encore.
+
+   Tout le reste vient des feuilles réelles (`app-styles.css`) : en-tête et
+   barre mobiles, `.mr-*` du compte rendu, `.match-widget`, `.team-card`,
+   `.team-page`, `.form-input`, `.btn*`. Ce fichier ne pose que les pièces
+   neuves, construites sur les mêmes jetons et les mêmes mesures que leurs
+   voisines réelles — rayon de 12 px des `.mr-card`, logos de 44 px à rayon de
+   10 px des `.mr-banner-logo`, puces de 24 px des `.mr-player-chip-jersey`.
+
+   Préfixe `mb-` : rien ici n'entre en collision avec une classe réelle. */
+
+/* ── Coquille : pastilles d'onglet et cloche ─────────────────────────────── */
+.mobile-tab { position: relative; }
+.mobile-tab-badge {
+  position: absolute; top: 2px; left: 54%;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--red-badge); color: var(--white);
+  font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+}
+.mobile-header-btn--notif { position: relative; }
+.mobile-header-dot {
+  position: absolute; top: 7px; right: 7px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red-badge); border: 2px solid var(--dark-0);
+}
+
+/* ── Page ────────────────────────────────────────────────────────────────── */
+.mb-page {
+  max-width: 900px; margin: 0 auto; padding: var(--p1);
+  display: flex; flex-direction: column; gap: var(--p1);
+}
+.mb-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--p1); }
+.mb-section-title {
+  font-family: var(--font-title); font-size: var(--text-tiny); font-weight: 700;
+  color: var(--dark-2); text-transform: uppercase; letter-spacing: 0.3px;
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-top: 4px;
+}
+.mb-section-title a { font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--link-blue); }
+.mb-card { background: var(--white); border-radius: 12px; padding: var(--p1); }
+
+/* ── Accueil : le cartouche d'appel à l'action ─────────────────────────────
+   Au-dessus du fil d'actualité réel. Une seule action, la plus utile du
+   moment : les évolutions à faire, sinon le prochain match. Même dégradé que `.mr-header`. */
+.mb-home { display: flex; flex-direction: column; gap: var(--p1); }
+/* Le fil réel n'a pas de marge propre sur son conteneur : ses blocs portent
+   la leur. Le cartouche s'aligne sur eux. */
+.mb-home .mb-cta, .mb-home .mb-cta-more { margin: var(--p1) var(--p1) 0; }
+.mb-cta {
+  background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-0) 100%);
+  border-radius: 12px; padding: var(--p1);
+  color: var(--white); display: flex; flex-direction: column; gap: var(--p1);
+}
+.mb-cta-kicker { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.3px; }
+.mb-cta-title { font-family: var(--font-title); font-weight: 700; font-size: var(--h5); }
+.mb-cta-when { text-align: center; font-size: var(--text-tiny); color: rgba(255,255,255,0.75); }
+.mb-cta-btn { background: var(--gold); color: var(--dark-0); }
+.mb-cta--evolve { background: linear-gradient(135deg, var(--green) 0%, var(--main-blue) 100%); }
+.mb-cta-list { display: flex; flex-direction: column; gap: 6px; }
+.mb-cta-item { display: flex; gap: 8px; align-items: baseline; font-size: var(--text-tiny); background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 10px; }
+.mb-cta-more { display: flex; align-items: center; gap: 12px; background: var(--white); border-radius: 12px; padding: var(--p1); }
+.mb-versus { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; text-align: center; }
+.mb-versus-team { display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: var(--font-title); font-weight: 700; font-size: var(--text-xs); }
+.mb-versus-coach { font-family: var(--font-body); font-weight: 400; font-size: 11px; color: rgba(255,255,255,0.6); }
+.mb-versus-vs { font-family: var(--font-title); font-weight: 700; font-size: var(--h5); color: var(--gold); }
+
+/* La page de suivi : la saisie passe par l'étape existante */
+.mb-live-actions { display: flex; flex-direction: column; gap: 8px; }
+
+/* Ligne d'une liste (à faire, équipes) */
+.mb-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.mb-row + .mb-row { border-top: 1px solid var(--dark-5); }
+.mb-row-icon {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; background: var(--dark-6);
+}
+.mb-row-main { flex: 1; min-width: 0; }
+.mb-row-title { font-size: var(--text-xs, 14px); font-weight: 600; color: var(--dark-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mb-row-title mark { background: rgba(255,215,0,0.35); color: inherit; border-radius: 2px; }
+.mb-row-sub { font-size: 12px; color: var(--dark-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mb-row-side { font-size: 12px; font-weight: 600; color: var(--dark-2); text-align: right; white-space: nowrap; }
+.mb-row-chevron { color: var(--dark-4); font-size: 18px; }
+.mb-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); display: inline-block; margin-right: 4px; vertical-align: 1px; }
+
+/* ── Équipes : recherche ─────────────────────────────────────────────────── */
+.mb-search { position: relative; }
+.mb-search .form-input { padding-left: 42px; border-color: var(--main-blue); border-width: 2px; }
+.mb-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; }
+.mb-search-clear { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--dark-3); }
+.mb-filters { display: flex; gap: 8px; overflow: hidden; }
+.mb-filter {
+  padding: 8px 14px; border-radius: 20px; font-size: var(--text-tiny); font-weight: 600;
+  border: 2px solid var(--dark-5); color: var(--dark-2); white-space: nowrap; background: var(--white);
+}
+.mb-filter.active { border-color: var(--main-blue); color: var(--main-blue); background: rgba(0,48,73,0.05); }
+.mb-rail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mb-rail .team-card { padding: var(--p1) 8px; }
+.mb-group-label { font-size: 11px; font-weight: 600; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.3px; padding-top: 8px; }
+
+/* ── Fiche équipe : l'effectif en cartes ─────────────────────────────────── */
+.mb-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+.mb-kpi { background: var(--dark-6); border-radius: 8px; padding: 8px 4px; text-align: center; }
+.mb-kpi-value { font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+.mb-kpi-label { font-size: 10px; font-weight: 600; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.3px; }
+.mb-roster { display: flex; flex-direction: column; gap: 8px; padding-top: var(--p1); }
+.mb-player {
+  background: var(--white); border: 1px solid var(--dark-5); border-radius: 8px;
+  padding: 10px; display: grid; grid-template-columns: 24px 1fr auto; gap: 6px 10px; align-items: center;
+}
+.mb-player-name { font-size: var(--text-xs, 14px); font-weight: 600; color: var(--dark-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mb-player-pos { font-weight: 400; font-size: 12px; color: var(--dark-3); }
+.mb-player-spp { font-size: 11px; font-weight: 700; color: var(--main-blue); background: rgba(0,48,73,0.08); border-radius: 4px; padding: 2px 6px; }
+.mb-player-stats, .mb-player-skills { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; }
+.mb-stat { font-size: 11px; color: var(--dark-3); background: var(--dark-6); border-radius: 4px; padding: 1px 6px; }
+.mb-stat b { color: var(--dark-1); font-weight: 700; }
+.mb-skill { font-size: 11px; border-radius: 4px; padding: 1px 6px; background: rgba(0,48,73,0.06); color: var(--main-blue); }
+.mb-skill--new { background: rgba(98,149,132,0.15); color: var(--green); font-weight: 700; }
+.mb-player--out { opacity: 0.55; }
+.mb-player--out .mr-player-chip-jersey { background: var(--red); }
+.mb-player-flag { font-size: 11px; font-weight: 700; color: var(--red); background: rgba(224,32,32,0.10); border-radius: 4px; padding: 2px 6px; }
+
+/* Fiche joueur : la page réelle (player-detail.html), en page complète */
+/* Remplace le `style="margin-bottom"` du gabarit réel, interdit ici. */
+.mb-back { margin-bottom: var(--p1); }
+/* La largeur de la barre de SPP est posée en `style` par le gabarit réel ;
+   la maquette la fixe par classe : 6 dépensés sur 14 gagnés. */
+.mb-spp-43 { width: 43%; }
+/* Le point d'entrée des évolutions, sous l'en-tête. */
+.mb-evolve { margin: 0; }
+
+/* ADAPTATION PROPOSÉE pour `pages/player-page.css`, sous 768 px. La page
+   réelle colle aux bords de l'écran, et `min-width: 240px` sur le corps de
+   l'en-tête renvoie AR seul à la ligne. */
+@media (max-width: 768px) {
+  .player-page { padding: var(--p1); gap: var(--p1); }
+  .player-page .player-header { flex-direction: column; align-items: stretch; }
+  .player-page .player-header-body { min-width: 0; }
+  .player-page .player-avatar { width: 48px; height: 48px; font-size: 18px; }
+  .player-page .player-header-meta { gap: var(--p1) var(--p2); }
+  .player-page .player-stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .player-page .pstat { background: var(--dark-6); border-radius: 8px; padding: 6px 0; }
+}
+
+/* ── Matchs ──────────────────────────────────────────────────────────────── */
+.mb-match { display: flex; flex-direction: column; gap: 8px; }
+.mb-match-meta { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; color: var(--dark-3); text-transform: uppercase; letter-spacing: 0.3px; padding: 0 4px; }
+.mb-match-due { color: var(--main-blue); }
+.mb-activity { display: flex; align-items: center; font-size: 12px; color: var(--dark-2); background: rgba(255,107,53,0.08); border-radius: 6px; padding: 6px 8px; }
+.mb-match-actions { display: flex; gap: 8px; }
+.mb-match-actions > * { flex: 1; text-align: center; }
+.mb-match--mine .mb-card { border-left: 4px solid var(--main-blue); }
+
+/* Le match en direct */
+.mb-sync { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--dark-3); }
+.mb-who { font-size: 11px; font-weight: 600; margin-top: 2px; }
+.mb-who--me { color: var(--main-blue); }
+.mb-who--live { color: var(--orange); }
+.mr-log-entry.mb-log--away { border-right: 3px solid var(--green); }
+.mr-log-entry.mb-log--home { border-left: 3px solid var(--main-blue); }
+.mr-log-entry.mb-log--new { background: rgba(255,107,53,0.08); border-color: rgba(255,107,53,0.35); }
+.mb-log-by { display: block; font-size: 11px; color: var(--dark-3); }
+
+/* ── Après-match ─────────────────────────────────────────────────────────── */
+.mb-mvp-list { display: flex; flex-direction: column; gap: 6px; }
+.mb-mvp-list .mr-player-chip { padding: 10px; }
+.mb-mvp-list .mr-player-chip.active { border-color: var(--gold); background: rgba(255,215,0,0.1); }
+.mb-mvp-sub { font-size: 11px; color: var(--dark-3); }
+.mb-mvp-spp { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--main-blue); white-space: nowrap; }
+.mb-status { font-size: 11px; font-weight: 700; border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+.mb-status--done { background: rgba(98,149,132,0.15); color: var(--green); }
+.mb-status--todo { background: rgba(0,48,73,0.10); color: var(--main-blue); }
+.mb-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mb-side { background: var(--white); border-radius: 12px; padding: var(--p1); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.mb-side-name { font-size: var(--text-tiny); font-weight: 600; color: var(--dark-1); }
+
+/* MVP : six désignés, un tiré au sort */
+.mb-check {
+  width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0;
+  border: 2px solid var(--dark-4); color: var(--white);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+}
+.mr-player-chip.active .mb-check { background: var(--main-blue); border-color: var(--main-blue); }
+.mb-mvp-winner {
+  display: flex; align-items: center; gap: 12px; padding: var(--p1);
+  border: 2px solid var(--gold); border-radius: 12px; background: rgba(255,215,0,0.1);
+}
+.mb-mvp-winner .mr-player-chip-jersey { width: 36px; height: 36px; font-size: 14px; border-radius: 6px; }
+.mb-mvp-star { margin-left: auto; font-size: 28px; }
+
+/* Le toast réel, poussé par SSE. En bas comme sur ordinateur, mais posé
+   au-dessus de la barre d'onglets, qui occupe le bas de l'écran mobile.
+   Fond blanc, filet `--main-blue` à gauche et ombre portée : la carte de
+   l'application (`.mr-card`, rayon de 12 px), qui se détache sur l'actualité
+   comme sur les barres sombres. Texte `--dark-1`, le plus lisible. */
+.toast-zone.mb-toast-zone {
+  top: auto; left: var(--p1); right: var(--p1);
+  bottom: calc(var(--mobile-tabbar-clearance) + var(--p1));
+}
+.toast.mb-toast {
+  max-width: none; pointer-events: auto;
+  background: var(--white); color: var(--dark-1); font-size: var(--text-tiny);
+  border-left: 4px solid var(--main-blue); border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+}
+.mb-toast-sub { display: block; font-weight: 400; color: var(--dark-2); margin-top: 2px; }
+
+
+/* « Nouveau match » ne doit pas sembler appartenir à la dernière carte. */
+.mb-new-match { margin-top: var(--p1); padding-top: var(--p1); border-top: 1px solid var(--dark-5); }
+
+/* Blessures persistantes : le nombre, comme la colonne « BP » du tableau
+   réel (`.player-bp--some`, rouge gras) ; absent quand il vaut zéro. */
+.mb-stat--bp { background: rgba(224,32,32,0.10); color: var(--red); }
+.mb-stat--bp b { color: var(--red); }
+
+/* 3b · Choix de l’équipe : des .mr-banner cliquables, chevron à droite. */
+.mb-team-pick { text-decoration: none; border: 1px solid var(--dark-5); }
+.mb-team-pick .mb-row-chevron { margin-left: auto; }
+
+
+/* 4 · MVP : les deux modes, en deux colonnes égales. */
+.mb-choice .choice-btn { flex: 1; text-align: center; padding: 10px 8px; font-size: var(--text-tiny); font-weight: 600; }
+
+/* Commencer : le mode de saisie, deux options exclusives. La carte reprend le
+   bandeau d'équipe (.mr-banner : rayon 12 px, filet --dark-5), le choix se
+   marque d'un filet --main-blue. */
+.mb-mode {
+  display: flex; align-items: flex-start; gap: 12px; padding: var(--p1);
+  border: 1px solid var(--dark-5); border-radius: 12px; background: var(--white);
+  text-decoration: none; color: inherit;
+}
+.mb-mode--selected { border: 2px solid var(--main-blue); background: rgba(0,48,73,0.04); }
+.mb-mode-body { display: flex; flex-direction: column; gap: 4px; }
+.mb-mode-title { font-family: var(--font-title); font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+.mb-mode-text { font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.45; }
+.mb-radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--dark-4); flex-shrink: 0; margin-top: 2px; }
+.mb-radio--on { border: 6px solid var(--main-blue); }
+
+/* Un message d'état sur la page : la carte du toast, posée dans le flux. */
+.mb-notice {
+  display: flex; flex-direction: column; gap: 4px; padding: var(--p1);
+  background: var(--white); border-left: 4px solid var(--main-blue); border-radius: 12px;
+}
+.mb-notice-title { font-weight: 700; font-size: var(--text-small); color: var(--dark-1); }
+
+/* Une étape ou un camp déjà réglé, replié sur une ligne. */
+.mb-progress-row, .mb-done-row { display: flex; align-items: center; gap: 10px; font-size: var(--text-tiny); color: var(--dark-1); }
+.mb-progress-row .text-tiny { margin-left: auto; }
+.mb-done-row { background: var(--white); border-radius: 12px; padding: 10px var(--p1); }
+.mb-done-row--wait { background: transparent; border: 1px dashed var(--dark-4); color: var(--dark-2); }
+.mb-done-text b { color: var(--dark-1); }

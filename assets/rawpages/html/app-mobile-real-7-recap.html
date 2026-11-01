@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Récapitulatif publié — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<!-- Écran ACTUEL de l'application, capturé tel que rendu ; seuls les noms,
+     l'indicateur d'étapes (5 étapes) et les retouches décidées (cf. FIXES de
+     convert.py) ont été changés. -->
+
+          
+
+<div class="ms-page">
+
+  <!-- ══ HERO ══════════════════════════════════════════════════ -->
+  <div class="ms-hero">
+
+    
+    <div class="ms-hero-header">
+      <span class="ms-hero-context">Ligue de Condate · Saison 5 · J4</span>
+    </div>
+    
+
+    <div class="ms-scoreboard">
+
+      <div class="ms-hero-team">
+        
+        <div class="ms-hero-logo">NF</div>
+        
+        <div class="ms-hero-team-info">
+          <div class="ms-hero-team-name">Nains de Fer</div>
+          <div class="ms-hero-coach"></div>
+          
+          <span class="ms-result-badge ms-result-win">Victoire</span>
+          
+        </div>
+      </div>
+
+      <div class="ms-score-center">
+        <div class="ms-score-display">
+          <span class="ms-score-num">2</span>
+          <span class="ms-score-sep">–</span>
+          <span class="ms-score-num">1</span>
+        </div>
+      </div>
+
+      <div class="ms-hero-team ms-hero-team--away">
+        
+        <div class="ms-hero-logo ms-hero-logo--away">LR</div>
+        
+        <div class="ms-hero-team-info">
+          <div class="ms-hero-team-name">London Rats</div>
+          <div class="ms-hero-coach"></div>
+          
+          <span class="ms-result-badge ms-result-lose">Défaite</span>
+          
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ms-hero-stats">
+      <div class="ms-hero-stat">
+        <span class="ms-hero-stat-value">2</span>
+        <span class="ms-hero-stat-label">TDs Nains de Fer</span>
+      </div>
+      <div class="ms-hero-stat">
+        <span class="ms-hero-stat-value">1</span>
+        <span class="ms-hero-stat-label">TDs London Rats</span>
+      </div>
+      <div class="ms-hero-stat">
+        <span class="ms-hero-stat-value ms-hero-stat-value--orange">1</span>
+        <span class="ms-hero-stat-label">Blessures</span>
+      </div>
+    </div>
+
+  </div>
+
+  
+  
+  <div class="ms-admin-bar">
+    <span class="ms-admin-bar-label">⚙️ Administration</span>
+    
+    
+    <button type="button" class="ms-correct-btn" disabled="">
+      <span>✎</span> Corriger le rapport
+    </button>
+    
+    
+    
+    
+<div class="move-pairing" hx-disinherit="*" x-data="{ ouvert: false }">
+  <button type="button" class="move-pairing-btn" @click="ouvert = !ouvert" :aria-expanded="ouvert" aria-expanded="false">
+    <span>📅</span> Déplacer sur une autre journée
+  </button>
+  <form class="move-pairing-panel" x-show="ouvert" hx-post="/app/01M45HJ7F8TWC4YCK26JWMR2EF/competitions/01M45MKDJP5VGW655NTX6F5515/01M45MKDJTT9WRZBYXPP550F1J/admin/schedule/move-match" hx-target="closest .move-pairing" hx-swap="outerHTML" style="display: none;">
+    <input type="hidden" name="pairing_id" value="01M45MKEBAZM3K4ECJ2850PSV3">
+    <div class="move-pairing-field">
+      <label class="move-pairing-label">
+        Journée cible <span class="move-pairing-current">(actuelle : J1)</span>
+      </label>
+      <kreek-select name="round_id" url="/app/01M45HJ7F8TWC4YCK26JWMR2EF/competitions/01M45MKDJP5VGW655NTX6F5515/01M45MKDJTT9WRZBYXPP550F1J/admin/schedule/move-match/targets?pairing_id=01M45MKEBAZM3K4ECJ2850PSV3" placeholder="Choisir une journée…" event="moveTargetSelected" event-fields="name" class="kreek-select"><input type="hidden" name="round_id" value=""><div class="ks-control"><span class="ks-display ks-placeholder">Choisir une journée…</span><span class="ks-arrow">▾</span></div><div class="ks-dropdown" style="display: none;"><input type="text" class="ks-search" placeholder="Rechercher…"><div class="ks-options"><div class="ks-option ks-empty">Aucun résultat</div></div></div></kreek-select>
+    </div>
+    <button type="submit" class="move-pairing-submit" @move-target-selected.window="cible = $event.detail.name" x-data="{ cible: '' }" :disabled="!cible" x-text="cible ? 'Déplacer en ' + cible + ' →' : 'Déplacer →'" disabled="disabled">Déplacer →</button>
+    <button type="button" class="move-pairing-cancel" @click="ouvert = false">Annuler</button>
+    <p class="move-pairing-hint">
+      Le match et son rapport changent de journée. Les résultats, le classement et
+      l'historique des joueurs suivent.
+    </p>
+  </form>
+</div>
+
+    
+    
+    
+    <div class="ms-correct-blocked">
+      <span class="ms-correct-blocked-icon">ⓘ</span>
+      <span>Nains de Fer a déjà utilisé les SPP de ses joueurs. Le rapport n'est plus corrigeable.</span>
+    </div>
+    
+    
+  </div>
+  
+
+  <!-- ══ BODY ═══════════════════════════════════════════════════ -->
+  <div class="ms-body">
+
+    <!-- ── Colonne principale ──────────────────────────────── -->
+    <div class="ms-main">
+
+      
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">📰</span>
+          <span class="ms-card-header-title">Compte-rendu</span>
+          
+          <span class="ms-card-header-byline">Soumis par <strong>Gaëtan</strong></span>
+          
+        </div>
+        <div class="ms-card-body">
+          <div class="ms-article-headline">Les Nains tiennent bon</div>
+          
+          <div class="ms-article-body">
+            <p class="ms-article-p">Une victoire au courage, arrachée au tour 16.</p>
+          </div>
+          
+        </div>
+      </div>
+      
+
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">⏱️</span>
+          <span class="ms-card-header-title">Moments clés</span>
+        </div>
+        <div class="ms-card-body">
+          <div class="ms-timeline">
+
+            
+            <div class="ms-half-label">1ère mi-temps</div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T1</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #1</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T1</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #3</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T1</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T1</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #5</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T1</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #6</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T2</div>
+              <div class="ms-event-icon">🩸</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #1</strong>
+                  (Piétaille des Carrières)
+                  Sortie
+                </div>
+                
+                
+                <span class="ms-event-injury ms-event-injury--out">Sortie</span>
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T2</div>
+              <div class="ms-event-icon">⭐</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #3</strong>
+                  (Piétaille des Carrières)
+                  MVP
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T2</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T2</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #5</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T2</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #6</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T3</div>
+              <div class="ms-event-icon">⭐</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #1</strong>
+                  (Piétaille des Carrières)
+                  MVP
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T3</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T3</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #5</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T3</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #6</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T4</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T4</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #5</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T4</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #6</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T5</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T6</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T7</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--home">T8</div>
+              <div class="ms-event-icon">🏈</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title">
+                  <strong>Piétaille des Carrières #4</strong>
+                  (Piétaille des Carrières)
+                  Touchdown
+                </div>
+                
+                
+              </div>
+            </div>
+            
+            
+            <div class="ms-half-label">2ème mi-temps · Mi-temps : 18 — 0</div>
+            
+            
+
+            
+            <div class="ms-half-label">MVPs</div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--mvp ms-event-turn--mvp--home">★</div>
+              <div class="ms-event-icon">⭐</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title"><strong>Piétaille des Carrières #1</strong> — MVP Nains de Fer</div>
+              </div>
+            </div>
+            
+            <div class="ms-event">
+              <div class="ms-event-turn ms-event-turn--mvp ms-event-turn--mvp--home">★</div>
+              <div class="ms-event-icon">⭐</div>
+              <div class="ms-event-body">
+                <div class="ms-event-title"><strong>Piétaille des Carrières #3</strong> — MVP Nains de Fer</div>
+              </div>
+            </div>
+            
+            
+
+          </div>
+        </div>
+      </div>
+
+      
+
+      <div class="ms-cta-row">
+        
+        <a class="ms-btn-outline" href="/app/01M45HJ7F8TWC4YCK26JWMR2EF/competitions/01M45MKDJP5VGW655NTX6F5515/01M45MKDJTT9WRZBYXPP550F1J">← Retour aux résultats</a>
+        <a class="ms-btn-primary" href="/app/01M45HJ7F8TWC4YCK26JWMR2EF/teams/01M45MKDYX6A40M4JMR9WRRFV4">Voir la fiche Nains de Fer →</a>
+        
+      </div>
+
+    </div>
+    <!-- fin ms-main -->
+
+    <!-- ── Sidebar ─────────────────────────────────────────── -->
+    <div class="ms-aside">
+
+      
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">⭐</span>
+          <span class="ms-card-header-title">Joueurs du match</span>
+        </div>
+        <div class="ms-card-body">
+          
+          <div class="ms-mvp-row">
+            <div class="ms-mvp-team-badge ms-mvp-team-badge--home">
+              TH
+            </div>
+            <div class="ms-mvp-info">
+              <div class="ms-mvp-name">Piétaille des Carrières #1</div>
+              <div class="ms-mvp-detail">Piétaille des Carrières · Nains de Fer</div>
+            </div>
+            <span class="ms-mvp-star">🌟</span>
+          </div>
+          
+          <div class="ms-mvp-row">
+            <div class="ms-mvp-team-badge ms-mvp-team-badge--home">
+              TH
+            </div>
+            <div class="ms-mvp-info">
+              <div class="ms-mvp-name">Piétaille des Carrières #3</div>
+              <div class="ms-mvp-detail">Piétaille des Carrières · Nains de Fer</div>
+            </div>
+            <span class="ms-mvp-star">🌟</span>
+          </div>
+          
+        </div>
+      </div>
+      
+
+      
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">📊</span>
+          <span class="ms-card-header-title">Performances (SPP)</span>
+        </div>
+        <div class="ms-card-body ms-card-body--tight">
+          
+          <div class="ms-perf-row">
+            <div class="ms-perf-jersey ms-perf-jersey--home">
+              TH
+            </div>
+            <div class="ms-perf-info">
+              <div class="ms-perf-name">Piétaille des Carrières #4</div>
+              <div class="ms-perf-pos">Piétaille des Carrières</div>
+            </div>
+            <div class="ms-perf-spp">+16 <span class="ms-perf-spp-label">SPP</span></div>
+          </div>
+          
+          <div class="ms-perf-row">
+            <div class="ms-perf-jersey ms-perf-jersey--home">
+              TH
+            </div>
+            <div class="ms-perf-info">
+              <div class="ms-perf-name">Piétaille des Carrières #1</div>
+              <div class="ms-perf-pos">Piétaille des Carrières</div>
+            </div>
+            <div class="ms-perf-spp">+11 <span class="ms-perf-spp-label">SPP</span></div>
+          </div>
+          
+          <div class="ms-perf-row">
+            <div class="ms-perf-jersey ms-perf-jersey--home">
+              TH
+            </div>
+            <div class="ms-perf-info">
+              <div class="ms-perf-name">Piétaille des Carrières #5</div>
+              <div class="ms-perf-pos">Piétaille des Carrières</div>
+            </div>
+            <div class="ms-perf-spp">+8 <span class="ms-perf-spp-label">SPP</span></div>
+          </div>
+          
+          <div class="ms-perf-row">
+            <div class="ms-perf-jersey ms-perf-jersey--home">
+              TH
+            </div>
+            <div class="ms-perf-info">
+              <div class="ms-perf-name">Piétaille des Carrières #6</div>
+              <div class="ms-perf-pos">Piétaille des Carrières</div>
+            </div>
+            <div class="ms-perf-spp">+8 <span class="ms-perf-spp-label">SPP</span></div>
+          </div>
+          
+          <div class="ms-perf-row">
+            <div class="ms-perf-jersey ms-perf-jersey--home">
+              TH
+            </div>
+            <div class="ms-perf-info">
+              <div class="ms-perf-name">Piétaille des Carrières #3</div>
+              <div class="ms-perf-pos">Piétaille des Carrières</div>
+            </div>
+            <div class="ms-perf-spp">+7 <span class="ms-perf-spp-label">SPP</span></div>
+          </div>
+          
+        </div>
+      </div>
+      
+
+      <div class="ms-card">
+        <div class="ms-card-header">
+          <span class="ms-card-header-icon">💰</span>
+          <span class="ms-card-header-title">Gains &amp; Fan Factor</span>
+        </div>
+        <div class="ms-card-body ms-card-body--tight">
+
+          <div class="ms-card-subheader">Recettes</div>
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--home">TH</div>
+              <span class="ms-stat-name">Nains de Fer</span>
+            </div>
+            <span class="ms-stat-value ms-stat-value--gain">+50000 kPo</span>
+          </div>
+          
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--away">TH</div>
+              <span class="ms-stat-name">London Rats</span>
+            </div>
+            <span class="ms-stat-value ms-stat-value--gain">+40000 kPo</span>
+          </div>
+          
+
+          <div class="ms-divider"></div>
+
+          <div class="ms-card-subheader">Fan Factor</div>
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--home">TH</div>
+              <span class="ms-stat-name">Nains de Fer</span>
+            </div>
+            
+            <span class="ms-stat-value ms-stat-value--pos">+1 fan</span>
+            
+          </div>
+          <div class="ms-stat-row">
+            <div class="ms-stat-team">
+              <div class="ms-stat-logo ms-stat-logo--away">TH</div>
+              <span class="ms-stat-name">London Rats</span>
+            </div>
+            
+            <span class="ms-stat-value ms-stat-value--neg">-1 fan</span>
+            
+          </div>
+
+        </div>
+      </div>
+
+      
+
+    </div>
+    <!-- fin ms-aside -->
+
+  </div>
+  <!-- fin ms-body -->
+
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

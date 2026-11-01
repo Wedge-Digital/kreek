@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche joueur — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="teams">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<!-- La page joueur réelle (players/io/web/templates/player-detail.html),
+     en page complète : c'est elle qui portera, à terme, les évolutions. -->
+<div class="player-page">
+  <div class="mb-back"><a class="player-detail-back">← Gueules d'Ork</a></div>
+
+  <div class="player-header">
+    <div class="player-avatar">1</div>
+    <div class="player-header-body">
+      <div class="player-header-top">
+        <div class="player-name">Grishnak</div>
+        <span class="jersey-chip">#1</span>
+        <span class="player-pos">Blitzeur orque</span>
+      </div>
+      <div class="player-header-meta">
+        <div class="meta-item"><div class="meta-label">Valeur actuelle</div><div class="meta-value">95 kPo</div></div>
+        <div class="meta-item"><div class="meta-label">Matchs joués</div><div class="meta-value">2</div></div>
+        <div class="meta-item"><div class="meta-label">Blessures persistantes</div><div class="meta-value">—</div></div>
+      </div>
+      <div class="player-stats-row">
+        <div class="pstat"><div class="pstat-val">6</div><div class="pstat-label">MV</div></div>
+        <div class="pstat"><div class="pstat-val">3</div><div class="pstat-label">FO</div></div>
+        <div class="pstat"><div class="pstat-val">3+</div><div class="pstat-label">AG</div></div>
+        <div class="pstat"><div class="pstat-val">4+</div><div class="pstat-label">PA</div></div>
+        <div class="pstat"><div class="pstat-val">10+</div><div class="pstat-label">AR</div></div>
+      </div>
+      <div class="player-skills-row">
+        <span class="skill-tag">Blocage</span>
+        <span class="skill-tag skill-tag--acquired">Châtaigne ✓</span>
+      </div>
+    </div>
+
+    <div class="spp-budget">
+      <div class="spp-budget-top">
+        <span class="spp-budget-label">SPP dépensés / gagnés</span>
+        <span class="spp-budget-numbers">6 / 14 SPP</span>
+      </div>
+      <div class="spp-budget-bar"><div class="spp-budget-bar-inner mb-spp-43"></div></div>
+      <div class="spp-budget-bottom">
+        <span>Gagnés sur 2 matchs</span>
+        <span>8 SPP en réserve</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Le point d'entrée des évolutions : il prendra la place du panneau de
+       dépense de SPP (spp-spending-panel.html) quand l'équipe est en phase
+       d'amélioration. -->
+  <a class="btn btn-primary-blue btn-md mb-evolve">📈 Faire évoluer · 8 SPP disponibles</a>
+
+  <div class="pd-split">
+    <div class="pd-left">
+      <div class="history-panel">
+        <div class="history-panel-header"><div class="history-panel-title">Résumé de carrière</div></div>
+        <div class="career-summary">
+          <div class="career-stat"><span class="career-stat-icon">🏈</span><span class="career-stat-val">1</span><span class="career-stat-label">Touchdowns</span></div>
+          <div class="career-stat"><span class="career-stat-icon">🎯</span><span class="career-stat-val">1</span><span class="career-stat-label">Passes</span></div>
+          <div class="career-stat"><span class="career-stat-icon">🛡️</span><span class="career-stat-val">0</span><span class="career-stat-label">Intercept.</span></div>
+          <div class="career-stat"><span class="career-stat-icon">🩸</span><span class="career-stat-val">3</span><span class="career-stat-label">Sorties</span></div>
+          <div class="career-stat"><span class="career-stat-icon">⭐</span><span class="career-stat-val">1</span><span class="career-stat-label">MVP</span></div>
+          <div class="career-stat"><span class="career-stat-icon">💰</span><span class="career-stat-val">14</span><span class="career-stat-label">SPP total</span></div>
+        </div>
+      </div>
+
+      <div class="history-panel">
+        <div class="history-panel-header">
+          <div class="history-panel-title">Historique de matchs</div>
+          <div class="history-count-badge">2 matchs</div>
+        </div>
+        <div class="match-list">
+          <div class="match-card">
+            <div class="match-card-top"><span class="match-round">J3</span><span class="badge badge-green">Victoire</span></div>
+            <div class="match-card-vs"><span class="match-opponent-name">Faucons d'Altdorf</span><span class="match-score">2 – 0</span></div>
+            <div class="match-actions">
+              <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie</span><span class="pd-log-spp">+2 SPP</span></div>
+              <div class="pd-log-entry"><span class="pd-log-icon">🎯</span><span class="pd-log-text">Passe réussie</span><span class="pd-log-spp">+1 SPP</span></div>
+              <div class="pd-log-entry"><span class="pd-log-icon">⭐</span><span class="pd-log-text">MVP</span><span class="pd-log-spp">+4 SPP</span></div>
+            </div>
+            <div class="match-subtotal"><span>+7 SPP</span></div>
+          </div>
+          <div class="match-card">
+            <div class="match-card-top"><span class="match-round">J2</span><span class="badge badge-dark">Nul</span></div>
+            <div class="match-card-vs"><span class="match-opponent-name">Crânes Rouges</span><span class="match-score">1 – 1</span></div>
+            <div class="match-actions">
+              <div class="pd-log-entry"><span class="pd-log-icon">🏈</span><span class="pd-log-text">Touchdown</span><span class="pd-log-spp">+3 SPP</span></div>
+              <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie</span><span class="pd-log-spp">+2 SPP</span></div>
+              <div class="pd-log-entry"><span class="pd-log-icon">🩸</span><span class="pd-log-text">Sortie</span><span class="pd-log-spp">+2 SPP</span></div>
+            </div>
+            <div class="match-subtotal"><span>+7 SPP</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

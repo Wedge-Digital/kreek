@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commencer — qui saisit ? — parcours mobile</title>
+  <!-- Le vrai style de l'application, puis les seules pièces neuves. -->
+  <link rel="stylesheet" href="app-styles.css">
+  <link rel="stylesheet" href="app-mobile.css">
+  <script src="app-mobile-shell.js"></script>
+  <script src="app-mobile-toasts.js"></script>
+</head>
+<body data-tab="matches">
+  <!-- Coquille de src/web/templates/app-layout.html ; l'en-tête et la barre
+       mobiles sont posés dans .menu-zone par app-mobile-shell.js. -->
+  <div class="app-layout">
+    <div class="sidebar"></div>
+    <div class="main-area">
+      <div class="menu-zone"></div>
+      <div class="page-content">
+        <div class="home-grid" id="app-content">
+<div class="mr-container">
+  <div class="mr-header">
+    <div class="mr-header-icon">🏈</div>
+    <div class="mr-header-title">Commencer le match</div>
+    <div class="mr-header-sub">Nains de Fer – London Rats · Ligue de Condate, J4</div>
+  </div>
+
+  <!-- NOUVEAU. Le mode de saisie se choisit une fois, avant la sélection :
+       il décide de qui touche à quoi, et l'on arrive aussitôt à l'avant-match, et règle d'avance le cas des deux coachs
+       arrivés en même temps sur les mêmes écrans. -->
+  <div class="mr-card">
+    <div class="mr-card-title">Qui saisit ce match ?</div>
+    <a class="mb-mode mb-mode--selected" href="app-mobile-real-2-pre-match.html">
+      <span class="mb-radio mb-radio--on"></span>
+      <div class="mb-mode-body">
+        <div class="mb-mode-title">📱 Je saisis tout</div>
+        <div class="mb-mode-text">Un seul téléphone pour la table : tu saisis les actions des deux équipes, les deux MVP, et tu publies seul. Morgane suit en direct.</div>
+      </div>
+    </a>
+    <a class="mb-mode" href="app-mobile-duo-pre-match.html">
+      <span class="mb-radio"></span>
+      <div class="mb-mode-body">
+        <div class="mb-mode-title">👥 Chacun son équipe</div>
+        <div class="mb-mode-text">Morgane saisit les London Rats sur son téléphone, en même temps que toi. Chacun son avant-match, ses actions, son MVP, ses gains, sa validation.</div>
+      </div>
+    </a>
+    <div class="text-tiny">Morgane est prévenue dès que tu commences. Le mode vaut pour tout le match : il ne pourra plus changer.</div>
+  </div>
+
+  <div class="mr-nav-row">
+    <a class="btn-outline-sm" href="app-mobile-matches.html">← Mes matchs</a>
+    <a class="btn-primary-sm" href="app-mobile-real-2-pre-match.html">Commencer →</a>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+/* Les feuilles RÉELLES de l'application, dans l'ordre du bundle
+   (`src/web/css_bundle.rs`, FEUILLES_APP). Un index d'@import, pas une copie :
+   une maquette qui le charge a exactement le style de l'application, et le
+   suit quand il change.
+
+   Les chemins sont absolus (`/static/css/…`), comme dans l'application : le
+   serveur de maquettes doit donc être lancé à la racine de `assets/`
+   (`python3 -m http.server 8765` depuis `assets/`), et la maquette s'ouvre
+   sous http://127.0.0.1:8765/rawpages/html/….
+
+   Si une feuille entre ou sort du bundle, cette liste se met à jour avec. */
+@import url("/static/css/fonts.css");
+@import url("/static/css/common.css");
+@import url("/static/css/layout-app.css");
+@import url("/static/css/components/competition-card.css");
+@import url("/static/css/components/competition-widget.css");
+@import url("/static/css/components/create-card.css");
+@import url("/static/css/components/kreek-select.css");
+@import url("/static/css/components/league-selector.css");
+@import url("/static/css/components/match-widget.css");
+@import url("/static/css/components/team-card.css");
+@import url("/static/css/components/team-selection.css");
+@import url("/static/css/components/toast.css");
+@import url("/static/css/components/tom-select.css");
+@import url("/static/css/components/upload.css");
+@import url("/static/css/pages/admin-container.css");
+@import url("/static/css/pages/allspace-home-grid.css");
+@import url("/static/css/pages/app-home.css");
+@import url("/static/css/pages/app-new-team.css");
+@import url("/static/css/pages/app-news-feed.css");
+@import url("/static/css/pages/article-container.css");
+@import url("/static/css/pages/competition-admin-enrollments.css");
+@import url("/static/css/pages/competition-admin-groups.css");
+@import url("/static/css/pages/competition-admin-schedule.css");
+@import url("/static/css/pages/competition-admin-settings.css");
+@import url("/static/css/pages/competition-container.css");
+@import url("/static/css/pages/competition-detail.css");
+@import url("/static/css/pages/editor-container.css");
+@import url("/static/css/pages/finalize-page.css");
+@import url("/static/css/pages/match-report-actions.css");
+@import url("/static/css/pages/match-report-inducements.css");
+@import url("/static/css/pages/match-report-pre-match.css");
+@import url("/static/css/pages/costly-mistakes.css");
+@import url("/static/css/pages/match-report-shared.css");
+@import url("/static/css/pages/match-report-step1.css");
+@import url("/static/css/pages/match-report-step5.css");
+@import url("/static/css/pages/ms-page.css");
+@import url("/static/css/pages/my-teams-container.css");
+@import url("/static/css/pages/new-competition-phase-2.css");
+@import url("/static/css/pages/new-competition-phase-3.css");
+@import url("/static/css/pages/new-competition-phase-4.css");
+@import url("/static/css/pages/new-competition-phase-5.css");
+@import url("/static/css/pages/new-space.css");
+@import url("/static/css/pages/player-debug.css");
+@import url("/static/css/pages/player-page.css");
+@import url("/static/css/pages/ranking-manual-points.css");
+@import url("/static/css/pages/space-admin.css");
+@import url("/static/css/pages/team-build.css");
+@import url("/static/css/pages/team-page.css");
+@import url("/static/css/pages/team-treasury.css");
+@import url("/static/css/pages/widget-tester-layout.css");
+@import url("/static/css/widgets/coach-creation.css");
+@import url("/static/css/widgets/coach-search.css");
+@import url("/static/css/widgets/space-admin-candidates.css");
+@import url("/static/css/widgets/space-admin-members.css");
+@import url("/static/css/widgets/space-admin-stats.css");
+@import url("/static/css/widgets/team-identity.css");
+@import url("/static/css/widgets/team-matches.css");
+@import url("/static/css/widgets/dis-page.css");
+@import url("/static/css/widgets/inducement-grid.css");
+@import url("/static/css/widgets/inducement-selector.css");
+@import url("/static/css/widgets/merco-selector.css");
+@import url("/static/css/widgets/move-pairing.css");
+@import url("/static/css/widgets/my-teams-widget.css");
+@import url("/static/css/widgets/notification-settings.css");
+@import url("/static/css/widgets/pd-right.css");
+@import url("/static/css/widgets/players-widget.css");
+@import url("/static/css/widgets/ranking-classement-widget.css");
+@import url("/static/css/widgets/ranking-detailed-standings-widget.css");
+@import url("/static/css/widgets/rec-page.css");
+@import url("/static/css/widgets/roster-picker-widget.css");
+@import url("/static/css/widgets/roster-picker.css");
+@import url("/static/css/widgets/skill-picker.css");
+@import url("/static/css/widgets/team-logo.css");
+@import url("/static/css/vendor/tom-select.min.css");
+@import url("/static/css/fonts.css");
+@import url("/static/css/vendor/tom-select.min.css");
+@import url("/static/css/components/tom-select.css");
