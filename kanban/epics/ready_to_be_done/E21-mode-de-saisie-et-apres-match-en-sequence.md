@@ -1,7 +1,7 @@
 # E21 — Le mode de saisie et l'après-match en séquence
 
-**État :** `to_be_refined` — 9 cartes, 631 à 639 ; la 634 attend une décision
-(le démarreur admin non coach). Découpage et cadrage validés le 2026-11-01.
+**État :** `ready_to_be_done` — 9 cartes, 631 à 639. Découpage et cadrage validés
+le 2026-11-01.
 **Cadrage :** `docs/specs/saisie-mobile/E21-cadrage.md`. Née le 2026-11-01 des maquettes
 mobiles. Dépend de E19.
 

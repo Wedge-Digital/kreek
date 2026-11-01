@@ -5,7 +5,7 @@ Fiche de cadrage de l'épic `kanban/epics/to_be_refined/E21-mode-de-saisie-et-ap
 évoluer l'existant part de ce que le code fait, des règles qu'elle pose, des
 événements qu'elle touche, des routes et des tests. Les décisions de l'épic
 (2026-11-01) ne sont pas rediscutées ici ; celles prises sur ce cadrage sont
-au § 8, avec le seul point encore en attente.
+au § 8 ; tous sont tranchés.
 
 ## 1. Ce que le code fait aujourd'hui
 
@@ -250,7 +250,7 @@ requête HTMX, reçoit **403** ; une page complète est **redirigée vers `/live
 | 631 | un événement **ajouté** ; deux colonnes de `match_report_proj` : `entry_mode TEXT NOT NULL DEFAULT 'SoloEntry'`, `started_by TEXT` ; `started_by` rempli depuis `SelectionConfirmed.confirmed_by` | tout compte rendu confirmé est en « Je saisis tout », son démarreur est celui qui a confirmé. Un brouillon jamais confirmé garde `started_by` vide : il n'est pas démarré. L'event store n'est pas touché. Mesure sur dump : aucun rapport en `PreMatch`, `ReadyToPublish` ou `Published` sans `SelectionConfirmed` |
 | 632 | aucune | — |
 | 633 | aucune | chaque brouillon du calendrier devient démarrable sans sélection, mais **seulement par le bouton** : l'ouverture du lien ne confirme rien. **Perte acceptée** (2026-11-01) : plus de changement d'équipes ni de journée par la sélection d'un match du calendrier |
-| 634 | aucune | **acceptée** (2026-11-01) : dans les comptes rendus en cours, l'autre coach que le démarreur est en lecture seule, même s'il saisissait ; un compte rendu publié ne se corrige plus que par son démarreur ou un admin. **À mesurer avant livraison** : les rapports en cours dont le démarreur n'est coach d'**aucune** des deux équipes — un admin qui a confirmé pour eux. Les deux coachs y seraient bloqués : **en attente de décision** (§ 8.8) |
+| 634 | aucune | **acceptée** (2026-11-01) : dans les comptes rendus en cours, l'autre coach que le démarreur est en lecture seule, même s'il saisissait ; un compte rendu publié ne se corrige plus que par son démarreur ou un admin. Un démarreur qui ne coache aucune des deux équipes ne compte pas : les deux coachs y écrivent (§ 8.8) |
 | 635 | **une colonne `recorded_by` et son remplissage** dans `match_report_actions` ; l'event store n'est pas touché | toutes les actions, anciennes comprises, disent qui les a saisies. Mesure sur dump : zéro `ActionRecorded` sans `recorded_by`, zéro ligne de `match_report_actions` sans événement |
 | 636 | aucune | un compte rendu en cours à la livraison reprend au match en direct au lieu de `step3` ; ses actions déjà saisies y sont |
 | 637 | aucune | les anciens MVP — à tout tour, zéro ou plusieurs par camp — restent valides et s'affichent : la règle ne vaut qu'à la saisie (le rejeu ne passe pas par elle, § 1). En correction, l'étape montre le ou les MVP du camp ; pour en saisir un autre, on supprime d'abord. SPP et événement publié inchangés |
@@ -307,12 +307,9 @@ requête HTMX, reçoit **403** ; une page complète est **redirigée vers `/live
 7. **La lecture seule avant le match en direct** (634, 636) : en 634, l'autre
    coach reçoit un refus lisible, « Ce match est saisi par … » ; la 636 le
    remplace par la redirection vers `/live`.
-8. **En attente de décision — le démarreur admin qui ne coache aucune des deux
-   équipes** (634). Les deux coachs y seraient en lecture seule. La réponse du
-   2026-11-01 est incomplète (« pas forcément, un coach simple peut très bien
-   créer un compte rendu ») : le cas reste à trancher, et la mesure sur dump —
-   les rapports en cours dont le démarreur n'est coach d'aucune équipe — est
-   faite **avant la livraison de la 634**, puis soumise à l'utilisateur.
+8. **Le démarreur admin qui ne coache aucune des deux équipes ne compte pas
+   comme démarreur** (634) : les deux coachs du match écrivent. Personne n'est
+   bloqué, aucune mesure sur dump n'est nécessaire.
 9. **L'étape 5 « Validation » est le récapitulatif non publié** (637),
    indicateur à 5, sans nouvelle route.
 10. **Hors épic** : « Signaler une erreur » sur l'écran de suivi, et les SPP et

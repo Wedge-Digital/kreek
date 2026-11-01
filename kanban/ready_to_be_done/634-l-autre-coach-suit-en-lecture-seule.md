@@ -22,7 +22,11 @@ pub async fn can_write_report(deps: &AccesRapportDeps<'_>, user: &User, space_id
 ```
 
 Admin (`est_administrateur`) → oui. Brouillon (`started_by` vide) → tout
-autorisé peut le démarrer. `SoloEntry` → `user.id == started_by`. Il se lit sur
+autorisé peut le démarrer. `SoloEntry` → `user.id == started_by`, **sauf si le
+démarreur ne coache aucune des deux équipes** (un admin qui a démarré pour
+eux) : il ne compte alors pas comme démarreur, et les deux coachs écrivent
+(décision du 2026-11-01). Le camp du démarreur se lit par `camp_du_coach`
+(621). Il se lit sur
 la projection (631), comme la portée de E19.
 
 **Le routeur** passe à trois groupes (`router.rs`) :
@@ -49,16 +53,14 @@ cours à la livraison, l'autre coach que le démarreur est bloqué, même s'il
 saisissait ; un compte rendu publié ne se corrige plus que par son démarreur ou
 un admin.
 
-**En attente de décision** (§ 8.8) : le cas « démarreur = admin qui ne coache
-aucune des deux équipes » n'est pas tranché. **Mesure sur dump avant
-livraison** : les rapports en cours dont le démarreur
-n'est coach d'aucune des deux équipes — un admin a confirmé pour eux, et **les
-deux** coachs y seraient bloqués. Le décompte est soumis à l'utilisateur, et
-la carte ne se livre pas avant sa décision.
+**Le démarreur admin non coach** (décision du 2026-11-01) : il ne compte pas
+comme démarreur — les deux coachs du match écrivent. Aucune mesure sur dump
+n'est nécessaire : personne n'est bloqué.
 
 ## Checklist
 
-- [ ] `can_write_report` et sa lecture sur la projection
+- [ ] `can_write_report` et sa lecture sur la projection ; le démarreur non coach
+      ne compte pas (test : un admin non coach a démarré, les deux coachs écrivent)
 - [ ] Trois groupes de routes ; le refus en 403 ou en page lisible
 - [ ] Publication, dépublication, correction : `can_write_report` ; boutons masqués
 - [ ] Tests unitaires : démarreur, admin non démarreur, autre coach, tiers, brouillon
