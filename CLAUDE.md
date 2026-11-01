@@ -1378,6 +1378,40 @@ Pour une grille dont le nombre de colonnes doit croître avec l'espace disponibl
 @media (min-width: 768px) { .mr-player-chip-list { grid-template-columns: repeat(4, 1fr); } }
 ```
 
+### Un gabarit par taille — quand la structure diffère
+
+Le CSS règle la **disposition**. Quand mobile et ordinateur n'affichent plus le
+même composant — un tableau de quatorze colonnes contre une carte par joueur —,
+le contorsionner en CSS coûte plus cher que deux gabarits. On écrit alors **un
+gabarit par taille**, et seulement le gabarit.
+
+| Partagé | Propre à chaque taille |
+|---|---|
+| route, contrôleur, use case, view model | le gabarit Askama |
+
+**La taille cible est dite par le navigateur, composant par composant** : le
+conteneur du widget ajoute à son `hx-get` un paramètre calculé par
+`matchMedia('(max-width: 768px)')` — la même requête que le CSS —, et recharge
+le widget quand la fenêtre franchit le seuil.
+
+- **Jamais de User-Agent ni de Client Hints** : l'iPad se dit ordinateur, une
+  fenêtre étroite se dit large, et Safari n'envoie pas `Sec-CH-UA-Mobile`. On
+  devinerait un appareil là où il faut une largeur.
+- **Un widget, pas une page** : une page rendue d'un bloc n'a pas de requête où
+  porter le paramètre. Une section qui doit différer devient un widget.
+- **Un seul gabarit rendu à la fois** : pas de balisage caché par `display:
+  none`, qui double chaque texte et fait tomber en mode strict les sélecteurs
+  e2e par texte.
+
+**Pourquoi ce n'est pas de la duplication** : aucune règle ni aucun calcul
+n'existe en double — c'est la présentation, et elle seule, qui diffère. Une
+logique qui apparaîtrait dans l'un des deux gabarits et pas dans l'autre est,
+elle, un défaut.
+
+Le choix se propose dès que les écarts entre mobile et ordinateur deviennent
+importants pour un composant ; il ne s'impose pas par défaut — la disposition
+reste l'affaire du CSS. Premier usage : l'effectif d'une équipe (E26).
+
 ### Ce qui n'est pas utilisé — ne pas introduire sans discussion
 
 - Pas de `clamp()` ni d'unités `vw`/`vh` fluides pour le texte — les ajustements de taille se font en dur par breakpoint.
