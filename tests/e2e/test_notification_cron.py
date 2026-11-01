@@ -25,6 +25,7 @@ Prérequis : serveur kreek lancé en dev, et une chaîne de compilation utilisab
 — le test invoque le binaire.
 """
 
+import os
 import subprocess
 from datetime import date, timedelta
 from pathlib import Path
@@ -51,6 +52,9 @@ def _lancer_le_cron(*extra: str) -> subprocess.CompletedProcess:
             "send-notifications", "--date", AUJOURDHUI.isoformat(), *extra,
         ],
         cwd=RACINE,
+        # Le profil de la suite : sans lui, le binaire lit `.env.dev` et le cron
+        # tourne sur la base de travail, que le test ne regarde pas.
+        env={**os.environ, "EXEC_PROFILE": "e2e"},
         capture_output=True,
         text=True,
         timeout=600,
