@@ -38,37 +38,22 @@ PROD_ENV_FILE := .env.$(PROD_PROFILE)
         load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
-help:
-	@echo ""
-	@echo "  Développement"
-	@echo "  ─────────────────────────────────────────────────────"
-	@echo "  dev            Serveur en watch, vrai catalogue (31 rosters, non versionné)"
-	@echo "  dev-demo       Jeu de démonstration (4 rosters) + e-mails au terminal — requis par e2e"
-	@echo "  test          Lance les tests (utilise .env.test)"
-	@echo "  e2e-server     Alias de dev-demo, sous le nom qui dit à quoi il sert"
-	@echo "  e2e            Lance les tests E2E Playwright (nécessite \`make e2e-server\` lancé)"
-	@echo "  test-impacted Idem, mais uniquement les e2e impactés par le diff courant"
-	@echo "  all_tests     test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)"
-	@echo "  migrate       Échappatoire manuelle (le binaire applique déjà les migrations au boot)"
-	@echo "  migration     Crée une migration (ex: make migration desc=create_teams)"
-	@echo "  prepare_db    Régénère le cache sqlx (cargo sqlx prepare)"
-	@echo "  reset_db      Remet la base à zéro (sqlx database reset)"
-	@echo "  reset_test_db Remet la base de test à zéro (.env.test)"
-	@echo "  init_db       reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)"
-	@echo "  init_remote_demo_db  Idem sur la base de démo distante ($(DEMO_ENV_FILE)) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée"
-	@echo "  init_remote_prod_db  Première mise en service de la production ($(PROD_ENV_FILE)) — DROP+CREATE...OWNER, refuse une base déjà peuplée, sans seed de comptes, triple confirmation"
-	@echo "  import_prod_db  Recopie la production dans une base locale — détruit la cible, refuse toute cible distante (TARGET_PROFILE=test, YES=1)"
-	@echo "  backup_prod_db  Sauvegarde la production dans dumps/ — lecture seule, rien n'est restauré"
-	@echo "  load_dump       Charge un dump de dumps/ (menu) dans une base locale — détruit la cible (TARGET_PROFILE=test, DUMP=…, YES=1)"
-	@echo "  seed_accounts Seed les comptes dev (scripts/seed_accounts.json)"
-	@echo "  seed_e2e      Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)"
-	@echo ""
-	@echo "  Qualité & architecture"
-	@echo "  ─────────────────────────────────────────────────────"
-	@echo "  lint          Formatage (fmt) + linting (clippy)"
-	@echo "  check-arch    Vérifications architecturales (axes 2–6)"
-	@echo "  coverage      Couverture de tests (nécessite cargo-llvm-cov)"
-	@echo "  analyze       lint + check-arch (pipeline CI complet)"
+#
+# L'aide est lue dans ce fichier : une cible y figure dès que sa ligne porte
+# `## <description>`, et une ligne `##@ <titre>` ouvre une section. Une cible
+# sans `##` reste cachée — c'est le cas des étapes internes (`load_data`,
+# `create_remote_db`, `init_remote_data`, `init_remote_db`), qui ne
+# s'appellent pas directement.
+#
+# Elle était écrite à la main, en `echo`. Cinq cibles en manquaient, et
+# `check-arch` y annonçait les axes 2 à 6 quand il en vérifiait dix-sept : une
+# liste recopiée dérive sans que rien ne le signale.
+#
+# Le motif admet les chiffres, pour `e2e`, `e2e-server` et `seed_e2e`.
+help: ## Affiche cette aide
+	@awk 'BEGIN { FS = ":.*## " } \
+	     /^##@ / { printf "\n  %s\n  ─────────────────────────────────────────────────────\n", substr($$0, 5); next } \
+	     /^[a-zA-Z0-9_-]+:.*## / { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo ""
 	@echo "  Variable : EXEC_PROFILE (défaut : dev)"
 	@echo ""
@@ -84,7 +69,8 @@ help:
 # Le dossier n'est pas versionné (cf. `.gitignore`). La cible refuse donc plutôt
 # que de retomber en silence sur la démonstration : ce silence **est** le défaut
 # qu'elle corrige, et un 500 sur un widget en est un bien mauvais messager.
-dev:
+##@ Développement
+dev: ## Serveur en watch, vrai catalogue (31 rosters, non versionné)
 	@[ -d assets/references ] || { \
 	    echo ""; \
 	    echo "  assets/references est absent — ce catalogue n'est pas versionné."; \
@@ -104,7 +90,7 @@ dev:
 # **Ce qu'il ajoute à `make dev` : `EMAIL__PROVIDER=console`**, et rien d'autre.
 # Les deux servent le même catalogue. Le nom laisse croire à un mode ; il n'y en
 # a pas — c'est `dev` plus les e-mails au terminal, ce qu'attend la suite e2e.
-dev-demo:
+dev-demo: ## Jeu de démonstration (4 rosters) + e-mails au terminal — requis par e2e
 	REFERENCES__DIR=assets/references.example EMAIL__PROVIDER=console cargo watch -x run -w src -w Cargo.toml -w assets/templates -w assets/static/css
 
 # Le serveur que la suite e2e attend (carte 550).
@@ -129,12 +115,13 @@ dev-demo:
 #
 # Prérequis, portés par `.env.dev` et la base de travail : `BYPASS_AUTH=true`,
 # et le coach `DevCoach` (`make seed_e2e`).
-e2e-server: dev-demo
+e2e-server: dev-demo ## Alias de dev-demo, sous le nom qui dit à quoi il sert
 
-test: reset_test_db
+##@ Tests
+test: reset_test_db ## Lance les tests (utilise .env.test)
 	DATABASE_URL="$(TEST_DB_URL)" cargo test
 
-e2e:
+e2e: ## Lance les tests E2E Playwright (nécessite `make e2e-server` lancé)
 	cd tests/e2e && uv run pytest -v
 
 # Filtre LOCAL de productivité : n'exécute que les tests e2e susceptibles
@@ -147,7 +134,7 @@ e2e:
 # dans le `elif` final, où une sélection vide ne déclenchait rien et la cible
 # rendait zéro : `select_tests.py` a planté des jours sur un `import tomllib`
 # sans qu'aucun test ne s'exécute, et sans que rien ne rougisse (carte 480).
-test-impacted:
+test-impacted: ## Idem, mais uniquement les e2e impactés par le diff courant
 	@tests=$$(./scripts/impact/changed_bcs.sh $(REF) | ./scripts/impact/select_tests.py); \
 	rc=$$?; \
 	if [ $$rc -eq 10 ]; then \
@@ -167,7 +154,7 @@ test-impacted:
 
 # Garde-fou avant commit (cf. CLAUDE.md, règle de collaboration obligatoire) :
 # make ne continue à e2e que si test a réussi (prérequis Make standard).
-all_tests: test e2e
+all_tests: test e2e ## test + e2e — garde-fou obligatoire avant tout commit (cf. CLAUDE.md)
 	@echo ""
 	@echo "  ✓ test + e2e : tout est vert"
 	@echo ""
@@ -213,20 +200,21 @@ define refuser_si_distant
 	fi
 endef
 
-migrate:
+##@ Base de données
+migrate: ## Échappatoire manuelle (le binaire applique déjà les migrations au boot)
 	DATABASE_URL="$(DATABASE_URL)" sqlx migrate run
 
-migration:
+migration: ## Crée une migration (ex: make migration desc=create_teams)
 	@test -n "$(desc)" || (echo "Usage : make migration desc=<description>"; exit 1)
 	DATABASE_URL="$(DATABASE_URL)" sqlx migrate add $(desc)
 
 # `--all-targets` : `make lint` lance `cargo clippy --tests`, donc les requêtes
 # écrites dans un module de test doivent être au cache elles aussi. Sans lui, la
 # cible ne peut pas satisfaire le lint qu'elle sert — constaté carte 427.
-prepare_db:
+prepare_db: ## Régénère le cache sqlx (cargo sqlx prepare)
 	DATABASE_URL="$(DATABASE_URL)" cargo sqlx prepare -- --all-targets
 
-reset_db:
+reset_db: ## Remet la base à zéro (sqlx database reset)
 	$(call refuser_si_distant,$(DATABASE_URL))
 	DATABASE_URL="$(DATABASE_URL)" sqlx database reset -y -f
 
@@ -237,7 +225,7 @@ reset_db:
 #   make import_prod_db                       # prod → dev
 #   make import_prod_db TARGET_PROFILE=test   # prod → test
 #   YES=1 make import_prod_db                 # sans la question
-import_prod_db:
+import_prod_db: ## Recopie la production dans une base locale — détruit la cible, refuse toute cible distante (TARGET_PROFILE=test, YES=1)
 	@SOURCE_PROFILE="$(SOURCE_PROFILE)" TARGET_PROFILE="$(TARGET_PROFILE)" YES="$(YES)" \
 	 bash scripts/import_prod_db.sh
 
@@ -245,7 +233,7 @@ import_prod_db:
 # sans restauration. Lecture seule sur la source, donc ni garde ni question.
 #
 #   make backup_prod_db
-backup_prod_db:
+backup_prod_db: ## Sauvegarde la production dans dumps/ — lecture seule, rien n'est restauré
 	@SOURCE_PROFILE="$(SOURCE_PROFILE)" bash scripts/backup_prod_db.sh
 
 # Charge un des dumps de `dumps/` dans une base locale, choisi dans un menu.
@@ -254,24 +242,24 @@ backup_prod_db:
 #   make load_dump                          # menu → dev
 #   make load_dump TARGET_PROFILE=test      # menu → test
 #   make load_dump DUMP=dumps/<fichier>     # sans le menu
-load_dump:
+load_dump: ## Charge un dump de dumps/ (menu) dans une base locale — détruit la cible (TARGET_PROFILE=test, DUMP=…, YES=1)
 	@TARGET_PROFILE="$(TARGET_PROFILE)" YES="$(YES)" DUMP="$(DUMP)" \
 	 bash scripts/load_dump.sh
 
-reset_test_db:
+reset_test_db: ## Remet la base de test à zéro (.env.test)
 	$(call refuser_si_distant,$(TEST_DB_URL))
 	DATABASE_URL="$(TEST_DB_URL)" sqlx database reset -y -f
 
-seed_accounts:
+seed_accounts: ## Seed les comptes dev (scripts/seed_accounts.json)
 	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-accounts
 
 # Seed synthétique de la suite e2e : un space, DevCoach (celui que BYPASS_AUTH
 # connecte, repéré par son nom) et onze autres coachs. Idempotent — rejouable
 # sans risque, et installable par-dessus les données legacy.
-seed_e2e:
+seed_e2e: ## Seed synthétique requis par la suite e2e (space + 12 coachs, idempotent)
 	DATABASE_URL="$(DATABASE_URL)" cargo run -- seed-e2e
 
-init_db: reset_db
+init_db: reset_db ## reset_db + import des données legacy + seed comptes dev (WITH_SEED=1 pour aussi affecter les coachs aux spaces)
 	@$(MAKE) --no-print-directory load_data
 
 # Import legacy + seed comptes dev (+ affectation coachs aux spaces si
@@ -464,7 +452,7 @@ init_remote_db:
 # legacy conservent leur hachage Django, que la connexion ne sait pas vérifier —
 # ils passent tous par « mot de passe oublié », ce qui réécrit leur hachage en
 # argon2. C'est connu et assumé.
-init_remote_demo_db:
+init_remote_demo_db: ## Idem sur la base de démo distante (.env.remote.demo) — DROP+CREATE...OWNER via un accès admin séparé, double confirmation exigée
 	@$(MAKE) --no-print-directory init_remote_db \
 	    PROFILE=$(DEMO_PROFILE) ENV_FILE=$(DEMO_ENV_FILE) LIBELLE="DE DÉMO" \
 	    WITH_ACCOUNTS=1 REFUS_SI_PEUPLEE=0 CONFIRMER_LIBELLE=0 NB_CONFIRMATIONS=2
@@ -473,13 +461,14 @@ init_remote_demo_db:
 # données legacy. Elle **refuse** de s'exécuter sur une base qui contient déjà
 # des comptes — ce n'est pas une précaution d'usage, c'est sa définition. Rejouée
 # par erreur sur une production en service, elle s'arrête au lieu de détruire.
-init_remote_prod_db:
+init_remote_prod_db: ## Première mise en service de la production (.env.remote.prod) — DROP+CREATE...OWNER, refuse une base déjà peuplée, sans seed de comptes, triple confirmation
 	@$(MAKE) --no-print-directory init_remote_db \
 	    PROFILE=$(PROD_PROFILE) ENV_FILE=$(PROD_ENV_FILE) LIBELLE="DE PRODUCTION" \
 	    WITH_ACCOUNTS=0 REFUS_SI_PEUPLEE=1 CONFIRMER_LIBELLE=1 NB_CONFIRMATIONS=3
 
 # ── Qualité Rust standard (axe 1) ────────────────────────────────────────────
-lint:
+##@ Qualité & architecture
+lint: ## Formatage (fmt) + linting (clippy)
 	@echo ""
 	@echo "\033[1m\033[34m┌─ Axe 1 · Qualité Rust standard\033[0m"
 	@echo ""
@@ -527,7 +516,7 @@ lint:
 # n'est imprimé → entrée de verrou jamais compilée, à ignorer dans
 # `.cargo/audit.toml` avec son motif. Un chemin est imprimé → exposition réelle,
 # à corriger par une montée de version ou un remplacement.
-audit:
+audit: ## Avis de sécurité des dépendances (cargo audit --deny warnings)
 	@echo ""
 	@echo "\033[1m\033[34m┌─ Audit des dépendances\033[0m"
 	@echo ""
@@ -541,11 +530,11 @@ audit:
 	fi
 	@echo ""
 
-check-arch:
+check-arch: ## Vérifications architecturales (axes 2 à 18)
 	@./scripts/check-arch.sh all
 
 # ── Couverture de tests (axe 7) ───────────────────────────────────────────────
-coverage:
+coverage: ## Couverture de tests (nécessite cargo-llvm-cov)
 	@if ! command -v cargo-llvm-cov >/dev/null 2>&1; then \
 		echo ""; \
 		echo "  \033[33m⚠\033[0m  cargo-llvm-cov non installé."; \
@@ -566,7 +555,7 @@ coverage:
 	@echo ""
 
 # ── Pipeline complet ──────────────────────────────────────────────────────────
-analyze: lint check-arch
+analyze: lint check-arch ## lint + check-arch (pipeline CI complet)
 	@echo ""
 	@echo "\033[1m\033[32m  ✓ Pipeline d'analyse terminé\033[0m"
 	@echo ""
