@@ -78,17 +78,137 @@ pub async fn est_administrateur(
     is_admin(deps.admin_access, &user.id, &space, Some(&competition)).await
 }
 
-/// Une erreur de port vaut « pas coach » : un contrôle d'accès échoue fermé.
+/// Coach de l'une des deux équipes, ou des deux — un camp, quel qu'il soit.
 async fn is_coach_of_either_team(
     deps: &AccesRapportDeps<'_>,
     scope: &PorteeRapport,
     user_id: &str,
 ) -> bool {
+    camp_du_coach(deps.team_data, scope, user_id).await != CampDuCoach::Aucun
+}
+
+/// Le camp d'un coach dans ce match. Un coach peut tenir les deux équipes.
+///
+/// L'admin n'a pas de camp : il agit sur le match, pas pour une équipe —
+/// `is_authorized` le traite à part.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CampDuCoach {
+    Domicile,
+    Visiteur,
+    LesDeux,
+    Aucun,
+}
+
+/// Qui est ce coach dans ce match. Une erreur de port vaut « pas coach » de
+/// cette équipe : un contrôle d'accès échoue fermé.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn camp_du_coach(
+    team_data: &dyn ITeamDataPort,
+    scope: &PorteeRapport,
+    user_id: &str,
+) -> CampDuCoach {
     let (home, away) = tokio::join!(
-        deps.team_data
-            .is_coach_of_team(&scope.home_team_id, user_id),
-        deps.team_data
-            .is_coach_of_team(&scope.away_team_id, user_id),
+        team_data.is_coach_of_team(&scope.home_team_id, user_id),
+        team_data.is_coach_of_team(&scope.away_team_id, user_id),
     );
-    home.unwrap_or(false) || away.unwrap_or(false)
+    match (home.unwrap_or(false), away.unwrap_or(false)) {
+        (true, true) => CampDuCoach::LesDeux,
+        (true, false) => CampDuCoach::Domicile,
+        (false, true) => CampDuCoach::Visiteur,
+        (false, false) => CampDuCoach::Aucun,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::ports::{JourneymanPositionDto, RosterPositionDto, TeamInfoDto};
+
+    const DOMICILE: &str = "domicile";
+    const VISITEUR: &str = "visiteur";
+
+    /// Les équipes que l'utilisateur coache, et celle dont le port échoue.
+    struct FakeTeamData {
+        coached: Vec<&'static str>,
+        failing: Option<&'static str>,
+    }
+
+    #[async_trait::async_trait]
+    impl ITeamDataPort for FakeTeamData {
+        async fn is_coach_of_team(&self, team_id: &str, _: &str) -> Result<bool, String> {
+            if self.failing == Some(team_id) {
+                return Err("port indisponible".to_string());
+            }
+            Ok(self.coached.contains(&team_id))
+        }
+        async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
+            Ok(true)
+        }
+        async fn is_team_in_player_improvement(&self, _: &str) -> Result<bool, String> {
+            Ok(false)
+        }
+        async fn find_team_info(&self, _: &str) -> Option<TeamInfoDto> {
+            None
+        }
+        async fn find_team_value(&self, _: &str) -> Option<u32> {
+            None
+        }
+        async fn find_team_treasury(&self, _: &str) -> Option<u32> {
+            None
+        }
+        async fn find_journeyman_position(&self, _: &str) -> Option<JourneymanPositionDto> {
+            None
+        }
+        async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
+            vec![]
+        }
+        async fn find_team_season(&self, _: &str) -> Option<String> {
+            None
+        }
+    }
+
+    fn scope() -> PorteeRapport {
+        PorteeRapport {
+            competition_id: "competition".to_string(),
+            home_team_id: DOMICILE.to_string(),
+            away_team_id: VISITEUR.to_string(),
+        }
+    }
+
+    async fn camp(coached: Vec<&'static str>, failing: Option<&'static str>) -> CampDuCoach {
+        camp_du_coach(&FakeTeamData { coached, failing }, &scope(), "coach").await
+    }
+
+    #[tokio::test]
+    async fn the_home_coach_is_on_the_home_side() {
+        assert_eq!(camp(vec![DOMICILE], None).await, CampDuCoach::Domicile);
+    }
+
+    #[tokio::test]
+    async fn the_away_coach_is_on_the_away_side() {
+        assert_eq!(camp(vec![VISITEUR], None).await, CampDuCoach::Visiteur);
+    }
+
+    #[tokio::test]
+    async fn a_coach_of_both_teams_holds_both_sides() {
+        assert_eq!(
+            camp(vec![DOMICILE, VISITEUR], None).await,
+            CampDuCoach::LesDeux
+        );
+    }
+
+    #[tokio::test]
+    async fn a_third_party_has_no_side() {
+        assert_eq!(camp(vec![], None).await, CampDuCoach::Aucun);
+    }
+
+    /// Le port en erreur sur une équipe ne donne pas ce camp — même au coach
+    /// qui le tient : un contrôle d'accès échoue fermé.
+    #[tokio::test]
+    async fn a_failing_port_denies_that_side_only() {
+        assert_eq!(
+            camp(vec![DOMICILE, VISITEUR], Some(DOMICILE)).await,
+            CampDuCoach::Visiteur
+        );
+    }
 }

@@ -1,6 +1,6 @@
 # E19 — Saisie du compte rendu : droits et robustesse
 
-**État :** `to_be_refined` — 5 cartes : 621 à 624, et 352 (à raffiner). Découpage
+**État :** `to_be_refined` — 5 cartes, 1 faite (621) : 621 à 624, et 352 (à raffiner). Découpage
 et cadrage validés le 2026-11-01.
 **Cadrage :** `docs/specs/saisie-mobile/E19-cadrage.md`
 Née le 2026-11-01 de l'analyse d'impact des maquettes mobiles

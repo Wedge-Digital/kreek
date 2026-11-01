@@ -31,7 +31,7 @@ L'admin n'a pas de camp : `is_authorized` continue de le traiter à part.
 
 ## Checklist
 
-- [ ] `CampDuCoach`, `camp_du_coach`, et `is_authorized` qui s'appuie dessus
-- [ ] Tests unitaires sur une doublure du port : domicile, visiteur, les deux,
+- [x] `CampDuCoach`, `camp_du_coach`, et `is_authorized` qui s'appuie dessus
+- [x] Tests unitaires sur une doublure du port : domicile, visiteur, les deux,
       aucun, port en erreur sur une équipe
-- [ ] `make lint`, `make check-arch`, `make test`
+- [x] `make lint`, `make check-arch`, `make test`
