@@ -269,3 +269,33 @@ def test_cart_footer_visible(page: Page, space_id, inducements_mr):
 
     expect(page.locator(".mr-cart-footer")).to_be_visible()
     expect(page.locator("button[name='intent'][value='validate']")).to_be_visible()
+
+
+def test_cart_unfolds_and_removes_an_inducement(page: Page, space_id, inducements_mr):
+    """Carte 629 : le panier se déplie, liste un coup de pouce commun, et son ✕
+    le retire — le sélecteur, qui garde les quantités, revient à 0."""
+    loc = inducements_mr["redirect_location"]
+    if "/inducements/" not in loc:
+        pytest.skip("Pas de page inducements pour cette compétition")
+
+    page.goto(f"{BASE_URL}{loc}", wait_until="load")
+
+    card = page.locator(".mr-inducement-card").first
+    try:
+        card.wait_for(state="visible", timeout=5000)
+    except Exception:
+        pytest.skip("Aucun inducement disponible pour ce tier")
+    name = card.locator(".mr-inducement-name").inner_text().strip()
+
+    card.locator(".mr-qty-btn").nth(1).click()
+    toggle = page.locator(".mr-cart-toggle")
+    expect(toggle).to_contain_text("Voir le panier")
+    toggle.click()
+    expect(toggle).to_have_attribute("aria-expanded", "true")
+
+    line = page.locator(".mr-cart-merco-item", has_text=name)
+    expect(line).to_be_visible()
+    line.locator(".mr-cart-merco-remove").click()
+
+    expect(page.locator(".mr-cart-items")).to_contain_text("Aucun coup de pouce")
+    expect(card.locator(".mr-qty-value")).to_have_text("0")

@@ -1,4 +1,5 @@
-<div class="merco-selector" hx-disinherit="*" x-data="mercenarySelector()">
+<div class="merco-selector" hx-disinherit="*" x-data="mercenarySelector()"
+     @remove-mercenaire.window="removeMerc($event.detail.idx)">
 
   <div class="merco-section">
     <div class="merco-section-header">
@@ -76,12 +77,11 @@
                 this.selectedPosition = null;
                 htmx.trigger(document.body, 'mercenarySelectionChanged', { mercs: this.hiredList });
             },
+            // Appelé par `@remove-mercenaire.window` sur la racine : l'écouteur
+            // suit le cycle de vie Alpine et disparaît avec le composant.
             removeMerc(idx) {
                 this.hiredList.splice(idx, 1);
                 htmx.trigger(document.body, 'mercenarySelectionChanged', { mercs: this.hiredList });
-            },
-            init() {
-                document.body.addEventListener('removeMercenaire', e => this.removeMerc(e.detail.idx));
             },
         };
     }

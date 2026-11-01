@@ -9,9 +9,32 @@
        totalCost: 0,
        budget: {{ budget }},
        mercenaryCart: [],
+       cartOpen: false,
        get mercenaryTotal() { return this.mercenaryCart.reduce((s, m) => s + m.cost, 0); },
        get grandTotal() { return this.totalCost + this.mercenaryTotal; },
        get overBudget() { return this.grandTotal > this.budget; },
+       get cartCount() { return this.items.reduce((s, i) => s + i.qty, 0) + this.mercenaryCart.length; },
+       get cartExpanded() { return this.cartOpen && this.cartCount > 0; },
+       get cartLines() {
+         const labels = { common: 'Commun', special: 'Spécial', star: 'Star' };
+         return this.items.map(i => ({
+           key: 'i-' + i.uid, uid: i.uid, name: i.name, qty: i.qty, max_qty: i.max_qty,
+           multi: i.max_qty > 1, price: i.qty * i.unit_cost,
+           type: (labels[i.category] || 'Coup de pouce') + (i.max_qty > 1 ? ' · ' + i.unit_cost + ' kPo l\'unité' : '')
+         })).concat(this.mercenaryCart.map((m, idx) => ({
+           key: 'm-' + idx, idx, name: m.name, multi: false, price: m.cost,
+           type: m.level === 'lvl1' ? 'Mercenaire Niv. 1' : 'Mercenaire'
+         })));
+       },
+       get cartSummary() {
+         const n = this.cartCount;
+         return n === 0 ? 'Aucun coup de pouce sélectionné' : n + (n > 1 ? ' coups' : ' coup') + ' de pouce';
+       },
+       adjust(uid, delta) { htmx.trigger(document.body, 'adjustInducement', { uid, delta }); },
+       removeLine(line) {
+         if (line.uid) { this.adjust(line.uid, -line.qty); }
+         else { htmx.trigger(document.body, 'removeMercenaire', { idx: line.idx }); }
+       },
        get selectionJson() {
          return JSON.stringify(this.items.map(i => ({ uid: i.uid, name: i.name, qty: i.qty, unit_cost: i.unit_cost })));
        },
@@ -28,7 +51,8 @@
        }
      }"
      @inducement-selection-changed.window="items = $event.detail.items; totalCost = $event.detail.total_cost"
-     @mercenary-selection-changed.window="mercenaryCart = $event.detail.mercs">
+     @mercenary-selection-changed.window="mercenaryCart = $event.detail.mercs"
+     @keydown.escape.window="cartOpen = false">
 
   <!-- Header -->
   <div class="mr-header">
@@ -93,39 +117,58 @@
        hx-swap="innerHTML">
   </div>
 
+  <!-- Voile derrière le panier ouvert — sur mobile seulement (CSS) -->
+  <div class="mr-cart-backdrop" x-show="cartExpanded" x-cloak @click="cartOpen = false"></div>
+
   <!-- Cart sticky footer -->
-  <form method="post" action="{{ form_action }}" class="mr-cart-footer">
+  <form method="post" action="{{ form_action }}" class="mr-cart-footer"
+        :class="{ 'mr-cart-footer--open': cartExpanded }">
     <input type="hidden" name="selection" :value="selectionJson">
     <input type="hidden" name="mercenaries" :value="mercenaryJson">
     <div class="mr-cart-inner">
 
-      <!-- Liste mercenaires dans le panier -->
-      <template x-if="mercenaryCart.length > 0">
-        <div class="mr-cart-merco-list">
-          <template x-for="(m, idx) in mercenaryCart" :key="idx">
-            <div class="mr-cart-merco-item">
-              <div class="mr-cart-merco-info">
-                <div class="mr-cart-merco-name" x-text="m.name"></div>
-                <div class="mr-cart-merco-type" x-text="m.level === 'lvl1' ? 'Mercenaire Niv. 1' : 'Mercenaire'"></div>
-              </div>
-              <div class="mr-cart-merco-price" x-text="m.cost + ' kPo'"></div>
-              <button class="mr-cart-merco-remove" type="button"
-                      @click="htmx.trigger(document.body, 'removeMercenaire', { idx })">&#10005;</button>
+      <!-- Tout le panier : chaque article s'ajuste ou se retire ici, sans
+           retrouver son onglet. Les quantités restent gardées par les
+           sélecteurs : le panier les leur demande par événement. -->
+      <div class="mr-cart-merco-list" x-show="cartExpanded" x-cloak>
+        <template x-for="line in cartLines" :key="line.key">
+          <div class="mr-cart-merco-item">
+            <div class="mr-cart-merco-info">
+              <div class="mr-cart-merco-name" x-text="line.name"></div>
+              <div class="mr-cart-merco-type" x-text="line.type"></div>
             </div>
-          </template>
-        </div>
-      </template>
+            <template x-if="line.multi">
+              <div class="mr-cart-qty">
+                <button class="mr-cart-qty-btn" type="button" @click="adjust(line.uid, -1)"
+                        :disabled="line.qty <= 1" :aria-label="'Retirer un ' + line.name">−</button>
+                <span class="mr-cart-qty-value" x-text="line.qty"></span>
+                <button class="mr-cart-qty-btn" type="button" @click="adjust(line.uid, 1)"
+                        :disabled="line.qty >= line.max_qty" :aria-label="'Ajouter un ' + line.name">+</button>
+              </div>
+            </template>
+            <div class="mr-cart-merco-price" x-text="line.price + ' kPo'"></div>
+            <button class="mr-cart-merco-remove" type="button" @click="removeLine(line)"
+                    :aria-label="'Retirer ' + line.name">&#10005;</button>
+          </div>
+        </template>
+      </div>
 
-      <div class="mr-cart-summary">
-        <div class="mr-cart-items"
-             x-text="(items.length + mercenaryCart.length) === 0 ? 'Aucun coup de pouce sélectionné' : (items.length + mercenaryCart.length) + ' coup(s) de pouce sélectionné(s)'">
-        </div>
-        <div class="mr-cart-total">
+      <div class="mr-cart-left" x-show="cartExpanded && !overBudget" x-cloak>
+        Reste à dépenser : <b x-text="(budget - grandTotal) + ' kPo'"></b>
+      </div>
+
+      <button type="button" class="mr-cart-summary mr-cart-toggle"
+              @click="cartOpen = !cartOpen" :disabled="cartCount === 0"
+              :aria-expanded="cartExpanded ? 'true' : 'false'">
+        <span class="mr-cart-items">
+          <span x-text="cartSummary"></span><template x-if="cartCount > 0"><span> · <span class="mr-cart-link" x-text="cartExpanded ? 'Masquer ▾' : 'Voir le panier ▴'"></span></span></template>
+        </span>
+        <span class="mr-cart-total">
           <span class="mr-cart-total-value" :class="{ 'mr-cart-total-value--over': overBudget }"
                 x-text="grandTotal"></span>
           <span class="mr-cart-total-unit">/ {{ budget }} kPo</span>
-        </div>
-      </div>
+        </span>
+      </button>
 
       <div class="mr-cart-remaining mr-cart-remaining--over" x-show="overBudget">
         &#9888;&#65039; Budget dépassé de <span x-text="grandTotal - budget"></span> kPo

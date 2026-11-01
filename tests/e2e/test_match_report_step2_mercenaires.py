@@ -186,6 +186,8 @@ def test_recruit_base_adds_to_cart(page: Page, space_id, merco_mr):
 
     dot_label = page.locator(".merco-dot-label")
     expect(dot_label).to_contain_text("1 / 3")
+    # Le panier est replié par défaut (carte 629) : on le déplie.
+    page.locator(".mr-cart-toggle").click()
     expect(page.locator(".mr-cart-merco-list")).to_be_visible()
     expect(page.locator(".mr-cart-merco-item")).to_have_count(1)
 
@@ -238,6 +240,8 @@ def test_remove_mercenaire_from_cart(page: Page, space_id, merco_mr):
     page.locator(".merco-hire-btn--base").click()
     expect(page.locator(".merco-dot-label")).to_contain_text("1 / 3")
 
+    # Le panier est replié par défaut (carte 629) : on le déplie.
+    page.locator(".mr-cart-toggle").click()
     page.locator(".mr-cart-merco-remove").first.click()
 
     expect(page.locator(".merco-dot-label")).to_contain_text("0 / 3")

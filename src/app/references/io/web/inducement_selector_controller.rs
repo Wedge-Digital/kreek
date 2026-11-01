@@ -59,6 +59,9 @@ struct JsItem {
     max_qty: u8,
     unit_cost: u32,
     qty: u8,
+    /// `common`, `special` ou `star` : le panier de la page hôte en tire le
+    /// libellé de chaque ligne (carte 629).
+    category: &'static str,
 }
 
 pub async fn inducement_selector_controller(
@@ -86,25 +89,32 @@ fn build_items_json(
     special: &[InducementSelectorItem],
     stars: &[StarPlayerSelectorItem],
 ) -> String {
-    let all: Vec<JsItem> = common
-        .iter()
-        .chain(special.iter())
-        .map(|i| JsItem {
-            uid: i.uid.clone(),
-            name: i.name.clone(),
-            max_qty: i.max_qty,
-            unit_cost: i.unit_cost,
-            qty: i.initial_qty,
-        })
+    let all: Vec<JsItem> = js_items(common, "common")
+        .chain(js_items(special, "special"))
         .chain(stars.iter().map(|s| JsItem {
             uid: s.uid.clone(),
             name: s.name.clone(),
             max_qty: 1,
             unit_cost: s.cost,
             qty: s.initial_qty,
+            category: "star",
         }))
         .collect();
     serde_json::to_string(&all).unwrap_or_else(|_| "[]".to_string())
+}
+
+fn js_items<'a>(
+    items: &'a [InducementSelectorItem],
+    category: &'static str,
+) -> impl Iterator<Item = JsItem> + 'a {
+    items.iter().map(move |i| JsItem {
+        uid: i.uid.clone(),
+        name: i.name.clone(),
+        max_qty: i.max_qty,
+        unit_cost: i.unit_cost,
+        qty: i.initial_qty,
+        category,
+    })
 }
 
 fn parse_selected(selected: &str) -> HashMap<String, u8> {
@@ -233,5 +243,62 @@ impl IntoResponse for InducementSelectorTemplate {
             Ok(html) => Html(html).into_response(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn item(uid: &str, max_qty: u8) -> InducementSelectorItem {
+        InducementSelectorItem {
+            uid: uid.to_string(),
+            name: uid.to_string(),
+            description: String::new(),
+            unit_cost: 15,
+            max_qty,
+            is_common: true,
+            initial_qty: 0,
+        }
+    }
+
+    fn star(uid: &str) -> StarPlayerSelectorItem {
+        StarPlayerSelectorItem {
+            uid: uid.to_string(),
+            name: uid.to_string(),
+            rosters_label: String::new(),
+            cost: 200,
+            ma: 6,
+            st: 3,
+            ag: "3+".to_string(),
+            pa: "4+".to_string(),
+            av: "9+".to_string(),
+            skills: vec![],
+            special_ability_name: String::new(),
+            special_ability_description: String::new(),
+            initial_qty: 0,
+        }
+    }
+
+    /// Le panier de la page hôte (carte 629) lit `max_qty` et `category` dans
+    /// chaque article : sans eux, il ne sait ni libeller la ligne ni borner +.
+    #[test]
+    fn items_json_carries_max_qty_and_category() {
+        let json = build_items_json(
+            &[item("chariot", 2)],
+            &[item("arbitre", 1)],
+            &[star("griff")],
+        );
+        let parsed: Vec<serde_json::Value> = serde_json::from_str(&json).unwrap();
+        let pairs: Vec<(&str, u64)> = parsed
+            .iter()
+            .map(|v| {
+                (
+                    v["category"].as_str().unwrap(),
+                    v["max_qty"].as_u64().unwrap(),
+                )
+            })
+            .collect();
+        assert_eq!(pairs, vec![("common", 2), ("special", 1), ("star", 1)]);
     }
 }

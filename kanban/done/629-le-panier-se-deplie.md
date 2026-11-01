@@ -50,11 +50,11 @@ Aucune. Affichage seulement ; ce que le serveur reçoit est identique.
 
 ## Checklist
 
-- [ ] `adjustInducement` écouté par le sélecteur, `max_qty` et `category` dans
+- [x] `adjustInducement` écouté par le sélecteur, `max_qty` et `category` dans
       l'événement
-- [ ] Le panier dépliable, toutes catégories, ajuster et retirer
-- [ ] `removeMercenaire` en `@remove-mercenaire.window`
-- [ ] Les sélecteurs e2e du panier (`.mr-cart-merco-item`, `.mr-cart-merco-remove`,
+- [x] Le panier dépliable, toutes catégories, ajuster et retirer
+- [x] `removeMercenaire` en `@remove-mercenaire.window`
+- [x] Les sélecteurs e2e du panier (`.mr-cart-merco-item`, `.mr-cart-merco-remove`,
       `.mr-cart-items`) gardés ou repris dans
       `test_match_report_step2_mercenaires.py` et `test_match_report_inducements.py`
-- [ ] `scripts/check-css-collisions.sh` ; `make lint`, `make check-arch`, e2e impactés
+- [x] `scripts/check-css-collisions.sh` ; `make lint`, `make check-arch`, e2e impactés

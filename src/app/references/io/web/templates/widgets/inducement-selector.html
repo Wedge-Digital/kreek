@@ -1,5 +1,6 @@
 <div class="inducement-selector" hx-disinherit="*" x-data="inducementSelector()"
-     @switch-inducement-tab.window="activeTab = $event.detail.tab">
+     @switch-inducement-tab.window="activeTab = $event.detail.tab"
+     @adjust-inducement.window="adjust($event.detail.uid, $event.detail.delta)">
 
   <!-- Communs -->
   {% if !common_items.is_empty() %}
@@ -120,6 +121,15 @@
         const item = this.items.find(i => i.uid === uid);
         if (item && item.qty > 0) { item.qty--; this.emit(); }
       },
+      // Demande venue d'ailleurs (le panier de la page hôte publie
+      // `adjustInducement { uid, delta }`) : la quantité reste gardée ici,
+      // bornée entre 0 et `max_qty`.
+      adjust(uid, delta) {
+        const item = this.items.find(i => i.uid === uid);
+        if (!item) return;
+        const qty = Math.max(0, Math.min(item.max_qty, item.qty + delta));
+        if (qty !== item.qty) { item.qty = qty; this.emit(); }
+      },
       toggleStar(uid) {
         if (this.openStars.has(uid)) { this.openStars.delete(uid); } else { this.openStars.add(uid); }
         this.openStars = new Set(this.openStars);
@@ -129,7 +139,10 @@
         const total_cost = selected.reduce((sum, i) => sum + i.qty * i.unit_cost, 0);
         htmx.trigger(document.body, 'inducementSelectionChanged', {
           instanceId: this.instanceId,
-          items: selected.map(i => ({ uid: i.uid, name: i.name, qty: i.qty, unit_cost: i.unit_cost })),
+          items: selected.map(i => ({
+            uid: i.uid, name: i.name, qty: i.qty, unit_cost: i.unit_cost,
+            max_qty: i.max_qty, category: i.category
+          })),
           total_cost
         });
       }
