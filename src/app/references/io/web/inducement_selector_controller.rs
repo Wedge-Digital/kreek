@@ -2,6 +2,7 @@ use crate::app::references::domain::inducement_availability::est_disponible_pour
 use crate::app::references::domain::inducement_pricing::cout_pour_roster;
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::references::domain::profil_roster::ProfilRoster;
+use crate::app::references::domain::star_player_availability::star_player_available_for;
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -180,10 +181,8 @@ fn build_star_player_items(
         .iter()
         .filter_map(|uid| {
             let sp = repo.find_star_player_by_uid(uid)?;
-            if !params.roster_id.is_empty()
-                && !sp.available_for_rosters.is_empty()
-                && !sp.available_for_rosters.contains(&params.roster_id)
-            {
+            // La règle vit au domaine depuis la carte 603.
+            if !star_player_available_for(sp, &params.roster_id) {
                 return None;
             }
             let rosters_label = if sp.available_for_rosters.is_empty() {

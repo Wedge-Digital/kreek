@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kreek — Imprimer la feuille d'équipe</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Roboto+Slab:wght@500;700;800&family=Roboto:wght@400;500;700&display=swap">
+<style id="page-size">@page { size: A4 portrait; margin: 0; }</style>
+<style>
+/* Mise en page : chrome kreek (clair, bleu nuit) — modale options à gauche, aperçu A4 à droite. */
+:root {
+  --main-blue: #003049;
+  --main-blue-soft: #e6eef2;
+  --dark-0: #1C1C29;
+  --dark-2: #555770;
+  --dark-3: #8F90A6;
+  --dark-4: #C7C9D9;
+  --dark-5: #E5E6EF;
+  --dark-6: #F0F2F4;
+  --white: #FFFFFF;
+  --gold: #FFD700;
+  --red: #E02020;
+  --link-blue: #0063F7;
+  --font-body: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-title: 'Roboto Slab', Georgia, serif;
+  --font-accent: 'Montserrat', 'Segoe UI', sans-serif;
+  --p05: 6px; --p1: 12px; --p2: 24px; --p3: 36px;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 12px;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--dark-6); color: var(--dark-0); font-family: var(--font-body); font-size: 14px; }
+
+/* ---------- Page d'arrière-plan (fiche d'équipe, assombrie) ---------- */
+.app-bg { padding: var(--p2) 16px; max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--p2); filter: blur(1.5px); opacity: .9; }
+.app-bg__banner { background: var(--main-blue); color: var(--white); border-radius: var(--radius-md); padding: var(--p2); display: flex; align-items: center; gap: var(--p2); }
+.app-bg__logo { width: 64px; height: 64px; border-radius: 50%; background: var(--gold); color: var(--main-blue); display: grid; place-items: center; font: 800 22px var(--font-accent); }
+.app-bg__name { font: 700 28px var(--font-title); margin: 0; }
+.app-bg__rows { background: var(--white); border-radius: var(--radius-md); height: 520px; }
+.scrim { position: fixed; inset: 0; background: rgba(28,28,41,.55); }
+
+/* ---------- Modale ---------- */
+.modal { position: fixed; inset: 24px; margin: auto; max-width: 1280px; max-height: 860px; background: var(--white); border-radius: var(--radius-lg); box-shadow: 0 24px 60px rgba(0,0,0,.35); display: grid; grid-template-columns: 330px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+.modal__head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: var(--p1); padding: 14px var(--p2); border-bottom: 1px solid var(--dark-5); }
+.modal__title { margin: 0; font: 700 20px var(--font-title); color: var(--main-blue); }
+.modal__subtitle { margin: 2px 0 0; color: var(--dark-2); font-size: 13px; }
+.icon-btn { border: 0; background: transparent; font-size: 22px; line-height: 1; color: var(--dark-2); cursor: pointer; padding: 6px 10px; border-radius: var(--radius-sm); }
+.icon-btn:hover { background: var(--dark-6); }
+
+.options { overflow-y: auto; padding: var(--p1) var(--p2) var(--p2); border-right: 1px solid var(--dark-5); display: flex; flex-direction: column; gap: 18px; }
+.opt-group { display: flex; flex-direction: column; gap: 8px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.opt-group legend, .opt-label { font: 700 11px var(--font-accent); letter-spacing: .08em; text-transform: uppercase; color: var(--dark-3); padding: 0; margin-bottom: 2px; }
+.radio-card { display: grid; grid-template-columns: 18px 1fr; gap: 4px 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--dark-4); border-radius: var(--radius-md); cursor: pointer; }
+.radio-card:has(input:checked) { border-color: var(--main-blue); background: var(--main-blue-soft); }
+.radio-card:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.radio-card input { margin: 2px 0 0; accent-color: var(--main-blue); }
+.radio-card__main { font-weight: 500; }
+.radio-card__hint { grid-column: 2; color: var(--dark-2); font-size: 12.5px; }
+.radio-card select { grid-column: 2; margin-top: 4px; width: 100%; padding: 7px 8px; border: 1px solid var(--dark-4); border-radius: var(--radius-sm); font: inherit; background: var(--white); }
+.check { display: grid; grid-template-columns: 18px 1fr; gap: 2px 10px; align-items: start; cursor: pointer; }
+.check input { margin: 2px 0 0; accent-color: var(--main-blue); }
+.check__hint { grid-column: 2; color: var(--dark-2); font-size: 12.5px; }
+.check--sub { margin-left: 28px; }
+.segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--dark-4); border-radius: var(--radius-sm); overflow: hidden; }
+.segmented label { position: relative; text-align: center; padding: 7px 4px; cursor: pointer; font-size: 13px; border-left: 1px solid var(--dark-4); }
+.segmented label:first-child { border-left: 0; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented label:has(input:checked) { background: var(--main-blue); color: var(--white); font-weight: 500; }
+.segmented label:has(input:focus-visible) { outline: 2px solid var(--link-blue); outline-offset: -3px; }
+.opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 10px; }
+.opt-row > span { font-size: 13px; color: var(--dark-2); }
+.proto-note { border: 1px dashed var(--dark-3); border-radius: var(--radius-md); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: #fffbe6; }
+.proto-note p { margin: 0; font-size: 12.5px; color: var(--dark-2); }
+
+.preview { position: relative; background: #5b5f6e; overflow: auto; padding: var(--p2); display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.preview__toolbar { position: sticky; top: calc(-1 * var(--p2)); z-index: 2; align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: var(--p1); margin: calc(-1 * var(--p2)) calc(-1 * var(--p2)) 0; padding: 8px var(--p2); background: #4b4f5d; color: #e9eaf0; font-size: 13px; }
+.zoom { display: flex; gap: 4px; }
+.zoom button { border: 1px solid #7d8193; background: transparent; color: #e9eaf0; border-radius: var(--radius-sm); padding: 4px 10px; font: inherit; cursor: pointer; }
+.zoom button[aria-pressed="true"] { background: #e9eaf0; color: var(--dark-0); }
+.pages { display: flex; flex-direction: column; gap: 22px; align-items: center; }
+.page-slot { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.page-slot__label { color: #e9eaf0; font-size: 12px; font-family: var(--font-accent); letter-spacing: .04em; }
+.page-frame { position: relative; box-shadow: 0 6px 18px rgba(0,0,0,.35); background: #fff; }
+.page-frame > .sheet { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+.modal__foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: var(--p1); padding: 12px var(--p2); border-top: 1px solid var(--dark-5); flex-wrap: wrap; }
+.foot__summary { color: var(--dark-2); font-variant-numeric: tabular-nums; }
+.foot__summary strong { color: var(--dark-0); }
+.foot__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { border-radius: var(--radius-sm); padding: 9px 16px; font: 500 14px var(--font-body); cursor: pointer; border: 1px solid var(--main-blue); }
+.btn--ghost { background: var(--white); color: var(--main-blue); border-color: var(--dark-4); }
+.btn--secondary { background: var(--white); color: var(--main-blue); }
+.btn--primary { background: var(--main-blue); color: var(--white); }
+.btn:focus-visible, .icon-btn:focus-visible, .zoom button:focus-visible { outline: 2px solid var(--link-blue); outline-offset: 2px; }
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--dark-0); color: var(--white); padding: 10px 16px; border-radius: var(--radius-md); font-size: 13px; max-width: calc(100% - 32px); }
+
+@media (max-width: 768px) {
+  .modal { inset: 0; border-radius: 0; max-height: none; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto; overflow-y: auto; }
+  .options { border-right: 0; border-bottom: 1px solid var(--dark-5); overflow: visible; padding-inline: 16px; }
+  .modal__head, .modal__foot { padding-inline: 16px; }
+  .preview { overflow: visible; padding: 16px; min-height: 0; }
+  .preview__toolbar { position: static; margin: -16px -16px 0; padding-inline: 16px; }
+  .modal__foot { position: sticky; bottom: 0; background: var(--white); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* =====================================================================
+   FEUILLES A4 — 96 dpi : portrait 794 × 1123 px, paysage 1123 × 794 px
+   ===================================================================== */
+.sheet { width: 794px; height: 1123px; padding: 34px 38px 30px; background: #fff; color: #111; font-family: var(--font-body); font-size: 11px; line-height: 1.3; display: flex; flex-direction: column; gap: 12px; overflow: hidden;
+  --s-accent: #003049; --s-accent-ink: #fff; --s-soft: #e8eef2; --s-line: #b9bfca; --s-strong: #111; --s-gold: #c79a00; --s-zebra: #f5f7f9; }
+.sheet.landscape { width: 1123px; height: 794px; padding: 28px 34px 24px; }
+.sheet.compact { font-size: 9.5px; gap: 9px; }
+.sheet.ink-bw { --s-accent: #222; --s-soft: #ededed; --s-gold: #555; --s-zebra: #f4f4f4; }
+.sheet h2, .sheet h3 { margin: 0; }
+.sheet table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.sheet th, .sheet td { padding: 4px 5px; text-align: left; vertical-align: top; }
+.sheet.compact th, .sheet.compact td { padding: 2.5px 4px; }
+.sheet .num { text-align: center; }
+.sheet .right { text-align: right; }
+.sheet-foot { margin-top: auto; display: flex; justify-content: space-between; color: #777; font-size: 9px; border-top: 1px solid var(--s-line); padding-top: 5px; }
+
+/* En-tête de fiche */
+.ts-head { display: grid; grid-template-columns: 58px 1fr auto; gap: 14px; align-items: center; }
+.ts-logo { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font: 800 19px var(--font-accent); background: var(--team); color: #fff; border: 2px solid var(--s-strong); }
+.sheet.ink-bw .ts-logo { background: #fff; color: #111; }
+.ts-role { font: 700 9px var(--font-accent); letter-spacing: .12em; text-transform: uppercase; color: var(--s-accent); }
+.ts-name { font: 800 22px var(--font-title); line-height: 1.1; }
+.sheet.compact .ts-name { font-size: 19px; }
+.ts-sub { color: #444; margin-top: 2px; }
+.ts-meta { text-align: right; color: #444; font-size: 10px; line-height: 1.45; }
+.ts-meta strong { color: #111; }
+
+/* Encadrés chiffrés */
+.ts-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); border: 1.5px solid var(--s-strong); }
+.ts-stat { padding: 5px 8px; border-left: 1px solid var(--s-line); display: flex; flex-direction: column; gap: 1px; }
+.ts-stat:first-child { border-left: 0; }
+.ts-stat__k { font: 700 8px var(--font-accent); letter-spacing: .08em; text-transform: uppercase; color: #555; }
+.ts-stat__v { font: 700 14px var(--font-body); font-variant-numeric: tabular-nums; }
+.sheet.compact .ts-stat__v { font-size: 12px; }
+.ts-stat__d { font-size: 9px; color: #555; }
+.ts-stat.key .ts-stat__v { color: var(--s-accent); }
+
+/* Tableau des joueurs */
+.roster thead th { font: 700 8.5px var(--font-accent); letter-spacing: .06em; text-transform: uppercase; color: var(--s-accent-ink); background: var(--s-accent); white-space: nowrap; }
+.roster tbody td { border-bottom: 1px solid var(--s-line); }
+.roster .c-n { width: 24px; font-weight: 700; }
+.roster .c-name { width: 112px; font-weight: 600; }
+.roster .c-pos { width: 82px; color: #333; }
+.roster .c-stat { width: 25px; }
+.roster .c-inj { width: 50px; }
+.roster .c-spp { width: 30px; }
+.roster .c-val { width: 40px; }
+.roster .acq { font-weight: 700; }
+.roster .tag { display: inline-block; margin-top: 2px; font: 700 7.5px var(--font-accent); letter-spacing: .05em; text-transform: uppercase; color: #b00020; border: 1px solid currentColor; padding: 0 3px; }
+.sheet.ink-bw .roster .tag { color: #111; }
+.roster tr.struck td:not(.c-skills) { text-decoration: line-through; color: #888; }
+.roster tr.struck td.c-skills { color: #888; }
+.roster tr.blank td { height: 22px; }
+.sheet.compact .roster tr.blank td { height: 17px; }
+.stat-down { font-weight: 700; text-decoration: underline; }
+.roster-legend { display: flex; justify-content: space-between; gap: 12px; color: #555; font-size: 9px; }
+
+/* Staff */
+.staff { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--s-line); }
+.staff div { padding: 5px 8px; border-left: 1px solid var(--s-line); display: flex; justify-content: space-between; gap: 6px; }
+.staff div:first-child { border-left: 0; }
+.staff b { font-variant-numeric: tabular-nums; }
+
+/* Annexe compétences */
+.annex-title { font: 800 18px var(--font-title); }
+.annex-sub { color: #555; }
+.skills { columns: 2; column-gap: 22px; }
+.sheet.landscape .skills { columns: 3; }
+.skill { break-inside: avoid; padding: 5px 0 6px; border-bottom: 1px solid var(--s-line); }
+.skill__h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.skill__name { font-weight: 700; font-size: 1.05em; }
+.skill__cat { font: 700 7.5px var(--font-accent); letter-spacing: .08em; text-transform: uppercase; color: var(--s-accent); white-space: nowrap; }
+.skill__who { color: #666; font-size: .88em; margin-top: 1px; }
+.skill__d { margin-top: 2px; }
+.sheet.compact .skill__who { display: none; }
+
+/* Feuille de match */
+.mr-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; border: 1.5px solid var(--s-strong); padding: 8px 12px; }
+.mr-team { display: flex; flex-direction: column; gap: 2px; }
+.mr-team.away { text-align: right; }
+.mr-team__name { font: 800 15px var(--font-title); }
+.mr-team__sub { color: #555; font-size: 9.5px; }
+.mr-team__name.write { border-bottom: 1px solid #111; min-height: 20px; }
+.mr-score { display: flex; gap: 8px; align-items: center; font: 800 18px var(--font-title); }
+.box { display: inline-block; width: 34px; height: 30px; border: 1.5px solid #111; vertical-align: middle; }
+.box.sm { width: 16px; height: 14px; border-width: 1px; }
+.mr-title { font: 700 9px var(--font-accent); letter-spacing: .1em; text-transform: uppercase; color: var(--s-accent); margin-bottom: 4px; }
+.mr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mr-block { border: 1px solid var(--s-line); padding: 7px 9px; }
+.line { display: flex; align-items: end; gap: 6px; padding: 3px 0; }
+.line .fill { flex: 1; border-bottom: 1px dotted #777; min-height: 13px; }
+.line .box.sm { flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.chips span { display: inline-flex; gap: 4px; align-items: center; }
+.tally thead th { font: 700 7.5px var(--font-accent); letter-spacing: .04em; text-transform: uppercase; background: var(--s-soft); color: #222; border: 1px solid var(--s-line); text-align: center; padding: 3px 2px; }
+.tally td { border: 1px solid var(--s-line); height: 17px; padding: 1px 3px; }
+.sheet.compact .tally td { height: 14px; }
+.tally .t-n { width: 18px; text-align: center; font-weight: 700; }
+.tally .t-name { font-size: .92em; white-space: nowrap; overflow: hidden; max-width: 92px; }
+.tally td.t-box { width: 26px; }
+.tally tr:nth-child(even) td { background: var(--s-zebra); }
+.turns td, .turns th { border: 1px solid var(--s-line); text-align: center; height: 20px; padding: 2px; }
+.turns th { font: 700 8px var(--font-accent); background: var(--s-soft); }
+.turns .t-team { text-align: left; font-weight: 600; width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.legend { color: #555; font-size: 9px; }
+.mr-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: #444; font-size: 9.5px; }
+.mr-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mr-col > .mr-title { font: 800 12px var(--font-title); letter-spacing: 0; text-transform: none; color: var(--s-accent); margin: 0; }
+.sheet.landscape .rules { grid-template-columns: 1fr 1fr; column-gap: 18px; }
+.sheet.landscape .mr-col .mr-block .line { padding: 1px 0; }
+.ind th.right, .ind td.right { text-align: right; }
+.sheet.landscape .mr-block.pre { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+.sheet.landscape .mr-block.pre > .mr-title, .sheet.landscape .mr-block.pre > .money { grid-column: 1 / -1; }
+.money { background: var(--s-soft); padding: 5px 7px; margin: 4px 0; }
+.ind { margin: 4px 0; }
+.ind th { font: 700 7.5px var(--font-accent); letter-spacing: .05em; text-transform: uppercase; color: #444; border-bottom: 1px solid var(--s-strong); padding: 2px 3px; }
+.ind td { border-bottom: 1px solid var(--s-line); padding: 2px 3px; }
+.ind .ind-boxes { white-space: nowrap; }
+.ind .ind-boxes .box.sm { margin-right: 3px; width: 12px; height: 11px; }
+.rules { display: grid; gap: 3px; border-left: 3px solid var(--s-accent); padding: 4px 0 4px 9px; color: #333; font-size: .92em; }
+.line.calc { flex-wrap: wrap; }
+.sps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sheet.landscape .sps { grid-template-columns: 1fr 1fr 1fr; }
+.sp { border: 1px solid var(--s-line); padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; break-inside: avoid; }
+.sp__h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sp__name { font: 800 13px var(--font-title); }
+.sp__cost { font-weight: 700; color: var(--s-accent); font-variant-numeric: tabular-nums; }
+.sp__type { color: #555; font-size: .9em; }
+.sheet .sp__stats { width: auto; }
+.sp__stats th, .sp__stats td { border: 1px solid var(--s-line); text-align: center; padding: 2px 8px; }
+.sp__stats th { font: 700 7.5px var(--font-accent); background: var(--s-soft); }
+.sp__power { border-top: 1px dashed var(--s-line); padding-top: 4px; }
+.mr-pre .mr-weather { grid-column: 1 / -1; }
+.sheet.landscape .mr-pre { grid-template-columns: 1fr 1fr 0.8fr; }
+.sheet.landscape .mr-pre .mr-weather { grid-column: auto; }
+.sheet.landscape .mr-weather .chips { flex-direction: column; }
+.sheet.landscape .tally td { height: 15px; }
+.sheet.landscape.compact .tally td { height: 13px; }
+.sheet.landscape .mr-post .mr-block { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+.sheet.landscape .mr-post .mr-title { grid-column: 1 / -1; }
+.sheet.landscape .mr-head { padding-block: 5px; }
+
+/* ---------- Style « Officielle » ---------- */
+.sheet.st-officielle { border: 0; outline: 3px double #111; outline-offset: -14px; }
+.sheet.st-officielle .ts-head { background: var(--s-accent); color: #fff; padding: 10px 12px; margin: -4px -4px 0; }
+.sheet.st-officielle .ts-role { color: var(--gold); }
+.sheet.st-officielle.ink-bw .ts-role { color: #fff; }
+.sheet.st-officielle .ts-sub, .sheet.st-officielle .ts-meta, .sheet.st-officielle .ts-meta strong { color: #fff; }
+.sheet.st-officielle .ts-name { text-transform: uppercase; letter-spacing: .02em; }
+.sheet.st-officielle .ts-logo { border-color: #fff; }
+.sheet.st-officielle .ts-stats { border-width: 2px; }
+.sheet.st-officielle .ts-stat { background: var(--s-soft); }
+.sheet.st-officielle .roster thead th { background: #111; }
+.sheet.st-officielle .roster tbody td { border: 1px solid #999; }
+.sheet.st-officielle .roster .c-stat { background: var(--s-soft); text-align: center; font-weight: 700; }
+.sheet.st-officielle .annex-title, .sheet.st-officielle .mr-team__name { text-transform: uppercase; }
+.sheet.st-officielle .mr-head { background: var(--s-soft); border-width: 2px; }
+
+/* ---------- Style « Terrain » ---------- */
+.sheet.st-terrain { padding-top: 0; }
+.sheet.st-terrain::before { content: ""; display: block; height: 10px; margin: 0 -38px 6px; background: repeating-linear-gradient(90deg, var(--s-accent) 0 38px, var(--s-soft) 38px 76px); }
+.sheet.st-terrain.landscape::before { margin-inline: -34px; }
+.sheet.st-terrain .ts-name, .sheet.st-terrain .annex-title, .sheet.st-terrain .mr-team__name { font-family: var(--font-accent); font-weight: 800; letter-spacing: -.01em; }
+.sheet.st-terrain .ts-stats { border: 0; gap: 6px; }
+.sheet.st-terrain .ts-stat { border: 0; background: var(--s-soft); border-radius: 6px; }
+.sheet.st-terrain .ts-stat.key { background: var(--s-accent); }
+.sheet.st-terrain .ts-stat.key .ts-stat__v, .sheet.st-terrain .ts-stat.key .ts-stat__k, .sheet.st-terrain .ts-stat.key .ts-stat__d { color: #fff; }
+.sheet.st-terrain .roster thead th { background: transparent; color: var(--s-accent); border-bottom: 2px solid var(--s-accent); }
+.sheet.st-terrain .roster tbody tr:nth-child(even) td { background: var(--s-zebra); }
+.sheet.st-terrain .roster tbody td { border-bottom: 0; }
+.sheet.st-terrain .ts-logo { border: 0; }
+.sheet.st-terrain .mr-head { border: 0; background: var(--s-soft); border-radius: 8px; }
+
+/* Paysage : en-tête et chiffres sur une ligne */
+.sheet.landscape .ts-head { grid-template-columns: 52px 1fr auto; }
+.sheet.landscape .ts-logo { width: 52px; height: 52px; }
+.sheet.landscape .roster .c-name { width: 130px; }
+.sheet.landscape .roster .c-pos { width: 110px; }
+
+/* ---------- Impression : seules les feuilles sortent ---------- */
+@media print {
+  html, body { height: auto; background: #fff; }
+  .app-bg, .scrim, .modal__head, .options, .modal__foot, .preview__toolbar, .page-slot__label, .toast { display: none !important; }
+  .modal { position: static; display: block; box-shadow: none; max-width: none; max-height: none; overflow: visible; border-radius: 0; inset: auto; }
+  .preview { display: block; padding: 0; background: #fff; overflow: visible; }
+  .pages, .page-slot { display: block; }
+  .page-frame { width: auto !important; height: auto !important; box-shadow: none; break-after: page; }
+  .page-frame > .sheet { position: static; transform: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+/* ---------- États de la maquette (absents de l'application) ---------- */
+.demo-states { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 6px 16px; background: #fffbe6; border-bottom: 1px dashed var(--dark-3); font-size: 12.5px; color: var(--dark-2); }
+.demo-states label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+.modal { top: 56px; }
+.preview__state { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #e9eaf0; text-align: center; max-width: 340px; padding: var(--p2); }
+.preview__state p { margin: 0; }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(233,234,240,.3); border-top-color: #e9eaf0; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ind-d { color: #555; font-size: .9em; }
+.mr-weather { min-width: 220px; }
+.sheet.landscape .roster .c-pos { width: 150px; white-space: nowrap; }
+.sheet .roster .c-pos { width: 118px; }
+.sheet .roster .c-name { width: 96px; }
+.sheet.landscape .tally td { height: 13.5px; }
+.sheet.landscape.st-officielle .mr-head { padding-block: 3px; }
+.sheet.landscape.compact .tally td { height: 12px; }
+.sheet.landscape .mr-col { gap: 4px; }
+.sheet.landscape .rules { gap: 1px; padding-block: 2px; font-size: .86em; }
+.sheet.landscape .mr-head .mr-team__name { font-size: 14px; }
+@media print { .demo-states, .preview__state { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="demo-states" role="group" aria-label="État de la maquette">
+  <span>Maquette · état :</span>
+  <label><input type="radio" name="demo-state" value="normal" checked> normal</label>
+  <label><input type="radio" name="demo-state" value="noopp"> sans prochain match</label>
+  <label><input type="radio" name="demo-state" value="loading"> aperçu en préparation</label>
+  <label><input type="radio" name="demo-state" value="error"> aperçu en erreur</label>
+</div>
+<div class="app-bg" aria-hidden="true">
+  <div class="app-bg__banner"><div class="app-bg__logo">TR</div><div><p class="app-bg__name">Les Tailleurs de Roc</p><p>Granitiers · Coach Brunhild · Prêt à jouer</p></div></div>
+  <div class="app-bg__rows"></div>
+</div>
+<div class="scrim" aria-hidden="true"></div>
+
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <header class="modal__head">
+    <div>
+      <h1 class="modal__title" id="modal-title">Imprimer la feuille d'équipe</h1>
+      <p class="modal__subtitle">Les Tailleurs de Roc · Ligue des Cimes</p>
+    </div>
+    <button class="icon-btn" type="button" aria-label="Fermer" data-action="close">×</button>
+  </header>
+
+  <form class="options" id="options" aria-label="Options d'impression">
+    <fieldset class="opt-group">
+      <legend>Équipes à imprimer</legend>
+      <label class="radio-card"><input type="radio" name="content" value="solo" id="content-solo">
+        <span class="radio-card__main">Mon équipe seule</span></label>
+      <label class="radio-card"><input type="radio" name="content" value="opp" id="content-opp" checked>
+        <span class="radio-card__main">Mon équipe et mon prochain adversaire</span>
+        <span class="radio-card__hint" id="opp-hint">Journée 6, samedi 25 octobre : Les Vents du Col (Zéphyriens)</span></label>
+      <label class="radio-card"><input type="radio" name="content" value="other" id="content-other">
+        <span class="radio-card__main">Mon équipe et une autre équipe</span>
+        <span class="radio-card__hint">Dans la Ligue des Cimes ; ma compétition par défaut.</span>
+        <select id="other-comp" aria-label="Compétition"></select>
+        <select id="other-team" aria-label="Équipe"></select></label>
+    </fieldset>
+
+    <fieldset class="opt-group">
+      <legend>Pages en plus</legend>
+      <label class="check"><input type="checkbox" id="annex" name="annex" checked>
+        <span>Détail des compétences</span>
+        <span class="check__hint">Seules celles des équipes imprimées, une fois chacune.</span></label>
+      <label class="check"><input type="checkbox" id="report" name="report" checked>
+        <span>Feuille de rapport de match</span>
+        <span class="check__hint">À remplir pendant le match, pour saisir le rapport ensuite.</span></label>
+      <label class="check check--sub"><input type="checkbox" id="copies" name="copies">
+        <span>En deux exemplaires, un par coach</span></label>
+      <label class="check"><input type="checkbox" id="inducements" name="inducements">
+        <span>Coups de pouce disponibles</span>
+        <span class="check__hint">Catalogue et prix pour chaque équipe imprimée, avec les règles d'achat.</span></label>
+      <label class="check"><input type="checkbox" id="starlist" name="starlist">
+        <span>Star players disponibles</span>
+        <span class="check__hint">Caractéristiques, prix, compétences et règle spéciale de ceux que les équipes imprimées peuvent engager.</span></label>
+    </fieldset>
+
+    <fieldset class="opt-group">
+      <legend>Mise en page</legend>
+      <div class="opt-row"><span>Orientation</span>
+        <div class="segmented"><label><input type="radio" name="orient" value="portrait" checked>Portrait</label><label><input type="radio" name="orient" value="landscape">Paysage</label></div></div>
+      <div class="opt-row"><span>Densité</span>
+        <div class="segmented"><label><input type="radio" name="density" value="normal" checked>Normale</label><label><input type="radio" name="density" value="compact">Compacte</label></div></div>
+      <div class="opt-row"><span>Encre</span>
+        <div class="segmented"><label><input type="radio" name="ink" value="color" checked>Couleur</label><label><input type="radio" name="ink" value="bw">Noir et blanc</label></div></div>
+      <div class="opt-row"><span>Style</span>
+        <div class="segmented"><label><input type="radio" name="style" value="sobre" checked>Sobre</label><label><input type="radio" name="style" value="officielle">Officielle</label><label><input type="radio" name="style" value="terrain">Terrain</label></div></div>
+    </fieldset>
+
+    <fieldset class="opt-group">
+      <legend>Sur les fiches</legend>
+      <div class="opt-row"><span>Indisponibles</span>
+        <div class="segmented"><label><input type="radio" name="unav" value="show">Afficher</label><label><input type="radio" name="unav" value="strike" checked>Barrer</label><label><input type="radio" name="unav" value="hide">Masquer</label></div></div>
+      <label class="check"><input type="checkbox" id="treasury" name="treasury" checked>
+        <span>Ma trésorerie</span>
+        <span class="check__hint">N'apparaît jamais sur la fiche de l'adversaire.</span></label>
+      <label class="check"><input type="checkbox" id="blank" name="blank" checked>
+        <span>Lignes vides jusqu'à 16 joueurs</span>
+        <span class="check__hint">Pour noter un journalier ou une recrue à la main.</span></label>
+    </fieldset>
+
+  </form>
+
+  <section class="preview" id="preview" aria-label="Aperçu avant impression">
+    <div class="preview__toolbar">
+      <span id="preview-count">Aperçu</span>
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button type="button" data-zoom="fit" aria-pressed="true">Ajuster</button>
+        <button type="button" data-zoom="full" aria-pressed="false">100 %</button>
+      </div>
+    </div>
+    <div id="pages" class="pages"></div>
+    <div class="preview__state" id="preview-loading" hidden><span class="spinner" aria-hidden="true"></span>Préparation de l'aperçu…</div>
+    <div class="preview__state" id="preview-error" hidden><p>L'aperçu n'a pas pu être préparé. Vérifie ta connexion, puis réessaie.</p><button class="btn btn--secondary" type="button" data-demo-retry>Réessayer</button></div>
+  </section>
+
+  <footer class="modal__foot">
+    <span class="foot__summary" id="summary"></span>
+    <div class="foot__actions">
+      <button class="btn btn--ghost" type="button" data-action="close">Annuler</button>
+      <button class="btn btn--primary" type="button" data-action="print">Imprimer</button>
+    </div>
+  </footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// ---------------------------------------------------------------- Données fictives
+// [n°, nom, poste, MV, FO, AG, PA, AR, base[], acquises[], blessure persistante, SPP, valeur, statut]
+// Données de la maquette : corpus fictif du dépôt (assets/references.example/).
+// [n°, nom, poste, MV, FO, AG, PA, AR, base[], acquises[], blessure persistante, SPP, valeur, statut]
+const TEAMS = {
+  own: { name: "Les Tailleurs de Roc", initials: "TR", roster: "Granitiers", coach: "Brunhild", color: "#5a4a3a",
+    spp: "brawlin_brutes", staffAllowed: ["APOTHECARY"], rules: [], treasury: 65, fans: 4, rerolls: [3, 60], apo: 1, assistants: 1, cheer: 1,
+    players: [
+      [1, "Menhir", "Colosse de Granit", 4, 5, "5+", "6+", "11+", ["Masse Inébranlable", "Lourdaud"], ["Poigne Large"], "", 14, 160, ""],
+      [2, "Basalte", "Percuteur", 5, 4, "5+", "6+", "10+", ["Appui Ferme"], ["Second Souffle", "Poigne Large"], "", 31, 130, ""],
+      [3, "Gneiss", "Percuteur", 5, 4, "5+", "6+", "9+", ["Appui Ferme"], ["Poigne Large"], "−1 AR", 12, 110, ""],
+      [4, "Schiste", "Percuteur", 5, 4, "5+", "6+", "10+", ["Appui Ferme"], [], "", 4, 90, "Rate le prochain match"],
+      [5, "Ardoise", "Percuteur", 5, 4, "5+", "6+", "10+", ["Appui Ferme"], ["Haine : Elfe"], "", 9, 90, ""],
+      [6, "Silex", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], ["Appui Ferme"], "", 8, 70, ""],
+      [7, "Quartz", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], ["Poigne Large"], "", 7, 90, ""],
+      [8, "Granite", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 2, 50, ""],
+      [9, "Marbre", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 1, 50, "Absent"],
+      [10, "Calcaire", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 0, 50, ""],
+      [11, "Grès", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 3, 50, ""],
+      [12, "Feldspath", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 0, 50, ""],
+      [13, "Obsidienne", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 5, 50, ""],
+      [14, "Jaspe", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 0, 50, ""],
+      [15, "Onyx", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 1, 50, ""],
+      [16, "Mica", "Piétaille des Carrières", 5, 3, "4+", "5+", "10+", [], [], "", 0, 50, ""],
+    ] },
+  opp: { name: "Les Vents du Col", initials: "VC", roster: "Zéphyriens", coach: "Aliza", color: "#2a6f97",
+    spp: "normal", staffAllowed: ["APOTHECARY"], rules: [], treasury: 40, fans: 3, rerolls: [2, 50], apo: 1, assistants: 2, cheer: 0,
+    players: [
+      [1, "Mistral", "Lanceur", 7, 3, "3+", "2+", "8+", ["Lancer Tendu"], ["Visée Longue"], "", 28, 120, ""],
+      [2, "Sirocco", "Lanceur", 7, 3, "3+", "2+", "8+", ["Lancer Tendu"], [], "", 6, 80, ""],
+      [3, "Alizé", "Receveur", 8, 2, "2+", "4+", "8+", ["Réception Sûre", "Pas de Côté"], ["Second Souffle"], "", 22, 105, ""],
+      [4, "Zéphyr", "Receveur", 7, 2, "2+", "4+", "8+", ["Réception Sûre", "Pas de Côté"], [], "−1 MV", 11, 85, ""],
+      [5, "Bise", "Receveur", 8, 2, "2+", "4+", "8+", ["Réception Sûre", "Pas de Côté"], [], "", 3, 85, ""],
+      [6, "Tramontane", "Receveur", 8, 2, "2+", "4+", "8+", ["Réception Sûre", "Pas de Côté"], [], "", 0, 85, "Rate le prochain match"],
+      [7, "Brise", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], ["Pas de Côté"], "", 7, 65, ""],
+      [8, "Rafale", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 2, 45, ""],
+      [9, "Noroît", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 0, 45, ""],
+      [10, "Suroît", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 1, 45, ""],
+      [11, "Autan", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 0, 45, ""],
+      [12, "Foehn", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 4, 45, ""],
+      [13, "Galerne", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 0, 45, ""],
+      [14, "Levant", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 0, 45, ""],
+      [15, "Ponant", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 2, 45, ""],
+      [16, "Mousson", "Piétaille des Courants", 7, 2, "3+", "4+", "8+", [], [], "", 0, 45, ""],
+    ] },
+  lanterne: { name: "Les Veilleurs d'Ombre", initials: "VO", roster: "Lanterniers", coach: "Morvan", color: "#4b3b6b",
+    spp: "normal", staffAllowed: [], rules: ["LOW_COST_LINEMEN"], treasury: 110, fans: 2, rerolls: [2, 70], apo: 0, assistants: 1, cheer: 2,
+    players: [
+      [1, "Fouine", "Rôdeur", 6, 3, "3+", "5+", "9+", ["Coup Bas"], ["Appui Ferme"], "", 13, 90, ""],
+      [2, "Belette", "Rôdeur", 6, 3, "3+", "5+", "9+", ["Coup Bas"], [], "", 2, 70, ""],
+      [3, "Trois-Yeux", "Mutant des Profondeurs", 6, 3, "4+", "5+", "9+", ["Écailles Dures"], ["Bras Supplémentaire"], "", 17, 115, ""],
+      [4, "Cornu", "Mutant des Profondeurs", 6, 3, "4+", "5+", "9+", ["Écailles Dures"], [], "", 5, 95, ""],
+      [5, "Mèche", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 3, 40, ""],
+      [6, "Suif", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 0, 40, ""],
+      [7, "Cire", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 1, 40, ""],
+      [8, "Fanal", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 0, 40, ""],
+      [9, "Lumignon", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 0, 40, "Absent"],
+      [10, "Bougie", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 2, 40, ""],
+      [11, "Falot", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 0, 40, ""],
+      [12, "Lampion", "Piétaille des Galeries", 6, 3, "4+", "5+", "9+", [], [], "", 0, 40, ""],
+    ] },
+  halfling: { name: "Les Tartes-à-Crème", initials: "TC", roster: "Semi-hommes", coach: "Pimprenelle", color: "#8a6d1d",
+    spp: "normal", staffAllowed: ["APOTHECARY"], rules: ["HALFLING"], treasury: 20, fans: 5, rerolls: [3, 60], apo: 1, assistants: 0, cheer: 1,
+    players: [
+      [1, "Crumble", "Batteur de Pâte", 5, 3, "3+", "5+", "8+", ["Appui Ferme"], ["Poigne Large"], "", 11, 90, ""],
+      [2, "Clafoutis", "Batteur de Pâte", 5, 3, "3+", "5+", "8+", ["Appui Ferme"], [], "", 3, 70, ""],
+      [3, "Macaron", "Attrapeur des Prés", 6, 2, "2+", "4+", "7+", ["Réception Sûre"], ["Second Souffle"], "", 15, 75, ""],
+      [4, "Éclair", "Attrapeur des Prés", 6, 2, "2+", "4+", "7+", ["Réception Sûre"], [], "", 1, 55, ""],
+      [5, "Brioche", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 2, 30, ""],
+      [6, "Chouquette", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 0, 30, ""],
+      [7, "Madeleine", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 4, 30, ""],
+      [8, "Financier", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 0, 30, ""],
+      [9, "Cannelé", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 1, 30, ""],
+      [10, "Kouign", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 0, 30, ""],
+      [11, "Galette", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 0, 30, ""],
+      [12, "Far", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 2, 30, ""],
+      [13, "Flan", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 0, 30, ""],
+      [14, "Babka", "Tourte-Pied", 5, 2, "3+", "4+", "7+", ["Pas de Côté"], [], "", 0, 30, ""],
+    ] },
+};
+
+// VE : valeur des joueurs + staff (relances, apothicaire 50, assistants et pom-pom girls 10).
+Object.values(TEAMS).forEach((t) => {
+  t.tv = t.players.reduce((sum, p) => sum + p[12], 0) + t.rerolls[0] * t.rerolls[1] + t.apo * 50 + (t.assistants + t.cheer) * 10;
+});
+
+// Espace de mon équipe → compétitions → équipes.
+const SPACES = {
+  cimes: { name: "Ligue des Cimes", comps: {
+    champ: { name: "Championnat des Cimes · saison 3", teams: ["opp", "lanterne", "halfling"] },
+    coupe: { name: "Coupe des Sommets 2026", teams: ["halfling", "opp"] } } },
+};
+const HOME = { space: "cimes", comp: "champ" };
+Object.values(TEAMS).forEach((t) => Object.assign(t, HOME));
+
+// Barèmes SPP (spp_rules.json) : les Granitiers portent la règle BRAWLIN_BRUTES.
+const SPP_SCALES = {
+  normal: { td: 4, cas: 2, pass: 1, int: 3, mvp: 5 },
+  brawlin_brutes: { td: 2, cas: 4, pass: 1, int: 3, mvp: 5 },
+};
+
+// Rappels fournis par le corpus de la ligue (nouveau fichier optionnel, textes fictifs ici).
+const REMINDERS = {
+  mvp: "Chaque coach désigne trois joueurs ayant joué ; un D3 désigne le MVP de l'équipe.",
+  fans: "Le vainqueur gagne un fan dévoué sur 4+ au D6 ; le perdant en perd un sur 1 ou 2. Match nul : rien ne change.",
+  weather: ["Grand Soleil", "Vent des Cimes", "Ciel Clément", "Brume Épaisse", "Grêle de Cailloux"],
+};
+
+// inducements_fr.json : prix, prix réduit et règles qui y donnent droit, maximum, restrictions.
+const INDUCEMENTS = [
+  { name: "Renfort Temporaire", cost: 20, reduced: 10, reducedFor: ["LOW_COST_LINEMEN"], max: 3, restricted: [], d: "Ajoute un remplaçant pour la durée de la rencontre." },
+  { name: "Chariot de Vivres", cost: 15, reduced: null, reducedFor: [], max: 5, restricted: [], d: "Améliore l'endurance de l'équipe jusqu'à la fin de la rencontre." },
+  { name: "Mage des Brumes", cost: 60, reduced: 40, reducedFor: [], max: 1, restricted: [], d: "Modifie une fois par rencontre les conditions météorologiques." },
+  { name: "Arbitre Complaisant", cost: 50, reduced: null, reducedFor: [], max: 1, restricted: [], d: "Ferme les yeux sur la première action déloyale de l'équipe." },
+  { name: "Guérisseur Itinérant", cost: 40, reduced: null, reducedFor: [], max: 1, restricted: ["APOTHECARY"], d: "Soigne un joueur une fois par rencontre." },
+  { name: "Masseur Douteux", cost: 30, reduced: 20, reducedFor: [], max: 2, restricted: ["Granitiers"], d: "Remet sur pied un joueur sonné, avec des résultats variables." },
+  { name: "Maitre cuisinier halfling", cost: 300, reduced: 100, reducedFor: ["HALFLING"], max: 1, restricted: [], d: "Au début de chaque mi-temps, peut voler des relances à l'adversaire." },
+];
+
+// star_players_fr.json
+const STAR_PLAYERS = [
+  { name: "Orval le Patient", type: "Percuteur, Granitier", s: [6, 4, "3+", "5+", "10+"], cost: 180, skills: ["Appui Ferme", "Masse Inébranlable"], power: ["Pierre Levée", "Une fois par rencontre, Orval peut annuler un déplacement forcé qui le viserait."], rosters: ["Granitiers", "Lanterniers"] },
+  { name: "Sylve aux Mains Vives", type: "Receveuse, Zéphyrienne", s: [8, 2, "2+", "3+", "8+"], cost: 210, skills: ["Réception Sûre", "Pas de Côté", "Second Souffle"], power: ["Course Portée", "Sylve peut relancer sa première tentative de réception de chaque mi-temps."], rosters: ["Granitiers", "Zéphyriens", "Lanterniers"] },
+  { name: "Grumo le Terne", type: "Colosse", s: [5, 5, "5+", "—", "11+"], cost: 120, skills: ["Lourdaud", "Masse Inébranlable"], power: ["Élan Pesant", "Grumo ne peut jamais recevoir le ballon, mais il déplace tout adversaire qu'il immobilise."], rosters: ["Granitiers"] },
+];
+
+// skills_fr.json + skill_cat_fr.json
+const SKILLS = {
+  "Appui Ferme": ["Général", "Ce joueur ne recule jamais de plus d'une case lorsqu'il est repoussé."],
+  "Second Souffle": ["Général", "Une fois par mi-temps, ce joueur peut se relever sans dépenser de mouvement."],
+  "Pas de Côté": ["Agilité", "Lorsqu'il est repoussé, ce joueur choisit lui-même la case d'arrivée parmi les cases libres adjacentes."],
+  "Réception Sûre": ["Agilité", "Ce joueur ignore le premier échec de réception de chaque mi-temps."],
+  "Poigne Large": ["Force", "Ce joueur peut immobiliser un adversaire adjacent au lieu de le repousser."],
+  "Masse Inébranlable": ["Force", "Ce joueur ne peut être déplacé par aucun effet provoqué par un adversaire de Force inférieure."],
+  "Lancer Tendu": ["Passe", "Ce joueur peut échanger la portée de sa passe contre un bonus de précision."],
+  "Visée Longue": ["Passe", "Ce joueur ignore le premier modificateur négatif de distance sur chacune de ses passes."],
+  "Coup Bas": ["Retors", "Ce joueur peut tenter une action déloyale contre un adversaire au sol, au risque d'être exclu."],
+  "Écailles Dures": ["Mutations", "L'Armure de ce joueur est considérée comme supérieure d'un point face aux agressions."],
+  "Bras Supplémentaire": ["Mutations", "Ce joueur bénéficie d'un bonus à toutes ses tentatives de récupération du ballon."],
+  "Lourdaud": ["Traits", "Ce joueur ne peut pas effectuer d'action de course deux tours de suite."],
+  "Haine : Elfe": ["Traits", "Ce joueur hait les Elfes."],
+};
+
+// ---------------------------------------------------------------- Rendu
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const baseName = (skill) => skill.replace(/\s*\(.*\)$/, "");
+const ROUND = "Journée 6 · samedi 25 octobre 2026";
+const PRINTED = "imprimé le 21/10/2026";
+
+function readState() {
+  const f = $("#options");
+  const v = (n) => f.querySelector(`[name="${n}"]:checked`)?.value;
+  return { content: v("content"), other: $("#other-team").value, annex: $("#annex").checked, starlist: $("#starlist").checked, inducements: $("#inducements").checked, report: $("#report").checked,
+    copies: $("#copies").checked, orient: v("orient"), density: v("density"), ink: v("ink"), unav: v("unav"),
+    treasury: $("#treasury").checked, blank: $("#blank").checked, style: v("style") };
+}
+
+function sheetClass(s) {
+  return ["sheet", s.orient === "landscape" ? "landscape" : "", s.density === "compact" ? "compact" : "",
+    s.ink === "bw" ? "ink-bw" : "", "st-" + s.style].join(" ");
+}
+
+function statsHtml(team, isOwn, s) {
+  const avail = team.players.filter((p) => !p[13]).length;
+  const cells = [
+    ["VE", `${team.tv} kPo`, "", true],
+    isOwn && s.treasury ? ["Trésorerie", `${team.treasury} kPo`, "", false] : null,
+    ["Alignables", `${avail} / ${team.players.length}`, "", true],
+    ["Relances", team.rerolls[0], `${team.rerolls[1]} kPo l'une`, false],
+    ["Fans dévoués", team.fans, "", false],
+  ].filter(Boolean);
+  return `<div class="ts-stats">${cells.map(([k, v, d, key]) =>
+    `<div class="ts-stat${key ? " key" : ""}"><span class="ts-stat__k">${k}</span><span class="ts-stat__v">${v}</span>${d ? `<span class="ts-stat__d">${d}</span>` : ""}</div>`).join("")}</div>`;
+}
+
+function staffHtml(team) {
+  return `<div class="staff"><div><span>Relances</span><b>${team.rerolls[0]} × ${team.rerolls[1]}</b></div><div><span>Apothicaire</span><b>${team.apo ? "Oui" : "Non"}</b></div><div><span>Assistants</span><b>${team.assistants}</b></div><div><span>Pom-pom girls</span><b>${team.cheer}</b></div></div>`;
+}
+
+function playerRow(p, s) {
+  const [n, name, pos, ma, st, ag, pa, av, base, acq, inj, spp, val, status] = p;
+  if (status && s.unav === "hide") return "";
+  const down = (stat) => inj && inj.includes(stat) ? " stat-down" : "";
+  const skills = [...base.map(esc), ...acq.map((k) => `<span class="acq">${esc(k)}</span>`)].join(", ");
+  return `<tr class="${status && s.unav === "strike" ? "struck" : ""}">
+    <td class="c-n num">${n}</td><td class="c-name">${esc(name)}${status ? `<br><span class="tag">${esc(status)}</span>` : ""}</td>
+    <td class="c-pos">${esc(pos)}</td><td class="c-stat num${down("MV")}">${ma}</td><td class="c-stat num">${st}</td><td class="c-stat num">${ag}</td>
+    <td class="c-stat num">${pa}</td><td class="c-stat num${down("AR")}">${av}</td><td class="c-skills">${skills}</td>
+    <td class="c-inj">${esc(inj)}</td><td class="c-spp num">${spp}</td><td class="c-val right">${val}</td></tr>`;
+}
+
+function teamSheet(team, isOwn, s) {
+  let rows = team.players.map((p) => playerRow(p, s)).join("");
+  const shown = (rows.match(/<tr/g) || []).length;
+  if (s.blank) for (let i = shown; i < 16; i++) rows += `<tr class="blank">${"<td></td>".repeat(12)}</tr>`;
+  return `<section class="${sheetClass(s)}">
+    <header class="ts-head">
+      <div class="ts-logo" style="--team:${team.color}">${team.initials}</div>
+      <div><div class="ts-role">${isOwn ? "Mon équipe" : "Adversaire"}</div><h2 class="ts-name">${esc(team.name)}</h2>
+        <div class="ts-sub">${esc(team.roster)} · Coach ${esc(team.coach)}</div></div>
+      <div class="ts-meta"><strong>${esc(SPACES[team.space].name)}</strong><br>${esc(SPACES[team.space].comps[team.comp].name)}<br>${isOwn || team === TEAMS.opp ? ROUND : ""}</div>
+    </header>
+    ${statsHtml(team, isOwn, s)}
+    <table class="roster"><thead><tr><th class="num">N°</th><th>Joueur</th><th>Poste</th><th class="num">MV</th><th class="num">FO</th><th class="num">AG</th><th class="num">PA</th><th class="num">AR</th><th>Compétences</th><th>Bless.</th><th class="num">SPP</th><th class="right">kPo</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="roster-legend"><span>En gras : compétences acquises. Souligné : caractéristique réduite par une blessure.</span></div>
+    ${staffHtml(team)}
+    <div class="sheet-foot"><span>kreek · ${PRINTED}</span><span class="page-no"></span></div>
+  </section>`;
+}
+
+function annexPages(teams, s) {
+  const used = new Map();
+  teams.forEach((t) => t.players.forEach((p) => [...p[8], ...p[9]].forEach((k) => {
+    const b = baseName(k);
+    if (!used.has(b)) used.set(b, new Set());
+    used.get(b).add(t.name.replace(/^(Les |Le |La )/, ""));
+  })));
+  const list = [...used.keys()].sort((a, b) => a.localeCompare(b, "fr"));
+  const per = s.orient === "landscape" ? (s.density === "compact" ? 33 : 24) : (s.density === "compact" ? 40 : 28);
+  const pages = [];
+  for (let i = 0; i < list.length; i += per) {
+    const items = list.slice(i, i + per).map((k) => {
+      const [cat, d] = SKILLS[k] || ["—", ""];
+      return `<div class="skill"><div class="skill__h"><span class="skill__name">${esc(k)}</span><span class="skill__cat">${cat}</span></div>
+        <div class="skill__who">${[...used.get(k)].map(esc).join(" · ")}</div><div class="skill__d">${esc(d)}</div></div>`;
+    }).join("");
+    pages.push({ label: "Compétences", html: `<section class="${sheetClass(s)}">
+      <div><h2 class="annex-title">Compétences en jeu</h2><div class="annex-sub">${list.length} compétences et traits portés par ${teams.map((t) => esc(t.name)).join(" et ")}.</div></div>
+      <div class="skills">${items}</div>
+      <div class="sheet-foot"><span>kreek · ${PRINTED}</span><span class="page-no"></span></div></section>` });
+  }
+  return pages;
+}
+
+const isOwnTeam = (t) => t === TEAMS.own;
+
+function tallyTable(team) {
+  const head = `<thead><tr><th>N°</th><th>Joueur</th><th>TD</th><th>Passe</th><th>Lancer</th><th>Int.</th><th>Sortie</th><th>Agr.</th><th>Blessé</th></tr></thead>`;
+  const rows = [];
+  for (let i = 0; i < 16; i++) {
+    const p = team ? team.players.filter((x) => !x[13])[i] : null;
+    rows.push(`<tr><td class="t-n">${p ? p[0] : ""}</td><td class="t-name">${p ? esc(p[1]) : ""}</td>${'<td class="t-box"></td>'.repeat(7)}</tr>`);
+  }
+  return `<table class="tally">${head}<tbody>${rows.join("")}</tbody></table>`;
+}
+
+function turnsTable(home, away) {
+  const turns = Array.from({ length: 8 }, (_, i) => `<th>${i + 1}</th>`).join("");
+  const row = (t) => `<tr><td class="t-team">${t ? esc(t.name) : ""}</td>${"<td></td>".repeat(8)}<td></td>${"<td></td>".repeat(8)}</tr>`;
+  return `<table class="turns"><thead><tr><th class="t-team">Score par tour</th>${turns}<th>MT</th>${turns}</tr></thead><tbody>${row(home)}${row(away)}</tbody></table>`;
+}
+
+function teamHeadCell(t, cls) {
+  return t ? `<div class="mr-team ${cls}"><span class="mr-team__name">${esc(t.name)}</span><span class="mr-team__sub">${esc(t.roster)} · Coach ${esc(t.coach)} · VE ${t.tv} kPo</span></div>`
+           : `<div class="mr-team ${cls}"><span class="mr-team__name write"></span><span class="mr-team__sub">Équipe · coach · VE</span></div>`;
+}
+
+function reportHead(home, away, copy) {
+  return `<div class="mr-head">${teamHeadCell(home, "home")}<div class="mr-score"><span class="box"></span>–<span class="box"></span></div>${teamHeadCell(away, "away")}</div>
+    <div class="mr-meta"><span><b>Feuille de match</b> · ${ROUND}${copy ? " · " + copy : ""}</span>
+      ${weatherHtml()}</div>`;
+}
+
+// Météos : liste du corpus de la ligue, cochable ; ligne libre si le corpus n'en fournit pas.
+function weatherHtml() {
+  if (!REMINDERS.weather || !REMINDERS.weather.length) return `<span class="line mr-weather"><b>Météo</b><span class="fill"></span></span>`;
+  return `<span class="chips"><b>Météo</b>${REMINDERS.weather.map((m) => `<span><i class="box sm"></i>${esc(m)}</span>`).join("")}</span>`;
+}
+
+// Favori : VE la plus forte, l'équipe à domicile en cas d'égalité (match_report_pre_match.rs).
+function underdogInfo(t, other) {
+  if (!t || !other) return null;
+  const top = t.tv >= other.tv ? t : other;
+  return { top, diff: Math.abs(t.tv - other.tv) };
+}
+
+function moneyLine(t, other) {
+  const u = underdogInfo(t, other);
+  if (!u) return `<div class="line"><span>Favori ou outsider · petite monnaie</span><span class="fill"></span><span>kPo</span></div>`;
+  if (u.top === t) return `<div class="money"><b>Favori</b> (VE ${t.tv} contre ${other.tv}) : il achète en premier, sur sa trésorerie.</div>`;
+  return `<div class="money"><b>Outsider</b> : petite monnaie de <b>${u.diff} kPo</b>, plus ce que le favori dépense.</div>`;
+}
+
+function preBlock(t, other) {
+  return `<div class="mr-block pre"><div class="mr-title">Avant le match</div>
+    <div class="line"><span>Fans dévoués ${t ? t.fans : "…"} + D3</span><i class="box sm"></i><span>= fans</span><i class="box sm"></i></div>
+    ${moneyLine(t, other)}
+    <div class="line"><span>Coups de pouce</span><span class="fill"></span></div>
+    <div class="line"><i class="box sm"></i><span>Star players</span><span class="fill"></span></div>
+    <div class="line"><i class="box sm"></i><span>Mercenaires</span><span class="fill"></span></div>
+    <div class="line"><i class="box sm"></i><span>Journaliers</span><span class="fill"></span></div>
+    <div class="line"><span>Total dépensé</span><span class="fill"></span><span>kPo</span></div></div>`;
+}
+
+function postBlock() {
+  return `<div class="mr-block"><div class="mr-title">Après le match</div>
+    <div class="line"><span>MVP · nommés</span><span class="fill"></span><span>dé</span><i class="box sm"></i><span>→ n°</span><i class="box sm"></i></div>
+    <div class="line calc"><span>Gains = (</span><i class="box sm"></i><span>+</span><i class="box sm"></i><span>) ÷ 2 × 10 +</span><i class="box sm"></i><span>TD × 10 +</span><i class="box sm"></i><span>=</span><span class="fill"></span><span>kPo</span></div>
+    <div class="line"><span>Fans dévoués</span><span class="chips">${["−2", "−1", "0", "+1", "+2"].map((v) => `<span><i class="box sm"></i>${v}</span>`).join("")}</span></div>
+    <div class="line"><i class="box sm"></i><span>Bonus de non-temporisation : + 10 kPo</span></div></div>`;
+}
+
+// Le barème SPP dépend du roster : chaque colonne imprime le sien.
+function sppLegend(t) {
+  if (!t) return `<div class="legend">SPP : selon le barème de l'équipe.</div>`;
+  const k = SPP_SCALES[t.spp];
+  return `<div class="legend">SPP ${t.spp === "normal" ? "" : "(" + esc(t.spp) + ") "}: TD ${k.td} · Sortie ${k.cas} · Int. ${k.int} · Passe ou lancer ${k.pass} · MVP ${k.mvp}</div>`;
+}
+
+function teamColumn(t, other) {
+  return `<div class="mr-col"><div class="mr-title">${t ? esc(t.name) : "Adversaire"}</div>${preBlock(t, other)}${tallyTable(t)}${sppLegend(t)}${postBlock()}</div>`;
+}
+
+// MVP et fans : textes du corpus de la ligue, absents s'il ne les fournit pas. Gains : règle codée dans kreek.
+function reportRules() {
+  return `<div class="rules">
+    ${REMINDERS.mvp ? `<div><b>MVP.</b> ${esc(REMINDERS.mvp)}</div>` : ""}
+    <div><b>Gains.</b> Fans des deux équipes additionnés, divisés par 2 (arrondi inférieur), multipliés par 10 kPo, plus 10 kPo par touchdown marqué. Le bonus de non-temporisation ajoute 10 kPo.</div>
+    ${REMINDERS.fans ? `<div><b>Fans dévoués.</b> ${esc(REMINDERS.fans)} Jamais sous 0 ni au-dessus de 20.</div>` : ""}
+    <div><b>Actions.</b> Un trait par action. Blessé : C commotion · A amoché · BS blessure sérieuse · S séquelle (préciser la caractéristique) · M mort.</div></div>`;
+}
+
+const FOOT = (extra) => `<div class="sheet-foot"><span>kreek · ${PRINTED}${extra ? " · " + extra : ""}</span><span class="page-no"></span></div>`;
+
+function reportPage(home, away, s, copy) {
+  return `<section class="${sheetClass(s)}">${reportHead(home, away, copy)}
+    <div class="mr-cols">${teamColumn(home, away)}${teamColumn(away, home)}</div>
+    ${reportRules()}${FOOT("à reporter dans le rapport de match")}</section>`;
+}
+
+// Prix pour une équipe, ou null si le coup de pouce lui est fermé (restrictedTo : roster ou staff autorisé).
+function inducementPrice(t, ind) {
+  const open = !ind.restricted.length || ind.restricted.some((r) => r === t.roster || t.staffAllowed.includes(r));
+  if (!open) return null;
+  return ind.reduced !== null && ind.reducedFor.some((r) => t.rules.includes(r)) ? ind.reduced : ind.cost;
+}
+
+function inducementSection(teams) {
+  const head = teams.map((t) => `<th class="right">${esc(t.name)}</th>`).join("");
+  const rows = INDUCEMENTS.map((ind) => `<tr><td><b>${esc(ind.name)}</b><div class="ind-d">${esc(ind.d)}</div></td>${teams.map((t) => {
+    const p = inducementPrice(t, ind);
+    return `<td class="right">${p === null ? "—" : p + " kPo"}</td>`;
+  }).join("")}<td class="num">${ind.max}</td></tr>`).join("");
+  return `<div><h2 class="annex-title">Coups de pouce disponibles</h2><div class="annex-sub">Catalogue du palier de la compétition, au prix de chaque équipe. « — » : non disponible pour cette équipe.</div></div>
+    <table class="ind"><thead><tr><th>Coup de pouce</th>${head}<th class="num">Max</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="rules"><div><b>Ordre.</b> Le favori, l'équipe à la VE la plus forte, achète en premier et paie sur sa trésorerie. L'outsider achète ensuite.</div>
+      <div><b>Petite monnaie.</b> L'outsider reçoit l'écart de VE plus tout ce que le favori a dépensé, et peut y ajouter jusqu'à 50 kPo de sa trésorerie.</div>
+      <div><b>Star players.</b> Deux au plus par équipe, et jamais celui que l'adversaire a déjà engagé.</div>
+      <div><b>Mercenaires.</b> Prix du poste + 30 kPo, ou + 80 kPo au niveau 1. Trois au plus par match, dans la limite du poste.</div>
+      <div><b>Journaliers.</b> L'équipe est complétée automatiquement jusqu'à 11 joueurs.</div></div>`;
+}
+
+function starCard(sp, teams) {
+  return `<div class="sp">
+    <div class="sp__h"><span class="sp__name">${esc(sp.name)}</span><span class="sp__cost">${sp.cost} kPo</span></div>
+    <div class="sp__type">${esc(sp.type)} · pour ${teams.filter((t) => sp.rosters.includes(t.roster)).map((t) => esc(t.name)).join(" et ")}</div>
+    <table class="sp__stats"><tr><th>MV</th><th>FO</th><th>AG</th><th>PA</th><th>AR</th></tr><tr>${sp.s.map((v) => `<td>${v}</td>`).join("")}</tr></table>
+    <div class="sp__skills">${sp.skills.map(esc).join(", ")}</div>
+    <div class="sp__power"><b>${esc(sp.power[0])}.</b> ${esc(sp.power[1])}</div></div>`;
+}
+
+// Coups de pouce et star players partagent leurs pages quand les deux options sont cochées.
+function inducementPages(teams, s) {
+  const stars = s.starlist ? STAR_PLAYERS.filter((sp) => teams.some((t) => sp.rosters.includes(t.roster))) : [];
+  const full = s.orient === "landscape" ? 6 : (s.density === "compact" ? 10 : 8);
+  const first = s.inducements ? Math.max(0, full - (s.orient === "landscape" ? 3 : 2)) : full;
+  const chunks = [stars.slice(0, first)];
+  for (let i = first; i < stars.length; i += full) chunks.push(stars.slice(i, i + full));
+  const label = s.inducements && s.starlist ? "Coups de pouce et star players" : s.inducements ? "Coups de pouce" : "Star players";
+  return chunks.filter((c, i) => c.length || (i === 0 && s.inducements)).map((cards, i) => ({ label, html: `<section class="${sheetClass(s)}">
+    ${i === 0 && s.inducements ? inducementSection(teams) : ""}
+    ${cards.length ? `<div><h2 class="annex-title">Star players disponibles</h2><div class="annex-sub">${stars.length} star players que ${teams.map((t) => esc(t.name)).join(" ou ")} peuvent engager. Deux au plus par équipe.</div></div><div class="sps">${cards.map((sp) => starCard(sp, teams)).join("")}</div>` : ""}
+    ${FOOT("")}</section>` }));
+}
+
+function secondTeam(s) {
+  return s.content === "opp" ? TEAMS.opp : s.content === "other" ? TEAMS[s.other] : null;
+}
+
+function buildPages(s) {
+  const own = TEAMS.own;
+  const second = secondTeam(s);
+  const teams = second ? [own, second] : [own];
+  const pages = [{ label: "Fiche · " + own.name, html: teamSheet(own, true, s) }];
+  if (second) pages.push({ label: "Fiche · " + second.name, html: teamSheet(second, false, s) });
+  if (s.annex) pages.push(...annexPages(teams, s));
+  if (s.inducements || s.starlist) pages.push(...inducementPages(teams, s));
+  if (s.report) {
+    const n = s.copies ? 2 : 1;
+    for (let i = 0; i < n; i++)
+      pages.push({ label: "Feuille de match" + (n > 1 ? ` (exemplaire ${i + 1})` : ""), html: reportPage(own, second, s, n > 1 ? `exemplaire ${i + 1} / 2` : "") });
+  }
+  return pages;
+}
+
+function fillSelect(sel, entries, wanted) {
+  sel.innerHTML = entries.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+  if (wanted && entries.some((e) => e[0] === wanted)) sel.value = wanted;
+}
+
+// Autre équipe : toujours dans l'espace de mon équipe, compétition puis équipe.
+function syncCascade(changedId) {
+  const co = $("#other-comp"), te = $("#other-team");
+  const space = SPACES[HOME.space];
+  if (!co.options.length) fillSelect(co, Object.entries(space.comps).map(([k, v]) => [k, v.name]), HOME.comp);
+  if (changedId !== "other-team")
+    fillSelect(te, space.comps[co.value].teams.map((k) => [k, `${TEAMS[k].name} · ${TEAMS[k].roster}`]), te.value);
+}
+
+let zoom = "fit";
+function render(e) {
+  syncCascade(e && e.target ? e.target.id : "");
+  const s = readState();
+  $("#copies").disabled = !s.report;
+  ["#other-comp", "#other-team"].forEach((id) => { $(id).disabled = s.content !== "other"; });
+  document.getElementById("page-size").textContent = `@page { size: A4 ${s.orient}; margin: 0; }`;
+  const pages = buildPages(s);
+  const host = $("#pages");
+  host.innerHTML = pages.map((p, i) => `<div class="page-slot"><span class="page-slot__label">${i + 1} · ${esc(p.label)}</span><div class="page-frame">${p.html}</div></div>`).join("");
+  host.querySelectorAll(".page-no").forEach((el, i) => { el.textContent = `page ${i + 1} / ${pages.length}`; });
+  $("#preview-count").textContent = `${pages.length} page${pages.length > 1 ? "s" : ""} · A4 ${s.orient === "portrait" ? "portrait" : "paysage"}`;
+  $("#summary").innerHTML = `<strong>${pages.length} page${pages.length > 1 ? "s" : ""}</strong> · ${s.ink === "bw" ? "noir et blanc" : "couleur"} · ${s.density === "compact" ? "compacte" : "normale"}`;
+  fit();
+}
+
+function fit() {
+  const preview = $("#preview");
+  const avail = preview.clientWidth - 48;
+  document.querySelectorAll(".page-frame").forEach((frame) => {
+    const sheet = frame.firstElementChild;
+    const w = sheet.offsetWidth, h = sheet.offsetHeight;
+    const k = zoom === "full" ? 1 : Math.min(1, avail / w);
+    sheet.style.transform = `scale(${k})`;
+    frame.style.width = `${w * k}px`;
+    frame.style.height = `${h * k}px`;
+  });
+}
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+$("#options").addEventListener("change", render);
+$("#options").addEventListener("submit", (e) => e.preventDefault());
+document.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => {
+  zoom = b.dataset.zoom;
+  document.querySelectorAll("[data-zoom]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  fit();
+}));
+document.querySelectorAll("[data-action]").forEach((b) => b.addEventListener("click", () => {
+  const msgs = { close: "Maquette : la modale se fermerait.", print: "Maquette : l'application ouvrirait la boîte d'impression du navigateur, qui propose aussi « Enregistrer en PDF »." };
+  toast(msgs[b.dataset.action]);
+}));
+window.addEventListener("resize", fit);
+
+// États de la maquette — absents de l'application.
+function applyDemoState() {
+  const state = document.querySelector('[name="demo-state"]:checked').value;
+  const opp = $("#content-opp");
+  opp.disabled = state === "noopp";
+  $("#opp-hint").textContent = state === "noopp" ? "Aucun match à venir pour mon équipe dans cette compétition." : "Journée 6, samedi 25 octobre : Les Vents du Col (Zéphyriens)";
+  if (opp.disabled && opp.checked) $("#content-solo").checked = true;
+  $("#preview-loading").hidden = state !== "loading";
+  $("#preview-error").hidden = state !== "error";
+  $("#pages").hidden = state === "loading" || state === "error";
+  render();
+}
+document.querySelectorAll('[name="demo-state"]').forEach((r) => r.addEventListener("change", applyDemoState));
+document.querySelector("[data-demo-retry]").addEventListener("click", () => { document.querySelector('[name="demo-state"][value="normal"]').checked = true; applyDemoState(); });
+render();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+</script>
+
+</body>
+</html>

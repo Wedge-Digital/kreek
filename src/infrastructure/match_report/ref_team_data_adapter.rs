@@ -85,6 +85,11 @@ impl ITeamDataPort for RefTeamDataAdapter {
         Some(team.team_value.0)
     }
 
+    async fn find_team_season(&self, team_id: &str) -> Option<String> {
+        let team = self.team_repo.find_by_id(team_id).await.ok()??;
+        team.season_id.map(|s| s.to_string())
+    }
+
     async fn find_team_treasury(&self, team_id: &str) -> Option<u32> {
         let team = self.team_repo.find_by_id(team_id).await.ok()??;
         Some(team.treasury().0)

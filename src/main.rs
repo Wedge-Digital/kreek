@@ -517,7 +517,12 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     references.repository.clone(),
                 ),
             );
-            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, admin_access.clone(), spp_calculator, keyword_catalog, event_bus.clone())
+            let reference_catalog = Arc::new(
+                crate::infrastructure::match_report::reference_catalog_adapter::ReferenceCatalogAdapter::new(
+                    references.repository.clone(),
+                ),
+            );
+            match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, admin_access.clone(), spp_calculator, keyword_catalog, reference_catalog, event_bus.clone())
         },
         teams: {
             TeamsContext::new(
@@ -579,6 +584,16 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     ),
                     Arc::new(
                         crate::app::team_creation::io::team_creation_repository::TeamDraftRepository::new(pool.clone()),
+                    ),
+                ),
+            ),
+            Arc::new(
+                crate::infrastructure::teams::space_ownership::OtherTeamSpaceOwnership::new(
+                    Arc::new(
+                        crate::app::teams::io::repository::team_repository::TeamRepository::new(
+                            pool.clone(),
+                            event_bus.clone(),
+                        ),
                     ),
                 ),
             ),

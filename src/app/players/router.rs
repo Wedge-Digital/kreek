@@ -10,6 +10,10 @@ use crate::app::players::io::web::roster_edition_controller::post_update_roster;
 use crate::app::players::io::web::widgets::evolution_journal_widget::evolution_journal_widget;
 use crate::app::players::io::web::widgets::match_player_selector_widget::match_player_selector_widget;
 use crate::app::players::io::web::widgets::player_customisation_widget::player_customisation_widget;
+use crate::app::players::io::web::widgets::player_print_skills_widget::{
+    get_skills_annex, get_skills_annex_with,
+};
+use crate::app::players::io::web::widgets::player_print_table_widget::get_player_print_table;
 use crate::app::players::io::web::widgets::player_table_widget::player_table_widget;
 use crate::app::players::io::web::widgets::spp_spending_widget::spp_spending_widget;
 use crate::app::players::routes::path;
@@ -22,6 +26,9 @@ use axum::{
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(path::PLAYERS_BY_TEAM_WIDGET, get(player_table_widget))
+        .route(path::PLAYERS_BY_TEAM_PRINT, get(get_player_print_table))
+        .route(path::PRINT_SKILLS, get(get_skills_annex))
+        .route(path::PRINT_SKILLS_WITH, get(get_skills_annex_with))
         .route(
             path::JOURNEYMEN_WIDGET,
             get(crate::app::players::io::web::widgets::journeymen_widget::journeymen_widget),

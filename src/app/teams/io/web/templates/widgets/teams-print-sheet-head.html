@@ -1,0 +1,57 @@
+{# L'en-tête d'une fiche imprimée (carte 597) — identité, chiffres, staff.
+
+   Chaque valeur vient du domaine ou du catalogue, transposée par
+   `print_builders::build_sheet_head_vm` : le gabarit n'en calcule aucune.
+   Feuille : `widgets/team-print-sheet-head.css`, racine `.team-print-sheet-head`. #}
+<div class="team-print-sheet-head" hx-disinherit="*">
+  <header class="team-print-sheet-head-top">
+    {% if let Some(url) = vm.logo_url %}
+    <img class="team-print-sheet-head-logo" src="{{ url }}" alt="" width="58" height="58">
+    {% else %}
+    <div class="team-print-sheet-head-logo team-print-sheet-head-logo--initials">{{ vm.initials }}</div>
+    {% endif %}
+    <div class="team-print-sheet-head-id">
+      <div class="team-print-sheet-head-role">{{ vm.role_label }}</div>
+      <h2 class="team-print-sheet-head-name">{{ vm.name }}</h2>
+      <div class="team-print-sheet-head-sub">{{ vm.roster_name }}{% if !vm.coach_name.is_empty() %} · Coach {{ vm.coach_name }}{% endif %}</div>
+    </div>
+    <div class="team-print-sheet-head-meta">
+      {% if let Some(c) = vm.competition_name %}<strong>{{ c }}</strong>{% endif %}
+      {% if let Some(s) = vm.season_name %}<span>{{ s }}</span>{% endif %}
+    </div>
+  </header>
+
+  <div class="team-print-sheet-head-stats">
+    <div class="team-print-sheet-head-stat team-print-sheet-head-stat--key">
+      <span class="team-print-sheet-head-stat-k">VE</span>
+      <span class="team-print-sheet-head-stat-v">{{ vm.team_value_kpo }} kPo</span>
+    </div>
+    <div class="team-print-sheet-head-stat">
+      <span class="team-print-sheet-head-stat-k">Trésorerie</span>
+      <span class="team-print-sheet-head-stat-v">{{ vm.treasury_kpo }} kPo</span>
+    </div>
+    <div class="team-print-sheet-head-stat team-print-sheet-head-stat--key">
+      <span class="team-print-sheet-head-stat-k">Alignables</span>
+      <span class="team-print-sheet-head-stat-v">{{ vm.alignable }} / {{ vm.squad_size }}</span>
+    </div>
+    <div class="team-print-sheet-head-stat">
+      <span class="team-print-sheet-head-stat-k">Relances</span>
+      <span class="team-print-sheet-head-stat-v">{{ vm.rerolls }}</span>
+      <span class="team-print-sheet-head-stat-d">{% match vm.reroll_price_kpo %}{% when Some with (prix) %}{{ prix }} kPo l'une{% when None %}—{% endmatch %}</span>
+    </div>
+    <div class="team-print-sheet-head-stat">
+      <span class="team-print-sheet-head-stat-k">Fans dévoués</span>
+      <span class="team-print-sheet-head-stat-v">{{ vm.dedicated_fans }}</span>
+    </div>
+  </div>
+
+  <div class="team-print-sheet-head-staff">
+    {% for line in vm.staff %}
+    <div class="team-print-sheet-head-staff-line">
+      <span>{{ line.label }}</span>
+      <b>{{ line.quantity }}</b>
+      <span class="team-print-sheet-head-staff-price">{% match line.unit_price_kpo %}{% when Some with (prix) %}{{ prix }} kPo{% when None %}—{% endmatch %}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>

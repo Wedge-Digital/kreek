@@ -90,8 +90,8 @@
     <span class="state-banner-text"><strong>{{ banner.title }}</strong> {{ banner.detail }}</span>
     {% for cta in banner.ctas %}
       {% match cta %}
-        {% when BannerCtaVm::Print %}
-          <button class="state-banner-cta state-banner-cta--outline" onclick="window.print()">Imprimer en PDF</button>
+        {% when BannerCtaVm::Print { href } %}
+          <a class="state-banner-cta state-banner-cta--outline" hx-get="{{ href }}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" hx-push-url="true">Imprimer</a>
         {% when BannerCtaVm::Navigate { label, href } %}
           <a class="state-banner-cta" hx-get="{{ href }}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" hx-push-url="true">{{ label }}</a>
         {% when BannerCtaVm::Mutate { label, post_url } %}

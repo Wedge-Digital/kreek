@@ -306,3 +306,21 @@ pub struct League {
     pub uid: String,
     pub label: String,
 }
+
+// ── Rappels de match (carte 604) ──────────────────────────────────────────────
+
+/// Les rappels que la feuille de match imprimée porte, et que kreek ne code pas :
+/// la règle du MVP, celle des fans dévoués, la liste des météos.
+///
+/// **Fichier optionnel du corpus** (`match_reminders_fr.json`) : ce sont des
+/// règles de jeu, que le dépôt ne contient pas (`CONTRIBUTING.md`). Absent, tout
+/// est vide et la feuille s'imprime sans ces rappels.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct MatchReminders {
+    #[serde(default)]
+    pub mvp: Option<String>,
+    #[serde(default)]
+    pub fans: Option<String>,
+    #[serde(default)]
+    pub weather: Vec<String>,
+}

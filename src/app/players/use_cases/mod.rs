@@ -8,5 +8,6 @@ pub mod player_access_service;
 pub mod player_stats_service;
 pub mod purchase_skill_use_case;
 pub mod revert_customisation_use_case;
+pub mod skills_annex_service;
 pub mod update_roster_use_case;
 pub mod validate_customisation_use_case;

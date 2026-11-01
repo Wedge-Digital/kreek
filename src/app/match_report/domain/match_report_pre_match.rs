@@ -2,6 +2,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::underdog;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
@@ -14,7 +15,13 @@ use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 
 /// Ce que l'underdog peut ajouter à sa petite monnaie, pris à sa trésorerie.
 /// Plafond de règlement, pas de configuration.
-const MAX_TREASURY_TOP_UP: u32 = 50;
+pub const MAX_TREASURY_TOP_UP: u32 = 50;
+/// Star players qu'une équipe peut engager pour un match. Publique, comme les
+/// deux suivantes, pour que la feuille imprimée rappelle la règle sans en
+/// recopier le chiffre (carte 607).
+pub const MAX_STAR_PLAYERS: usize = 2;
+/// Mercenaires par match, toutes positions confondues.
+pub const MAX_MERCENARIES: u8 = 3;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 
@@ -112,12 +119,13 @@ impl MatchReportPreMatch {
     }
 
     pub fn topdog_team_id(&self) -> &TeamId {
-        let home_tv = self.home_team_value.as_ref().expect("TV not recorded");
-        let away_tv = self.away_team_value.as_ref().expect("TV not recorded");
-        if away_tv > home_tv {
-            &self.away_team_id
-        } else {
-            &self.home_team_id
+        let home_tv = self.home_team_value.expect("TV not recorded");
+        let away_tv = self.away_team_value.expect("TV not recorded");
+        // La règle vit dans `underdog` (carte 602) : la feuille imprimée
+        // l'applique avant qu'aucun rapport n'existe.
+        match underdog::top_dog(home_tv, away_tv) {
+            underdog::Side::Away => &self.away_team_id,
+            underdog::Side::Home => &self.home_team_id,
         }
     }
 
@@ -149,11 +157,8 @@ impl MatchReportPreMatch {
     /// Elle est **dynamique** — un achat de plus côté top dog l'augmente, et
     /// c'est voulu : elle compense l'écart au moment où il se creuse.
     pub fn petty_cash(&self) -> u32 {
-        let tv_diff = self
-            .home_team_value
-            .unwrap()
-            .into_inner()
-            .abs_diff(self.away_team_value.unwrap().into_inner());
+        let tv_diff =
+            underdog::tv_gap(self.home_team_value.unwrap(), self.away_team_value.unwrap());
         tv_diff + self.topdog_spending()
     }
 
@@ -499,10 +504,10 @@ fn validate_mercenary_limit(purchases: &[(InducementId, u8)]) -> Result<(), Doma
         .filter(|(uid, _)| uid.0.starts_with("MERCO:"))
         .map(|(_, qty)| *qty)
         .sum();
-    if total > 3 {
+    if total > MAX_MERCENARIES {
         Err(DomainError::TooManyMercenaries {
             requested: total,
-            max: 3,
+            max: MAX_MERCENARIES,
         })
     } else {
         Ok(())
@@ -544,7 +549,7 @@ fn validate_star_player_limit(
                 .any(|s| &s.uid == uid && s.is_star_player.0)
         })
         .count();
-    if star_count > 2 {
+    if star_count > MAX_STAR_PLAYERS {
         Err(DomainError::StarPlayerLimitExceeded)
     } else {
         Ok(())

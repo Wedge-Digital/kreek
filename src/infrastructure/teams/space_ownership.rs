@@ -76,3 +76,41 @@ impl ISpaceOwnership for TeamSpaceOwnership {
         }
     }
 }
+
+/// La **seconde** équipe d'une URL — celle qu'on imprime à côté de la sienne
+/// (carte 594).
+///
+/// `space_scope` ne contrôle que les paramètres qu'il connaît. Une seconde
+/// équipe passée en query, ou sous un nom sans résolveur, ne serait vérifiée par
+/// personne : c'est la fuite de `team-selection/json`. Toute route à deux
+/// équipes la déclare donc `{other_team_id}`, et ce résolveur répond pour elle.
+///
+/// **Équipes enrôlées seulement** : un brouillon ne s'imprime pas, il n'a ni
+/// effectif ni adversaire. La projection suffit.
+pub struct OtherTeamSpaceOwnership {
+    equipes: Arc<dyn ITeamRepository>,
+}
+
+impl OtherTeamSpaceOwnership {
+    pub fn new(equipes: Arc<dyn ITeamRepository>) -> Self {
+        Self { equipes }
+    }
+}
+
+#[async_trait]
+impl ISpaceOwnership for OtherTeamSpaceOwnership {
+    fn param(&self) -> &'static str {
+        "other_team_id"
+    }
+
+    async fn space_of(&self, id: &str) -> Option<SpaceId> {
+        match self.equipes.find_space_id(id).await {
+            Ok(Some(brut)) => SpaceId::try_new(&brut).ok(),
+            Ok(None) => None,
+            Err(e) => {
+                tracing::error!("space_ownership other_team {id} : {e:?}");
+                None
+            }
+        }
+    }
+}

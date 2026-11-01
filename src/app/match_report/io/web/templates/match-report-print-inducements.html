@@ -1,0 +1,83 @@
+{# Les coups de pouce et star players disponibles d'une impression (carte 607).
+
+   Le fragment rend ses propres feuilles A4 (`print-slot` › `print-frame` ›
+   `print-sheet`) : le contrat des fragments d'impression multi-pages de la page
+   « Imprimer » de `teams`, qui les style et les numérote.
+   Feuille du contenu : `widgets/match-report-print-inducements.css`, racine
+   `.match-report-print-inducements`. #}
+{% for page in vm.pages %}
+<div class="print-slot">
+  <span class="print-slot-label">{% if page.with_inducements %}Coups de pouce{% else %}Star players{% endif %}</span>
+  <div class="print-frame">
+    <section class="print-sheet">
+      <div class="match-report-print-inducements" hx-disinherit="*">
+        {% if page.with_inducements %}
+        <header>
+          <h2 class="match-report-print-inducements-title">Coups de pouce disponibles</h2>
+          <p class="match-report-print-inducements-sub">Catalogue du palier de la compétition de chaque équipe, à son prix. « — » : non disponible pour elle.</p>
+        </header>
+        {% for nom in vm.missing_tiers %}
+        <p class="match-report-print-inducements-missing">{{ nom }} : palier introuvable — sa colonne est vide.</p>
+        {% endfor %}
+        <table class="match-report-print-inducements-grid">
+          <thead>
+            <tr>
+              <th>Coup de pouce</th>
+              {% for nom in vm.team_names %}<th class="match-report-print-inducements-price">{{ nom }}</th>{% endfor %}
+              <th class="match-report-print-inducements-max">Max</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in vm.rows %}
+            <tr>
+              <td><b>{{ row.name }}</b>{% if !row.description.is_empty() %}<div class="match-report-print-inducements-desc">{{ row.description }}</div>{% endif %}</td>
+              {% for price in row.prices %}
+              <td class="match-report-print-inducements-price">{% if let Some(p) = price %}{{ p }} kPo{% else %}—{% endif %}</td>
+              {% endfor %}
+              <td class="match-report-print-inducements-max">{{ row.max_qty }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="match-report-print-inducements-rules">
+          <div><b>Ordre.</b> Le favori, l'équipe à la VE la plus forte, achète en premier et paie sur sa trésorerie. L'outsider achète ensuite.</div>
+          <div><b>Petite monnaie.</b> L'outsider reçoit l'écart de VE plus tout ce que le favori a dépensé, et peut y ajouter jusqu'à {{ vm.rules.treasury_top_up_kpo }} kPo de sa trésorerie.</div>
+          <div><b>Star players.</b> {{ vm.rules.max_star_players }} au plus par équipe, et jamais celui que l'adversaire a déjà engagé.</div>
+          <div><b>Mercenaires.</b> Prix du poste + {{ vm.rules.mercenary_base_kpo }} kPo, ou + {{ vm.rules.mercenary_lvl1_kpo }} kPo au niveau 1. {{ vm.rules.max_mercenaries }} au plus par match, dans la limite du poste.</div>
+          <div><b>Journaliers.</b> L'équipe est complétée automatiquement jusqu'à {{ vm.rules.journeymen_fill_to }} joueurs.</div>
+        </div>
+        {% endif %}
+        {% if page.stars_heading %}
+        <header>
+          <h2 class="match-report-print-inducements-title">Star players disponibles</h2>
+          <p class="match-report-print-inducements-sub">{{ vm.total_stars }} star players que les équipes imprimées peuvent engager.</p>
+        </header>
+        {% endif %}
+        {% if !page.stars.is_empty() %}
+        <div class="match-report-print-inducements-stars">
+          {% for s in page.stars %}
+          <div class="match-report-print-inducements-star">
+            <div class="match-report-print-inducements-star-head">
+              <span class="match-report-print-inducements-star-name">{{ s.name }}</span>
+              <span class="match-report-print-inducements-star-cost">{{ s.cost_kpo }} kPo</span>
+            </div>
+            <div class="match-report-print-inducements-star-type">{{ s.player_type }} · pour {{ s.teams }}</div>
+            <table class="match-report-print-inducements-star-stats">
+              <tr><th>MV</th><th>FO</th><th>AG</th><th>PA</th><th>AR</th></tr>
+              <tr>{% for v in s.stats %}<td>{{ v }}</td>{% endfor %}</tr>
+            </table>
+            <div>{{ s.skills }}</div>
+            <div class="match-report-print-inducements-star-power"><b>{{ s.ability_name }}.</b> {{ s.ability_description }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <footer class="print-sheet-foot">
+        <span class="print-sheet-stamp"></span>
+        <span class="print-sheet-page"></span>
+      </footer>
+    </section>
+  </div>
+</div>
+{% endfor %}

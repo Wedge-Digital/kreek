@@ -1,6 +1,6 @@
 use crate::app::references::domain::models::{
-    Inducement, Keyword, League, PlayerPosition, Skill, SkillCategory, SkillCostLevel, SpecialRule,
-    SppRule, SppScale, Staff, StarPlayer, Team,
+    Inducement, Keyword, League, MatchReminders, PlayerPosition, Skill, SkillCategory,
+    SkillCostLevel, SpecialRule, SppRule, SppScale, Staff, StarPlayer, Team,
 };
 use crate::app::references::domain::port::IReferenceRepository;
 use crate::app::references::io::repository::reference_data_error::ReferenceDataError;
@@ -121,6 +121,7 @@ pub struct InMemoryReferenceRepository {
     skill_cost_matrix: Vec<SkillCostLevel>,
     improvement_values: ImprovementValues,
     spp_rules: SppRulesFile,
+    match_reminders: MatchReminders,
 }
 
 /// L'identifiant de la règle spéciale, en minuscules, **est** le nom du barème.
@@ -173,6 +174,7 @@ impl InMemoryReferenceRepository {
             improvement_values: read_json::<ImprovementValuesFile>(dir, "improvement_values.json")?
                 .improvement_values,
             spp_rules: read_json::<SppRulesFile>(dir, "spp_rules.json")?,
+            match_reminders: read_optional_json::<MatchReminders>(dir, "match_reminders_fr.json")?,
         })
     }
 
@@ -250,6 +252,20 @@ fn read_json<T: DeserializeOwned>(dir: &Path, file: &str) -> Result<T, Reference
         file: path.display().to_string(),
         cause: e.to_string(),
     })
+}
+
+/// Un fichier **optionnel** du corpus (carte 604) : absent, sa valeur par
+/// défaut ; présent mais illisible ou mal formé, la même erreur que les
+/// fichiers obligatoires — un fichier qu'on a voulu fournir ne s'ignore pas.
+fn read_optional_json<T: DeserializeOwned + Default>(
+    dir: &Path,
+    file: &str,
+) -> Result<T, ReferenceDataError> {
+    if dir.join(file).exists() {
+        read_json(dir, file)
+    } else {
+        Ok(T::default())
+    }
 }
 
 impl IReferenceRepository for InMemoryReferenceRepository {
@@ -353,6 +369,10 @@ impl IReferenceRepository for InMemoryReferenceRepository {
             .find(|t| t.uid == roster_uid)
             .map(|t| self.resoudre_bareme(t))
             .unwrap_or_default()
+    }
+
+    fn match_reminders(&self) -> MatchReminders {
+        self.match_reminders.clone()
     }
 
     fn improvement_skill_value_delta(&self, is_secondary_access: bool, is_elite: bool) -> u32 {
@@ -467,6 +487,37 @@ mod tests {
         r.err()
             .expect("un corpus incohérent ne doit pas charger")
             .to_string()
+    }
+
+    // ── Rappels de match, fichier optionnel (carte 604) ──────────────────────
+
+    #[test]
+    fn les_rappels_du_corpus_de_demonstration_sont_lus() {
+        let rappels = InMemoryReferenceRepository::load_for_tests().match_reminders();
+        assert!(rappels.mvp.is_some_and(|t| t.contains("MVP")));
+        assert!(rappels.fans.is_some());
+        assert_eq!(rappels.weather.len(), 5);
+    }
+
+    /// Le catalogue de production ne l'a pas encore : il doit démarrer.
+    #[test]
+    fn sans_le_fichier_des_rappels_le_corpus_charge_sans_rappel() {
+        let temp = corpus_mute("sans-rappels", "match_reminders_fr.json", "{}");
+        std::fs::remove_file(temp.join("match_reminders_fr.json")).unwrap();
+        let r = InMemoryReferenceRepository::load_from_dir(&temp);
+        let _ = std::fs::remove_dir_all(&temp);
+        let rappels = r
+            .expect("un corpus sans rappels doit charger")
+            .match_reminders();
+        assert!(rappels.mvp.is_none() && rappels.fans.is_none() && rappels.weather.is_empty());
+    }
+
+    /// Fourni mais mal formé : on l'a voulu, on ne l'ignore pas.
+    #[test]
+    fn un_fichier_des_rappels_mal_forme_refuse_de_charger() {
+        let temp = corpus_mute("rappels-casses", "match_reminders_fr.json", "{ pas du json");
+        let message = echec_du_chargement(temp);
+        assert!(message.contains("match_reminders_fr.json"), "{message}");
     }
 
     #[test]

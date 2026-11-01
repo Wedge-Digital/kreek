@@ -1,5 +1,5 @@
 use crate::app::players::domain::match_impact::PlayerParticipationStatus;
-use crate::app::players::domain::player::TeamId;
+use crate::app::players::domain::player::{RosterMembership, TeamId};
 use crate::app::players::io::app_events::team_created_listener::skill_category_css;
 use crate::app::players::ports::{AcquiredSkillProjection, ISkillCatalogPort, PlayerProjection};
 use crate::app::players::use_cases::player_stats_service::{self, ResolvedPlayerStats};
@@ -105,6 +105,9 @@ pub struct PlayerRowVm {
     /// Le nombre de blessures persistantes — nées de blessures sérieuses, et
     /// d'elles seules (carte 568). Lu dans la projection ; zéro rend un tiret.
     pub persistent_injuries: u16,
+    /// Un journalier (R6, carte 598) : il joue, compte dans la VE, mais n'est
+    /// pas embauché. Lu tel que le domaine le dit (`RosterMembership`).
+    pub is_journeyman: bool,
     /// « Elfe, Blitzer » — les mots-clefs du poste, déjà joints.
     ///
     /// Vide quand le poste n'en porte pas : le template n'affiche alors rien du
@@ -251,6 +254,8 @@ pub async fn build_player_rows(state: &AppState, team: &TeamId) -> Vec<PlayerRow
                 // Un compteur négatif n'existe pas : la colonne est reposée
                 // depuis un `u16` de l'agrégat.
                 persistent_injuries: u16::try_from(p.persistent_injuries).unwrap_or(0),
+                is_journeyman: RosterMembership::from_str(&p.membership)
+                    == RosterMembership::Journeyman,
                 keywords,
             }
         })
@@ -293,6 +298,7 @@ mod tests_sous_total {
                 PlayerParticipationStatus::Dead => "Dead",
             }),
             persistent_injuries: 0,
+            is_journeyman: false,
             keywords: String::new(),
         }
     }

@@ -1,0 +1,21 @@
+{% extends "app-layout.html" %}
+
+{# Une équipe qui n'est pas prête à jouer ne s'imprime pas (R1, carte 595).
+   On arrive ici par une URL partagée ou un favori : la page explique au lieu
+   de répondre 404. #}
+
+{% block content %}
+<div class="team-print team-print--unavailable">
+  <h1 class="team-print-title">Impression indisponible</h1>
+  <p class="team-print-subtitle">
+    <strong>{{ team_name }}</strong> n'est pas prête à jouer : son effectif peut
+    encore changer. L'impression sera disponible dès qu'elle le sera.
+  </p>
+  <a class="btn btn-primary-blue btn-md btn-fit"
+     hx-get="{{ back_url }}"
+     hx-target="#app-content"
+     hx-select="#app-content"
+     hx-swap="outerHTML"
+     hx-push-url="true">Retour à la fiche</a>
+</div>
+{% endblock %}

@@ -628,6 +628,10 @@ mod authorization_tests {
         async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
             vec![]
         }
+
+        async fn find_team_season(&self, _: &str) -> Option<String> {
+            None
+        }
     }
 
     fn user() -> User {

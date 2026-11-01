@@ -1,0 +1,7 @@
+{
+  "ruleset": "demo",
+  "edition": "Jeu de démonstration — données fictives",
+  "mvp": "Chaque coach désigne trois joueurs ayant joué ; un D3 désigne le MVP de l'équipe.",
+  "fans": "Le vainqueur gagne un fan dévoué sur 4+ au D6 ; le perdant en perd un sur 1 ou 2. Match nul : rien ne change.",
+  "weather": ["Grand Soleil", "Vent des Cimes", "Ciel Clément", "Brume Épaisse", "Grêle de Cailloux"]
+}

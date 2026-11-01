@@ -2,6 +2,8 @@ pub mod evolution_journal_widget;
 pub mod journeymen_widget;
 pub mod match_player_selector_widget;
 pub mod player_customisation_widget;
+pub mod player_print_skills_widget;
+pub mod player_print_table_widget;
 pub mod player_table_widget;
 pub mod spp_spending_widget;
 pub mod stat_display;

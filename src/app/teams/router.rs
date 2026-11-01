@@ -5,6 +5,7 @@ use crate::app::teams::io::web::garde_action_equipe::garde_action_equipe;
 use crate::app::teams::io::web::phase_override_controller::post_phase_override;
 use crate::app::teams::io::web::recruitment::recruitment_page;
 use crate::app::teams::io::web::team_detail::{team_detail, team_page_matches, team_page_treasury};
+use crate::app::teams::io::web::team_print_controller::get_team_print_page;
 use crate::app::teams::io::web::validate_phase_actions::{
     post_validate_dismissals_phase, post_validate_improvement_phase,
     post_validate_recruitment_phase,
@@ -20,6 +21,10 @@ use crate::app::teams::io::web::widgets::enrollment_actions::{
 };
 use crate::app::teams::io::web::widgets::my_teams_widget::my_teams_widget;
 use crate::app::teams::io::web::widgets::pending_enrollment_widget::pending_enrollment_widget;
+use crate::app::teams::io::web::widgets::print_preview_widget::{
+    get_print_preview, get_print_preview_with,
+};
+use crate::app::teams::io::web::widgets::print_sheet_head_widget::get_print_sheet_head;
 use crate::app::teams::io::web::widgets::recruitment_cart_widget::{
     recruitment_cart, remove_player, remove_staff,
 };
@@ -76,6 +81,11 @@ fn routes_ouvertes() -> Router<AppState> {
         // par `require_team_admin` — le propriétaire n'y a pas droit.
         .route(path::PHASE_OVERRIDE, post(post_phase_override))
         .route(path::TEAM_MATCHES, get(team_page_matches))
+        // L'impression (épic E16) : lecture seule, tout utilisateur connecté.
+        .route(path::TEAM_PRINT, get(get_team_print_page))
+        .route(path::TEAM_PRINT_PREVIEW, get(get_print_preview))
+        .route(path::TEAM_PRINT_PREVIEW_WITH, get(get_print_preview_with))
+        .route(path::TEAM_PRINT_SHEET_HEAD, get(get_print_sheet_head))
         .route(path::DISMISS_TEAM, post(dismiss_team))
         .route(path::TEAM_IDENTITY_WIDGET, get(team_identity_widget))
         .route(

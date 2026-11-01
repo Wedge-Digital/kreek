@@ -53,6 +53,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E13 — Gestion des erreurs coûteuses](done/E13-gestion-des-erreurs-couteuses.md) | `done` · 4/4 | 4 |
 | [E14 — Modifier une compétition en cours](en_cours/E14-modifier-une-competition-en-cours.md) | `en_cours` · 7/10 | 10 |
 | [E15 — Recruter un journalier](ready_to_be_done/E15-recruter-un-journalier.md) | `ready_to_be_done` · 0/6 | 6 |
+| [E16 — Imprimer la feuille d'équipe](done/E16-imprimer-la-feuille-d-equipe.md) | `done` · 17/17 | 17 |
 | [E18 — Appariement des présents](en_cours/E18-appariement-des-presents.md) | `en_cours` · 4/8 | 8 |
 | [E19 — Saisie du compte rendu : droits et robustesse](to_be_refined/E19-saisie-du-compte-rendu-droits-et-robustesse.md) | `to_be_refined` | 5 |
 | [E20 — Coups de pouce : le panier et l'annulation](to_be_refined/E20-coups-de-pouce-panier-et-annulation.md) | `to_be_refined` | 5 |

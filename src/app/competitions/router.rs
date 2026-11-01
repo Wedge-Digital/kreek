@@ -67,6 +67,7 @@ use crate::app::competitions::io::web::widgets::move_pairing_widget::{
 use crate::app::competitions::io::web::widgets::notification_settings_widget::{
     get_notification_settings_widget, post_notification_settings,
 };
+use crate::app::competitions::io::web::widgets::print_next_opponent_widget::get_print_next_opponent;
 use crate::app::competitions::io::web::widgets::team_matches_widget::get_team_matches_widget;
 use crate::app::competitions::routes::path;
 use crate::state::AppState;
@@ -116,6 +117,7 @@ pub fn router() -> Router<AppState> {
             get(latest_results_widget),
         )
         .route(path::TEAM_MATCHES_WIDGET, get(get_team_matches_widget))
+        .route(path::TEAM_PRINT_NEXT_OPPONENT, get(get_print_next_opponent))
         .route(
             path::COMPETITION_WIDGET_JSON_COMPETITIONS,
             get(get_json_competitions),

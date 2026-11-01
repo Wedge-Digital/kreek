@@ -4,8 +4,8 @@ use crate::app::match_report::io::app_events::{
 };
 use crate::app::match_report::io::repository::match_report_repository::MatchReportRepository;
 use crate::app::match_report::ports::{
-    ICoachDataPort, ICompetitionDataPort, IKeywordCatalogPort, IPlayerDataPort, ISppCalculatorPort,
-    ITeamDataPort,
+    ICoachDataPort, ICompetitionDataPort, IKeywordCatalogPort, IPlayerDataPort,
+    IReferenceCatalogPort, ISppCalculatorPort, ITeamDataPort,
 };
 use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -23,6 +23,9 @@ pub struct MatchReportContext {
     pub admin_access: Arc<dyn IAdminAccessPort>,
     pub spp_calculator: Arc<dyn ISppCalculatorPort>,
     pub keyword_catalog: Arc<dyn IKeywordCatalogPort>,
+    /// Le catalogue pour l'impression (épic E16) : libellés, star players,
+    /// barème SPP, rappels du corpus.
+    pub reference_catalog: Arc<dyn IReferenceCatalogPort>,
     pub event_bus: EventBus,
 }
 
@@ -57,6 +60,7 @@ impl MatchReportContext {
         admin_access: Arc<dyn IAdminAccessPort>,
         spp_calculator: Arc<dyn ISppCalculatorPort>,
         keyword_catalog: Arc<dyn IKeywordCatalogPort>,
+        reference_catalog: Arc<dyn IReferenceCatalogPort>,
         event_bus: EventBus,
     ) -> Self {
         Self {
@@ -68,6 +72,7 @@ impl MatchReportContext {
             admin_access,
             spp_calculator,
             keyword_catalog,
+            reference_catalog,
             event_bus,
         }
     }
