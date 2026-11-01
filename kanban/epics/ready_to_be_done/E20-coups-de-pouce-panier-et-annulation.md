@@ -1,6 +1,7 @@
 # E20 — Coups de pouce : le panier et l'annulation
 
-**État :** `to_be_refined` — 5 cartes à écrire. Découpage validé le 2026-11-01.
+**État :** `ready_to_be_done` — 5 cartes, 626 à 630. Découpage et cadrage validés le
+2026-11-01. **Cadrage :** `docs/specs/saisie-mobile/E20-cadrage.md`
 Née le 2026-11-01 des maquettes
 mobiles. Indépendante du mode de saisie : elle vaut sur ordinateur comme sur
 mobile.
@@ -37,11 +38,11 @@ autre état.
 
 | # | Intitulé | Apport |
 |---|---|---|
-| — | Annuler les coups de pouce | événement domaine qui efface les deux paniers et les joueurs temporaires ; permis **tant qu'aucune action de match n'est saisie** (règle du 2026-11-01) |
-| — | Des achats validés ne se modifient plus | la route `/inducements/{team_id}` d'une équipe qui a validé n'accepte plus d'écriture ; « valider » se lit dans la présence d'un `InducementsRecorded` — « Passer » en enregistre déjà un, vide |
-| — | Le récapitulatif des coups de pouce terminés | la page de choix laisse place aux achats des deux camps, au coup d'envoi et à l'annulation confirmée dans la page |
-| — | Le panier se déplie | le pied de page liste tous les articles ; chacun s'ajuste ou se retire sur place, par un événement sur `body` comme `removeMercenaire` |
-| — | Les tests e2e des coups de pouce | panier, achats figés, annulation et rachat ; reprise des tests qui reviennent modifier des achats (`test_match_report_inducements`, `test_inducement_treasury`…) |
+| 626 | Annuler les coups de pouce | événement domaine qui efface les deux paniers et les joueurs temporaires ; permis **tant qu'aucune action de match n'est saisie** (règle du 2026-11-01) |
+| 627 | Des achats validés ne se modifient plus | la route `/inducements/{team_id}` d'une équipe qui a validé n'accepte plus d'écriture ; « valider » se lit dans la présence d'un `InducementsRecorded` — « Passer » en enregistre déjà un, vide |
+| 628 | Le récapitulatif des coups de pouce terminés | la page de choix laisse place aux achats des deux camps, au coup d'envoi et à l'annulation confirmée dans la page |
+| 629 | Le panier se déplie | le pied de page liste tous les articles ; chacun s'ajuste ou se retire sur place, par un événement sur `body` comme `removeMercenaire` |
+| 630 | Les tests e2e des coups de pouce | panier, achats figés, annulation et rachat ; reprise des tests qui reviennent modifier des achats (`test_match_report_inducements`, `test_inducement_treasury`…) |
 
 ## Ce qui commande l'ordre
 
@@ -60,9 +61,11 @@ premier.
 
 **Perte de capacité acceptée** (décision du 2026-11-01) : aujourd'hui, un
 compte rendu dépublié pour correction redevient éditable, coups de pouce
-compris (`into_pre_match`). Demain, un match publié ayant toujours des actions,
-l'annulation n'y est jamais proposée : **une erreur de coups de pouce découverte
-après la publication ne se corrige plus.** Le récapitulatif des achats, avant le
+compris (`into_pre_match`). Demain, un compte rendu dépublié revient en état
+« prêt à publier », et l'annulation n'est permise qu'en avant-match : **une
+erreur de coups de pouce découverte après la publication ne se corrige plus.**
+(Le cadrage a corrigé le motif : publier n'exige aucune action, c'est la borne
+d'état qui ferme la porte.) Le récapitulatif des achats, avant le
 coup d'envoi, est la dernière vérification.
 
 ## Ce que l'épic ne couvre pas
