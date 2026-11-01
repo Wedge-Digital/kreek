@@ -1,7 +1,8 @@
 # E19 — Saisie du compte rendu : droits et robustesse
 
-**État :** `to_be_refined` — 5 cartes, dont 1 existante (352) ; 4 à écrire.
-Découpage validé le 2026-11-01.
+**État :** `to_be_refined` — 5 cartes : 621 à 624, et 352 (à raffiner). Découpage
+et cadrage validés le 2026-11-01.
+**Cadrage :** `docs/specs/saisie-mobile/E19-cadrage.md`
 Née le 2026-11-01 de l'analyse d'impact des maquettes mobiles
 (`assets/rawpages/html/app-mobile-parcours.html`). Prérequis de E21 et E22.
 
@@ -30,10 +31,10 @@ l'analyse.
 
 | # | Intitulé | Apport |
 |---|---|---|
-| — | Le camp du coach courant | port vers `teams` qui répond domicile, visiteur ou aucun ; service d'accès par camp dans `match_report` |
-| — | Les routes d'écriture du compte rendu sont gardées | sélection, avant-match, coups de pouce, POST/DELETE d'actions, étape 5, et les écrans de saisie : coachs des deux équipes et admins (`is_admin`), 403 sinon |
-| — | Un conflit d'écriture se dit | `ConcurrentWrite` → 409, message et rechargement, au lieu d'un 500 |
-| — | « Publié par » au récapitulatif | se lit dans `published_by` de `MatchReportPublished`, et non plus dans `created_by` ; aucune donnée réécrite |
+| 621 | Le camp du coach courant | port vers `teams` qui répond domicile, visiteur ou aucun ; service d'accès par camp dans `match_report` |
+| 622 | Les routes du compte rendu sont gardées | sélection, avant-match, coups de pouce, POST/DELETE d'actions, étape 5, et les écrans de saisie : coachs des deux équipes et admins (`is_admin`), 403 sinon |
+| 623 | Un conflit d'écriture se dit | `ConcurrentWrite` → 409, message et rechargement, au lieu d'un 500 |
+| 624 | « Publié par » au récapitulatif | se lit dans `published_by` de `MatchReportPublished`, et non plus dans `created_by` ; aucune donnée réécrite |
 | 352 | `MatchReportConfirmed` passe par le publisher | existante ; deux use cases émettent l'app event en direct. E21 déplace la confirmation, autant la remettre d'aplomb avant |
 
 ## Ce qui commande l'ordre
