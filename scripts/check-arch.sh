@@ -178,7 +178,9 @@ echo ""
 
 # ── Axe 4 : pas de route en dur dans le front ───────────────────────────────
 echo -e "${BOLD}Axe 4 · Pas de route en dur dans le front (toujours via routes.*)${RESET}"
-axe4=$(grep -rnE '(hx-get|hx-post|hx-put|hx-delete|hx-target|href|action)="\/(app|auth|references|test)\/' --include="*.html" src/ assets/ 2>/dev/null || true)
+# Les maquettes de `assets/rawpages/` ne sont pas servies : certaines sont des
+# captures de pages réelles, dont les URL en dur sont la trace fidèle du rendu.
+axe4=$(grep -rnE '(hx-get|hx-post|hx-put|hx-delete|hx-target|href|action)="\/(app|auth|references|test)\/' --include="*.html" --exclude-dir=rawpages src/ assets/ 2>/dev/null || true)
 axe4+=$'\n'"$(grep -rnE "(fetch\(|htmx\.ajax\('(GET|POST|PUT|DELETE)',)\s*['\"]\/(app|auth|references)\/" --include="*.html" src/ 2>/dev/null || true)"
 axe4="$(printf '%s' "$axe4" | sed '/^$/d')"
 if [ -n "$axe4" ]; then print_fail "$axe4"; else print_pass; fi
