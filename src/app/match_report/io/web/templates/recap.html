@@ -127,8 +127,8 @@
         <div class="ms-card-header">
           <span class="ms-card-header-icon">&#128240;</span>
           <span class="ms-card-header-title">Compte-rendu</span>
-          {% if let Some(coach) = submitted_by.as_ref() %}
-          <span class="ms-card-header-byline">Soumis par <strong>{{ coach }}</strong></span>
+          {% if let Some(coach) = published_by.as_ref() %}
+          <span class="ms-card-header-byline">Publié par <strong>{{ coach }}</strong></span>
           {% endif %}
         </div>
         <div class="ms-card-body">

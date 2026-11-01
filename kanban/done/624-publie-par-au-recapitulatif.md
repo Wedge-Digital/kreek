@@ -28,7 +28,7 @@ désormais leur publieur — ceux issus du calendrier n'affichaient rien.
 
 ## Checklist
 
-- [ ] `RecapSource` et le gabarit lisent `published_by`
-- [ ] Test unitaire : un rapport publié nomme son publieur, un rapport non publié n'en nomme pas
-- [ ] E2E : le récapitulatif publié affiche « Publié par » et le coach
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `RecapSource` et le gabarit lisent `published_by`
+- [x] Test unitaire : un rapport publié nomme son publieur, un rapport non publié n'en nomme pas
+- [x] E2E : le récapitulatif publié affiche « Publié par » et le coach
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

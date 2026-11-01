@@ -7,7 +7,7 @@ use crate::app::match_report::domain::value_objects::MatchAction;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
 use crate::app::match_report::io::web::builders::{
-    build_correction_zone, build_performance_rows, build_round_context_vm, build_submitted_by,
+    build_correction_zone, build_performance_rows, build_published_by, build_round_context_vm,
     build_team_banner, AdminBarVm, CorrectionZoneVm, PerformanceRowVm, RoundContextVm,
     TeamBannerVm,
 };
@@ -45,7 +45,7 @@ pub struct RecapTemplate {
     pub match_report_id: String,
     pub is_published: bool,
     pub round_context: Option<RoundContextVm>,
-    pub submitted_by: Option<String>,
+    pub published_by: Option<String>,
     pub home_banner: TeamBannerVm,
     pub away_banner: TeamBannerVm,
     pub result: MatchResultVm,
@@ -82,7 +82,10 @@ struct RecapSource<'a> {
     /// `None` sur les rapports d'avant la carte 552, qui naissaient sans
     /// appariement : pas de déplacement possible, la barre le tait.
     pairing_id: Option<String>,
-    created_by: String,
+    /// Celui qui a publié (carte 624) — et non `created_by`, qui vaut
+    /// l'identifiant de la compétition pour tout brouillon issu du calendrier.
+    /// `None` tant que le rapport n'est pas publié.
+    published_by: Option<String>,
     home_actions: &'a [MatchAction],
     away_actions: &'a [MatchAction],
     /// Le total, bonus compris (carte 481) : c'est ce que la trésorerie crédite.
@@ -106,7 +109,7 @@ impl<'a> RecapSource<'a> {
             season_id: rtp.season_id.to_string(),
             round_id: rtp.round_id.to_string(),
             pairing_id: rtp.pairing_id.clone(),
-            created_by: rtp.created_by.to_string(),
+            published_by: None,
             home_actions: &rtp.home_actions,
             away_actions: &rtp.away_actions,
             home_gain_kpo: rtp.total_home_gain_kpo(),
@@ -129,7 +132,7 @@ impl<'a> RecapSource<'a> {
             season_id: p.season_id.to_string(),
             round_id: p.round_id.to_string(),
             pairing_id: p.pairing_id.clone(),
-            created_by: p.created_by.to_string(),
+            published_by: Some(p.published_by.to_string()),
             home_actions: &p.home_actions,
             away_actions: &p.away_actions,
             home_gain_kpo: p.total_home_gain_kpo(),
@@ -270,7 +273,7 @@ async fn build_recap_template(
         source.summary_body.clone(),
     );
 
-    let (round_context, performances, submitted_by) = tokio::join!(
+    let (round_context, performances, published_by) = tokio::join!(
         build_round_context_vm(
             state.match_report.competition_data.as_ref(),
             &source.season_id,
@@ -283,7 +286,10 @@ async fn build_recap_template(
             &home_info.roster_id,
             &away_info.roster_id,
         ),
-        build_submitted_by(state.match_report.coach_data.as_ref(), &source.created_by),
+        build_published_by(
+            state.match_report.coach_data.as_ref(),
+            source.published_by.as_deref()
+        ),
     );
 
     // Le garde-fou ne se calcule que pour un rapport publié : quatre
@@ -301,7 +307,7 @@ async fn build_recap_template(
         match_report_id: match_report_id.to_string(),
         is_published,
         round_context,
-        submitted_by,
+        published_by,
         home_banner: build_team_banner(home_info, result.home_score, result.away_score),
         away_banner: build_team_banner(away_info, result.away_score, result.home_score),
         gains_fan: GainsFanVm {
@@ -762,5 +768,92 @@ mod authorization_tests {
             fails: true,
         };
         assert!(!authorize(false, false, failing).await);
+    }
+}
+
+/// Carte 624 : le récapitulatif nomme celui qui a publié, pas `created_by`.
+#[cfg(test)]
+mod published_by_tests {
+    use super::*;
+    use crate::app::match_report::domain::value_objects::{
+        DedicatedFans, FanFactorMod, InducementSpending, MatchGain, MatchReportOrigin,
+    };
+    use crate::app::match_report::ports::ICoachDataPort;
+    use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, RoundId, SeasonId};
+    use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
+
+    /// Ne connaît qu'un coach, à qui il donne le nom « DevCoach ».
+    struct FakeCoachData {
+        coach_id: String,
+    }
+
+    #[async_trait::async_trait]
+    impl ICoachDataPort for FakeCoachData {
+        async fn find_coach_name(&self, coach_id: &str) -> Option<String> {
+            (coach_id == self.coach_id).then(|| "DevCoach".to_string())
+        }
+    }
+
+    fn make_rtp() -> MatchReportReadyToPublish {
+        MatchReportReadyToPublish {
+            id: MatchReportId::new(),
+            home_inducement_spending: InducementSpending::default(),
+            away_inducement_spending: InducementSpending::default(),
+            space_id: SpaceId::new(),
+            competition_id: CompetitionId::new(),
+            season_id: SeasonId::new(),
+            round_id: RoundId::new(),
+            home_team_id: TeamId::new(),
+            away_team_id: TeamId::new(),
+            created_by: CoachId::new(),
+            origin: MatchReportOrigin::Manual,
+            pairing_id: None,
+            home_fan_roll: None,
+            away_fan_roll: None,
+            home_dedicated_fans: DedicatedFans::default(),
+            away_dedicated_fans: DedicatedFans::default(),
+            home_inducements: None,
+            away_inducements: None,
+            star_engagements: vec![],
+            home_temp_players: vec![],
+            away_temp_players: vec![],
+            home_actions: vec![],
+            away_actions: vec![],
+            version: 5,
+            home_gain: MatchGain::try_new(10_000).unwrap(),
+            away_gain: MatchGain::try_new(5_000).unwrap(),
+            home_no_stalling_bonus: Default::default(),
+            away_no_stalling_bonus: Default::default(),
+            home_fan_mod: FanFactorMod::try_new(1).unwrap(),
+            away_fan_mod: FanFactorMod::try_new(-1).unwrap(),
+            summary_title: Some("Titre".to_string()),
+            summary_body: Some("Corps".to_string()),
+            was_published_before: false,
+        }
+    }
+
+    /// Ce que la ligne « Publié par » afficherait, le port ne connaissant que `known`.
+    async fn displayed_publisher(source: &RecapSource<'_>, known: &CoachId) -> Option<String> {
+        let coach_data = FakeCoachData {
+            coach_id: known.to_string(),
+        };
+        build_published_by(&coach_data, source.published_by.as_deref()).await
+    }
+
+    #[tokio::test]
+    async fn published_report_names_its_publisher() {
+        let publisher = CoachId::new();
+        let (published, _) = make_rtp().publish(publisher);
+        let source = RecapSource::from_published(&published);
+        let name = displayed_publisher(&source, &publisher).await;
+        assert_eq!(name.as_deref(), Some("DevCoach"));
+    }
+
+    /// Le créateur est connu du port : s'il était encore lu, son nom s'afficherait.
+    #[tokio::test]
+    async fn unpublished_report_names_nobody() {
+        let rtp = make_rtp();
+        let source = RecapSource::from_rtp(&rtp);
+        assert_eq!(displayed_publisher(&source, &rtp.created_by).await, None);
     }
 }

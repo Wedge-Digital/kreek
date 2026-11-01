@@ -108,11 +108,13 @@ fn find_action_display(
         .map(|a| (a.player_display_name.clone(), a.player_position.clone()))
 }
 
-pub async fn build_submitted_by(
+/// Le nom du coach qui a publié le compte rendu (carte 624). Un rapport jamais
+/// publié n'a pas de publieur : rien n'est affiché, plutôt qu'un nom inventé.
+pub async fn build_published_by(
     coach_data: &dyn ICoachDataPort,
-    created_by: &str,
+    published_by: Option<&str>,
 ) -> Option<String> {
-    coach_data.find_coach_name(created_by).await
+    coach_data.find_coach_name(published_by?).await
 }
 
 // ── Barre d'administration (carte 557) ───────────────────────────────────────

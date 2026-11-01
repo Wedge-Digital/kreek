@@ -8,6 +8,7 @@ Scénarios couverts :
 - TC-05 — Double publication (POST direct sur un rapport déjà publié) → 409
 - TC-06 — Draft/PreMatch → 404, Cancelled → 410
 - TC-08 — Carte Performances (SPP) absente proprement si aucune action enregistrée
+- TC-09 — « Publié par » nomme le coach qui a publié ; absent tant que rien n'est publié
 
 Allocation des paires d'équipes : une équipe est verrouillée (TeamNotAvailable) dès la
 confirmation (Draft → PreMatch) — verrou permanent en l'état actuel de l'appli, aucune remise
@@ -359,3 +360,26 @@ def test_tc08_performances_card_absent_without_actions(page: Page, space_id, rec
 
     expect(page.locator(".ms-card-header-title", has_text="Performances")).to_have_count(0)
     expect(page.locator(".ms-hero")).to_be_visible()
+
+
+# ── TC-09 — « Publié par » nomme le publieur (carte 624) ──────────────────────
+
+def test_tc09_published_recap_names_its_publisher(page: Page, space_id, mr_published):
+    """Le récapitulatif lit `published_by`, et non `created_by` : ce dernier vaut
+    l'identifiant de la compétition pour un brouillon issu du calendrier, que
+    personne ne porte. DevCoach est l'identité de la suite, donc le publieur."""
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_published}/recap", wait_until="load")
+
+    byline = page.locator(".ms-card-header-byline")
+    expect(byline).to_have_count(1)
+    expect(byline).to_contain_text("Publié par")
+    expect(byline.locator("strong")).to_have_text("DevCoach")
+
+
+def test_tc09_unpublished_recap_names_nobody(page: Page, space_id, mr_ready):
+    """Jamais publié, donc pas de publieur : la ligne est absente plutôt que
+    d'afficher le créateur à sa place."""
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_ready}/recap", wait_until="load")
+
+    expect(page.locator(".ms-card-header-title", has_text="Compte-rendu")).to_be_visible()
+    expect(page.locator(".ms-card-header-byline")).to_have_count(0)
