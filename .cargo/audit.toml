@@ -28,6 +28,15 @@ ignore = [
     # anyhow 1.0.102 — `Error::downcast_mut()` unsound. Tirée par les crates
     # `wit-*` et `wasm-metadata`, absentes du graphe. Constaté le 2026-07-30.
     "RUSTSEC-2026-0190",
+
+    # basic-toml 0.1.10 — non maintenue, sans faille connue. **Compilée**, donc
+    # exposition assumée et non crate absente : `askama_derive` (0.12 comme
+    # 0.16) en dépend par sa feature `config`, celle qui lit `askama.toml` et
+    # ses douze dossiers de gabarits — indispensable. Elle ne tourne qu'à la
+    # compilation, dans une macro, et ne lit que des fichiers du dépôt ; elle
+    # n'entre pas dans le binaire. À retirer quand askama s'en passera.
+    # Constaté le 2026-11-02.
+    "RUSTSEC-2026-0374",
 ]
 
 # `spin` 0.9.8 était *yanked* — ce qui n'est pas un avis et n'a donc pas
