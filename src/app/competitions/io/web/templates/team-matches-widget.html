@@ -17,7 +17,7 @@
   {% else %}
   <div class="matches-list card-shadow">
     {% for m in matches %}
-    {% call widget::match_widget(m) %}
+    {% call widget::match_widget(m) %}{% endcall %}
     {% endfor %}
   </div>
   {% endif %}

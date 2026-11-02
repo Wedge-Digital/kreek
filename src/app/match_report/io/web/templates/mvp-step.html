@@ -54,7 +54,7 @@
     <div class="mr-header-sub">MVP</div>
   </div>
 
-  {% call steps::indicator(3) %}
+  {% call steps::indicator(3) %}{% endcall %}
 
   {% if let Some(recap) = home_recap %}
   <div class="mvp-done-row">

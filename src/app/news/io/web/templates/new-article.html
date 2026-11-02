@@ -59,7 +59,7 @@
                 <div class="section-title">Image principale</div>
             </div>
             <div class="article-image-upload">
-                {% call cmp::cloudinary_upload("image_url", image_url_value, "news/images", "Image principale", image_error) %}
+                {% call cmp::cloudinary_upload("image_url", image_url_value, "news/images", "Image principale", image_error) %}{% endcall %}
             </div>
         </div>
 

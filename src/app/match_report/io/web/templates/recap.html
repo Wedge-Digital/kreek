@@ -7,7 +7,7 @@
 
   {# Non publié, le récapitulatif est l'étape « Validation » (carte 637). #}
   {% if !is_published %}
-  {% call steps::indicator(5) %}
+  {% call steps::indicator(5) %}{% endcall %}
   {% endif %}
 
   <!-- ══ HERO ══════════════════════════════════════════════════ -->

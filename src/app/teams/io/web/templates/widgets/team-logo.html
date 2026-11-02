@@ -31,7 +31,7 @@
           hx-target="closest .team-logo"
           hx-swap="outerHTML">
 
-      {% call cmp::cloudinary_upload("logo_url", vm.logo_url, "teams/logos", "Logo de l'équipe", vm.error) %}
+      {% call cmp::cloudinary_upload("logo_url", vm.logo_url, "teams/logos", "Logo de l'équipe", vm.error) %}{% endcall %}
 
       {# Pas de `@click` Alpine : ce bouton est déplacé par le script plus
          bas, et `appendChild` sur un nœud existant lui fait perdre ses

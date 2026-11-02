@@ -8,7 +8,7 @@
     </div>
     <div class="active-teams-grid">
         {% for team in active_teams %}
-        {% call card_cmp::card(team.team_name, team.logo, team.roster_name, "", 0, team.initials, team.status_class, team.status_label, team.link) %}
+        {% call card_cmp::card(team.team_name, team.logo, team.roster_name, "", 0, team.initials, team.status_class, team.status_label, team.link) %}{% endcall %}
         {% endfor %}
     </div>
     {% endif %}

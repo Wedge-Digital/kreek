@@ -8,7 +8,7 @@
         <span class="text-tiny text-dark-3">{{ journee.matches.len() }} match{% if journee.matches.len() > 1 %}s{% endif %}</span>
     </div>
     {% for m in journee.matches %}
-    {% call widget::match_widget(m) %}
+    {% call widget::match_widget(m) %}{% endcall %}
     {% endfor %}
 </div>
 {% endfor %}

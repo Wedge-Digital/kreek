@@ -75,7 +75,7 @@
             <div id="coach-search-widget"></div>
           </div>
         </div>
-        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo", logo_error) %}
+        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo", logo_error) %}{% endcall %}
 
       {% if let Some(err) = general_error %}
       <div class="spacer-p2"></div>

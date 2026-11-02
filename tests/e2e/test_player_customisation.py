@@ -20,6 +20,7 @@ qu'on affirme** : présence du bouton, valeur affichée, bouton grisé.
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), `make seed_e2e`.
 """
 
+import html
 import re
 
 import pytest
@@ -278,8 +279,9 @@ def test_une_competence_a_apostrophe_traverse_toute_la_chaine(custo_ctx):
     journal = requests.get(
         _url(custo_ctx, joueur, "widgets/evolution-journal"), timeout=10
     ).text
-    # Askama échappe l'apostrophe en `&#x27;` — les deux formes valent preuve.
-    assert "Capitaine d&#x27;équipe" in journal or "Capitaine d'équipe" in journal
+    # Askama échappe l'apostrophe (`&#x27;` en 0.12, `&#39;` depuis 0.13) :
+    # on lit le texte décodé, pas une forme d'échappement.
+    assert "Capitaine d'équipe" in html.unescape(journal)
 
 
 # ── Scénarios 3 et 4 — direction des seuils de dé, puis borne ─────────────────

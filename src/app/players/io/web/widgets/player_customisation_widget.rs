@@ -1020,7 +1020,8 @@ mod tests {
         assert!(html.contains("disabled title=\"Borne atteinte\""));
         // Les quatre lignes du panier, dont le libellé en offset brut.
         // L'apostrophe ressort échappée : c'est Askama qui fait son travail.
-        assert!(html.contains("Amélioration d&#x27;Agilité -2"));
+        // `&#39;` depuis askama 0.13 (`&#x27;` avant) — même caractère.
+        assert!(html.contains("Amélioration d&#39;Agilité -2"));
         assert!(html.contains("Prix -15 kPo"));
         assert!(html.contains("SPP +7"));
         // Prix effectif 50 − 15, SPP effectifs 30 + 7 : deux nombres distincts,

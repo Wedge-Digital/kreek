@@ -6,15 +6,15 @@
    il était recopié dans six gabarits. #}
 {% macro indicator(current) %}
 <div class="mr-steps">
-  {% call step(1, current, "Avant-match") %}
+  {% call step(1, current, "Avant-match") %}{% endcall %}
   <div class="mr-step-line{% if current > 1 %} mr-step-line--done{% endif %}"></div>
-  {% call step(2, current, "Match") %}
+  {% call step(2, current, "Match") %}{% endcall %}
   <div class="mr-step-line{% if current > 2 %} mr-step-line--done{% endif %}"></div>
-  {% call step(3, current, "MVP") %}
+  {% call step(3, current, "MVP") %}{% endcall %}
   <div class="mr-step-line{% if current > 3 %} mr-step-line--done{% endif %}"></div>
-  {% call step(4, current, "Gains et fans") %}
+  {% call step(4, current, "Gains et fans") %}{% endcall %}
   <div class="mr-step-line{% if current > 4 %} mr-step-line--done{% endif %}"></div>
-  {% call step(5, current, "Validation") %}
+  {% call step(5, current, "Validation") %}{% endcall %}
 </div>
 {% endmacro %}
 

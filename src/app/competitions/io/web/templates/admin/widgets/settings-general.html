@@ -41,7 +41,7 @@
     <div class="form-row">
       <div class="form-row-label">Logo</div>
       <div class="form-row-content">
-        {% call cmp::cloudinary_upload("logo_url", vm.logo_url, "competitions/logos", "Logo", vm.logo_error) %}
+        {% call cmp::cloudinary_upload("logo_url", vm.logo_url, "competitions/logos", "Logo", vm.logo_error) %}{% endcall %}
       </div>
     </div>
 

@@ -1,7 +1,7 @@
 {% import "components/team-card.html" as card_cmp %}
 <div class="teams-grid" hx-disinherit="*">
     {% for team in teams %}
-    {% call card_cmp::card(team.name, team.logo, team.roster, team.coach, team.tv, team.initials, "", "", team.link) %}
+    {% call card_cmp::card(team.name, team.logo, team.roster, team.coach, team.tv, team.initials, "", "", team.link) %}{% endcall %}
     {% endfor %}
     {% if teams.is_empty() %}
     <div class="tab-empty-state teams-empty">

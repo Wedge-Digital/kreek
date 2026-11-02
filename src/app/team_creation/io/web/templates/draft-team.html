@@ -33,7 +33,7 @@
              hx-target="this"
              hx-swap="innerHTML">
         </div>
-        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}
+        {% call cmp::cloudinary_upload("logo_url", logo_url_value, "teams/logos", "Logo de votre équipe", logo_error) %}{% endcall %}
 
         <div hx-get="{{ app_routes.competitions.competition_widget(space_id) }}"
              hx-trigger="load"

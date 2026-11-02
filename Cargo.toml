@@ -29,7 +29,7 @@ dotenvy = { version = "0.15.7", default-features = false }
 urlencoding = "2.1"
 config = "0.15.22"
 nutype = { version = "0.7.0", features = ["regex", "serde"] }
-askama = "0.12"
+askama = "0.16"
 regex = "1.12.3"
 tower-livereload = "0.10.3"
 argon2 = "0.5"
