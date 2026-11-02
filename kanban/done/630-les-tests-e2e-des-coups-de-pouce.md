@@ -41,10 +41,10 @@ Aucune.
 
 ## Checklist
 
-- [ ] Les sept scénarios
-- [ ] `tests/impact-map.toml` : le fichier, s'il est nouveau
-- [ ] La suite des coups de pouce passe en entier : `test_match_report_inducements`,
+- [x] Les sept scénarios
+- [x] `tests/impact-map.toml` : le fichier, s'il est nouveau
+- [x] La suite des coups de pouce passe en entier : `test_match_report_inducements`,
       `test_inducement_treasury`, `test_inducements_restreints`,
       `test_inducements_tarif_reduit`, `test_cuistot_halfling`,
       `test_match_report_step2_mercenaires`
-- [ ] `make e2e` impactés
+- [x] `make e2e` impactés

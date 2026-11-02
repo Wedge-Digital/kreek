@@ -181,7 +181,13 @@
                                          "competitions", "team_creation", "players", "ranking", "spaces"]
 "test_match_report_inducements" = ["match_report", "references", "teams",
                                    "competitions", "team_creation", "players", "ranking", "spaces"]
-"test_match_report_step3_4_actions" = ["match_report", "players", "references", "teams",
+# Les parcours des coups de pouce (carte 630) : panier, achats figés,
+# récapitulatif, annulation. Le scénario des journaliers publie un match
+# (spp_calculator, ranking) et lit leur retrait dans `players`, via `teams`.
+"test_match_report_inducements_flows" = ["match_report", "references", "teams", "players",
+                                         "competitions", "team_creation", "ranking", "spaces",
+                                         "spp_calculator"]
+"test_match_report_step3_4_actions" =["match_report", "players", "references", "teams",
                                        "competitions", "team_creation", "ranking", "spaces"]
 # L'étape MVP (carte 637) : le sélecteur de joueurs est celui du BC `players`.
 "test_match_report_mvp_step" = ["match_report", "players", "references", "teams",
