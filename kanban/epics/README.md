@@ -59,7 +59,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E20 — Coups de pouce : le panier et l'annulation](done/E20-coups-de-pouce-panier-et-annulation.md) | `done` · 5/5 | 5 |
 | [E21 — Le mode de saisie et l'après-match en séquence](done/E21-mode-de-saisie-et-apres-match-en-sequence.md) | `done` · 9/9 | 9 |
 | [E22 — Le mode « Chacun son équipe »](to_be_refined/E22-mode-chacun-son-equipe.md) | `to_be_refined` | 10 |
-| [E23 — Le temps réel : connexions, présence et notifications](to_be_refined/E23-temps-reel-connexions-et-notifications.md) | `to_be_refined` | 6 |
+| [E23 — Le temps réel : connexions, présence et notifications](ready_to_be_done/E23-temps-reel-connexions-et-notifications.md) | `ready_to_be_done` · 0/6 | 6 |
 | [E24 — La navigation mobile](to_be_refined/E24-navigation-mobile.md) | `to_be_refined` | 3 |
 | [E25 — Retrouver ses matchs](to_be_refined/E25-retrouver-ses-matchs.md) | `to_be_refined` | 4 |
 | [E26 — Les équipes sur mobile : recherche et fiches](to_be_refined/E26-equipes-sur-mobile.md) | `to_be_refined` | 5 |
