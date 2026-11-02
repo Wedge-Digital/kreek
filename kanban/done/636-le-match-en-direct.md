@@ -38,11 +38,11 @@ actions déjà saisies y sont.
 
 ## Checklist
 
-- [ ] `/live` et son gabarit, sa feuille au bundle ; le choix d'équipe
-- [ ] `step3`/`step4` : « Retour au journal » seul
-- [ ] Avant-match et coups de pouce mènent à `/live` ; refus de 634 → redirection
-- [ ] Fragment `mr-steps` à cinq étapes, inclus par chaque gabarit
-- [ ] Tests unitaires : le VM de `/live` avec et sans droit d'écriture
-- [ ] E2E : de l'avant-match au journal, « Nouvelle action » → équipe → saisie → retour ; l'autre coach ne voit aucun bouton ; `test_match_report_step3_4_actions.py` suit la navigation
-- [ ] `tests/impact-map.toml` et `tests/e2e/visual/urls.py` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `/live` et son gabarit, sa feuille au bundle ; le choix d'équipe
+- [x] `step3`/`step4` : « Retour au journal » seul
+- [x] Avant-match et coups de pouce mènent à `/live` ; refus de 634 → redirection
+- [x] Fragment `mr-steps` à cinq étapes, inclus par chaque gabarit
+- [x] Tests unitaires : le VM de `/live` avec et sans droit d'écriture
+- [x] E2E : de l'avant-match au journal, « Nouvelle action » → équipe → saisie → retour ; l'autre coach ne voit aucun bouton ; `test_match_report_step3_4_actions.py` suit la navigation
+- [x] `tests/impact-map.toml` et `tests/e2e/visual/urls.py` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

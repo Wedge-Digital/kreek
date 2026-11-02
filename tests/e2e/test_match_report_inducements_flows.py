@@ -239,7 +239,7 @@ def test_recap_shows_both_sides_and_their_lines(page: Page, flows_ctx):
     expect(outsider.locator(".mr-cart-merco-item")).to_contain_text("Chariot de Vivres ×2")
     expect(favori.locator(".mr-recap-total b")).to_have_text(str(_cout(achats_favori)))
     expect(outsider.locator(".mr-recap-total b")).to_have_text(str(_cout(achats_outsider)))
-    expect(page.get_by_role("link", name="Coup d'envoi → Match")).to_have_attribute("href", re.compile(r"/step3$"))
+    expect(page.get_by_role("link", name="Coup d'envoi → Match")).to_have_attribute("href", re.compile(r"/live$"))
     expect(page.locator(".mr-recap-cancel")).to_be_visible()
 
 

@@ -1,4 +1,5 @@
 {% extends "app-layout.html" %}
+{% import "match_report/steps-indicator.html" as steps %}
 
 {% block content %}
 
@@ -14,18 +15,8 @@
     <div class="mr-header-sub">Achats terminés pour les deux équipes</div>
   </div>
 
-  <!-- Étapes -->
-  <div class="mr-steps">
-    <div class="mr-step mr-step--done">&#10003;</div>
-    <div class="mr-step-line mr-step-line--done"></div>
-    <div class="mr-step mr-step--active">2</div>
-    <div class="mr-step-line"></div>
-    <div class="mr-step mr-step--pending">3</div>
-    <div class="mr-step-line"></div>
-    <div class="mr-step mr-step--pending">4</div>
-    <div class="mr-step-line"></div>
-    <div class="mr-step mr-step--pending">5</div>
-  </div>
+  <!-- Étapes : les coups de pouce appartiennent à l'avant-match (R9). -->
+  {% call steps::indicator(1) %}
 
   {% for side in sides %}
   <div class="mr-card mr-recap-side">

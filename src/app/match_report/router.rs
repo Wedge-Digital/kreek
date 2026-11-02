@@ -4,6 +4,7 @@ use crate::app::match_report::io::web::garde_saisie::{garde_saisie, garde_suivi}
 use crate::app::match_report::io::web::inducements_controller::{
     get_inducements, post_inducements,
 };
+use crate::app::match_report::io::web::live_match_controller::get_live_match;
 use crate::app::match_report::io::web::match_selection_controller::{
     create_match_report, edit_match_report, from_pairing, new_match_report, update_match_selection,
 };
@@ -90,9 +91,11 @@ fn routes_ouvertes() -> Router<AppState> {
 }
 
 /// La lecture d'un compte rendu en cours, ouverte à l'autre coach (carte 634).
-/// La carte 636 y ajoutera le match en direct.
 fn routes_de_suivi() -> Router<AppState> {
     Router::new()
+        // Le match en direct (carte 636) : les gestes d'écriture y suivent le
+        // droit d'écrire, la lecture non.
+        .route(path::MATCH_REPORT_LIVE, get(get_live_match))
         // Le journal des deux camps (carte 635) : le ✕ y suit le droit
         // d'écrire, la lecture non.
         .route(path::MATCH_REPORT_ACTION_LOG, get(get_action_log))

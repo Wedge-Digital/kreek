@@ -5,7 +5,7 @@ joueur choisi directement. Il s'inscrit au journal comme une action `Mvp` au
 tour 16, un par camp.
 
 Scénarios couverts, dans l'ordre du fichier — ils partagent un seul rapport :
-- M1 — La fin du match (étape visiteur) mène au MVP du domicile
+- M1 — La fin du match (match en direct) mène au MVP du domicile, qui y ramène
 - M2 — MVP domicile au clic : indicateur à 3, « MVP 1 / 2 », suite vers le visiteur
 - M3 — MVP visiteur : le domicile rappelé en tête, « MVP 2 / 2 », suite vers les gains
 - M4 — Les deux MVP sont au journal, au tour 16, un par camp
@@ -87,11 +87,17 @@ def _choisir_un_joueur_et_valider(page: Page):
 # ── M1 ────────────────────────────────────────────────────────────────────────
 
 def test_m1_la_fin_du_match_mene_au_mvp_du_domicile(page: Page, space_id, mvp_ctx):
+    """Depuis le match en direct (carte 636) ; le retour du MVP domicile y
+    ramène."""
     mr_id = mvp_ctx["mr_id"]
-    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step4", wait_until="load")
-    suite = page.locator(".mr-nav-row .btn-primary-sm")
-    expect(suite).to_contain_text("MVP")
-    assert suite.get_attribute("href").endswith(f"/{mr_id}/mvp/home")
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/live", wait_until="load")
+    fin = page.locator(".match-report-live .live-end-match")
+    expect(fin).to_contain_text("Fin du match")
+    assert fin.get_attribute("href").endswith(f"/{mr_id}/mvp/home")
+
+    page.goto(_mvp_url(space_id, mr_id, "home"), wait_until="load")
+    retour = page.locator(".match-report-mvp a.btn-outline-sm")
+    assert retour.get_attribute("href").endswith(f"/{mr_id}/live")
 
 
 # ── M2 ────────────────────────────────────────────────────────────────────────

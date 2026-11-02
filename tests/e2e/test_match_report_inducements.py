@@ -121,7 +121,7 @@ def underdog_inducements_location(space_id, inducements_ctx):
     location = resp.headers.get("Location", "")
     m = _TEAM_ID_RE.search(location)
     if not m:
-        return location  # déjà sur step3 (pas de phase inducements pour ce tier)
+        return location  # déjà au match en direct (pas de phase inducements pour ce tier)
     resp2 = _post_pass(space_id, mr_id, m.group(1))
     assert resp2.status_code in (302, 303), f"pass topdog: {resp2.status_code}"
     return resp2.headers.get("Location", "")
@@ -129,10 +129,11 @@ def underdog_inducements_location(space_id, inducements_ctx):
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
-def test_fan_factor_redirects_to_inducements_or_step3(inducements_mr):
-    """POST fan factor → redirect vers inducements/{team_id} ou step3."""
+def test_fan_factor_redirects_to_inducements_or_live(inducements_mr):
+    """POST fan factor → redirect vers inducements/{team_id} ou le match en
+    direct (carte 636)."""
     loc = inducements_mr["redirect_location"]
-    assert "/inducements/" in loc or "/step3" in loc, (
+    assert "/inducements/" in loc or "/live" in loc, (
         f"Redirect inattendu après fan factor : {loc!r}"
     )
 
@@ -141,7 +142,7 @@ def test_inducements_page_loads(page: Page, space_id, inducements_mr):
     """GET page inducements → header équipe + bannière budget visible."""
     loc = inducements_mr["redirect_location"]
     if "/inducements/" not in loc:
-        pytest.skip("Pas de page inducements pour cette compétition (skip direct vers step3)")
+        pytest.skip("Pas de page inducements pour cette compétition (directement au match en direct)")
 
     page.goto(f"{BASE_URL}{loc}", wait_until="load")
 
@@ -192,9 +193,9 @@ def test_topdog_pass_redirects_to_underdog(page: Page, space_id, inducements_mr)
         page.locator("button[name='intent'][value='pass']").click()
 
     # Après "Passer" depuis TopDog, on est soit sur la page inducements de l'autre
-    # équipe, soit sur step3 si les inducements sont entièrement sautées.
+    # équipe, soit au match en direct si les inducements sont entièrement sautées.
     new_url = page.url
-    assert "/inducements/" in new_url or "/step3" in new_url, (
+    assert "/inducements/" in new_url or "/live" in new_url, (
         f"Redirect inattendu depuis 'Passer' TopDog : {new_url!r}"
     )
     if "/inducements/" in new_url:
@@ -208,7 +209,7 @@ def test_topdog_pass_redirects_to_underdog(page: Page, space_id, inducements_mr)
 def test_underdog_pass_redirects_to_recap(page: Page, space_id, underdog_inducements_location):
     """Underdog clique 'Passer' → le récapitulatif des deux camps (carte 628,
     décision 4), servi par la page des coups de pouce elle-même ; le coup
-    d'envoi y mène à step3."""
+    d'envoi y mène au match en direct (carte 636)."""
     loc = underdog_inducements_location
     if "/inducements/" not in loc:
         pytest.skip("Pas de page inducements Underdog pour cette compétition")
@@ -225,7 +226,7 @@ def test_underdog_pass_redirects_to_recap(page: Page, space_id, underdog_inducem
     expect(page.locator(".mr-recap-side")).to_have_count(2)
     expect(page.locator(".mr-recap-empty")).to_have_count(2)
     kickoff = page.get_by_role("link", name="Coup d'envoi → Match")
-    expect(kickoff).to_have_attribute("href", re.compile(r"/step3$"))
+    expect(kickoff).to_have_attribute("href", re.compile(r"/live$"))
 
 
 def test_pass_discards_pending_selection(page: Page, space_id, inducements_ctx):

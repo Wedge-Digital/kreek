@@ -276,7 +276,7 @@ fn recap_template(
         app_routes: page.routes,
         topdog_name: name_of(0),
         underdog_name: name_of(1),
-        kickoff_url: routes.step3(page.space_id, &mr_id),
+        kickoff_url: routes.live(page.space_id, &mr_id),
         can_cancel,
         cancel_url: routes.cancel_inducements(page.space_id, &mr_id),
         sides,
@@ -643,18 +643,18 @@ mod tests {
     }
 
     /// R3 : sans le feu vert du domaine, ni bouton ni confirmation ; le coup
-    /// d'envoi mène toujours à l'étape 3.
+    /// d'envoi mène toujours au match en direct (carte 636).
     #[test]
     fn l_annulation_ne_s_affiche_que_si_le_domaine_la_permet() {
         let with = rendered_recap(true);
         assert!(with.contains("Annuler les coups de pouce"));
         assert!(with.contains("/cancel-inducements"));
         assert!(with.contains("Oui, tout annuler"));
-        assert!(with.contains("/step3"));
+        assert!(with.contains("/live"));
         assert!(with.contains("Aucun coup de pouce"));
         let without = rendered_recap(false);
         assert!(!without.contains("Annuler les coups de pouce"));
         assert!(!without.contains("/cancel-inducements"));
-        assert!(without.contains("/step3"));
+        assert!(without.contains("/live"));
     }
 }

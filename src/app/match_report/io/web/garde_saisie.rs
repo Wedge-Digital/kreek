@@ -11,12 +11,11 @@
 //!
 //! Les autres membres de l'espace reçoivent 403 des deux. L'autre coach, que
 //! seule la seconde refuse, reçoit 403 sur une écriture ou une requête htmx,
-//! et une page lisible — « Ce match est saisi par … » — quand il demandait une
-//! page complète (décision du 2026-11-01). Cette page est servie en **200** :
-//! c'est une page de lecture, pas une erreur, et la mise en page n'affiche
-//! aucune réponse 4xx hors 422 — en 403, une navigation htmx n'aurait rien
-//! montré. La carte 636 la remplacera par la redirection vers le match en
-//! direct.
+//! et une **redirection 303 vers le match en direct** quand il demandait une
+//! page complète (carte 636) : il y suit le match, sans bouton d'écriture.
+//! Elle remplace la page « Ce match est saisi par … » de la carte 634 : un
+//! refus en 403 n'aurait rien montré à une navigation htmx, la mise en page
+//! n'affichant aucune réponse 4xx hors 422.
 //!
 //! **Où** : posées une fois, par `route_layer`. Une route ajoutée à un groupe
 //! est gardée sans qu'on y pense ; c'est le point du découpage, préféré à vingt
@@ -40,12 +39,11 @@ use crate::app::match_report::use_cases::match_report_access_service::{
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use crate::web::htmx::veut_la_page_entiere;
-use askama::Template;
 use axum::extract::{Path, Request, State};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, Method, StatusCode};
 use axum::middleware::Next;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::RequestPartsExt;
 use std::collections::HashMap;
 
@@ -88,8 +86,9 @@ async fn path_params(parts: &mut Parts) -> HashMap<String, String> {
     }
 }
 
-/// Une page complète mérite un refus lisible plutôt qu'un 403 nu : un `GET`
-/// du navigateur, ou une navigation htmx vers le contenu applicatif.
+/// Une page complète mérite d'être menée au match en direct plutôt qu'un 403
+/// nu : un `GET` du navigateur, ou une navigation htmx vers le contenu
+/// applicatif.
 fn veut_une_page(method: &Method, headers: &HeaderMap) -> bool {
     method == Method::GET && veut_la_page_entiere(headers)
 }
@@ -152,12 +151,12 @@ async fn autoriser_saisie(
         user,
         space_id,
         portee,
-        ..
+        match_report_id,
     } = &rapport;
     if can_write_report(&deps, user, space_id, portee, &entry).await {
         return Ok(());
     }
-    Err(refuser_l_ecriture(state, &entry, wants_page).await)
+    Err(refuser_l_ecriture(space_id, match_report_id, wants_page))
 }
 
 /// Le mode de saisie et le démarreur. Absents alors que la portée vient
@@ -175,33 +174,16 @@ async fn charger_entree(state: &AppState, match_report_id: &str) -> Result<Entry
 }
 
 /// Le refus fait à l'autre coach : 403 nu sur une écriture ou un fragment, et
-/// en 200 une page qui dit qui saisit quand c'est une page complète qu'il
-/// demandait.
-async fn refuser_l_ecriture(state: &AppState, entry: &EntryScope, wants_page: bool) -> Response {
+/// la redirection vers le match en direct quand c'est une page complète qu'il
+/// demandait (carte 636).
+fn refuser_l_ecriture(space_id: &str, match_report_id: &str, wants_page: bool) -> Response {
     if !wants_page {
         return StatusCode::FORBIDDEN.into_response();
     }
-    let starter_name = match entry.started_by.as_deref() {
-        Some(id) => state.match_report.coach_data.find_coach_name(id).await,
-        None => None,
-    };
-    let page = ReadOnlyReportTemplate {
-        app_routes: AppRoutes::default(),
-        starter_name,
-    };
-    match page.render() {
-        Ok(html) => Html(html).into_response(),
-        Err(_) => StatusCode::FORBIDDEN.into_response(),
-    }
-}
-
-/// « Ce match est saisi par … » (carte 634).
-#[derive(Template)]
-#[template(path = "read-only-report.html")]
-pub struct ReadOnlyReportTemplate {
-    pub app_routes: AppRoutes,
-    /// Le nom du démarreur ; `None` s'il est inconnu, et le gabarit le tait.
-    pub starter_name: Option<String>,
+    let live = AppRoutes::default()
+        .match_report
+        .live(space_id, match_report_id);
+    Redirect::to(&live).into_response()
 }
 
 async fn charger_portee(
@@ -389,10 +371,10 @@ mod tests {
         h
     }
 
-    /// Le refus lisible ne vaut que pour une page : une écriture, ou un
-    /// fragment demandé par htmx, reçoit un 403 nu (carte 634).
+    /// La redirection ne vaut que pour une page : une écriture, ou un
+    /// fragment demandé par htmx, reçoit un 403 nu (cartes 634 et 636).
     #[test]
-    fn only_a_page_request_gets_the_readable_refusal() {
+    fn only_a_page_request_is_led_to_the_live_match() {
         assert!(veut_une_page(&Method::GET, &headers(&[])));
         assert!(veut_une_page(
             &Method::GET,
@@ -407,23 +389,20 @@ mod tests {
     }
 
     #[test]
-    fn the_readable_refusal_names_the_starter_or_stays_silent() {
-        let named = ReadOnlyReportTemplate {
-            app_routes: AppRoutes::default(),
-            starter_name: Some("Yann".to_string()),
-        };
-        assert!(named
-            .render()
-            .unwrap()
-            .contains("Ce match est saisi par Yann."));
-        let unknown = ReadOnlyReportTemplate {
-            app_routes: AppRoutes::default(),
-            starter_name: None,
-        };
-        assert!(unknown
-            .render()
-            .unwrap()
-            .contains("Ce match est saisi par le coach qui l'a d"));
+    fn a_page_request_is_redirected_to_the_live_match() {
+        let response = refuser_l_ecriture("espace", "rapport", true);
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        let location = response.headers().get("location").unwrap();
+        assert_eq!(
+            location.to_str().unwrap(),
+            "/app/espace/match-report/rapport/live"
+        );
+    }
+
+    #[test]
+    fn a_write_is_forbidden_without_redirection() {
+        let response = refuser_l_ecriture("espace", "rapport", false);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]

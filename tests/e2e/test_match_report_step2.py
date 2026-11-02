@@ -140,7 +140,7 @@ def test_step2_pre_match_page_loads(page: Page, space_id, pre_match_mr_id):
 
 
 def test_step2_submit_valid_fan_factor(page: Page, space_id, pre_match_mr_id):
-    """Saisie D3 valide (1 et 2) + soumission → redirect vers inducements ou step3."""
+    """Saisie D3 valide (1 et 2) + soumission → redirect vers inducements ou le match en direct."""
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{pre_match_mr_id}/step2",
               wait_until="load")
 
@@ -150,10 +150,11 @@ def test_step2_submit_valid_fan_factor(page: Page, space_id, pre_match_mr_id):
     with page.expect_navigation(wait_until="load"):
         page.click("button[type='submit']")
 
-    # La soumission du fan factor redirige vers la page inducements ou step3 —
+    # La soumission du fan factor redirige vers la page inducements ou le
+    # match en direct (carte 636) —
     # jamais vers /step2 à nouveau.
     assert "/step2" not in page.url or "/inducements/" in page.url, (
-        f"Redirect inattendu vers {page.url!r} — attendu inducements ou step3"
+        f"Redirect inattendu vers {page.url!r} — attendu inducements ou le match en direct"
     )
 
 

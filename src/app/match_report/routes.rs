@@ -9,6 +9,8 @@ pub mod path {
     /// `/inducements/{team_id}` (carte 626).
     pub const MATCH_REPORT_CANCEL_INDUCEMENTS: &str =
         "/app/{space_id}/match-report/{match_report_id}/cancel-inducements";
+    /// Le match en direct : le journal d'où se saisit le match (carte 636).
+    pub const MATCH_REPORT_LIVE: &str = "/app/{space_id}/match-report/{match_report_id}/live";
     pub const MATCH_REPORT_STEP3: &str = "/app/{space_id}/match-report/{match_report_id}/step3";
     pub const MATCH_REPORT_STEP4: &str = "/app/{space_id}/match-report/{match_report_id}/step4";
     pub const MATCH_REPORT_STEP5: &str = "/app/{space_id}/match-report/{match_report_id}/step5";
@@ -110,6 +112,13 @@ impl Routes {
     /// (carte 628).
     pub fn cancel_inducements(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_CANCEL_INDUCEMENTS
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    /// Le match en direct (carte 636).
+    pub fn live(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_LIVE
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }

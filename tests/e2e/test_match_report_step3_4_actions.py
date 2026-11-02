@@ -12,9 +12,10 @@ Scénarios couverts :
 - S9  — Joueur temp visible si inducements soumis (skip sinon)
 - S10 — Journaliers automatiques si équipe < 11 (skip sinon)
 - S11 — Page step4 (équipe away) : mêmes zones présentes
-- S12 — Journal des deux camps : l'action du visiteur en tête, son camp, « saisi par toi »
+- S12 — Journal des deux camps : l'action du visiteur en tête, son camp, « saisi par vous »
 - S13 — Le panneau d'action n'a plus de ⭐ MVP (carte 637)
 - S14 — Le POST d'action refuse `MVP` en 400, sans rien inscrire (carte 637)
+- S15 — Un seul retour, « ← Retour au journal », vers le match en direct (carte 636)
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée.
 """
@@ -423,6 +424,21 @@ def test_s14_le_post_d_action_refuse_le_mvp(space_id, mr_step3):
     assert _query_db(compter) == before
 
 
+# ── S15 — Le retour au journal (carte 636) ───────────────────────────────────
+
+@pytest.mark.parametrize("etape", ["step3", "step4"])
+def test_s15_un_seul_retour_vers_le_journal(page: Page, space_id, mr_step3, etape):
+    """Plus de suite d'un camp à l'autre : la saisie d'un camp revient au
+    match en direct, d'où se décide la fin du match."""
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_step3}/{etape}",
+              wait_until="load")
+    nav = page.locator(".mr-nav-row")
+    expect(nav.locator("a, button")).to_have_count(1)
+    retour = nav.locator("a", has_text="Retour au journal")
+    assert retour.get_attribute("href").endswith(f"/{mr_step3}/live")
+    expect(page.locator(".mr-step--active")).to_have_text("2")
+
+
 # ── S9 — Joueur temporaire visible ────────────────────────────────────────────
 
 def test_s9_temp_player_visible_after_inducements(page: Page, space_id, mr_step3_full):
@@ -658,7 +674,7 @@ def test_s12_le_journal_montre_les_deux_camps(page: Page, space_id, mr_step3):
     premiere = page.locator("#action-log .mr-log-entry").first
     expect(premiere).to_contain_text("T16")
     expect(premiere).to_have_class(re.compile(r"\bmr-log-entry--away\b"))
-    expect(premiere).to_contain_text("saisi par toi")
+    expect(premiere).to_contain_text("saisi par vous")
     # Le coach qui saisit a le droit de supprimer : le ✕ est là.
     expect(premiere.locator(".mr-log-delete")).to_be_visible()
     # Les actions domicile des scénarios précédents restent dans le même fil.

@@ -189,6 +189,10 @@
                                          "spp_calculator"]
 "test_match_report_step3_4_actions" =["match_report", "players", "references", "teams",
                                        "competitions", "team_creation", "ranking", "spaces"]
+# Le match en direct (carte 636) : de l'avant-match au journal, la saisie d'un
+# camp par le sélecteur de joueurs du BC `players`, et l'autre coach qui suit.
+"test_match_report_live" = ["match_report", "players", "references", "teams",
+                            "competitions", "team_creation", "ranking", "spaces"]
 # L'étape MVP (carte 637) : le sélecteur de joueurs est celui du BC `players`.
 "test_match_report_mvp_step" = ["match_report", "players", "references", "teams",
                                 "competitions", "team_creation", "ranking", "spaces"]

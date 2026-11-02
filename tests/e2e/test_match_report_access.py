@@ -1,12 +1,13 @@
-"""Les gardes d'un compte rendu (cartes 622 et 634).
+"""Les gardes d'un compte rendu (cartes 622, 634 et 636).
 
 Lire un compte rendu en cours est réservé aux admins et aux coachs des deux
 équipes du match ; un autre membre de l'espace reçoit 403 (carte 622).
 
 Écrire — et ouvrir les écrans qui préparent l'écriture — est réservé, en « Je
 saisis tout », au **démarreur** et aux admins (carte 634). L'autre coach suit :
-403 sur une écriture, page lisible « Ce match est saisi par … » (servie en
-200) sur une page complète, journal sans ✕. Un démarreur qui ne coache aucune des deux équipes
+403 sur une écriture, redirection 303 vers le match en direct sur une page
+complète (carte 636), où il lit le score et le journal sans aucun bouton
+d'écriture, journal sans ✕. Un démarreur qui ne coache aucune des deux équipes
 — un admin qui a démarré pour eux — ne compte pas : les deux coachs écrivent.
 
 Le membre simple de la suite (`X-Bypass-Auth-Profile: simple`, « E2E Coach
@@ -141,16 +142,45 @@ def test_l_autre_coach_ne_peut_pas_publier(rapports):
     assert reponse.status_code == 403, reponse.status_code
 
 
-def test_l_autre_coach_lit_qui_saisit_le_match(rapports):
-    """Une page complète, et non un 403 nu — servie en 200, pour qu'une
-    navigation htmx l'affiche. La carte 636 la remplacera par la redirection
-    vers le match en direct."""
+def test_l_autre_coach_est_mene_au_match_en_direct(rapports):
+    """Une page complète, et non un 403 nu : la redirection vers le match en
+    direct, où il suit (carte 636). Elle remplace la page « Ce match est saisi
+    par … » de la carte 634."""
     reponse = requests.get(
         _url(rapports, "adverse", "step2"), headers=PROFIL_SIMPLE,
         allow_redirects=False, timeout=15,
     )
-    assert reponse.status_code == 200, reponse.status_code
-    assert "Ce match est saisi par DevCoach." in reponse.text
+    assert reponse.status_code == 303, reponse.status_code
+    assert reponse.headers["Location"].endswith(f"/{rapports['adverse']}/live")
+
+
+def test_l_autre_coach_suit_le_match_sans_bouton_d_ecriture(rapports):
+    """R5 : le même écran, sans « Nouvelle action » ni « Fin du match ». Lu
+    par l'admin, il les porte : sans ce témoin, une page vide passerait."""
+    autre = requests.get(
+        _url(rapports, "adverse", "live"), headers=PROFIL_SIMPLE,
+        allow_redirects=False, timeout=15,
+    )
+    assert autre.status_code == 200, autre.status_code
+    assert "DevCoach saisit tout le match" in autre.text
+    assert "Nouvelle action" not in autre.text
+    assert "live-end-match" not in autre.text
+    assert "/step3" not in autre.text
+
+    admin = requests.get(
+        _url(rapports, "adverse", "live"), allow_redirects=False, timeout=15,
+    )
+    assert admin.status_code == 200, admin.status_code
+    assert "Nouvelle action" in admin.text
+    assert "saisit tout le match" not in admin.text
+
+
+def test_un_tiers_ne_suit_pas_le_match(rapports):
+    reponse = requests.get(
+        _url(rapports, "etranger", "live"), headers=PROFIL_SIMPLE,
+        allow_redirects=False, timeout=15,
+    )
+    assert reponse.status_code == 403, reponse.status_code
 
 
 def test_l_autre_coach_voit_le_recapitulatif_sans_bouton_de_publication(rapports):

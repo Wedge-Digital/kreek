@@ -25,10 +25,8 @@ pub struct ActionsStepTemplate {
     pub temp_player_selector_url: String,
     pub action_panel_url: String,
     pub action_log_url: String,
-    pub back_url: String,
-    pub next_url: String,
-    pub next_label: String,
-    pub next_disabled: bool,
+    /// Le seul retour : le match en direct (carte 636).
+    pub live_url: String,
 }
 
 fn initials_from(name: &str) -> String {
@@ -112,24 +110,9 @@ async fn get_step(space_id: String, mr_id: String, side: TeamSide, state: AppSta
         TeamSide::Home => "home",
         TeamSide::Away => "away",
     };
-    let back_url = match side {
-        TeamSide::Home => routes.match_report.step2(&space_id, &mr_id),
-        TeamSide::Away => routes.match_report.step3(&space_id, &mr_id),
-    };
-    let (next_url, next_label, next_disabled) = match side {
-        TeamSide::Home => (
-            routes.match_report.step4(&space_id, &mr_id),
-            "Équipe extérieure",
-            false,
-        ),
-        // La fin du match mène au MVP du domicile (carte 637) ; la carte 636
-        // y conduira depuis le match en direct.
-        TeamSide::Away => (
-            routes.match_report.mvp(&space_id, &mr_id, "home"),
-            "MVP",
-            false,
-        ),
-    };
+    // Un seul retour, vers le journal : la fin du match se décide au match en
+    // direct, plus d'une étape de camp à l'autre (carte 636).
+    let live_url = routes.match_report.live(&space_id, &mr_id);
 
     ActionsStepTemplate {
         app_routes: routes,
@@ -147,10 +130,7 @@ async fn get_step(space_id: String, mr_id: String, side: TeamSide, state: AppSta
         temp_player_selector_url,
         action_panel_url,
         action_log_url,
-        back_url,
-        next_url,
-        next_label: next_label.to_string(),
-        next_disabled,
+        live_url,
     }
     .into_response()
 }

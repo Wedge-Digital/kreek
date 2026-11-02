@@ -1,0 +1,93 @@
+{% extends "app-layout.html" %}
+{% import "match_report/steps-indicator.html" as steps %}
+
+{# Le match en direct (carte 636) : le score, le journal des deux camps, et
+   selon le droit d'écrire les gestes de saisie ou le bandeau de suivi.
+   Maquettes : app-mobile-solo-live.html, app-mobile-match-new-action.html,
+   app-mobile-solo-follow.html. #}
+{% block content %}
+<div class="mr-container match-report-live">
+
+  <div class="mr-header">
+    <div class="mr-header-icon">&#127944;</div>
+    <div class="mr-header-title">Match en direct</div>
+    <div class="mr-header-sub">Le journal des deux &eacute;quipes</div>
+  </div>
+
+  {% call steps::indicator(2) %}
+
+  <div class="live-score-banner">
+    <div class="live-score-team">
+      {% if let Some(url) = home.logo_url.as_ref() %}
+      <img class="live-score-logo live-score-logo--img" src="{{ url }}" alt="{{ home.initials }}">
+      {% else %}
+      <div class="live-score-logo">{{ home.initials }}</div>
+      {% endif %}
+      <div class="live-score-name">{{ home.name }}</div>
+    </div>
+    <div class="live-score-center">
+      <div class="live-score-nums"><span class="live-score-value">{{ score.home }}</span><span class="live-score-sep">&#8212;</span><span class="live-score-value">{{ score.away }}</span></div>
+      <div class="live-score-cas" title="Sorties"><span>{{ score.home_cas }}</span><span class="live-score-cas-sep">&#8211;</span><span>{{ score.away_cas }}</span></div>
+    </div>
+    <div class="live-score-team">
+      {% if let Some(url) = away.logo_url.as_ref() %}
+      <img class="live-score-logo live-score-logo--img" src="{{ url }}" alt="{{ away.initials }}">
+      {% else %}
+      <div class="live-score-logo">{{ away.initials }}</div>
+      {% endif %}
+      <div class="live-score-name">{{ away.name }}</div>
+    </div>
+  </div>
+
+  {% if write.is_none() %}
+  <div class="live-notice">
+    <div class="live-notice-title">
+      <span class="live-dot"></span>
+      {% if let Some(name) = starter_name.as_ref() %}{{ name }} saisit tout le match{% else %}Ce match est saisi par le coach qui l'a d&eacute;marr&eacute;{% endif %}
+    </div>
+    <div class="text-tiny">Vous suivez le match en direct, il n'y a rien &agrave; faire de votre c&ocirc;t&eacute;. Le compte rendu vous parviendra publi&eacute;.</div>
+  </div>
+  {% endif %}
+
+  {# Qui suit voit le journal se remettre à jour de lui-même ; qui saisit le
+     recharge à chaque suppression. #}
+  <div class="live-log"
+       hx-get="{{ action_log_url }}"
+       hx-trigger="load, actionDeleted from:body{% if write.is_none() %}, every 15s{% endif %}"
+       hx-target="this"
+       hx-swap="innerHTML">
+  </div>
+
+  {% if let Some(w) = write %}
+  <div class="live-actions">
+    {# Le choix de l'équipe, dans la page et sans script : un <details>
+       natif, qui s'ouvre et se referme au clic. #}
+    <details class="live-new-action">
+      <summary class="btn btn-primary-blue btn-md live-new-action-toggle">&#65291; Nouvelle action</summary>
+      <div class="mr-card live-team-pick-card">
+        <div class="mr-card-title">Quelle &eacute;quipe a r&eacute;alis&eacute; l'action ?</div>
+        <a class="mr-banner live-team-pick" href="{{ w.home_step_url }}">
+          {% if let Some(url) = home.logo_url.as_ref() %}
+          <img class="mr-banner-logo mr-banner-logo--img" src="{{ url }}" alt="{{ home.initials }}">
+          {% else %}
+          <div class="mr-banner-logo">{{ home.initials }}</div>
+          {% endif %}
+          <div><div class="mr-banner-name">{{ home.name }}</div><div class="mr-banner-label">&Eacute;quipe &agrave; domicile</div></div>
+          <span class="live-team-pick-chevron">&#8250;</span>
+        </a>
+        <a class="mr-banner live-team-pick" href="{{ w.away_step_url }}">
+          {% if let Some(url) = away.logo_url.as_ref() %}
+          <img class="mr-banner-logo mr-banner-logo--img" src="{{ url }}" alt="{{ away.initials }}">
+          {% else %}
+          <div class="mr-banner-logo">{{ away.initials }}</div>
+          {% endif %}
+          <div><div class="mr-banner-name">{{ away.name }}</div><div class="mr-banner-label">&Eacute;quipe visiteur</div></div>
+          <span class="live-team-pick-chevron">&#8250;</span>
+        </a>
+      </div>
+    </details>
+    <a class="btn btn-outline btn-sm live-end-match" href="{{ w.mvp_url }}">Fin du match &#8594; MVP</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

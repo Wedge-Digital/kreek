@@ -266,13 +266,13 @@ fn temp_players_url(ids: &PageIds<'_>, side: TeamSide) -> String {
     }
 }
 
-/// Domicile : retour au match, suite au visiteur. Visiteur : retour au
+/// Domicile : retour au match en direct (carte 636), suite au visiteur. Visiteur : retour au
 /// domicile, suite aux gains et fans.
 fn nav_for(ids: &PageIds<'_>, side: TeamSide, away_name: &str) -> MvpNavVm {
     let routes = AppRoutes::default().match_report;
     let (back_url, back_label, next_label) = match side {
         TeamSide::Home => (
-            routes.step4(ids.space_id, ids.mr_id),
+            routes.live(ids.space_id, ids.mr_id),
             "Match".to_string(),
             format!("MVP : {away_name}"),
         ),
@@ -351,7 +351,7 @@ mod tests {
             .ends_with("/M/mvp/home"));
         assert!(nav_for(&ids, TeamSide::Home, "Rats")
             .back_url
-            .ends_with("/M/step4"));
+            .ends_with("/M/live"));
     }
 
     #[test]

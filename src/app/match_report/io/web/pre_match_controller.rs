@@ -222,10 +222,10 @@ pub async fn post_pre_match(
             );
             Redirect::to(&url).into_response()
         }
-        Ok(record_fan_factor_use_case::RecordFanFactorOutcome::RedirectToStep3) => {
+        Ok(record_fan_factor_use_case::RecordFanFactorOutcome::RedirectToLiveMatch) => {
             let url = AppRoutes::default()
                 .match_report
-                .step3(&space_id, &match_report_id);
+                .live(&space_id, &match_report_id);
             Redirect::to(&url).into_response()
         }
         Err(record_fan_factor_use_case::RecordFanFactorError::NotFound) => {

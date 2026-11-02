@@ -26,7 +26,7 @@ pub struct ActionRowVm {
     /// `home` ou `away` : le liseré du camp, les deux camps partageant le fil.
     pub side_class: &'static str,
     pub team_name: String,
-    /// « toi », le nom de l'autre coach, ou rien quand l'auteur est inconnu —
+    /// « vous », le nom de l'autre coach, ou rien quand l'auteur est inconnu —
     /// jamais un auteur inventé.
     pub recorded_by: Option<String>,
     /// `None` pour qui ne peut pas supprimer : le ✕ n'est pas rendu.
@@ -70,11 +70,11 @@ impl ActionRowVm {
     }
 }
 
-/// « toi » pour l'utilisateur courant, sinon le nom résolu par le port.
+/// « vous » pour l'utilisateur courant, sinon le nom résolu par le port.
 fn recorded_by_label(recorded_by: Option<&str>, ctx: &ActionLogContext<'_>) -> Option<String> {
     let id = recorded_by?;
     if id == ctx.current_user_id {
-        return Some("toi".to_string());
+        return Some("vous".to_string());
     }
     ctx.recorder_names.get(id).cloned()
 }
@@ -168,7 +168,9 @@ async fn log_context<'a>(
     }
 }
 
-async fn load_scope(state: &AppState, mr_id: &str) -> Result<PorteeRapport, StatusCode> {
+/// La portée du rapport, lue sur la projection ; servie aussi au match en
+/// direct (carte 636).
+pub async fn load_scope(state: &AppState, mr_id: &str) -> Result<PorteeRapport, StatusCode> {
     let repo = state.match_report.match_report_repo.as_ref();
     match repo.find_access_scope(mr_id).await {
         Ok(Some((competition_id, home_team_id, away_team_id))) => Ok(PorteeRapport {
@@ -185,7 +187,7 @@ async fn load_scope(state: &AppState, mr_id: &str) -> Result<PorteeRapport, Stat
 }
 
 /// Le mode de saisie et le démarreur, d'où se décide le ✕ (carte 634).
-async fn load_entry(state: &AppState, mr_id: &str) -> Result<EntryScope, StatusCode> {
+pub async fn load_entry(state: &AppState, mr_id: &str) -> Result<EntryScope, StatusCode> {
     let repo = state.match_report.match_report_repo.as_ref();
     match load_entry_scope(repo, mr_id).await {
         Ok(Some(entry)) => Ok(entry),
@@ -220,7 +222,7 @@ async fn team_names(state: &AppState, scope: &PorteeRapport) -> (String, String)
 }
 
 /// Le nom de chaque auteur du journal, l'utilisateur courant excepté : il est
-/// « toi ». Un coach que le port ne connaît pas reste sans nom.
+/// « vous ». Un coach que le port ne connaît pas reste sans nom.
 async fn recorder_names(
     coach_data: &dyn ICoachDataPort,
     rows: &[MatchActionRow],
@@ -357,7 +359,7 @@ mod tests {
     #[test]
     fn the_current_user_is_named_you() {
         let vm = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx(true));
-        assert_eq!(vm.recorded_by.as_deref(), Some("toi"));
+        assert_eq!(vm.recorded_by.as_deref(), Some("vous"));
     }
 
     #[test]
@@ -414,7 +416,7 @@ mod tests {
         assert!(!html.contains("mr-log-delete"));
     }
 
-    /// L'utilisateur courant n'est pas demandé au port : il est « toi ».
+    /// L'utilisateur courant n'est pas demandé au port : c'est « vous ».
     #[tokio::test]
     async fn recorder_names_skip_the_current_user() {
         let rows = vec![

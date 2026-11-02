@@ -1,0 +1,113 @@
+/* Le match en direct (carte 636). Le reste — en-tête, indicateur d'étapes,
+   bannière d'équipe, journal — vient de match-report-shared.css.
+   Maquettes : app-mobile-solo-live.html, app-mobile-match-new-action.html,
+   app-mobile-solo-follow.html. */
+
+/* ── Le score ── */
+.match-report-live .live-score-banner {
+  background: var(--white);
+  border-radius: 12px;
+  padding: var(--p2);
+  display: flex;
+  align-items: center;
+}
+.match-report-live .live-score-team {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.match-report-live .live-score-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--main-blue), var(--dark-2));
+}
+.match-report-live .live-score-logo--img { object-fit: cover; background: none; }
+.match-report-live .live-score-name {
+  font-size: var(--text-tiny);
+  font-weight: 600;
+  color: var(--dark-1);
+}
+.match-report-live .live-score-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 0 var(--p1);
+}
+.match-report-live .live-score-nums { display: flex; align-items: center; gap: 10px; }
+.match-report-live .live-score-value {
+  font-family: var(--font-title);
+  font-size: var(--h3);
+  font-weight: 700;
+  color: var(--dark-0);
+}
+.match-report-live .live-score-sep { font-size: var(--h4); font-weight: 700; color: var(--dark-4); }
+.match-report-live .live-score-cas {
+  display: flex;
+  gap: 6px;
+  font-family: var(--font-title);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark-3);
+}
+.match-report-live .live-score-cas-sep { color: var(--dark-5); }
+
+/* ── Qui suit : le bandeau ── */
+.match-report-live .live-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--p1);
+  background: var(--white);
+  border-left: 4px solid var(--main-blue);
+  border-radius: 12px;
+}
+.match-report-live .live-notice-title {
+  font-weight: 700;
+  font-size: var(--text-small);
+  color: var(--dark-1);
+}
+.match-report-live .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--orange);
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+
+/* ── Qui saisit : les gestes ── */
+.match-report-live .live-actions { display: flex; flex-direction: column; gap: 8px; }
+.match-report-live .live-new-action { display: flex; flex-direction: column; gap: 8px; }
+.match-report-live .live-new-action-toggle {
+  display: block;
+  text-align: center;
+  cursor: pointer;
+  list-style: none;
+}
+.match-report-live .live-new-action-toggle::-webkit-details-marker { display: none; }
+.match-report-live .live-end-match { text-align: center; }
+.match-report-live .live-team-pick-card { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.match-report-live .live-team-pick {
+  text-decoration: none;
+  border: 1px solid var(--dark-5);
+}
+.match-report-live .live-team-pick:hover { border-color: var(--main-blue); }
+.match-report-live .live-team-pick-chevron {
+  margin-left: auto;
+  color: var(--dark-4);
+  font-size: 18px;
+}

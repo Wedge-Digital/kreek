@@ -20,8 +20,11 @@ pub struct RecordFanFactorCommand {
 
 #[derive(Debug)]
 pub enum RecordFanFactorOutcome {
-    RedirectToInducements { topdog_team_id: String },
-    RedirectToStep3,
+    RedirectToInducements {
+        topdog_team_id: String,
+    },
+    /// Pas de coups de pouce : le coup d'envoi, au match en direct (carte 636).
+    RedirectToLiveMatch,
 }
 
 #[derive(Debug)]
@@ -160,7 +163,7 @@ async fn determine_outcome(
             topdog_team_id: topdog_id,
         })
     } else {
-        Ok(RecordFanFactorOutcome::RedirectToStep3)
+        Ok(RecordFanFactorOutcome::RedirectToLiveMatch)
     }
 }
 

@@ -297,7 +297,7 @@ def test_submit_with_mercenaire_creates_temp_player(page: Page, space_id, merco_
         page.locator("button[name='intent'][value='validate']").click()
 
     new_url = page.url
-    assert "/inducements/" in new_url or "/step3" in new_url, (
+    assert "/inducements/" in new_url or "/live" in new_url, (
         f"Redirect inattendu après soumission avec mercenaire : {new_url!r}"
     )
 
@@ -321,7 +321,7 @@ def test_submit_without_mercenaires_regression(page: Page, space_id, merco_ctx, 
         page.locator("button[name='intent'][value='validate']").click()
 
     new_url = page.url
-    assert "/inducements/" in new_url or "/step3" in new_url, (
+    assert "/inducements/" in new_url or "/live" in new_url, (
         f"Non-régression échouée — redirect inattendu : {new_url!r}"
     )
 

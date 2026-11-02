@@ -138,12 +138,7 @@
 
     <!-- Navigation -->
     <div class="mr-nav-row">
-        <a class="btn-outline-sm" href="{{ back_url }}">← Retour</a>
-        {% if next_disabled %}
-        <button class="btn-primary-sm" disabled>{{ next_label }} →</button>
-        {% else %}
-        <a class="btn-primary-sm" href="{{ next_url }}">{{ next_label }} →</a>
-        {% endif %}
+        <a class="btn-outline-sm" href="{{ live_url }}">← Retour au journal</a>
     </div>
 </div>
 {% endblock %}
