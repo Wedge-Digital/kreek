@@ -32,7 +32,7 @@ from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
-from match_report_helpers import ensure_mvps, record_mvp_api
+from match_report_helpers import post_step5, publish, record_mvp_api
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
@@ -119,19 +119,6 @@ def _first_player_id(mr_id: str, side: str) -> str:
     return player_rows[0]
 
 
-def _post_step5(space_id: str, mr_id: str, **overrides) -> requests.Response:
-    # Le MVP est obligatoire : sans, l'après-match est refusé (carte 638).
-    ensure_mvps(space_id, mr_id)
-    data = {"home_gain": "50000", "away_gain": "40000", "home_fan_mod": "1", "away_fan_mod": "-1"}
-    data.update(overrides)
-    return requests.post(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5", data=data, allow_redirects=False)
-
-
-def _publish(space_id: str, mr_id: str) -> None:
-    resp = requests.post(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap/publish", allow_redirects=False)
-    assert resp.status_code in (302, 303), f"publish: {resp.status_code}\n{resp.text[:200]}"
-
-
 def _wait_for(check, attempts=30, delay_s=0.2):
     import time
     for _ in range(attempts):
@@ -170,9 +157,8 @@ def published_match(browser, space_id):
     # Le MVP passe par son étape, au tour 16 (carte 637).
     record_mvp_api(space_id, mr_id, "home", home_player)
 
-    resp = _post_step5(space_id, mr_id, summary_title="Match E2E fiche joueur", summary_body="Généré par les tests.")
-    assert resp.status_code in (302, 303), f"step5: {resp.status_code}\n{resp.text[:200]}"
-    _publish(space_id, mr_id)
+    post_step5(space_id, mr_id, summary_title="Match E2E fiche joueur", summary_body="Généré par les tests.")
+    publish(space_id, mr_id)
 
     team_id_rows = _query_db(f"SELECT home_team_id FROM match_report_proj WHERE match_report_id = '{mr_id}'")
     home_team_id = team_id_rows[0]

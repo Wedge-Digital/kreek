@@ -31,7 +31,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
-from match_report_helpers import create_draft, ensure_pre_match
+from match_report_helpers import create_draft, ensure_pre_match, pass_inducements_in_browser
 
 ENTETE_MEMBRE_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
 
@@ -51,21 +51,6 @@ def live_ctx(browser, space_id):
     return {"space_id": space_id, "mr_id": mr_id}
 
 
-def _passer_les_coups_de_pouce(page: Page) -> None:
-    """Le favori puis l'outsider passent ; le récapitulatif offre le coup
-    d'envoi. Rien à faire si le tier n'a pas de coups de pouce."""
-    passer = page.locator("button[name='intent'][value='pass']")
-    for _ in range(2):
-        if "/inducements/" not in page.url or passer.count() == 0:
-            return
-        with page.expect_navigation(wait_until="load"):
-            passer.click()
-    coup_d_envoi = page.get_by_role("link", name="Coup d'envoi → Match")
-    if coup_d_envoi.count():
-        with page.expect_navigation(wait_until="load"):
-            coup_d_envoi.click()
-
-
 # ── L1 ────────────────────────────────────────────────────────────────────────
 
 def test_l1_de_l_avant_match_au_journal(page: Page, live_ctx):
@@ -76,7 +61,7 @@ def test_l1_de_l_avant_match_au_journal(page: Page, live_ctx):
     with page.expect_navigation(wait_until="load"):
         page.click("button[type='submit']")
 
-    _passer_les_coups_de_pouce(page)
+    pass_inducements_in_browser(page)
 
     page.wait_for_url(re.compile(rf".*/{mr_id}/live$"), timeout=10000)
     expect(page.locator(".mr-step--active")).to_have_text("2")

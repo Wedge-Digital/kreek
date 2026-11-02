@@ -15,29 +15,12 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import attendre_que, query_db
+from match_report_helpers import draft_of_round, entry_mode_of
 
 
 @pytest.fixture(scope="module")
 def competition(browser, space_id):
     return build_full_competition(browser, space_id, 2, 2)
-
-
-def _rapport_de_la_journee(round_id: str) -> str:
-    lignes = query_db(
-        "SELECT match_report_id FROM match_report_proj "
-        f"WHERE round_id = '{round_id}' LIMIT 1"
-    )
-    assert lignes, "la journée doit porter un rapport, créé avec son appariement"
-    return lignes[0].strip()
-
-
-def _mode_et_demarreur(mr_id: str) -> tuple[str, str, str]:
-    ligne = query_db(
-        "SELECT phase || '|' || entry_mode || '|' || COALESCE(started_by, '') "
-        f"FROM match_report_proj WHERE match_report_id = '{mr_id}'"
-    )[0]
-    phase, mode, demarreur = ligne.split("|")
-    return phase, mode, demarreur
 
 
 def test_la_carte_est_visible_et_cochee_sur_je_saisis_tout(page: Page, space_id):
@@ -57,7 +40,7 @@ def test_la_carte_est_visible_et_cochee_sur_je_saisis_tout(page: Page, space_id)
 def test_un_mode_inconnu_est_refuse_sans_demarrer(space_id, competition):
     """Le refus précède tout effet : le brouillon reste un brouillon. Le corps
     porte les deux équipes du brouillon, pour que seul le mode soit en cause."""
-    mr_id = _rapport_de_la_journee(competition["round_ids"][1])
+    mr_id = draft_of_round(competition["round_ids"][1])
     domicile, exterieur = query_db(
         "SELECT home_team_id || '|' || away_team_id FROM match_report_proj "
         f"WHERE match_report_id = '{mr_id}'"
@@ -71,13 +54,13 @@ def test_un_mode_inconnu_est_refuse_sans_demarrer(space_id, competition):
     )
 
     assert reponse.status_code == 400, f"obtenu {reponse.status_code}"
-    assert _mode_et_demarreur(mr_id)[0] == "Draft"
+    assert entry_mode_of(mr_id)[0] == "Draft"
 
 
 def test_commencer_demarre_en_je_saisis_tout(page: Page, space_id, competition):
     """Le geste réel : le formulaire envoie le mode coché, et le match en sort
     démarré en « Je saisis tout », avec son démarreur."""
-    mr_id = _rapport_de_la_journee(competition["round_ids"][0])
+    mr_id = draft_of_round(competition["round_ids"][0])
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}", wait_until="load")
 
     with page.expect_request(
@@ -87,9 +70,9 @@ def test_commencer_demarre_en_je_saisis_tout(page: Page, space_id, competition):
     assert "entry_mode=SoloEntry" in (envoyee.value.post_data or "")
 
     attendre_que(
-        lambda: _mode_et_demarreur(mr_id)[0] != "Draft",
+        lambda: entry_mode_of(mr_id)[0] != "Draft",
         quoi="le démarrage du match",
     )
-    _, mode, demarreur = _mode_et_demarreur(mr_id)
+    _, mode, demarreur = entry_mode_of(mr_id)
     assert mode == "SoloEntry"
     assert demarreur, "le démarreur doit être enregistré"

@@ -200,6 +200,15 @@
 # que l'étape MVP, le sélecteur de joueurs venant de `players`.
 "test_match_report_mvp_draw" = ["match_report", "players", "references", "teams",
                                 "competitions", "team_creation", "ranking", "spaces"]
+# Le parcours « Je saisis tout » de bout en bout (carte 639) : il part de
+# l'onglet Calendrier de `competitions`, démarre le match (`teams` verrouille
+# les équipes), saisit par le sélecteur de joueurs de `players`, passe les coups
+# de pouce de `references`, et publie — `spp_calculator` pour le récapitulatif,
+# `ranking`, `teams` et `players` pour ce que la publication déclenche. `auth` :
+# l'autre coach suit sous le profil simple du contournement d'authentification.
+"test_match_report_solo_entry" = ["match_report", "competitions", "teams", "players",
+                                  "references", "team_creation", "ranking", "spaces",
+                                  "spp_calculator", "auth"]
 # Publie deux rapports pour obtenir un journalier : il traverse tout ce que
 # traverse un match complet, plus `players` dont il vérifie qu'il ne bouge pas.
 "test_haine_journalier" = ["match_report", "players", "references", "teams",

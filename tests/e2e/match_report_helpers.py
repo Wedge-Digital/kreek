@@ -46,6 +46,36 @@ def create_draft(space_id, ctx, round_id, home_team_id, away_team_id):
     return m.group(1)
 
 
+def draft_of_round(round_id: str) -> str:
+    """Le rapport qu'une journée porte dès son appariement (carte 633).
+
+    Ramené de `test_match_report_entry_mode.py` et de
+    `test_competition_hors_calendrier.py`, qui en portaient chacun une copie
+    identique (carte 639).
+    """
+    lignes = query_db(
+        "SELECT match_report_id FROM match_report_proj "
+        f"WHERE round_id = '{round_id}' LIMIT 1"
+    )
+    assert lignes, "la journée doit porter un rapport, créé avec son appariement"
+    return lignes[0].strip()
+
+
+def entry_mode_of(mr_id: str) -> tuple[str, str, str]:
+    """La phase, le mode de saisie et le démarreur, lus sur la projection
+    (cartes 631 et 632). Le démarreur est vide tant que le match n'est pas
+    démarré.
+
+    Ramené de `test_match_report_entry_mode.py` (carte 639).
+    """
+    ligne = query_db(
+        "SELECT phase || '|' || entry_mode || '|' || COALESCE(started_by, '') "
+        f"FROM match_report_proj WHERE match_report_id = '{mr_id}'"
+    )[0]
+    phase, mode, demarreur = ligne.split("|")
+    return phase, mode, demarreur
+
+
 def ensure_pre_match(space_id, mr_id, ctx, round_id, home_team_id, away_team_id):
     check = requests.get(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2", allow_redirects=False)
     if check.status_code == 200:
@@ -105,6 +135,26 @@ def pass_topdog_first(space_id, mr_id, team_id):
     assert passed.status_code in (302, 303), (
         f"le favori n'a pas pu passer : {passed.status_code}\n{passed.text[:200]}"
     )
+
+
+def pass_inducements_in_browser(page) -> None:
+    """Le favori puis l'outsider passent ; le récapitulatif offre le coup
+    d'envoi. Rien à faire si le tier n'a pas de coups de pouce.
+
+    Le seul geste **au navigateur** de ce module : ramené de
+    `test_match_report_live.py`, pour que le parcours complet de la carte 639
+    traverse les coups de pouce de la même façon, sans en porter une copie.
+    """
+    passer = page.locator("button[name='intent'][value='pass']")
+    for _ in range(2):
+        if "/inducements/" not in page.url or passer.count() == 0:
+            return
+        with page.expect_navigation(wait_until="load"):
+            passer.click()
+    coup_d_envoi = page.get_by_role("link", name="Coup d'envoi → Match")
+    if coup_d_envoi.count():
+        with page.expect_navigation(wait_until="load"):
+            coup_d_envoi.click()
 
 
 def record_action_api(space_id, mr_id, side, player_id, turn, action_type):
@@ -179,7 +229,15 @@ def _query_side_team(mr_id, side):
     return query_db(f"SELECT {side}_team_id FROM match_report_proj WHERE match_report_id = '{mr_id}'")
 
 
-def post_step5(space_id, mr_id, *, home_gain=50000, away_gain=40000):
+def post_step5(
+    space_id,
+    mr_id,
+    *,
+    home_gain=50000,
+    away_gain=40000,
+    summary_title="Match E2E",
+    summary_body="Compte-rendu automatique.",
+):
     """Les gains sont en **kPo** (cf. l'unité affichée par step5.html).
 
     Les valeurs par défaut sont celles d'origine, conservées telles quelles pour
@@ -190,6 +248,10 @@ def post_step5(space_id, mr_id, *, home_gain=50000, away_gain=40000):
 
     Chaque camp reçoit d'abord son MVP s'il n'en a pas : sans, l'après-match est
     refusé (carte 638).
+
+    Le titre et le corps du résumé sont paramétrables depuis la carte 639 : les
+    copies privées de quatre fichiers, qui ne différaient plus que par eux
+    depuis qu'elles appelaient `ensure_mvps`, sont ramenées ici.
     """
     ensure_mvps(space_id, mr_id)
     resp = requests.post(
@@ -199,8 +261,8 @@ def post_step5(space_id, mr_id, *, home_gain=50000, away_gain=40000):
             "away_gain": str(away_gain),
             "home_fan_mod": "1",
             "away_fan_mod": "-1",
-            "summary_title": "Match E2E",
-            "summary_body": "Compte-rendu automatique.",
+            "summary_title": summary_title,
+            "summary_body": summary_body,
         },
         allow_redirects=False,
     )

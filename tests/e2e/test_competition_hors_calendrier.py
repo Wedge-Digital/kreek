@@ -31,6 +31,7 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import execute_db, query_db
+from match_report_helpers import draft_of_round
 
 HX = {"HX-Request": "true"}
 #: `requests` ne pose pas de `Content-Type` quand le corps est **vide**, et le
@@ -146,15 +147,6 @@ def _option_en_base(season_id: str) -> str:
     )[0].strip()
 
 
-def _rapport_de_la_journee(round_id: str) -> str:
-    lignes = query_db(
-        "SELECT match_report_id FROM match_report_proj "
-        f"WHERE round_id = '{round_id}' LIMIT 1"
-    )
-    assert lignes, "la journée doit porter un rapport, créé avec son appariement"
-    return lignes[0].strip()
-
-
 def _equipes_du_rapport(mr_id: str) -> tuple[str, str]:
     ligne = query_db(
         "SELECT home_team_id || '|' || away_team_id "
@@ -265,7 +257,7 @@ def test_un_post_trafique_ne_change_pas_les_equipes(space_id, competition):
     _regler(space_id, competition, False)
 
     round_id = competition["round_ids"][0]
-    mr_id = _rapport_de_la_journee(round_id)
+    mr_id = draft_of_round(round_id)
     avant = _equipes_du_rapport(mr_id)
 
     # Les deux équipes inversées : un corps qu'un formulaire honnête n'enverrait
@@ -326,7 +318,7 @@ def test_un_membre_simple_commence_son_rapport_depuis_la_phase_figee(
     test précédent ne le voyait pas, parce qu'il envoie un corps complet.
     """
     _regler(space_id, brouillon_neuf, False)
-    mr_id = _rapport_de_la_journee(brouillon_neuf["round_ids"][0])
+    mr_id = draft_of_round(brouillon_neuf["round_ids"][0])
     avant = _equipes_du_rapport(mr_id)
 
     _en_membre_simple(page)
