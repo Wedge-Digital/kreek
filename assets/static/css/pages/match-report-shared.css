@@ -286,9 +286,11 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
+/* Une colonne : le ⭐ qui partageait la ligne avec « Blessé » est parti à
+   l'étape MVP (carte 637). */
 .mr-action-status-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 6px;
   margin-top: 4px;
 }
@@ -304,14 +306,11 @@
 .mr-action-btn:active { transform: scale(0.96); }
 .mr-action-btn--damage { border-color: rgba(224,32,32,0.2); background: rgba(224,32,32,0.02); }
 .mr-action-btn--damage:hover { border-color: var(--red); background: rgba(224,32,32,0.06); }
-.mr-action-btn--mvp { border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.03); }
-.mr-action-btn--mvp:hover { border-color: var(--gold); background: rgba(255,215,0,0.08); }
 .mr-action-btn--sortie { border-color: rgba(255,107,53,0.25); background: rgba(255,107,53,0.02); }
 .mr-action-btn--sortie:hover { border-color: var(--orange); background: rgba(255,107,53,0.07); }
 .mr-action-btn-icon { font-size: 20px; }
 .mr-action-btn-label { font-size: 10px; font-weight: 600; color: var(--dark-2); text-align: center; }
 .mr-action-btn--damage .mr-action-btn-label { color: var(--red); }
-.mr-action-btn--mvp .mr-action-btn-label { color: #9A7800; }
 .mr-action-btn--sortie .mr-action-btn-label { color: var(--orange); }
 
 /* ── Injury panel ── */

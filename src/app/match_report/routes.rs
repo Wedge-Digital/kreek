@@ -12,6 +12,8 @@ pub mod path {
     pub const MATCH_REPORT_STEP3: &str = "/app/{space_id}/match-report/{match_report_id}/step3";
     pub const MATCH_REPORT_STEP4: &str = "/app/{space_id}/match-report/{match_report_id}/step4";
     pub const MATCH_REPORT_STEP5: &str = "/app/{space_id}/match-report/{match_report_id}/step5";
+    /// L'étape MVP d'un camp, `home` ou `away` (carte 637).
+    pub const MATCH_REPORT_MVP: &str = "/app/{space_id}/match-report/{match_report_id}/mvp/{side}";
     pub const MATCH_REPORT_STEP3_TURN_SELECTOR: &str =
         "/app/{space_id}/match-report/{match_report_id}/step3/turn-selector";
     pub const MATCH_REPORT_STEP4_TURN_SELECTOR: &str =
@@ -128,6 +130,14 @@ impl Routes {
         path::MATCH_REPORT_STEP5
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
+    }
+
+    /// `side` vaut `home` ou `away`.
+    pub fn mvp(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
+        path::MATCH_REPORT_MVP
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{side}", side)
     }
 
     pub fn step3_turn_selector(&self, space_id: &str, match_report_id: &str) -> String {

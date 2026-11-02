@@ -122,9 +122,11 @@ async fn get_step(space_id: String, mr_id: String, side: TeamSide, state: AppSta
             "Équipe extérieure",
             false,
         ),
+        // La fin du match mène au MVP du domicile (carte 637) ; la carte 636
+        // y conduira depuis le match en direct.
         TeamSide::Away => (
-            routes.match_report.step5(&space_id, &mr_id),
-            "Après-match",
+            routes.match_report.mvp(&space_id, &mr_id, "home"),
+            "MVP",
             false,
         ),
     };

@@ -135,7 +135,9 @@ pub async fn execute(
     Ok(outcome)
 }
 
-async fn resolve_player_info(
+/// Le nom et le poste figés dans l'action. Partagée avec l'étape MVP
+/// (`record_mvp_use_case`, carte 637), qui inscrit une action du même genre.
+pub(crate) async fn resolve_player_info(
     player: &ActionPlayer,
     side: TeamSide,
     pm: &crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch,

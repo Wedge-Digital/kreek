@@ -1695,4 +1695,66 @@ mod tests {
         };
         assert_eq!(rtp.home_inducements_recorded_by, Some(coach_id));
     }
+
+    // ── carte 637 : le rejeu ignore la règle du MVP ──────────────────────
+
+    fn old_mvp(coach_id: CoachId, id: &str, turn: u8) -> MatchReportDomainEvent {
+        use crate::app::match_report::domain::value_objects::{
+            ActionId, ActionPlayer, MatchActionType, TeamSide, TurnNumber,
+        };
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        MatchReportDomainEvent::ActionRecorded {
+            action_id: ActionId(id.into()),
+            team_side: TeamSide::Home,
+            turn: TurnNumber::try_new(turn).unwrap(),
+            player: ActionPlayer::Regular(PlayerId::new()),
+            action: MatchActionType::Mvp,
+            player_display_name: format!("Joueur {id}"),
+            player_position: String::new(),
+            recorded_by: coach_id,
+        }
+    }
+
+    /// Un rapport saisi avant la règle : **deux** MVP au domicile, aux tours 7
+    /// et 3. Il se rejoue à l'identique, publié compris — la règle ne vaut
+    /// qu'à la saisie.
+    #[test]
+    fn un_ancien_rapport_a_deux_mvp_hors_tour_16_se_rejoue() {
+        let (mut events, coach_id) = avant_match_valide();
+        events.push(old_mvp(coach_id, "mvp-1", 7));
+        events.push(old_mvp(coach_id, "mvp-2", 3));
+        events.push(post_match_event(coach_id));
+        events.push(published_event(coach_id));
+        let MatchReportState::Published(published) = rehydrate(events).unwrap() else {
+            panic!("attendu Published");
+        };
+        let turns: Vec<u8> = published
+            .home_actions
+            .iter()
+            .map(|a| a.turn.value())
+            .collect();
+        assert_eq!(turns, vec![7, 3]);
+    }
+
+    /// En correction, l'étape refuse un troisième MVP à ce rapport : on
+    /// supprime d'abord.
+    #[test]
+    fn un_ancien_rapport_a_mvp_refuse_un_mvp_de_plus() {
+        use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, TeamSide};
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        let (mut events, coach_id) = avant_match_valide();
+        events.push(old_mvp(coach_id, "mvp-1", 7));
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        let refus = pm.record_mvp(
+            TeamSide::Home,
+            ActionPlayer::Regular(PlayerId::new()),
+            "Nouveau".into(),
+            String::new(),
+            ActionId("mvp-3".into()),
+            coach_id,
+        );
+        assert_eq!(refus.unwrap_err(), DomainError::MvpAlreadyRecorded);
+    }
 }

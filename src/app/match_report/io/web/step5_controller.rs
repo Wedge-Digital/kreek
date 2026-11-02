@@ -247,7 +247,8 @@ fn build_template(
     let routes = AppRoutes::default();
     Step5Template {
         form_action: routes.match_report.step5(space_id, match_report_id),
-        back_url: routes.match_report.step4(space_id, match_report_id),
+        // Les gains suivent le MVP du visiteur (carte 637).
+        back_url: routes.match_report.mvp(space_id, match_report_id, "away"),
         app_routes: Default::default(),
         space_id: space_id.to_string(),
         match_report_id: match_report_id.to_string(),

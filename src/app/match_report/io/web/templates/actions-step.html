@@ -1,4 +1,5 @@
 {% extends "app-layout.html" %}
+{% import "match_report/steps-indicator.html" as steps %}
 
 {% block content %}
 
@@ -52,23 +53,7 @@
     </div>
 
     <!-- Steps -->
-    <div class="mr-steps">
-        <div class="mr-step mr-step--done">&#10003;</div>
-        <div class="mr-step-line mr-step-line--done"></div>
-        <div class="mr-step mr-step--done">&#10003;</div>
-        <div class="mr-step-line mr-step-line--done"></div>
-        {% if team_side == "home" %}
-        <div class="mr-step mr-step--active">3</div>
-        <div class="mr-step-line"></div>
-        <div class="mr-step mr-step--pending">4</div>
-        {% else %}
-        <div class="mr-step mr-step--done">&#10003;</div>
-        <div class="mr-step-line mr-step-line--done"></div>
-        <div class="mr-step mr-step--active">4</div>
-        {% endif %}
-        <div class="mr-step-line"></div>
-        <div class="mr-step mr-step--pending">5</div>
-    </div>
+    {% call steps::indicator(2) %}
 
     <!-- Bannière équipe active -->
     <div class="mr-banner">

@@ -203,7 +203,8 @@ pub async fn delete_action(
     }
 }
 
-fn build_player(player_id: &str, player_type: &str) -> Option<ActionPlayer> {
+/// Partagée avec l'étape MVP (`mvp_step_controller`, carte 637).
+pub(crate) fn build_player(player_id: &str, player_type: &str) -> Option<ActionPlayer> {
     match player_type {
         "regular" => Some(ActionPlayer::Regular(PlayerId::try_new(player_id).ok()?)),
         "temp" => Some(ActionPlayer::Temp(TempPlayerId(player_id.to_string()))),
@@ -223,7 +224,8 @@ fn build_action_type(
         "AGRESSION" => Some(MatchActionType::Agression),
         "LANCER" => Some(MatchActionType::Lancer),
         "SORTIE" => Some(MatchActionType::Sortie),
-        "MVP" => Some(MatchActionType::Mvp),
+        // Pas de "MVP" : il n'entre que par son étape (carte 637). Envoyé
+        // ici, il tombe sur le refus commun d'un type inconnu — 400.
         // La Haine reste vide ici : sa saisie et sa validation arrivent avec la
         // carte 401, qui a besoin du port de référence que ce parseur n'a pas.
         "BLESSE" => Some(MatchActionType::Blesse {
@@ -303,6 +305,13 @@ mod tests {
             .unwrap()
             .expect("un mot-clef bien formé doit être lu");
         assert_eq!(mot.to_string(), "DARK_ELF");
+    }
+
+    /// Carte 637 : le MVP n'a plus de porte par le POST d'action.
+    #[test]
+    fn le_parseur_d_action_ne_connait_plus_le_mvp() {
+        assert!(build_action_type("MVP", None, None).is_none());
+        assert!(build_action_type("TOUCHDOWN", None, None).is_some());
     }
 
     #[test]

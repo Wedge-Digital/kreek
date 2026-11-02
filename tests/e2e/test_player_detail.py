@@ -32,6 +32,7 @@ from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
+from match_report_helpers import record_mvp_api
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
@@ -164,7 +165,8 @@ def published_match(browser, space_id):
     _record_action_api(space_id, mr_id, "home", home_player, turn=1, action_type="TOUCHDOWN")
     _record_action_api(space_id, mr_id, "home", home_player, turn=2, action_type="SORTIE")
     _record_action_api(space_id, mr_id, "away", away_player, turn=3, action_type="BLESSE", injury_type="AMOCHE")
-    _record_action_api(space_id, mr_id, "home", home_player, turn=4, action_type="MVP")
+    # Le MVP passe par son étape, au tour 16 (carte 637).
+    record_mvp_api(space_id, mr_id, "home", home_player)
 
     resp = _post_step5(space_id, mr_id, summary_title="Match E2E fiche joueur", summary_body="Généré par les tests.")
     assert resp.status_code in (302, 303), f"step5: {resp.status_code}\n{resp.text[:200]}"

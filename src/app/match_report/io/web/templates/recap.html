@@ -1,8 +1,14 @@
 {% extends "app-layout.html" %}
+{% import "match_report/steps-indicator.html" as steps %}
 
 {% block content %}
 
 <div class="ms-page">
+
+  {# Non publié, le récapitulatif est l'étape « Validation » (carte 637). #}
+  {% if !is_published %}
+  {% call steps::indicator(5) %}
+  {% endif %}
 
   <!-- ══ HERO ══════════════════════════════════════════════════ -->
   <div class="ms-hero">
@@ -206,7 +212,7 @@
         <a class="ms-btn-outline" href="{{ competition_url }}">&#8592; Retour aux r&eacute;sultats</a>
         <a class="ms-btn-primary" href="{{ home_team_detail_url }}">Voir la fiche {{ home_banner.team_name }} &#8594;</a>
         {% else if can_write %}
-        <a class="ms-btn-outline" href="{{ back_to_step5_url }}">&#8592; Modifier &eacute;tape 5</a>
+        <a class="ms-btn-outline" href="{{ back_to_step5_url }}">&#8592; Gains et fans</a>
         <form class="ms-cta-form" method="post" action="{{ publish_url }}">
           <button type="submit" class="ms-btn-primary">Publier &#8594;</button>
         </form>

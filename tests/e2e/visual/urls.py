@@ -83,6 +83,7 @@ CLASSE_ATTENDUE = {
     "rapport-mode": ".entry-mode-card",
     "rapport-prematch": ".match-report-pre-match",
     "rapport-actions": ".match-report-actions",
+    "rapport-mvp": ".match-report-mvp",
     "rapport-step5": ".match-report-step5",
     "rapport-recap": ".ms-page",
     "competition-structure": ".new-competition-phase-3",
@@ -225,6 +226,7 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         "rapport-mode":          f"{a}/match-report/{rapport_brouillon}" if rapport_brouillon else None,
         "rapport-prematch":      f"{a}/match-report/{rapport_prematch}/step2" if rapport_prematch else None,
         "rapport-actions":       f"{a}/match-report/{rapport_prematch}/step3" if rapport_prematch else None,
+        "rapport-mvp":           f"{a}/match-report/{rapport_prematch}/mvp/home" if rapport_prematch else None,
         "rapport-step5":         f"{a}/match-report/{rapport_pret}/step5" if rapport_pret else None,
         "rapport-recap":         f"{a}/match-report/{rapport_publie}/recap" if rapport_publie else None,
         "rapport-inducements":   (f"{a}/match-report/{rapport_prematch}/inducements/{equipe_prematch}"

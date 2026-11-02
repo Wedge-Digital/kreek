@@ -13,6 +13,8 @@ Scénarios couverts :
 - S10 — Journaliers automatiques si équipe < 11 (skip sinon)
 - S11 — Page step4 (équipe away) : mêmes zones présentes
 - S12 — Journal des deux camps : l'action du visiteur en tête, son camp, « saisi par toi »
+- S13 — Le panneau d'action n'a plus de ⭐ MVP (carte 637)
+- S14 — Le POST d'action refuse `MVP` en 400, sans rien inscrire (carte 637)
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), base initialisée.
 """
@@ -347,7 +349,8 @@ def test_s7_delete_action(page: Page, space_id, mr_step3):
     if not player_id:
         pytest.skip("Aucun joueur trouvé pour l'équipe domicile")
 
-    _record_action_api(space_id, mr_step3, "home", player_id, turn=8, action_type="MVP")
+    # Une passe et non plus un MVP : le POST d'action le refuse (carte 637).
+    _record_action_api(space_id, mr_step3, "home", player_id, turn=8, action_type="PASSE")
 
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_step3}/step3",
               wait_until="load")
@@ -370,13 +373,13 @@ def test_s7_delete_action(page: Page, space_id, mr_step3):
 # ── S8 — Plusieurs actions même tour ─────────────────────────────────────────
 
 def test_s8_multiple_actions_same_turn(page: Page, space_id, mr_step3):
-    """Enregistrer TD + MVP au tour 5 → log contient 2+ entrées."""
+    """Enregistrer TD + passe au tour 5 → log contient 2+ entrées."""
     player_id = _first_player_id(mr_step3, "home")
     if not player_id:
         pytest.skip("Aucun joueur trouvé pour l'équipe domicile")
 
     _record_action_api(space_id, mr_step3, "home", player_id, turn=5, action_type="TOUCHDOWN")
-    _record_action_api(space_id, mr_step3, "home", player_id, turn=5, action_type="MVP")
+    _record_action_api(space_id, mr_step3, "home", player_id, turn=5, action_type="PASSE")
 
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_step3}/step3",
               wait_until="load")
@@ -386,6 +389,38 @@ def test_s8_multiple_actions_same_turn(page: Page, space_id, mr_step3):
     assert t5_entries.count() >= 2, (
         f"Attendu 2+ entrées au tour 5, trouvé {t5_entries.count()}"
     )
+
+
+# ── S13 — Le MVP n'est plus une action (carte 637) ───────────────────────────
+
+def test_s13_le_panneau_d_action_n_a_plus_de_mvp(page: Page, space_id, mr_step3):
+    """Le ⭐ a quitté le panneau : le MVP se désigne à son étape."""
+    page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_step3}/step3",
+              wait_until="load")
+    _wait_for_widgets(page)
+    _select_turn_and_player(page, turn=1)
+
+    expect(page.locator("#action-panel .mr-action-grid")).to_be_visible()
+    expect(page.locator("#action-panel .mr-action-btn", has_text="MVP")).to_have_count(0)
+
+
+def test_s14_le_post_d_action_refuse_le_mvp(space_id, mr_step3):
+    """Pas de porte de service : `MVP` envoyé comme action est refusé, et rien
+    ne s'inscrit au journal."""
+    player_id = _first_player_id(mr_step3, "home")
+    if not player_id:
+        pytest.skip("Aucun joueur trouvé pour l'équipe domicile")
+    compter = (
+        f"SELECT COUNT(*) FROM match_report_actions "
+        f"WHERE match_report_id = '{mr_step3}' AND NOT is_deleted"
+    )
+    before = _query_db(compter)
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_step3}/step3/actions",
+        data={"turn": "16", "player_id": player_id, "player_type": "regular", "action_type": "MVP"},
+    )
+    assert resp.status_code == 400, f"attendu 400, obtenu {resp.status_code}"
+    assert _query_db(compter) == before
 
 
 # ── S9 — Joueur temporaire visible ────────────────────────────────────────────

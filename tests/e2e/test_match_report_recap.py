@@ -1,7 +1,8 @@
 """Tests E2E — rapport de match, page récap.
 
 Scénarios couverts :
-- TC-01 — Page charge en état ReadyToPublish : CTA "Publier" + "← Modifier étape 5"
+- TC-01 — Page charge en état ReadyToPublish : CTA "Publier" + "← Gains et fans",
+  indicateur à l'étape 5 « Validation » (carte 637)
 - TC-02 — Sortie sans badge de blessure ; Bilan sanitaire ne liste que les Blesse{injury}
 - TC-03 — MVP affiché à la fois en sidebar et en fin de chronologie
 - TC-04 — Publication (clic bouton) → CTA devient "Retour" + "Voir fiche"
@@ -33,6 +34,7 @@ from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
+from match_report_helpers import record_mvp_api
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 _INJURY_LABELS = ("Commotion", "Amoché", "Blessure Sérieuse", "Séquelle", "Mort")
@@ -163,8 +165,9 @@ def _advance_to_ready_to_publish(space_id: str, ctx: dict, round_id: str,
         _record_action_api(space_id, mr_id, "home", home_player, turn=2, action_type="SORTIE")
         _record_action_api(space_id, mr_id, "away", away_player, turn=3,
                             action_type="BLESSE", injury_type="AMOCHE")
-        _record_action_api(space_id, mr_id, "home", home_player, turn=4, action_type="MVP")
-        _record_action_api(space_id, mr_id, "away", away_player, turn=5, action_type="MVP")
+        # Le MVP n'est plus une action : il passe par son étape (carte 637).
+        record_mvp_api(space_id, mr_id, "home", home_player)
+        record_mvp_api(space_id, mr_id, "away", away_player)
 
     resp = _post_step5(
         space_id, mr_id,
@@ -226,7 +229,9 @@ def test_tc01_recap_loads_ready_to_publish(page: Page, space_id, mr_ready):
 
     expect(page.locator(".ms-hero")).to_be_visible()
     expect(page.locator(".ms-btn-primary", has_text="Publier")).to_be_visible()
-    expect(page.locator(".ms-btn-outline", has_text="Modifier étape 5")).to_be_visible()
+    expect(page.locator(".ms-btn-outline", has_text="Gains et fans")).to_be_visible()
+    # Non publié, le récapitulatif est l'étape « Validation » (carte 637).
+    expect(page.locator(".mr-step--active")).to_have_text("5")
     expect(page.locator(".ms-btn-outline", has_text="Retour aux résultats")).to_have_count(0)
 
 

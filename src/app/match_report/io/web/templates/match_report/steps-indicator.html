@@ -1,0 +1,29 @@
+{# L'indicateur d'étapes du compte rendu (carte 637, R9) : cinq étapes,
+   Avant-match · Match · MVP · Gains et fans · Validation.
+
+   `current` est le numéro de l'étape affichée ; celles qui la précèdent sont
+   faites, celles qui la suivent à venir. Un seul endroit pour le découpage :
+   il était recopié dans six gabarits. #}
+{% macro indicator(current) %}
+<div class="mr-steps">
+  {% call step(1, current, "Avant-match") %}
+  <div class="mr-step-line{% if current > 1 %} mr-step-line--done{% endif %}"></div>
+  {% call step(2, current, "Match") %}
+  <div class="mr-step-line{% if current > 2 %} mr-step-line--done{% endif %}"></div>
+  {% call step(3, current, "MVP") %}
+  <div class="mr-step-line{% if current > 3 %} mr-step-line--done{% endif %}"></div>
+  {% call step(4, current, "Gains et fans") %}
+  <div class="mr-step-line{% if current > 4 %} mr-step-line--done{% endif %}"></div>
+  {% call step(5, current, "Validation") %}
+</div>
+{% endmacro %}
+
+{% macro step(n, current, label) %}
+{% if n < current %}
+<div class="mr-step mr-step--done" title="{{ label }}">&#10003;</div>
+{% else if n == current %}
+<div class="mr-step mr-step--active" title="{{ label }}">{{ n }}</div>
+{% else %}
+<div class="mr-step mr-step--pending" title="{{ label }}">{{ n }}</div>
+{% endif %}
+{% endmacro %}

@@ -1,0 +1,98 @@
+{% extends "app-layout.html" %}
+{% import "match_report/steps-indicator.html" as steps %}
+
+{% block content %}
+
+<div class="mr-container match-report-mvp" x-data="{
+    playerId: '',
+    playerType: 'regular',
+    init() {
+        document.body.addEventListener('playerSelected', (e) => {
+            this.playerId = e.detail.player_id;
+            this.playerType = e.detail.player_type || 'regular';
+        });
+        document.body.addEventListener('actionDeleted', () => window.location.reload(), { once: true });
+    }
+}">
+  <div class="mr-header">
+    <div class="mr-header-icon">&#11088;</div>
+    <div class="mr-header-title">S&eacute;quence d'apr&egrave;s-match</div>
+    <div class="mr-header-sub">MVP</div>
+  </div>
+
+  {% call steps::indicator(3) %}
+
+  {% if let Some(recap) = home_recap %}
+  <div class="mvp-done-row">
+    <span class="mvp-status">&#10003;</span>
+    <span class="mvp-done-text"><b>{{ recap.team_name }}</b> &middot;
+      {% if recap.player_names.is_empty() %}pas de MVP{% else %}{{ recap.player_names|join(", ") }}{% endif %}
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="mr-banner">
+    {% if let Some(url) = team.logo_url %}
+    <img class="mr-banner-logo mr-banner-logo--img" src="{{ url }}" alt="{{ team.initials }}">
+    {% else %}
+    <div class="mr-banner-logo">{{ team.initials }}</div>
+    {% endif %}
+    <div>
+      <div class="mr-banner-name">{{ team.name }}</div>
+      <div class="mr-banner-label">
+        {% if is_home %}&Eacute;quipe &agrave; domicile &middot; MVP 1 / 2{% else %}&Eacute;quipe visiteur &middot; MVP 2 / 2{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="mr-card">
+    <div class="mr-card-title">Le MVP</div>
+    {% if mvps.is_empty() %}
+    <div class="text-tiny">Choisissez directement le MVP parmi les joueurs qui ont jou&eacute;. Il s'inscrit au journal comme une action du tour 16.</div>
+
+    <div class="mr-player-section">
+      <div class="mr-player-section-label">&Eacute;quipe</div>
+      <div hx-get="{{ player_selector_url }}"
+           hx-trigger="load"
+           hx-target="this"
+           hx-swap="innerHTML">
+      </div>
+    </div>
+    <div hx-get="{{ temp_player_selector_url }}"
+         hx-trigger="load"
+         hx-target="this"
+         hx-swap="innerHTML">
+    </div>
+    {% else %}
+    <div class="text-tiny">Le MVP de cette &eacute;quipe est d&eacute;sign&eacute;. Pour en choisir un autre, supprimez-le d'abord.</div>
+    <div class="mvp-list">
+      {% for mvp in mvps %}
+      <div class="mvp-row">
+        <span class="mvp-row-icon">&#11088;</span>
+        <span class="mvp-row-name">{{ mvp.player_name }}</span>
+        {% if !mvp.player_position.is_empty() %}<span class="mvp-row-position">{{ mvp.player_position }}</span>{% endif %}
+        <button type="button" class="mvp-row-delete" title="Supprimer ce MVP"
+                hx-delete="{{ mvp.delete_url }}"
+                hx-swap="none">&#10005;</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if mvps.is_empty() %}
+  {# Le bouton de suite enregistre le MVP choisi, puis mène à l'étape suivante. #}
+  <form class="mr-nav-row" hx-post="{{ post_url }}">
+    <input type="hidden" name="player_id" :value="playerId">
+    <input type="hidden" name="player_type" :value="playerType">
+    <a class="btn-outline-sm" href="{{ nav.back_url }}">&larr; {{ nav.back_label }}</a>
+    <button type="submit" class="btn-primary-sm" :disabled="!playerId">{{ nav.next_label }} &rarr;</button>
+  </form>
+  {% else %}
+  <div class="mr-nav-row">
+    <a class="btn-outline-sm" href="{{ nav.back_url }}">&larr; {{ nav.back_label }}</a>
+    <a class="btn-primary-sm" href="{{ nav.next_url }}">{{ nav.next_label }} &rarr;</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

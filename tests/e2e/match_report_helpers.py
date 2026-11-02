@@ -116,6 +116,21 @@ def record_action_api(space_id, mr_id, side, player_id, turn, action_type):
     assert resp.status_code == 200, f"record_action {action_type}: {resp.status_code}\n{resp.text[:200]}"
 
 
+def record_mvp_api(space_id, mr_id, side, player_id, player_type="regular"):
+    """Désigne le MVP d'un camp par son étape (carte 637).
+
+    Le POST d'action refuse `MVP` : le MVP n'entre que par `/mvp/{side}`, au
+    tour 16, et un seul par camp — un second est refusé en 422.
+    """
+    resp = requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/mvp/{side}",
+        data={"player_id": player_id, "player_type": player_type},
+        allow_redirects=False,
+    )
+    assert resp.status_code == 200, f"record_mvp {side}: {resp.status_code}\n{resp.text[:200]}"
+    return resp
+
+
 def first_player_id(mr_id, side):
     rows = _query_side_team(mr_id, side)
     assert rows, f"match report {mr_id} introuvable en DB"

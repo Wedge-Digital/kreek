@@ -55,6 +55,9 @@ async fn render_temp_players(mr_id: &str, side: TeamSide, state: &AppState) -> R
     };
     let pm = match state_opt {
         Some(MatchReportState::PreMatch(pm)) => pm,
+        // En correction aussi : l'étape MVP d'un rapport prêt à publier
+        // propose ses remplaçants (carte 637).
+        Some(MatchReportState::ReadyToPublish(rtp)) => rtp.into_pre_match(),
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
     let (mut mercenaries, mut stars) = (Vec::new(), Vec::new());

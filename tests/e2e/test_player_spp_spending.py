@@ -53,6 +53,7 @@ from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
+from match_report_helpers import record_mvp_api
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
@@ -177,13 +178,17 @@ def spp_ctx(browser, space_id):
 
     _record_action_api(space_id, mr_id, "home", rich_player, turn=1, action_type="TOUCHDOWN")
     _record_action_api(space_id, mr_id, "home", rich_player, turn=2, action_type="SORTIE")
-    _record_action_api(space_id, mr_id, "home", rich_player, turn=3, action_type="MVP")
+    # Un seul MVP par camp depuis la carte 637 : il revient à value_player
+    # ci-dessous. rich_player garde sa réserve par deux essais de plus, qui
+    # rapportent au moins ce que rapportait son MVP.
+    _record_action_api(space_id, mr_id, "home", rich_player, turn=3, action_type="TOUCHDOWN")
+    _record_action_api(space_id, mr_id, "home", rich_player, turn=4, action_type="TOUCHDOWN")
     # Joueur dédié au scénario team_value — indépendant de rich_player pour ne
     # pas dépendre de l'ordre d'exécution des tests (réserve SPP non partagée).
     # TOUCHDOWN + MVP = 7 SPP, suffisant pour une compétence primaire choisie
     # (coût niveau 1 = 6) sans devoir changer de mode dans skill_picker.
     _record_action_api(space_id, mr_id, "home", value_player, turn=1, action_type="TOUCHDOWN")
-    _record_action_api(space_id, mr_id, "home", value_player, turn=2, action_type="MVP")
+    record_mvp_api(space_id, mr_id, "home", value_player)
     # Joueur dédié au scénario d'augmentation de caractéristique — indépendant
     # de rich_player, budget confortable pour couvrir le coût niveau 1 d'une
     # caractéristique (14), quel que soit l'ordre d'exécution des tests.

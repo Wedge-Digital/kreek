@@ -14,6 +14,7 @@ pub mod reassign_round_use_case;
 pub mod record_action_use_case;
 pub mod record_fan_factor_use_case;
 pub mod record_inducements_use_case;
+pub mod record_mvp_use_case;
 pub mod record_post_match_use_case;
 #[cfg(test)]
 pub mod test_doubles;

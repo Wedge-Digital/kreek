@@ -58,11 +58,11 @@ en cours ne sont pas bloqués : leur MVP déjà saisi s'affiche à l'étape.
 
 ## Checklist
 
-- [ ] `record_mvp`, ses erreurs ; `record_action` refuse `Mvp`
-- [ ] `record_mvp_use_case`, `/mvp/{side}`, gabarit et feuille au bundle
-- [ ] Bouton ⭐ retiré ; `"MVP"` retiré du parseur d'action
-- [ ] Enchaînements et indicateur ; récapitulatif non publié à l'étape 5
-- [ ] Tests unitaires : tour 16 ; second MVP refusé ; rejeu d'un rapport ancien à deux MVP et à un MVP hors tour 16
-- [ ] E2E : saisir le MVP domicile puis visiteur ; `record_mvp_api` dans `match_report_helpers.py` ; migration des tests qui saisissent `MVP` comme action — `test_match_report_recap.py`, `test_match_report_recap_spp.py`, `test_match_report_correction.py`, `test_manual_phase_override.py`, `test_player_spp_spending.py` (deux MVP dans un camp), `test_player_detail.py`, `test_match_report_step3_4_actions.py` (S7, S8)
-- [ ] `tests/impact-map.toml` et `tests/e2e/visual/urls.py` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `record_mvp`, ses erreurs ; `record_action` refuse `Mvp`
+- [x] `record_mvp_use_case`, `/mvp/{side}`, gabarit et feuille au bundle
+- [x] Bouton ⭐ retiré ; `"MVP"` retiré du parseur d'action
+- [x] Enchaînements et indicateur ; récapitulatif non publié à l'étape 5
+- [x] Tests unitaires : tour 16 ; second MVP refusé ; rejeu d'un rapport ancien à deux MVP et à un MVP hors tour 16
+- [x] E2E : saisir le MVP domicile puis visiteur ; `record_mvp_api` dans `match_report_helpers.py` ; migration des tests qui saisissent `MVP` comme action — `test_match_report_recap.py`, `test_match_report_recap_spp.py`, `test_match_report_correction.py`, `test_manual_phase_override.py`, `test_player_spp_spending.py` (deux MVP dans un camp), `test_player_detail.py`, `test_match_report_step3_4_actions.py` (S7, S8)
+- [x] `tests/impact-map.toml` et `tests/e2e/visual/urls.py` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

@@ -286,6 +286,9 @@ pub struct TempPlayerId(pub String);
 pub struct TurnNumber(u8);
 
 impl TurnNumber {
+    /// Le dernier tour du match, celui où s'inscrit le MVP (carte 637).
+    pub const LAST: TurnNumber = TurnNumber(16);
+
     pub fn try_new(value: u8) -> Result<Self, DomainError> {
         if (1..=16).contains(&value) {
             Ok(Self(value))

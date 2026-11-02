@@ -4,6 +4,7 @@ pub mod cancel_inducements_controller;
 pub mod garde_saisie;
 pub mod inducements_controller;
 pub mod match_selection_controller;
+pub mod mvp_step_controller;
 pub mod pre_match_controller;
 pub mod recap_controller;
 pub mod record_action_controller;

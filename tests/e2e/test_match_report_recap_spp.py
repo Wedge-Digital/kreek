@@ -31,6 +31,7 @@ from match_report_helpers import (
     ensure_pre_match,
     post_step5,
     record_action_api,
+    record_mvp_api,
 )
 
 # Corpus de démonstration (`assets/references.example/spp_rules.json`).
@@ -92,7 +93,8 @@ def recap_spp_ctx(browser, space_id):
     for turn, action in enumerate(["TOUCHDOWN", "TOUCHDOWN", "SORTIE", "SORTIE", "SORTIE"], 1):
         record_action_api(space_id, mr_id, "home", buteur, turn=turn, action_type=action)
     record_action_api(space_id, mr_id, "home", agresseur, turn=6, action_type="AGRESSION")
-    record_action_api(space_id, mr_id, "away", adverse, turn=7, action_type="MVP")
+    # Le MVP passe par son étape, au tour 16 (carte 637).
+    record_mvp_api(space_id, mr_id, "away", adverse)
 
     # Le rapport reste en ReadyToPublish : le récapitulatif d'avant publication
     # est justement celui que le calcul sert, et le seul qui l'exerce.

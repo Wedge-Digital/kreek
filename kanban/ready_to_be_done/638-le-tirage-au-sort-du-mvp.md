@@ -51,6 +51,20 @@ comme une autre. `MvpDrawn` est nommé dans l'aiguillage du publisher (631).
 SMALLINT` nullable, posé par `MvpDrawn`, pour afficher « tiré parmi 6
 désignés ».
 
+## Le MVP devient obligatoire
+
+Décision du 2026-11-02, à la livraison de la 637 : l'étape MVP y est restée
+**facultative** — on pouvait passer un camp sans MVP, et le domaine acceptait
+un rapport qui n'en avait pas. Avec le tirage, désigner un MVP ne coûte plus
+d'effort : **chaque camp en a un**, comme le veut la règle de Blood Bowl.
+
+- Le domaine refuse de passer à l'étape suivante, ou de clore l'après-match,
+  tant qu'un camp n'a pas son MVP ; l'écran ne fait qu'en refléter le refus.
+- **L'existant n'est pas touché** : un rapport publié sans MVP se rejoue tel
+  quel. La règle vaut à la saisie, comme celle du MVP unique de la 637.
+- Les e2e qui sautent l'étape MVP la traversent désormais — `record_mvp_api`
+  de `match_report_helpers.py` existe pour ça.
+
 ## Données de production
 
 Un événement **ajouté** ; la colonne nullable `draw_size`, vide pour
@@ -64,5 +78,6 @@ seuls nouveaux.
 - [ ] Migration : `draw_size` ; projection de `MvpDrawn` ; « tiré parmi » au journal
 - [ ] Tests unitaires, graine fixe : moins de six ou un doublon refusés ; le tiré est l'un des six ; l'action tirée est au tour 16 ; rejeu de `MvpDrawn`
 - [ ] E2E : désigner six joueurs, tirer, l'action « tiré parmi » au journal ; « Tirer » fermé à cinq
+- [ ] Le MVP obligatoire : refus du domaine sans MVP, rejeu de l'existant intact, e2e qui traversent l'étape
 - [ ] `tests/impact-map.toml` mis à jour
 - [ ] `make lint`, `make check-arch`, `make test`, e2e impactés

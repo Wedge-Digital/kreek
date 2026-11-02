@@ -1,4 +1,5 @@
 {% extends "app-layout.html" %}
+{% import "match_report/steps-indicator.html" as steps %}
 
 {% block content %}
 
@@ -22,17 +23,7 @@
   </div>
 
   <!-- Steps -->
-  <div class="mr-steps">
-    <div class="mr-step mr-step--done">&#10003;</div>
-    <div class="mr-step-line mr-step-line--done"></div>
-    <div class="mr-step mr-step--done">&#10003;</div>
-    <div class="mr-step-line mr-step-line--done"></div>
-    <div class="mr-step mr-step--done">&#10003;</div>
-    <div class="mr-step-line mr-step-line--done"></div>
-    <div class="mr-step mr-step--done">&#10003;</div>
-    <div class="mr-step-line mr-step-line--done"></div>
-    <div class="mr-step mr-step--active">5</div>
-  </div>
+  {% call steps::indicator(4) %}
 
   {% if already_recorded %}
   <div class="mr-info-banner mr-info-banner--neutral">

@@ -52,6 +52,13 @@ pub enum DomainError {
     /// L'outsider envoie ses achats avant que le favori ait validé les siens :
     /// son budget se calculerait sans les dépenses du favori (carte 627, R9).
     TopdogHasNotChosen,
+    /// Le camp a déjà son MVP, quel que soit son tour : on le supprime avant
+    /// d'en désigner un autre (carte 637).
+    MvpAlreadyRecorded,
+    /// Un MVP envoyé comme une action de match : il n'entre que par son étape,
+    /// et la règle « un par camp, au tour 16 » n'a pas de porte de service
+    /// (carte 637).
+    MvpOutsideMvpStep,
 }
 
 impl fmt::Display for DomainError {
@@ -76,6 +83,13 @@ impl fmt::Display for DomainError {
             ),
             Self::TopdogHasNotChosen => {
                 write!(f, "Le favori choisit ses coups de pouce en premier.")
+            }
+            Self::MvpAlreadyRecorded => write!(
+                f,
+                "Cette équipe a déjà son MVP. Supprimez-le pour en désigner un autre."
+            ),
+            Self::MvpOutsideMvpStep => {
+                write!(f, "Le MVP se désigne à l'étape MVP, après le match.")
             }
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),

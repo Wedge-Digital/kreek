@@ -45,6 +45,7 @@ from match_report_helpers import (
     post_step5,
     publish,
     record_action_api,
+    record_mvp_api,
 )
 
 
@@ -230,7 +231,8 @@ def _play_and_publish(
         if away_mvp:
             # Essai + MVP = 7 SPP, le minimum pour s'offrir une compétence
             # primaire choisie (coût niveau 1 = 6).
-            record_action_api(space_id, mr_id, "away", away_player, turn=away_td + 1, action_type="MVP")
+            # Le MVP passe par son étape, au tour 16 (carte 637).
+            record_mvp_api(space_id, mr_id, "away", away_player)
 
     post_step5(space_id, mr_id)
     publish(space_id, mr_id)

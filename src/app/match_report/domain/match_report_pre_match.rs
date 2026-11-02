@@ -457,27 +457,7 @@ impl MatchReportPreMatch {
         action_id: ActionId,
         recorded_by: CoachId,
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
-        if let MatchActionType::Blesse {
-            injury,
-            hatred: Some(_),
-            ..
-        } = &action
-        {
-            if !injury.peut_donner_haine() {
-                return Err(DomainError::HatredNotAllowedForInjury);
-            }
-        }
-
-        let event = MatchReportDomainEvent::ActionRecorded {
-            action_id: action_id.clone(),
-            team_side,
-            turn,
-            player: player.clone(),
-            action: action.clone(),
-            player_display_name: player_display_name.clone(),
-            player_position: player_position.clone(),
-            recorded_by,
-        };
+        check_match_action(&action)?;
         let entry = MatchAction {
             id: action_id,
             turn,
@@ -486,13 +466,76 @@ impl MatchReportPreMatch {
             player_display_name,
             player_position,
         };
+        Ok(self.push_action(team_side, entry, recorded_by))
+    }
+
+    /// Le MVP d'un camp (carte 637, R7) : une action `Mvp` au **tour 16**, et
+    /// **une seule par camp** — un MVP déjà saisi, à quelque tour que ce soit,
+    /// se supprime avant d'en désigner un autre.
+    ///
+    /// La règle vaut à la saisie, jamais au rejeu : `rehydrate` construit les
+    /// actions sans passer par ici, et un ancien rapport à deux MVP, ou à un MVP
+    /// au tour 7, se relit à l'identique.
+    pub fn record_mvp(
+        &self,
+        side: TeamSide,
+        player: ActionPlayer,
+        player_display_name: String,
+        player_position: String,
+        action_id: ActionId,
+        recorded_by: CoachId,
+    ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        if self.has_mvp(side) {
+            return Err(DomainError::MvpAlreadyRecorded);
+        }
+        let entry = MatchAction {
+            id: action_id,
+            turn: TurnNumber::LAST,
+            player,
+            action: MatchActionType::Mvp,
+            player_display_name,
+            player_position,
+        };
+        Ok(self.push_action(side, entry, recorded_by))
+    }
+
+    /// Les MVP d'un camp. Plusieurs pour un rapport ancien, saisi avant que
+    /// la règle n'existe — ils restent valides, et l'étape les montre.
+    pub fn mvps_of(&self, side: TeamSide) -> Vec<&MatchAction> {
+        self.actions_for(side)
+            .iter()
+            .filter(|a| matches!(a.action, MatchActionType::Mvp))
+            .collect()
+    }
+
+    pub fn has_mvp(&self, side: TeamSide) -> bool {
+        !self.mvps_of(side).is_empty()
+    }
+
+    /// L'action ajoutée à son camp, et l'événement qui le dit.
+    fn push_action(
+        &self,
+        side: TeamSide,
+        entry: MatchAction,
+        recorded_by: CoachId,
+    ) -> (Self, MatchReportDomainEvent) {
+        let event = MatchReportDomainEvent::ActionRecorded {
+            action_id: entry.id.clone(),
+            team_side: side,
+            turn: entry.turn,
+            player: entry.player.clone(),
+            action: entry.action.clone(),
+            player_display_name: entry.player_display_name.clone(),
+            player_position: entry.player_position.clone(),
+            recorded_by,
+        };
         let mut updated = self.clone();
-        match team_side {
+        match side {
             TeamSide::Home => updated.home_actions.push(entry),
             TeamSide::Away => updated.away_actions.push(entry),
         }
         updated.version += 1;
-        Ok((updated, event))
+        (updated, event)
     }
 
     pub fn delete_action(
@@ -669,6 +712,21 @@ impl MatchReportPreMatch {
             version: self.version + 1,
             ..self
         }
+    }
+}
+
+/// Ce qu'une action de match ne peut pas porter : une Haine sur une blessure
+/// qui n'en donne pas, ou un MVP — qui n'entre que par `record_mvp` (carte
+/// 637, décision du 2026-11-01 : la règle n'a pas de porte de service).
+fn check_match_action(action: &MatchActionType) -> Result<(), DomainError> {
+    match action {
+        MatchActionType::Mvp => Err(DomainError::MvpOutsideMvpStep),
+        MatchActionType::Blesse {
+            injury,
+            hatred: Some(_),
+            ..
+        } if !injury.peut_donner_haine() => Err(DomainError::HatredNotAllowedForInjury),
+        _ => Ok(()),
     }
 }
 
@@ -1324,32 +1382,94 @@ mod tests {
 
     #[test]
     fn record_two_mvp_same_team() {
-        let pm = make_pm(1000, 1000);
-        let (pm2, _) = pm
-            .record_action(
-                TeamSide::Home,
-                TurnNumber::try_new(1).unwrap(),
-                ActionPlayer::Regular(PlayerId::new()),
-                MatchActionType::Mvp,
-                "A".to_string(),
-                String::new(),
-                ActionId("a1".to_string()),
-                CoachId::new(),
-            )
-            .expect("action de test valide");
-        let (pm3, _) = pm2
-            .record_action(
-                TeamSide::Home,
-                TurnNumber::try_new(1).unwrap(),
-                ActionPlayer::Regular(PlayerId::new()),
-                MatchActionType::Mvp,
-                "B".to_string(),
-                String::new(),
-                ActionId("a2".to_string()),
-                CoachId::new(),
-            )
-            .expect("action de test valide");
-        assert_eq!(pm3.home_actions.len(), 2);
+        // Carte 637 : le second MVP d'un camp est refusé — l'ancien test
+        // fixait l'inverse, quand aucune règle n'existait.
+        let (pm2, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "a1").unwrap();
+        assert_eq!(
+            mvp(&pm2, TeamSide::Home, "a2").unwrap_err(),
+            DomainError::MvpAlreadyRecorded
+        );
+        assert_eq!(pm2.home_actions.len(), 1);
+    }
+
+    // ── Le MVP (carte 637) ───────────────────────────────────────────────
+
+    fn mvp(
+        pm: &MatchReportPreMatch,
+        side: TeamSide,
+        id: &str,
+    ) -> Result<(MatchReportPreMatch, MatchReportDomainEvent), DomainError> {
+        pm.record_mvp(
+            side,
+            ActionPlayer::Regular(PlayerId::new()),
+            "Thorgrim (#4)".into(),
+            "Tueur de trolls".into(),
+            ActionId(id.into()),
+            CoachId::new(),
+        )
+    }
+
+    #[test]
+    fn le_mvp_s_inscrit_au_tour_16() {
+        let (pm, event) = mvp(&make_pm(1000, 1000), TeamSide::Away, "m1").unwrap();
+        assert_eq!(pm.away_actions.len(), 1);
+        assert_eq!(pm.away_actions[0].turn.value(), 16);
+        assert!(matches!(pm.away_actions[0].action, MatchActionType::Mvp));
+        let MatchReportDomainEvent::ActionRecorded { turn, action, .. } = event else {
+            panic!("attendu ActionRecorded");
+        };
+        assert_eq!(turn.value(), 16);
+        assert!(matches!(action, MatchActionType::Mvp));
+    }
+
+    #[test]
+    fn un_mvp_par_camp_et_non_par_match() {
+        let (pm, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "m1").unwrap();
+        let (pm, _) = mvp(&pm, TeamSide::Away, "m2").unwrap();
+        assert!(pm.has_mvp(TeamSide::Home) && pm.has_mvp(TeamSide::Away));
+    }
+
+    /// Un MVP saisi avant la règle, au tour 7 : il compte, quel que soit son
+    /// tour.
+    #[test]
+    fn un_ancien_mvp_hors_tour_16_bloque_le_second() {
+        let mut pm = make_pm(1000, 1000);
+        pm.home_actions.push(MatchAction {
+            id: ActionId("ancien".into()),
+            turn: TurnNumber::try_new(7).unwrap(),
+            player: ActionPlayer::Regular(PlayerId::new()),
+            action: MatchActionType::Mvp,
+            player_display_name: "Borin".into(),
+            player_position: String::new(),
+        });
+        assert_eq!(
+            mvp(&pm, TeamSide::Home, "m1").unwrap_err(),
+            DomainError::MvpAlreadyRecorded
+        );
+    }
+
+    #[test]
+    fn supprimer_le_mvp_permet_d_en_designer_un_autre() {
+        let (pm, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "m1").unwrap();
+        let (pm, _) = pm
+            .delete_action(&ActionId("m1".into()), CoachId::new())
+            .unwrap();
+        assert!(mvp(&pm, TeamSide::Home, "m2").is_ok());
+    }
+
+    #[test]
+    fn une_action_mvp_est_refusee() {
+        let r = make_pm(1000, 1000).record_action(
+            TeamSide::Home,
+            TurnNumber::try_new(16).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Mvp,
+            "A".into(),
+            String::new(),
+            ActionId("a1".into()),
+            CoachId::new(),
+        );
+        assert_eq!(r.unwrap_err(), DomainError::MvpOutsideMvpStep);
     }
 
     #[test]
@@ -1616,8 +1736,9 @@ mod tests {
     }
 
     #[test]
-    fn les_sept_autres_actions_restent_enregistrables() {
+    fn les_six_autres_actions_restent_enregistrables() {
         let pm = make_pm(1000, 1000);
+        // Le MVP n'en est plus : il entre par `record_mvp` (carte 637).
         for action in [
             MatchActionType::Touchdown,
             MatchActionType::Passe,
@@ -1625,7 +1746,6 @@ mod tests {
             MatchActionType::Agression,
             MatchActionType::Lancer,
             MatchActionType::Sortie,
-            MatchActionType::Mvp,
         ] {
             let r = pm.record_action(
                 TeamSide::Home,

@@ -38,6 +38,7 @@ from match_report_helpers import (
     post_step5,
     publish,
     record_action_api,
+    record_mvp_api,
 )
 from team_phase_helpers import SEUIL_KPO, attendre_une_phase, traverser_erreurs_couteuses
 
@@ -204,7 +205,8 @@ def joue_ctx(competition, space_id):
     ensure_inducements(space_id, mr_id)
     buteur = first_player_id(mr_id, "away")
     record_action_api(space_id, mr_id, "away", buteur, turn=1, action_type="TOUCHDOWN")
-    record_action_api(space_id, mr_id, "away", buteur, turn=2, action_type="MVP")
+    # Le MVP passe par son étape, au tour 16 (carte 637).
+    record_mvp_api(space_id, mr_id, "away", buteur)
     post_step5(space_id, mr_id)
     publish(space_id, mr_id)
 
