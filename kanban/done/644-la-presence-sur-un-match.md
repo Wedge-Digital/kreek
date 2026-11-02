@@ -31,25 +31,40 @@ saisit ». Un onglet fermé ou parti ailleurs cesse d'y compter.
   `match_role(user, space_id, match_report_id) -> MatchRole { None, Follow, Write }`,
   implémenté par `src/infrastructure/web/match_role_adapter.rs` sur
   `is_authorized` et `can_write_report`, sans les réécrire. Une erreur de port
-  vaut `Aucun`.
+  vaut `None`, et un match qui n'est pas de `space_id` aussi : le `POST` de
+  présence n'a pas d'espace dans son chemin, `space_scope` ne le garde pas
+  (arbitrage du 2026-11-02).
 - **Le marqueur** dans les pages de match — `live-match.html`,
   `actions-step.html`, `mvp-step.html` :
-  `<div class="realtime-presence" data-match="…" data-space="…" hidden></div>`.
-- **La déclaration** : le script du layout, au chargement et après chaque
-  `htmx:afterSettle` de `#app-content`, envoie
+  `<div class="realtime-presence" data-match="…" data-space="…" data-activity="…" hidden></div>`.
+  L'**activité** est celle de la page : `follow` sur `/live`, `write` sur
+  `/step3`, `/step4` et `/mvp/{side}`.
+- **La déclaration** : le script du layout, à chaque `hello` (une connexion
+  neuve, reconnexion comprise, n'a aucune présence) et après chaque
+  `htmx:afterSettle` quand le match ou l'activité a changé, envoie
   `POST /app/realtime/presence` (`HX-Request: true`) avec l'identifiant de
-  connexion et le match du marqueur — ou sans match s'il n'y en a plus. Le
-  serveur demande `match_role` : `Aucun` répond 403, sinon il enregistre le
-  rôle **qu'il a calculé** sur la connexion, jamais ce que la page prétend.
+  connexion, le match et l'activité du marqueur — ou rien s'il n'y en a plus.
+- **Le rôle inscrit est `min(droit, activité)`** (arbitrage du 2026-11-02) :
+  le serveur calcule le **droit** par `match_role`, et inscrit le minimum du
+  droit et de l'activité déclarée (`None < Follow < Write`). La page peut se
+  déclarer en dessous de son droit, jamais au-dessus : un admin qui lit
+  `/live` « suit le match ». Un droit `None` répond 403 quelle que soit
+  l'activité ; une activité illisible répond 400.
+- **L'onglet est celui du demandeur** : une connexion inconnue ou appartenant
+  à un autre utilisateur reçoit le même 404 — personne ne pose de présence à
+  la place d'un autre, et rien n'est révélé des onglets d'autrui.
 - **Le départ** : une présence s'efface quand la connexion tombe (garde de la
   642), ou quand l'onglet en déclare une autre ou aucune.
 - **Le widget** `GET /app/{space_id}/realtime/matches/{match_report_id}/presence`,
   gardé par `space_scope` et `match_role` : les autres connectés présents, par
-  nom, « saisit » pour le rôle `Saisie`, « suit le match » pour `Suivi`. Il ne
+  nom, « saisit » pour le rôle `Write`, « suit le match » pour `Follow`. Le
+  demandeur n'y figure sur aucun de ses onglets ; une personne à plusieurs
+  onglets n'y figure qu'une fois, avec son rôle le plus fort. Il ne
   lit que le registre. Il se recharge sur `presenceChanged`, émis aux présents
   d'un match à chaque arrivée ou départ.
-- **Sur `/live`**, le widget remplace la première ligne du bandeau statique ;
-  sa phrase d'explication reste.
+- **Sur `/live`**, le widget se pose **au-dessus** de la ligne statique du
+  bandeau, qui reste (arbitrage du 2026-11-02) : elle dit le mode, et reste
+  vraie quand l'onglet du saisisseur est fermé.
 - **Le journal** : `présence` en `debug` (`conn`, `match_report_id`, `role`).
 
 ## Fichiers touchés
@@ -64,18 +79,23 @@ et sa feuille au bundle (`src/web/css_bundle.rs`), `live-match.html`,
 ## Tests
 
 - **Unitaires** : une présence posée, remplacée, effacée par la déclaration
-  vide et par la fermeture ; le rôle enregistré est celui du port ; `Aucun`
-  refuse ; le widget ne liste pas l'onglet qui le demande.
+  vide et par la fermeture ; le rôle enregistré est celui du port ; `None`
+  refuse ; une page `follow` ne donne jamais `Write`, une page `write` sans
+  droit d'écrire donne `Follow` ; le widget ne liste pas l'onglet qui le
+  demande.
 - **E2E** (`tests/e2e/test_realtime_presence.py`) : DevCoach saisit sur
   `/step3`, le membre simple (`X-Bypass-Auth-Profile: simple`) ouvre `/live`
   dans un second contexte et lit « DevCoach saisit » ; DevCoach ferme son
-  onglet, la mention disparaît chez le membre simple. Un tiers qui déclare sa
-  présence reçoit 403.
+  onglet, la mention disparaît chez le membre simple (P1, P2). DevCoach quitte
+  le match par le menu — navigation htmx, plus de marqueur — et la mention
+  disparaît aussi (P3, arbitrage du 2026-11-02). Un tiers, « E2E Coach 02 »
+  vraiment connecté, qui déclare sa présence ou lit le widget reçoit 403 (P4).
 - `tests/impact-map.toml` et `tests/e2e/visual/urls.py` mis à jour.
 
 ## Hors périmètre
 
 - Le rechargement du journal sur signal : 646.
+- Montrer au saisisseur qui le suit : le bandeau n'est rendu qu'à qui suit.
 - Une présence hors des pages de match.
 
 ## Conséquences sur les données de production

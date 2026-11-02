@@ -7,6 +7,9 @@
    app-mobile-solo-follow.html. #}
 {% block content %}
 <div class="mr-container match-report-live">
+  {# Le layout déclare ce match au canal temps réel (carte 644) : l'activité
+     de cette page est le suivi, quel que soit le droit. #}
+  <div class="realtime-presence" data-space="{{ space_id }}" data-match="{{ match_report_id }}" data-activity="follow" hidden></div>
 
   <div class="mr-header">
     <div class="mr-header-icon">&#127944;</div>
@@ -41,6 +44,15 @@
 
   {% if write.is_none() %}
   <div class="live-notice">
+    {# Qui d'autre est sur le match en ce moment (carte 644) — au-dessus du
+       titre, qui dit le mode et reste vrai quand l'onglet du saisisseur est
+       fermé. #}
+    <div class="live-presence"
+         hx-get="{{ presence_widget_url }}"
+         hx-trigger="load, presenceChanged[detail.id=='{{ match_report_id }}'] from:body, realtimeResync from:body"
+         hx-target="this"
+         hx-swap="innerHTML">
+    </div>
     <div class="live-notice-title">
       <span class="live-dot"></span>
       {% if let Some(name) = starter_name.as_ref() %}{{ name }} saisit tout le match{% else %}Ce match est saisi par le coach qui l'a d&eacute;marr&eacute;{% endif %}

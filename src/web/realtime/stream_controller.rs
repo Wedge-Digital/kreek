@@ -119,8 +119,14 @@ impl ConnectionGuard {
 
 impl Drop for ConnectionGuard {
     fn drop(&mut self) {
-        self.registry.close(&self.id);
+        let left = self.registry.close(&self.id);
         let _entered = self.span.enter();
+        if let Some(match_report_id) = left {
+            // L'onglet fermé quitte son match : ses autres présents l'apprennent.
+            tracing::debug!(conn = %self.id, %match_report_id, role = "none", "présence");
+            self.registry
+                .notify_presence_changed(&match_report_id, None);
+        }
         tracing::info!(
             conn = %self.id,
             duration_s = self.opened_at.elapsed().as_secs(),

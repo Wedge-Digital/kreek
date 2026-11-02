@@ -1,0 +1,28 @@
+/* Le widget de présence d'un match (carte 644) — qui suit, qui saisit,
+   en ce moment. */
+.presence-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Personne d'autre sur le match : rien à montrer, pas même un interligne. */
+.presence-widget:not(:has(.presence-widget-line)) {
+  display: none;
+}
+
+.presence-widget .presence-widget-line {
+  font-weight: 700;
+  font-size: var(--text-small);
+  color: var(--dark-1);
+}
+
+.presence-widget .presence-widget-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: 1px;
+}

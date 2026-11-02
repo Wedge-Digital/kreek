@@ -4,6 +4,12 @@ pub mod path {
     pub const MENU: &str = "/app/menu";
     /// Le flux SSE de l'onglet (carte 642) — sous `/app`, donc sous `require_auth`.
     pub const REALTIME_STREAM: &str = "/app/realtime/stream";
+    /// Un onglet déclare le match qu'il regarde, ou aucun (carte 644).
+    pub const REALTIME_PRESENCE: &str = "/app/realtime/presence";
+    /// Le widget « qui suit, qui saisit » d'un match (carte 644) — sous
+    /// `space_scope`, qui résout `match_report_id`.
+    pub const REALTIME_MATCH_PRESENCE: &str =
+        "/app/{space_id}/realtime/matches/{match_report_id}/presence";
     pub const SPACES_WIDGET_TESTER: &str = "/spaces/widget/tester";
     pub const KREEK_SELECT_TESTER: &str = "/kreek-select-tester";
     pub const KREEK_SELECT_TESTER_DATA: &str = "/kreek-select-tester/data";
@@ -29,5 +35,13 @@ impl Routes {
     }
     pub fn realtime_stream(&self) -> &'static str {
         path::REALTIME_STREAM
+    }
+    pub fn realtime_presence(&self) -> &'static str {
+        path::REALTIME_PRESENCE
+    }
+    pub fn realtime_match_presence(&self, space_id: &str, match_report_id: &str) -> String {
+        path::REALTIME_MATCH_PRESENCE
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
     }
 }

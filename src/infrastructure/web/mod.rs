@@ -12,3 +12,4 @@
 pub mod hors_calendrier_adapter;
 // Carte 645 : les coachs d'un match, pour le routage des notifications.
 pub mod match_audience_adapter;
+pub mod match_role_adapter;

@@ -71,6 +71,13 @@
                                  "references", "team_creation", "ranking", "spaces",
                                  "auth"]
 
+# La présence sur un match (carte 644) : le widget vit dans `src/web/realtime`,
+# le port dans `src/infrastructure/web` adossé à `match_report`. Le décor est
+# celui de `test_match_report_live` — `build_full_competition`, puis un rapport
+# démarré —, d'où la même traversée.
+"test_realtime_presence" = ["match_report", "players", "references", "teams",
+                            "competitions", "team_creation", "ranking", "spaces"]
+
 # ── Création de compétition (aucune équipe, aucun match) ─────────────────────
 # Phase 1 → recherche de coachs (widget du BC spaces).
 # Phase 2 → pickers roster/star/inducement (BC references) et catalogue des

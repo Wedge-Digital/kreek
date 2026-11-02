@@ -89,6 +89,11 @@ pub struct LiveMatchTemplate {
     /// `None` pour qui suit : aucun bouton d'écriture n'est rendu.
     pub write: Option<LiveWriteVm>,
     pub starter_name: Option<String>,
+    /// Le marqueur de présence (carte 644) : le layout déclare ce match.
+    pub space_id: String,
+    pub match_report_id: String,
+    /// Le widget « qui suit, qui saisit » du canal temps réel (carte 644).
+    pub presence_widget_url: String,
 }
 
 impl IntoResponse for LiveMatchTemplate {
@@ -231,6 +236,9 @@ pub fn build_template(
         action_log_url: routes.match_report.action_log(ids.space_id, ids.mr_id),
         write: access.can_write.then(|| write_vm(ids)),
         starter_name: access.starter_name,
+        space_id: ids.space_id.to_string(),
+        match_report_id: ids.mr_id.to_string(),
+        presence_widget_url: routes.web.realtime_match_presence(ids.space_id, ids.mr_id),
         app_routes: routes,
         home,
         away,

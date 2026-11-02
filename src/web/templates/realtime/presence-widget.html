@@ -1,0 +1,8 @@
+{# Qui d'autre est sur ce match en ce moment (carte 644). Ne lit que le
+   registre des connexions : aucun appel de BC, aucune table. La liste est vide
+   quand personne d'autre n'est là, et la feuille masque alors la racine. #}
+<div class="presence-widget" hx-disinherit="*">
+  {% for line in lines %}
+  <div class="presence-widget-line"><span class="presence-widget-dot"></span>{{ line.coach_name }} {{ line.label }}</div>
+  {% endfor %}
+</div>

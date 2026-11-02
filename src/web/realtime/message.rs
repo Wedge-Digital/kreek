@@ -7,6 +7,7 @@
 //! Le registre ne connaît que `RealtimeMessage` : la forme SSE vit ici, pour
 //! qu'un autre transport ne change rien au registre.
 
+use crate::app::shared_kernel::identity::ids::EntityId;
 use crate::web::realtime::registry::ConnectionId;
 use axum::response::sse::Event;
 use std::time::Duration;
@@ -25,6 +26,10 @@ pub enum RealtimeMessage {
     /// Des messages ont pu être perdus (`Lagged`) : les widgets abonnés se
     /// rechargent, comme à une reconnexion.
     Resync,
+    // ── Carte 644 : la présence ──
+    /// Quelqu'un est arrivé sur ce match, en est parti, ou y a changé de rôle
+    /// (carte 644) : le widget de présence se recharge.
+    PresenceChanged { match_report_id: EntityId },
 }
 
 /// Ce que le layout passe à `kreekToast(title, 'success', { subtitle, link })`.
@@ -48,6 +53,13 @@ impl RealtimeMessage {
                 .event("toast")
                 .data(serde_json::to_string(payload).unwrap_or_default()),
             RealtimeMessage::Resync => Event::default().event("resync").data("{}"),
+            // ── Carte 644 ──
+            RealtimeMessage::PresenceChanged { match_report_id } => {
+                Event::default().event("presence").data(
+                    serde_json::json!({ "match_report_id": match_report_id.to_string() })
+                        .to_string(),
+                )
+            }
         }
     }
 }

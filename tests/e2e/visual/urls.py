@@ -98,6 +98,7 @@ CLASSE_ATTENDUE = {
     "widget-customisation": ".pd-right",
     "rapport-inducements": ".match-report-inducements",
     "rapport-mercenaires": ".merco-selector",
+    "widget-presence": ".presence-widget",
 }
 
 
@@ -243,6 +244,10 @@ def collecter() -> tuple[dict[str, str], list[str]]:
                                   if rapport_prematch and equipe_prematch else None),
         "rapport-mercenaires":   (f"{a}/match-report/{rapport_prematch}/step2/{equipe_prematch}/mercenaires"
                                   if rapport_prematch and equipe_prematch else None),
+        # Le widget de présence du canal temps réel (carte 644) : vide pour qui
+        # le capture seul, mais sa racine est rendue.
+        "widget-presence":       (f"{a}/realtime/matches/{rapport_prematch}/presence"
+                                  if rapport_prematch else None),
     }
     pages = {n: u for n, u in candidates.items() if u}
     manquantes = [n for n, u in candidates.items() if not u]

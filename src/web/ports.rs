@@ -63,3 +63,36 @@ pub trait IMatchAudiencePort: Send + Sync {
         away_team_id: &str,
     ) -> Vec<crate::app::shared_kernel::identity::ids::UserId>;
 }
+
+// ── Le rôle d'un utilisateur sur un match (carte 644) ────────────────────────
+
+use crate::app::auth::domain::user::User;
+use crate::app::shared_kernel::identity::ids::EntityId;
+
+/// Ce qu'un utilisateur peut faire sur un match : rien, le suivre, le saisir.
+///
+/// L'ordre des variants est celui des droits : `None < Follow < Write`. La
+/// présence inscrit le **minimum** du droit et de l'activité de la page — un
+/// navigateur ne peut rien obtenir au-delà de son droit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MatchRole {
+    None,
+    Follow,
+    Write,
+}
+
+/// Ce que cet utilisateur peut faire sur ce match, d'après les règles de
+/// `match_report` — `is_authorized` et `can_write_report`, sans les réécrire.
+///
+/// Seul `src/infrastructure/web/match_role_adapter.rs` importe le BC.
+#[async_trait]
+pub trait IMatchRolePort: Send + Sync {
+    /// `None` aussi quand le match n'est pas de cet espace, et en cas d'échec
+    /// de lecture : un contrôle d'accès échoue fermé.
+    async fn match_role(
+        &self,
+        user: &User,
+        space_id: &EntityId,
+        match_report_id: &EntityId,
+    ) -> MatchRole;
+}

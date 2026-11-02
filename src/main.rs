@@ -641,6 +641,13 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             ),
         ),
         realtime,
+        match_role: Arc::new(
+            crate::infrastructure::web::match_role_adapter::MatchRoleAdapter::new(
+                Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
+                admin_access.clone(),
+                match_report_team_data.clone(),
+            ),
+        ),
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),

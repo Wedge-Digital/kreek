@@ -183,6 +183,11 @@
       // Le serveur a perdu des messages : même effet qu'une reconnexion.
       resync: function () {
         emit('realtimeResync');
+      },
+      // Quelqu'un est arrivé sur le match de cet onglet, ou en est parti
+      // (carte 644) : le widget de présence se recharge.
+      presence: function (data) {
+        emit('presenceChanged', { id: data.match_report_id });
       }
     };
 
@@ -219,6 +224,53 @@
     });
 
     connect();
+  })();
+  </script>
+  <!-- Présence sur un match — carte 644.
+       La page de match pose `.realtime-presence` (match, activité) ; ce script
+       le déclare au serveur, qui calcule lui-même le rôle. Déclenché à chaque
+       `hello` — une connexion neuve n'a aucune présence, y compris après une
+       reconnexion — et après chaque navigation htmx, mais seulement quand le
+       match ou l'activité a changé. `fetch` et non `htmx.ajax` : une requête
+       htmx émettrait à son tour les événements qui déclenchent ce script. -->
+  <div class="realtime-presence-client" data-url="{{ app_routes.web.realtime_presence() }}" hidden></div>
+  <script>
+  (function () {
+    var marker = document.currentScript.previousElementSibling;
+    if (window.kreekPresence) return;
+    var presence = window.kreekPresence = { declared: '' };
+
+    function currentPage() {
+      var page = document.querySelector('#app-content .realtime-presence');
+      if (!page) return { key: '', space: '', match: '', activity: '' };
+      var d = page.dataset;
+      return { key: d.match + '|' + d.activity, space: d.space, match: d.match, activity: d.activity };
+    }
+
+    function send(connectionId, page) {
+      var body = new URLSearchParams({
+        connection_id: connectionId, space_id: page.space,
+        match_report_id: page.match, activity: page.activity
+      });
+      fetch(marker.dataset.url, {
+        method: 'POST', credentials: 'same-origin', body: body,
+        headers: { 'HX-Request': 'true' }
+      }).catch(function () {});
+    }
+
+    function declare(fresh) {
+      var connectionId = window.kreekRealtime && window.kreekRealtime.connectionId;
+      if (!connectionId) return;
+      if (fresh) presence.declared = '';
+      var page = currentPage();
+      if (page.key === presence.declared) return;
+      presence.declared = page.key;
+      send(connectionId, page);
+    }
+
+    document.body.addEventListener('realtimeHello', function () { declare(true); });
+    document.body.addEventListener('htmx:afterSettle', function () { declare(false); });
+    document.body.addEventListener('htmx:historyRestore', function () { declare(false); });
   })();
   </script>
 </body>

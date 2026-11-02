@@ -23,6 +23,11 @@ use tokio::sync::mpsc::error::TrySendError;
 /// Messages en attente par connexion. Au-delà, ils sont perdus (R3, R8).
 pub const QUEUE_CAPACITY: usize = 32;
 
+// ── La présence sur un match (carte 644) ─────────────────────────────────────
+mod presence;
+use crate::app::shared_kernel::identity::ids::EntityId;
+pub use presence::{Presence, PresenceChange, PresenceError, PresentConnection};
+
 /// L'identifiant d'une connexion, rendu au navigateur par l'événement `hello`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ConnectionId(SUlid);
@@ -30,6 +35,11 @@ pub struct ConnectionId(SUlid);
 impl ConnectionId {
     pub fn new() -> Self {
         Self(SUlid::new())
+    }
+
+    /// L'identifiant renvoyé par le navigateur ; `None` s'il est illisible.
+    pub fn parse(s: &str) -> Option<Self> {
+        SUlid::try_new(s).ok().map(Self)
     }
 }
 
@@ -73,12 +83,13 @@ impl ConnectionStats {
 
 struct Connection {
     user_id: UserId,
-    // Pris sur `AuthSession` à l'ouverture : la présence (644) et le routage
-    // des notifications (645) le liront. Rien ne le lit encore.
-    #[allow(dead_code)]
+    /// Pris sur `AuthSession` à l'ouverture ; le widget de présence l'affiche.
     coach_name: CoachName,
     sender: mpsc::Sender<RealtimeMessage>,
     stats: Arc<ConnectionStats>,
+    /// Le match que cet onglet regarde, et le rôle calculé par le serveur
+    /// (carte 644). `None` hors des pages de match.
+    presence: Option<Presence>,
 }
 
 /// Ce que l'ouverture rend au flux : son identifiant, sa file, ses compteurs.
@@ -120,6 +131,7 @@ impl ConnectionRegistry {
             coach_name,
             sender,
             stats: stats.clone(),
+            presence: None,
         };
         self.by_user.entry(user_id).or_default().insert(id);
         self.connections.insert(id, connection);
@@ -131,16 +143,16 @@ impl ConnectionRegistry {
     }
 
     /// Retire une connexion — appelé par le `Drop` de la garde du flux, seul
-    /// nettoyage du registre.
-    pub fn close(&self, id: &ConnectionId) {
-        let Some((_, connection)) = self.connections.remove(id) else {
-            return;
-        };
+    /// nettoyage du registre. Rend le match que la connexion quittait, pour
+    /// que ses autres présents l'apprennent (carte 644).
+    pub fn close(&self, id: &ConnectionId) -> Option<EntityId> {
+        let (_, connection) = self.connections.remove(id)?;
         let user_id = connection.user_id;
         if let Some(mut ids) = self.by_user.get_mut(&user_id) {
             ids.remove(id);
         }
         self.by_user.remove_if(&user_id, |_, ids| ids.is_empty());
+        connection.presence.map(|p| p.match_report_id)
     }
 
     /// Livre un message à une connexion, sans jamais attendre.

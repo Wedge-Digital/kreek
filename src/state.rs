@@ -12,6 +12,7 @@ use crate::app::teams::context::TeamsContext;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::web::middleware::space_scope::ISpaceOwnership;
 use crate::web::ports::IHorsCalendrierPort;
+use crate::web::ports::IMatchRolePort;
 use crate::web::realtime::registry::ConnectionRegistry;
 use axum::extract::FromRef;
 use std::sync::Arc;
@@ -42,6 +43,9 @@ pub struct AppState {
     /// Les flux temps réel ouverts, en mémoire (carte 642). Le flux y
     /// enregistre ses connexions ; les cartes 644 à 646 y livreront.
     pub realtime: Arc<ConnectionRegistry>,
+    /// Ce qu'un utilisateur peut faire sur un match, demandé à `match_report`
+    /// par la présence temps réel (carte 644).
+    pub match_role: Arc<dyn IMatchRolePort>,
     pub bypass_auth: bool,
     pub event_bus: EventBus,
     pub app_event_bus: EventBus,

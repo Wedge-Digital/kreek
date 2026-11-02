@@ -6,6 +6,8 @@
 //! branchent.
 
 pub mod message;
+pub mod presence_controller;
+pub mod presence_widget;
 pub mod registry;
 pub mod stream_controller;
 

@@ -2,6 +2,9 @@
 {% import "match_report/steps-indicator.html" as steps %}
 
 {% block content %}
+{# Le layout déclare ce match au canal temps réel (carte 644) : une page de
+   saisie. Le serveur n'inscrit « saisit » que si le droit d'écrire suit. #}
+<div class="realtime-presence" data-space="{{ space_id }}" data-match="{{ match_report_id }}" data-activity="write" hidden></div>
 
 <div class="mr-container match-report-actions" x-data="{
     selectedTurn: null,
