@@ -31,6 +31,9 @@ pub struct ActionRowVm {
     pub recorded_by: Option<String>,
     /// `None` pour qui ne peut pas supprimer : le ✕ n'est pas rendu.
     pub delete_url: Option<String>,
+    /// Le nombre de désignés d'un MVP tiré au sort (carte 638) : « tiré parmi
+    /// 6 désignés ».
+    pub draw_size: Option<i16>,
 }
 
 /// Ce qu'une ligne du journal ne lit pas sur elle-même.
@@ -57,7 +60,8 @@ impl ActionRowVm {
         Self {
             hate_label: libelle_de_haine(&row.action_json, ctx.keyword_catalog),
             recorded_by: recorded_by_label(row.recorded_by.as_deref(), ctx),
-            delete_url: delete_url(&row.action_id, ctx),
+            delete_url: delete_url(&row, ctx),
+            draw_size: row.draw_size,
             side_class,
             team_name: team_name.clone(),
             action_id: row.action_id,
@@ -79,12 +83,14 @@ fn recorded_by_label(recorded_by: Option<&str>, ctx: &ActionLogContext<'_>) -> O
     ctx.recorder_names.get(id).cloned()
 }
 
-fn delete_url(action_id: &str, ctx: &ActionLogContext<'_>) -> Option<String> {
-    ctx.can_delete.then(|| {
+/// Pas de ✕ pour qui ne peut pas écrire, ni pour un MVP tiré au sort : le
+/// domaine refuse sa suppression (carte 638), la projection du tirage le dit.
+fn delete_url(row: &MatchActionRow, ctx: &ActionLogContext<'_>) -> Option<String> {
+    (ctx.can_delete && row.draw_size.is_none()).then(|| {
         AppRoutes::default().match_report.delete_action(
             ctx.space_id,
             ctx.match_report_id,
-            action_id,
+            &row.action_id,
         )
     })
 }
@@ -340,6 +346,7 @@ mod tests {
             player_display_name: "Borin".to_string(),
             player_position: "Bloqueur".to_string(),
             recorded_by: recorded_by.map(str::to_string),
+            draw_size: None,
         }
     }
 
@@ -413,6 +420,19 @@ mod tests {
         )];
         let html = ActionLogTemplate { actions }.render().unwrap();
         assert!(html.contains("London Rats · saisi par Yann"));
+        assert!(!html.contains("mr-log-delete"));
+    }
+
+    /// Carte 638 : un MVP tiré dit parmi combien, et n'a pas de ✕.
+    #[test]
+    fn a_drawn_mvp_says_among_how_many_and_has_no_cross() {
+        let mut drawn = row(TeamSide::Home, Some(ME));
+        drawn.action_json = serde_json::to_value(MatchActionType::Mvp).unwrap();
+        drawn.draw_size = Some(6);
+        let vm = ActionRowVm::from_row(drawn, &ctx(true));
+        assert_eq!(vm.delete_url, None);
+        let html = ActionLogTemplate { actions: vec![vm] }.render().unwrap();
+        assert!(html.contains("tiré parmi 6 désignés"), "{html}");
         assert!(!html.contains("mr-log-delete"));
     }
 

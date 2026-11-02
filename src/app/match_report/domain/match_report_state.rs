@@ -4,8 +4,10 @@ use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::mvp_draw::{DesignatedPlayer, DrawnMvp};
 use crate::app::match_report::domain::value_objects::CorrectionEligibility;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
+use crate::app::match_report::domain::value_objects::{ActionId, TeamSide};
 use crate::app::shared_kernel::bloodbowl::ids::{MatchReportId, RoundId};
 use crate::app::shared_kernel::identity::ids::SpaceId;
 
@@ -260,6 +262,32 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 updated.version += 1;
                 MatchReportState::PreMatch(updated)
             }
+            // Le tirage du MVP (carte 638) : l'action tirée est déjà rejouée
+            // par l'`ActionRecorded` qui le précède, seul le tirage reste.
+            (
+                Some(MatchReportState::PreMatch(mut pm)),
+                MatchReportDomainEvent::MvpDrawn {
+                    action_id,
+                    team_side,
+                    designated,
+                },
+            ) => {
+                pm.apply_mvp_drawn(drawn_mvp_of(action_id, *team_side, designated));
+                MatchReportState::PreMatch(pm)
+            }
+            (
+                Some(MatchReportState::ReadyToPublish(mut rtp)),
+                MatchReportDomainEvent::MvpDrawn {
+                    action_id,
+                    team_side,
+                    designated,
+                },
+            ) => {
+                rtp.drawn_mvps
+                    .push(drawn_mvp_of(action_id, *team_side, designated));
+                rtp.version += 1;
+                MatchReportState::ReadyToPublish(rtp)
+            }
             (
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::MatchReportCancelled { reason, .. },
@@ -493,6 +521,19 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
     }
 
     state.ok_or(DomainError::EmptyEventStream)
+}
+
+/// Le tirage que `MvpDrawn` retient.
+fn drawn_mvp_of(
+    action_id: &ActionId,
+    team_side: TeamSide,
+    designated: &[DesignatedPlayer],
+) -> DrawnMvp {
+    DrawnMvp {
+        action_id: action_id.clone(),
+        team_side,
+        designated: designated.to_vec(),
+    }
 }
 
 fn rejouer_la_journee(
@@ -1756,5 +1797,79 @@ mod tests {
             coach_id,
         );
         assert_eq!(refus.unwrap_err(), DomainError::MvpAlreadyRecorded);
+    }
+
+    // ── carte 638 : le tirage au sort, rejoué ────────────────────────────
+
+    fn drawn_events(coach_id: CoachId) -> Vec<MatchReportDomainEvent> {
+        use crate::app::match_report::domain::mvp_draw::DesignatedPlayer;
+        use crate::app::match_report::domain::value_objects::ActionPlayer;
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        let designated: Vec<DesignatedPlayer> = (0..6)
+            .map(|i| DesignatedPlayer {
+                player: ActionPlayer::Regular(PlayerId::new()),
+                display_name: format!("Nain {i}"),
+                position: String::new(),
+            })
+            .collect();
+        vec![
+            old_mvp(coach_id, "tire", 16),
+            MatchReportDomainEvent::MvpDrawn {
+                action_id: ActionId("tire".into()),
+                team_side: TeamSide::Home,
+                designated,
+            },
+        ]
+    }
+
+    /// `MvpDrawn` se rejoue : l'agrégat retient le tirage, et le MVP tiré ne
+    /// se supprime pas.
+    #[test]
+    fn le_tirage_se_rejoue_et_reste_definitif() {
+        let (mut events, coach_id) = avant_match_valide();
+        events.extend(drawn_events(coach_id));
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        let drawn = pm
+            .drawn_mvp(&ActionId("tire".into()))
+            .expect("tirage rejoué");
+        assert_eq!(drawn.designated.len(), 6);
+        assert_eq!(
+            pm.delete_action(&ActionId("tire".into()), coach_id)
+                .unwrap_err(),
+            DomainError::DrawnMvpIsFinal
+        );
+    }
+
+    /// Le tirage survit à la publication et à la dépublication : en
+    /// correction, il reste définitif.
+    #[test]
+    fn le_tirage_survit_a_la_correction() {
+        let (mut events, coach_id) = avant_match_valide();
+        events.extend(drawn_events(coach_id));
+        events.push(post_match_event(coach_id));
+        events.push(published_event(coach_id));
+        events.push(unpublished_event(coach_id));
+        let MatchReportState::ReadyToPublish(rtp) = rehydrate(events).unwrap() else {
+            panic!("attendu ReadyToPublish");
+        };
+        let refus = rtp
+            .into_pre_match()
+            .delete_action(&ActionId("tire".into()), coach_id);
+        assert_eq!(refus.unwrap_err(), DomainError::DrawnMvpIsFinal);
+    }
+
+    /// Un rapport publié sans aucun MVP, d'avant la règle, se rejoue tel quel :
+    /// le MVP obligatoire vaut à la saisie, jamais au rejeu.
+    #[test]
+    fn un_ancien_rapport_sans_mvp_se_rejoue() {
+        let (mut events, coach_id) = avant_match_valide();
+        events.push(post_match_event(coach_id));
+        events.push(published_event(coach_id));
+        let MatchReportState::Published(published) = rehydrate(events).unwrap() else {
+            panic!("attendu Published");
+        };
+        assert!(published.home_actions.is_empty() && published.away_actions.is_empty());
     }
 }

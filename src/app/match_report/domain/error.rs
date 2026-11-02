@@ -1,4 +1,4 @@
-use crate::app::match_report::domain::value_objects::CorrectionBlocker;
+use crate::app::match_report::domain::value_objects::{CorrectionBlocker, TeamSide};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,6 +59,18 @@ pub enum DomainError {
     /// et la règle « un par camp, au tour 16 » n'a pas de porte de service
     /// (carte 637).
     MvpOutsideMvpStep,
+    /// Le tirage se fait parmi **six** joueurs désignés, ni plus ni moins
+    /// (carte 638, R8). Porte le nombre reçu.
+    DrawNeedsSixPlayers(usize),
+    /// Un même joueur désigné deux fois pour le tirage (carte 638).
+    DuplicateDesignatedPlayer,
+    /// Un MVP tiré au sort est définitif, même en correction (carte 638,
+    /// décision du 2026-11-01).
+    DrawnMvpIsFinal,
+    /// Un camp n'a pas son MVP : l'après-match ne se clôt pas sans (carte
+    /// 638, décision du 2026-11-02). La règle vaut à la saisie, jamais au
+    /// rejeu.
+    MvpMissing(TeamSide),
 }
 
 impl fmt::Display for DomainError {
@@ -90,6 +102,22 @@ impl fmt::Display for DomainError {
             ),
             Self::MvpOutsideMvpStep => {
                 write!(f, "Le MVP se désigne à l'étape MVP, après le match.")
+            }
+            Self::DrawNeedsSixPlayers(n) => write!(
+                f,
+                "Désignez exactement 6 joueurs pour le tirage ({n} désignés)."
+            ),
+            Self::DuplicateDesignatedPlayer => {
+                write!(f, "Un même joueur ne peut être désigné deux fois.")
+            }
+            Self::DrawnMvpIsFinal => {
+                write!(f, "Ce MVP a été tiré au sort : le tirage est définitif.")
+            }
+            Self::MvpMissing(TeamSide::Home) => {
+                write!(f, "L'équipe à domicile n'a pas encore son MVP.")
+            }
+            Self::MvpMissing(TeamSide::Away) => {
+                write!(f, "L'équipe visiteuse n'a pas encore son MVP.")
             }
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),

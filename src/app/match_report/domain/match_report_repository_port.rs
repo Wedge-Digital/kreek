@@ -18,6 +18,9 @@ pub struct MatchActionRow {
     /// Qui l'a saisie, `None` pour une action sans événement correspondant —
     /// jamais un auteur inventé (carte 635).
     pub recorded_by: Option<String>,
+    /// Le nombre de désignés d'un MVP tiré au sort, `None` pour toute autre
+    /// action — un MVP saisi à la main, ou d'avant le tirage (carte 638).
+    pub draw_size: Option<i16>,
 }
 
 /// Le mode de saisie d'un rapport et celui qui l'a démarré, lus sur la

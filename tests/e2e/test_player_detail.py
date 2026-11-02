@@ -32,7 +32,7 @@ from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
-from match_report_helpers import record_mvp_api
+from match_report_helpers import ensure_mvps, record_mvp_api
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
@@ -120,6 +120,8 @@ def _first_player_id(mr_id: str, side: str) -> str:
 
 
 def _post_step5(space_id: str, mr_id: str, **overrides) -> requests.Response:
+    # Le MVP est obligatoire : sans, l'après-match est refusé (carte 638).
+    ensure_mvps(space_id, mr_id)
     data = {"home_gain": "50000", "away_gain": "40000", "home_fan_mod": "1", "away_fan_mod": "-1"}
     data.update(overrides)
     return requests.post(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5", data=data, allow_redirects=False)

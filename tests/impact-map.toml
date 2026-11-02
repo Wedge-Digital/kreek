@@ -196,6 +196,10 @@
 # L'étape MVP (carte 637) : le sélecteur de joueurs est celui du BC `players`.
 "test_match_report_mvp_step" = ["match_report", "players", "references", "teams",
                                 "competitions", "team_creation", "ranking", "spaces"]
+# Le tirage au sort du MVP et le MVP obligatoire (carte 638) : mêmes chemins
+# que l'étape MVP, le sélecteur de joueurs venant de `players`.
+"test_match_report_mvp_draw" = ["match_report", "players", "references", "teams",
+                                "competitions", "team_creation", "ranking", "spaces"]
 # Publie deux rapports pour obtenir un journalier : il traverse tout ce que
 # traverse un match complet, plus `players` dont il vérifie qu'il ne bouge pas.
 "test_haine_journalier" = ["match_report", "players", "references", "teams",

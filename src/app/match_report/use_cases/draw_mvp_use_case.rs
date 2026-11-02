@@ -1,0 +1,156 @@
+//! Le tirage au sort du MVP (carte 638).
+//!
+//! Sur le modèle de `record_mvp_use_case` : les noms et postes des six
+//! désignés sont résolus au moment présent, un rapport prêt à publier repasse
+//! en avant-match (correction), et un conflit d'écriture se relaie. La règle —
+//! six désignés distincts, un MVP par camp, au tour 16 — est celle du domaine
+//! (`draw_mvp`).
+//!
+//! Le générateur est **reçu** : `StdRng::from_os_rng()` dans le contrôleur, une
+//! graine fixe en test.
+
+use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
+use crate::app::match_report::domain::mvp_draw::DesignatedPlayer;
+use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, TeamSide};
+use crate::app::match_report::ports::IPlayerDataPort;
+use crate::app::match_report::use_cases::record_action_use_case::resolve_player_info;
+use crate::app::match_report::use_cases::record_mvp_use_case::{load_pre_match, RecordMvpError};
+use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
+use crate::app::shared_kernel::identity::ids::CoachId;
+use rand::Rng;
+
+#[derive(Debug)]
+pub struct DrawMvpCommand {
+    pub match_report_id: MatchReportId,
+    pub team_side: TeamSide,
+    /// Les joueurs désignés, dans l'ordre de leur désignation.
+    pub designated: Vec<ActionPlayer>,
+    pub recorded_by: CoachId,
+}
+
+/// Les refus sont ceux de la saisie manuelle : même résolution des joueurs,
+/// mêmes conflits, et les refus du domaine.
+pub type DrawMvpError = RecordMvpError;
+
+#[tracing::instrument(skip_all, fields(cmd = ?cmd))]
+pub async fn execute<R: Rng + Send>(
+    cmd: DrawMvpCommand,
+    repo: &dyn IMatchReportRepository,
+    player_data: &dyn IPlayerDataPort,
+    rng: &mut R,
+) -> Result<(), DrawMvpError> {
+    let mr_id = cmd.match_report_id.to_string();
+    let pm = load_pre_match(&mr_id, repo).await?;
+    let designated = resolve_designated(&cmd, &pm, player_data).await?;
+    let action_id = ActionId(ulid::Ulid::new().to_string());
+    // Six désignés, distincts, un MVP par camp : les refus viennent du domaine.
+    let (_, events) = pm
+        .draw_mvp(cmd.team_side, designated, rng, action_id, cmd.recorded_by)
+        .map_err(DrawMvpError::Domain)?;
+    // `ActionRecorded` puis `MvpDrawn`, dans une seule transaction.
+    repo.append_many(&mr_id, events, pm.version)
+        .await
+        .map_err(DrawMvpError::from_repository)?;
+    Ok(())
+}
+
+/// Le nom et le poste de chaque désigné, figés au moment du tirage.
+async fn resolve_designated(
+    cmd: &DrawMvpCommand,
+    pm: &MatchReportPreMatch,
+    player_data: &dyn IPlayerDataPort,
+) -> Result<Vec<DesignatedPlayer>, DrawMvpError> {
+    let mut designated = Vec::with_capacity(cmd.designated.len());
+    for player in &cmd.designated {
+        let (display_name, position) = resolve_player_info(player, cmd.team_side, pm, player_data)
+            .await
+            .map_err(DrawMvpError::from_resolution)?;
+        designated.push(DesignatedPlayer {
+            player: player.clone(),
+            display_name,
+            position,
+        });
+    }
+    Ok(designated)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::domain::error::DomainError;
+    use crate::app::match_report::domain::events::MatchReportDomainEvent;
+    use crate::app::match_report::domain::match_report_state::MatchReportState;
+    use crate::app::match_report::domain::value_objects::MatchActionType;
+    use crate::app::match_report::use_cases::test_doubles::{
+        pre_match, ConflictingRepository, KnownPlayers, RecordingRepository,
+    };
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+
+    fn command(n: usize) -> DrawMvpCommand {
+        DrawMvpCommand {
+            match_report_id: MatchReportId::new(),
+            team_side: TeamSide::Home,
+            designated: (0..n)
+                .map(|_| ActionPlayer::Regular(PlayerId::new()))
+                .collect(),
+            recorded_by: CoachId::new(),
+        }
+    }
+
+    async fn run(
+        repo: &dyn IMatchReportRepository,
+        cmd: DrawMvpCommand,
+    ) -> Result<(), DrawMvpError> {
+        execute(cmd, repo, &KnownPlayers, &mut StdRng::seed_from_u64(638)).await
+    }
+
+    /// L'action tirée puis le tirage, appendés ensemble ; le tiré est l'un des six.
+    #[tokio::test]
+    async fn le_tirage_appende_l_action_puis_le_tirage() {
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let cmd = command(6);
+        let six = cmd.designated.clone();
+        run(&repo, cmd).await.unwrap();
+        let appended = repo.appended();
+        let [MatchReportDomainEvent::ActionRecorded {
+            action_id,
+            player,
+            turn,
+            action,
+            ..
+        }, MatchReportDomainEvent::MvpDrawn {
+            action_id: drawn_id,
+            designated,
+            ..
+        }] = appended.as_slice()
+        else {
+            panic!("attendu ActionRecorded puis MvpDrawn : {appended:?}");
+        };
+        assert_eq!(action_id, drawn_id);
+        assert_eq!(turn.value(), 16);
+        assert!(matches!(action, MatchActionType::Mvp));
+        assert!(six.contains(player));
+        assert_eq!(designated.len(), 6);
+    }
+
+    #[tokio::test]
+    async fn cinq_designes_sont_refuses_sans_ecriture() {
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let r = run(&repo, command(5)).await;
+        assert!(matches!(
+            r,
+            Err(RecordMvpError::Domain(DomainError::DrawNeedsSixPlayers(5)))
+        ));
+        assert!(repo.appended().is_empty());
+    }
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let r = run(&repo, command(6)).await;
+        assert!(matches!(r, Err(RecordMvpError::Conflict)), "{:?}", r.err());
+    }
+}

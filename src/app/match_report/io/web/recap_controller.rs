@@ -860,6 +860,7 @@ mod published_by_tests {
             away_temp_players: vec![],
             home_actions: vec![],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: 5,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),

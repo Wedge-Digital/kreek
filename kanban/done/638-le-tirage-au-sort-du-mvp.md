@@ -60,6 +60,9 @@ d'effort : **chaque camp en a un**, comme le veut la règle de Blood Bowl.
 
 - Le domaine refuse de passer à l'étape suivante, ou de clore l'après-match,
   tant qu'un camp n'a pas son MVP ; l'écran ne fait qu'en refléter le refus.
+- **La correction aussi** (décision du 2026-11-02) : corriger un rapport sans
+  MVP oblige à passer par l'étape MVP — une correction ressaisit les gains, et
+  la règle vaut à la saisie.
 - **L'existant n'est pas touché** : un rapport publié sans MVP se rejoue tel
   quel. La règle vaut à la saisie, comme celle du MVP unique de la 637.
 - Les e2e qui sautent l'étape MVP la traversent désormais — `record_mvp_api`
@@ -73,11 +76,11 @@ seuls nouveaux.
 
 ## Checklist
 
-- [ ] `DesignatedPlayer`, `MvpDrawn`, `draw_mvp`, son rejeu ; `delete_action` refuse un MVP tiré
-- [ ] Use case et route du tirage ; l'onglet sur la page MVP
-- [ ] Migration : `draw_size` ; projection de `MvpDrawn` ; « tiré parmi » au journal
-- [ ] Tests unitaires, graine fixe : moins de six ou un doublon refusés ; le tiré est l'un des six ; l'action tirée est au tour 16 ; rejeu de `MvpDrawn`
-- [ ] E2E : désigner six joueurs, tirer, l'action « tiré parmi » au journal ; « Tirer » fermé à cinq
-- [ ] Le MVP obligatoire : refus du domaine sans MVP, rejeu de l'existant intact, e2e qui traversent l'étape
-- [ ] `tests/impact-map.toml` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] `DesignatedPlayer`, `MvpDrawn`, `draw_mvp`, son rejeu ; `delete_action` refuse un MVP tiré
+- [x] Use case et route du tirage ; l'onglet sur la page MVP
+- [x] Migration : `draw_size` ; projection de `MvpDrawn` ; « tiré parmi » au journal
+- [x] Tests unitaires, graine fixe : moins de six ou un doublon refusés ; le tiré est l'un des six ; l'action tirée est au tour 16 ; rejeu de `MvpDrawn`
+- [x] E2E : désigner six joueurs, tirer, l'action « tiré parmi » au journal ; « Tirer » fermé à cinq
+- [x] Le MVP obligatoire : refus du domaine sans MVP, rejeu de l'existant intact, e2e qui traversent l'étape
+- [x] `tests/impact-map.toml` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

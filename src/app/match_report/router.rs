@@ -8,6 +8,7 @@ use crate::app::match_report::io::web::live_match_controller::get_live_match;
 use crate::app::match_report::io::web::match_selection_controller::{
     create_match_report, edit_match_report, from_pairing, new_match_report, update_match_selection,
 };
+use crate::app::match_report::io::web::mvp_draw_controller::post_mvp_draw;
 use crate::app::match_report::io::web::mvp_step_controller::{get_mvp_step, post_mvp_step};
 use crate::app::match_report::io::web::pre_match_controller::{get_pre_match, post_pre_match};
 use crate::app::match_report::io::web::recap_controller::{
@@ -130,6 +131,8 @@ fn routes_de_saisie() -> Router<AppState> {
             path::MATCH_REPORT_MVP,
             get(get_mvp_step).post(post_mvp_step),
         )
+        // Le tirage au sort du MVP (carte 638).
+        .route(path::MATCH_REPORT_MVP_DRAW, post(post_mvp_draw))
         .route(path::MATCH_REPORT_STEP5, get(get_step5).post(post_step5))
         .route(
             path::MATCH_REPORT_STEP3_TURN_SELECTOR,

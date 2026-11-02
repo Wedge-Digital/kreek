@@ -2,6 +2,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::mvp_draw::{self, DesignatedPlayer, DrawnMvp};
 use crate::app::match_report::domain::underdog;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::TurnNumber;
@@ -12,6 +13,7 @@ use crate::app::match_report::domain::value_objects::{
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
+use rand::Rng;
 
 /// Ce que l'underdog peut ajouter à sa petite monnaie, pris à sa trésorerie.
 /// Plafond de règlement, pas de configuration.
@@ -61,6 +63,9 @@ pub struct MatchReportPreMatch {
     pub away_temp_players: Vec<TempPlayer>,
     pub home_actions: Vec<MatchAction>,
     pub away_actions: Vec<MatchAction>,
+    /// Les MVP tirés au sort et leurs désignés (carte 638) : leur action ne
+    /// se supprime pas. Vide pour un rapport sans tirage.
+    pub drawn_mvps: Vec<DrawnMvp>,
     pub version: u64,
 }
 
@@ -538,18 +543,67 @@ impl MatchReportPreMatch {
         (updated, event)
     }
 
+    /// Le MVP tiré au sort parmi six désignés (carte 638, R8).
+    ///
+    /// Exactement six désignés, distincts ; le tiré passe par `record_mvp`, et
+    /// en reçoit les refus — un camp qui a déjà son MVP ne tire pas. Rend
+    /// `ActionRecorded` (le `Mvp` au tour 16) puis `MvpDrawn`, à appender
+    /// ensemble.
+    pub fn draw_mvp(
+        &self,
+        side: TeamSide,
+        designated: Vec<DesignatedPlayer>,
+        rng: &mut impl Rng,
+        action_id: ActionId,
+        recorded_by: CoachId,
+    ) -> Result<(Self, Vec<MatchReportDomainEvent>), DomainError> {
+        mvp_draw::check_designated(&designated)?;
+        let winner = mvp_draw::pick(&designated, rng).clone();
+        let (mut updated, recorded) = self.record_mvp(
+            side,
+            winner.player,
+            winner.display_name,
+            winner.position,
+            action_id.clone(),
+            recorded_by,
+        )?;
+        let drawn = DrawnMvp {
+            action_id,
+            team_side: side,
+            designated,
+        };
+        let event = drawn.to_event();
+        updated.apply_mvp_drawn(drawn);
+        Ok((updated, vec![recorded, event]))
+    }
+
+    /// Retient un MVP tiré — à la saisie comme au rejeu de `MvpDrawn`.
+    pub(crate) fn apply_mvp_drawn(&mut self, drawn: DrawnMvp) {
+        self.drawn_mvps.push(drawn);
+        self.version += 1;
+    }
+
+    /// Le tirage dont cette action est le résultat, s'il y en a un.
+    pub fn drawn_mvp(&self, action_id: &ActionId) -> Option<&DrawnMvp> {
+        self.drawn_mvps.iter().find(|d| &d.action_id == action_id)
+    }
+
+    /// Le premier camp, domicile puis visiteur, qui n'a pas son MVP (carte
+    /// 638) : l'après-match ne se clôt pas tant qu'il y en a un.
+    pub fn first_side_without_mvp(&self) -> Option<TeamSide> {
+        first_side_without_mvp(&self.home_actions, &self.away_actions)
+    }
+
+    /// Un MVP tiré au sort ne se supprime pas, même en correction (carte 638).
     pub fn delete_action(
         &self,
         action_id: &ActionId,
         deleted_by: CoachId,
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
-        let team_side = if self.home_actions.iter().any(|a| &a.id == action_id) {
-            TeamSide::Home
-        } else if self.away_actions.iter().any(|a| &a.id == action_id) {
-            TeamSide::Away
-        } else {
-            return Err(DomainError::ActionNotFound(action_id.0.clone()));
-        };
+        if self.drawn_mvp(action_id).is_some() {
+            return Err(DomainError::DrawnMvpIsFinal);
+        }
+        let team_side = self.side_of_action(action_id)?;
         let event = MatchReportDomainEvent::ActionDeleted {
             action_id: action_id.clone(),
             team_side,
@@ -562,6 +616,16 @@ impl MatchReportPreMatch {
         }
         updated.version += 1;
         Ok((updated, event))
+    }
+
+    fn side_of_action(&self, action_id: &ActionId) -> Result<TeamSide, DomainError> {
+        if self.home_actions.iter().any(|a| &a.id == action_id) {
+            Ok(TeamSide::Home)
+        } else if self.away_actions.iter().any(|a| &a.id == action_id) {
+            Ok(TeamSide::Away)
+        } else {
+            Err(DomainError::ActionNotFound(action_id.0.clone()))
+        }
     }
 
     pub fn temp_players_for(&self, side: TeamSide) -> &[TempPlayer] {
@@ -640,7 +704,12 @@ impl MatchReportPreMatch {
         summary_title: Option<String>,
         summary_body: Option<String>,
         recorded_by: CoachId,
-    ) -> (MatchReportReadyToPublish, MatchReportDomainEvent) {
+    ) -> Result<(MatchReportReadyToPublish, MatchReportDomainEvent), DomainError> {
+        // Chaque camp a son MVP avant les gains (carte 638) — à la saisie,
+        // jamais au rejeu : `rehydrate` ne passe pas par ici.
+        if let Some(side) = self.first_side_without_mvp() {
+            return Err(DomainError::MvpMissing(side));
+        }
         let event = MatchReportDomainEvent::PostMatchRecorded {
             home_gain,
             away_gain,
@@ -662,7 +731,7 @@ impl MatchReportPreMatch {
             summary_title,
             summary_body,
         );
-        (ready, event)
+        Ok((ready, event))
     }
 
     /// L'avant-match d'un brouillon confirmé par `confirmed_by`.
@@ -699,6 +768,7 @@ impl MatchReportPreMatch {
             away_temp_players: vec![],
             home_actions: vec![],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: draft.version + 1,
         }
     }
@@ -712,6 +782,27 @@ impl MatchReportPreMatch {
             version: self.version + 1,
             ..self
         }
+    }
+}
+
+/// Le premier camp, domicile puis visiteur, dont les actions ne comptent aucun
+/// MVP (carte 638). Partagée avec le rapport prêt à publier, que la correction
+/// ramène aux mêmes étapes.
+pub(crate) fn first_side_without_mvp(
+    home_actions: &[MatchAction],
+    away_actions: &[MatchAction],
+) -> Option<TeamSide> {
+    let has_mvp = |actions: &[MatchAction]| {
+        actions
+            .iter()
+            .any(|a| matches!(a.action, MatchActionType::Mvp))
+    };
+    if !has_mvp(home_actions) {
+        Some(TeamSide::Home)
+    } else if !has_mvp(away_actions) {
+        Some(TeamSide::Away)
+    } else {
+        None
     }
 }
 
@@ -950,6 +1041,7 @@ mod tests {
             away_temp_players: vec![],
             home_actions: vec![],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: 1,
         }
     }
@@ -1457,6 +1549,211 @@ mod tests {
         assert!(mvp(&pm, TeamSide::Home, "m2").is_ok());
     }
 
+    /// Chaque camp avec son MVP : l'après-match peut se clore (carte 638).
+    fn with_both_mvps(pm: MatchReportPreMatch) -> MatchReportPreMatch {
+        let (pm, _) = mvp(&pm, TeamSide::Home, "mvp-home").unwrap();
+        let (pm, _) = mvp(&pm, TeamSide::Away, "mvp-away").unwrap();
+        pm
+    }
+
+    // ── Le tirage au sort du MVP (carte 638) ──────────────────────────────
+
+    fn six_designes() -> Vec<DesignatedPlayer> {
+        ["Thorgrim", "Borin", "Durin", "Balin", "Nori", "Gimli"]
+            .iter()
+            .map(|name| DesignatedPlayer {
+                player: ActionPlayer::Regular(PlayerId::new()),
+                display_name: name.to_string(),
+                position: "Bloqueur".into(),
+            })
+            .collect()
+    }
+
+    fn draw(
+        pm: &MatchReportPreMatch,
+        designated: Vec<DesignatedPlayer>,
+        seed: u64,
+    ) -> Result<(MatchReportPreMatch, Vec<MatchReportDomainEvent>), DomainError> {
+        use rand::SeedableRng;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+        pm.draw_mvp(
+            TeamSide::Home,
+            designated,
+            &mut rng,
+            ActionId("tire".into()),
+            CoachId::new(),
+        )
+    }
+
+    #[test]
+    fn le_tirage_exige_six_designes() {
+        let mut cinq = six_designes();
+        cinq.pop();
+        assert_eq!(
+            draw(&make_pm(1000, 1000), cinq, 1).unwrap_err(),
+            DomainError::DrawNeedsSixPlayers(5)
+        );
+    }
+
+    #[test]
+    fn le_tirage_refuse_un_doublon() {
+        let mut list = six_designes();
+        list[4] = list[0].clone();
+        assert_eq!(
+            draw(&make_pm(1000, 1000), list, 1).unwrap_err(),
+            DomainError::DuplicateDesignatedPlayer
+        );
+    }
+
+    /// Sur plusieurs graines fixes, le tiré est toujours l'un des six, au tour
+    /// 16, et l'agrégat retient le tirage.
+    #[test]
+    fn le_tire_est_l_un_des_six_au_tour_16() {
+        for seed in 0..20 {
+            let designated = six_designes();
+            let (pm, _) = draw(&make_pm(1000, 1000), designated.clone(), seed).unwrap();
+            let action = &pm.home_actions[0];
+            assert_eq!(action.turn.value(), 16);
+            assert!(matches!(action.action, MatchActionType::Mvp));
+            assert!(designated.iter().any(|d| d.player == action.player));
+            let drawn = pm.drawn_mvp(&action.id).expect("le tirage est retenu");
+            assert_eq!(drawn.designated, designated);
+        }
+    }
+
+    #[test]
+    fn le_tirage_rend_l_action_puis_le_tirage() {
+        let (pm, events) = draw(&make_pm(1000, 1000), six_designes(), 3).unwrap();
+        let [MatchReportDomainEvent::ActionRecorded { action_id, .. }, MatchReportDomainEvent::MvpDrawn {
+            action_id: drawn_id,
+            team_side,
+            designated,
+        }] = events.as_slice()
+        else {
+            panic!("attendu ActionRecorded puis MvpDrawn : {events:?}");
+        };
+        assert_eq!(action_id, drawn_id);
+        assert_eq!(*team_side, TeamSide::Home);
+        assert_eq!(designated.len(), 6);
+        // Deux événements, deux versions.
+        assert_eq!(pm.version, make_pm(1000, 1000).version + 2);
+    }
+
+    #[test]
+    fn un_camp_qui_a_son_mvp_ne_tire_pas() {
+        let (pm, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "m1").unwrap();
+        assert_eq!(
+            draw(&pm, six_designes(), 1).unwrap_err(),
+            DomainError::MvpAlreadyRecorded
+        );
+    }
+
+    #[test]
+    fn un_mvp_tire_ne_se_supprime_pas() {
+        let (pm, _) = draw(&make_pm(1000, 1000), six_designes(), 5).unwrap();
+        assert_eq!(
+            pm.delete_action(&ActionId("tire".into()), CoachId::new())
+                .unwrap_err(),
+            DomainError::DrawnMvpIsFinal
+        );
+    }
+
+    /// Un MVP saisi à la main, lui, se supprime toujours (carte 637).
+    #[test]
+    fn un_mvp_saisi_a_la_main_se_supprime_encore() {
+        let (pm, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "m1").unwrap();
+        assert!(pm
+            .delete_action(&ActionId("m1".into()), CoachId::new())
+            .is_ok());
+    }
+
+    // ── Le MVP obligatoire (carte 638) ────────────────────────────────────
+
+    fn gains() -> (
+        MatchGain,
+        MatchGain,
+        NoStallingBonuses,
+        FanFactorMod,
+        FanFactorMod,
+    ) {
+        (
+            MatchGain::try_new(10).unwrap(),
+            MatchGain::try_new(10).unwrap(),
+            NoStallingBonuses::default(),
+            FanFactorMod::try_new(0).unwrap(),
+            FanFactorMod::try_new(0).unwrap(),
+        )
+    }
+
+    fn close(pm: &MatchReportPreMatch) -> Result<MatchReportReadyToPublish, DomainError> {
+        let (home, away, bonuses, home_mod, away_mod) = gains();
+        pm.record_post_match(
+            home,
+            away,
+            bonuses,
+            home_mod,
+            away_mod,
+            None,
+            None,
+            CoachId::new(),
+        )
+        .map(|(ready, _)| ready)
+    }
+
+    #[test]
+    fn sans_mvp_l_apres_match_ne_se_clot_pas() {
+        let pm = make_pm(1000, 1000);
+        assert_eq!(pm.first_side_without_mvp(), Some(TeamSide::Home));
+        assert_eq!(
+            close(&pm).unwrap_err(),
+            DomainError::MvpMissing(TeamSide::Home)
+        );
+    }
+
+    #[test]
+    fn le_visiteur_sans_mvp_bloque_aussi() {
+        let (pm, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "m1").unwrap();
+        assert_eq!(pm.first_side_without_mvp(), Some(TeamSide::Away));
+        assert_eq!(
+            close(&pm).unwrap_err(),
+            DomainError::MvpMissing(TeamSide::Away)
+        );
+    }
+
+    #[test]
+    fn avec_ses_deux_mvp_l_apres_match_se_clot() {
+        let pm = with_both_mvps(make_pm(1000, 1000));
+        assert_eq!(pm.first_side_without_mvp(), None);
+        assert!(close(&pm).is_ok());
+    }
+
+    /// En correction, un MVP supprimé bloque de nouveau la clôture.
+    #[test]
+    fn en_correction_le_mvp_reste_obligatoire() {
+        let ready = close(&with_both_mvps(make_pm(1000, 1000))).unwrap();
+        let (pm, _) = ready
+            .into_pre_match()
+            .delete_action(&ActionId("mvp-away".into()), CoachId::new())
+            .unwrap();
+        let (home, away, bonuses, home_mod, away_mod) = gains();
+        let ready_again = MatchReportReadyToPublish::from_pre_match(
+            &pm, home, away, bonuses, home_mod, away_mod, None, None,
+        );
+        assert_eq!(ready_again.first_side_without_mvp(), Some(TeamSide::Away));
+        let (home, away, bonuses, home_mod, away_mod) = gains();
+        let refus = ready_again.record_post_match(
+            home,
+            away,
+            bonuses,
+            home_mod,
+            away_mod,
+            None,
+            None,
+            CoachId::new(),
+        );
+        assert_eq!(refus.unwrap_err(), DomainError::MvpMissing(TeamSide::Away));
+    }
+
     #[test]
     fn une_action_mvp_est_refusee() {
         let r = make_pm(1000, 1000).record_action(
@@ -1954,21 +2251,23 @@ mod tests {
 
     #[test]
     fn record_post_match_emits_event_and_returns_ready_to_publish() {
-        let pm = pm_with_fans(10, 10, 2, 1);
+        let pm = with_both_mvps(pm_with_fans(10, 10, 2, 1));
         let home_gain = MatchGain::try_new(130).unwrap();
         let away_gain = MatchGain::try_new(110).unwrap();
         let home_mod = FanFactorMod::try_new(1).unwrap();
         let away_mod = FanFactorMod::try_new(-1).unwrap();
-        let (ready, event) = pm.record_post_match(
-            home_gain,
-            away_gain,
-            crate::app::match_report::domain::value_objects::NoStallingBonuses::default(),
-            home_mod,
-            away_mod,
-            Some("Titre".into()),
-            None,
-            CoachId::new(),
-        );
+        let (ready, event) = pm
+            .record_post_match(
+                home_gain,
+                away_gain,
+                crate::app::match_report::domain::value_objects::NoStallingBonuses::default(),
+                home_mod,
+                away_mod,
+                Some("Titre".into()),
+                None,
+                CoachId::new(),
+            )
+            .unwrap();
         assert_eq!(ready.home_gain, home_gain);
         assert_eq!(ready.away_gain, away_gain);
         assert_eq!(ready.home_fan_mod, home_mod);
@@ -1983,19 +2282,21 @@ mod tests {
 
     fn record_with(home: bool, away: bool) -> (MatchReportReadyToPublish, MatchReportDomainEvent) {
         use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
-        pm_with_fans(10, 10, 2, 1).record_post_match(
-            MatchGain::try_new(130).unwrap(),
-            MatchGain::try_new(110).unwrap(),
-            NoStallingBonuses {
-                home: NoStallingBonus::new(home),
-                away: NoStallingBonus::new(away),
-            },
-            FanFactorMod::try_new(0).unwrap(),
-            FanFactorMod::try_new(0).unwrap(),
-            None,
-            None,
-            CoachId::new(),
-        )
+        with_both_mvps(pm_with_fans(10, 10, 2, 1))
+            .record_post_match(
+                MatchGain::try_new(130).unwrap(),
+                MatchGain::try_new(110).unwrap(),
+                NoStallingBonuses {
+                    home: NoStallingBonus::new(home),
+                    away: NoStallingBonus::new(away),
+                },
+                FanFactorMod::try_new(0).unwrap(),
+                FanFactorMod::try_new(0).unwrap(),
+                None,
+                None,
+                CoachId::new(),
+            )
+            .unwrap()
     }
 
     /// **Le test qui compte** : le gain enregistré reste la base saisie. Un
@@ -2203,18 +2504,20 @@ mod tests {
     /// refusé pour ce qu'il est : des achats validés.
     #[test]
     fn racheter_depuis_un_ready_to_publish_est_refuse() {
-        let pm = validated_both_sides();
+        let pm = with_both_mvps(validated_both_sides());
         let home = pm.home_team_id.clone();
-        let (ready, _) = pm.record_post_match(
-            MatchGain::try_new(10).unwrap(),
-            MatchGain::try_new(10).unwrap(),
-            NoStallingBonuses::default(),
-            FanFactorMod::try_new(0).unwrap(),
-            FanFactorMod::try_new(0).unwrap(),
-            None,
-            None,
-            CoachId::new(),
-        );
+        let (ready, _) = pm
+            .record_post_match(
+                MatchGain::try_new(10).unwrap(),
+                MatchGain::try_new(10).unwrap(),
+                NoStallingBonuses::default(),
+                FanFactorMod::try_new(0).unwrap(),
+                FanFactorMod::try_new(0).unwrap(),
+                None,
+                None,
+                CoachId::new(),
+            )
+            .unwrap();
         let reconverted = ready.into_pre_match();
         assert_eq!(
             pass(&reconverted, &home).unwrap_err(),

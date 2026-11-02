@@ -2,6 +2,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
+use crate::app::match_report::io::web::mvp_step_controller::side_slug;
 use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::use_cases::record_post_match_use_case;
 use crate::app::routes::AppRoutes;
@@ -91,6 +92,9 @@ pub async fn get_step5(
         }
     };
 
+    if let Some(redirect) = mvp_step_first(&mr_state, &space_id, &match_report_id) {
+        return redirect;
+    }
     let (pm, already_recorded) = match mr_state {
         MatchReportState::PreMatch(pm) => (pm, false),
         MatchReportState::ReadyToPublish(rtp) => {
@@ -142,6 +146,20 @@ pub async fn get_step5(
         false,
     )
     .into_response()
+}
+
+/// Un camp sans MVP ne passe pas aux gains (carte 638) : le domaine le dit,
+/// la page renvoie à l'étape MVP de ce camp.
+fn mvp_step_first(state: &MatchReportState, space_id: &str, mr_id: &str) -> Option<Response> {
+    let side = match state {
+        MatchReportState::PreMatch(pm) => pm.first_side_without_mvp(),
+        MatchReportState::ReadyToPublish(rtp) => rtp.first_side_without_mvp(),
+        _ => None,
+    }?;
+    let url = AppRoutes::default()
+        .match_report
+        .mvp(space_id, mr_id, side_slug(side));
+    Some(Redirect::to(&url).into_response())
 }
 
 async fn build_step5_from_rtp(
@@ -366,6 +384,10 @@ pub async fn post_step5(
             StatusCode::CONFLICT.into_response()
         }
         Err(record_post_match_use_case::RecordPostMatchError::Conflict) => conflict_response(),
+        // Une page périmée : un MVP supprimé entre-temps (carte 638).
+        Err(record_post_match_use_case::RecordPostMatchError::Domain(err)) => {
+            (StatusCode::UNPROCESSABLE_ENTITY, err.to_string()).into_response()
+        }
         Err(e) => {
             tracing::error!("post_step5: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

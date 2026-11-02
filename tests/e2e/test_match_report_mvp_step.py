@@ -4,6 +4,10 @@ Le MVP est la première étape de l'après-match : domicile, puis visiteur, un
 joueur choisi directement. Il s'inscrit au journal comme une action `Mvp` au
 tour 16, un par camp.
 
+Depuis la carte 638, l'étape s'ouvre sur l'onglet « Tirage au sort » : ces
+scénarios passent d'abord à « Saisie manuelle ». Le tirage a son propre
+fichier, `test_match_report_mvp_draw.py`.
+
 Scénarios couverts, dans l'ordre du fichier — ils partagent un seul rapport :
 - M1 — La fin du match (match en direct) mène au MVP du domicile, qui y ramène
 - M2 — MVP domicile au clic : indicateur à 3, « MVP 1 / 2 », suite vers le visiteur
@@ -69,6 +73,18 @@ def _home_mvp_name(mr_id):
     return rows[0]
 
 
+_SUITE_MANUELLE = ".match-report-mvp form.mvp-manual-form button[type=submit]"
+
+
+def _passer_en_saisie_manuelle(page: Page):
+    """L'étape s'ouvre sur le tirage au sort (carte 638) : on choisit l'autre
+    onglet. Le bouton n'est pas htmx, c'est Alpine qui le câble ; on attend que
+    l'onglet soit marqué choisi."""
+    onglet = page.locator(".match-report-mvp .mvp-mode-manual")
+    onglet.click()
+    expect(onglet).to_have_class(re.compile(r"\bselected\b"))
+
+
 def _choisir_un_joueur_et_valider(page: Page):
     """Le premier joueur de l'équipe, puis le bouton de suite qui l'enregistre.
 
@@ -76,10 +92,11 @@ def _choisir_un_joueur_et_valider(page: Page):
     htmx — son clic émet `playerSelected` : attendre son câblage n'aboutirait
     jamais. On attend donc que le bouton de suite, lui, soit activé par la
     sélection."""
+    _passer_en_saisie_manuelle(page)
     puce = page.locator(".match-report-mvp .mr-player-chip").first
     puce.wait_for(state="visible", timeout=10000)
     puce.click()
-    suite = page.locator(".match-report-mvp form.mr-nav-row button[type=submit]")
+    suite = page.locator(_SUITE_MANUELLE)
     expect(suite).to_be_enabled()
     suite.click()
 
@@ -96,8 +113,12 @@ def test_m1_la_fin_du_match_mene_au_mvp_du_domicile(page: Page, space_id, mvp_ct
     assert fin.get_attribute("href").endswith(f"/{mr_id}/mvp/home")
 
     page.goto(_mvp_url(space_id, mr_id, "home"), wait_until="load")
-    retour = page.locator(".match-report-mvp a.btn-outline-sm")
-    assert retour.get_attribute("href").endswith(f"/{mr_id}/live")
+    # Un retour par onglet (tirage et saisie manuelle, carte 638) : tous
+    # ramènent au match en direct.
+    retours = page.locator(".match-report-mvp a.btn-outline-sm")
+    expect(retours.first).to_be_attached()
+    for href in [retours.nth(i).get_attribute("href") for i in range(retours.count())]:
+        assert href.endswith(f"/{mr_id}/live"), href
 
 
 # ── M2 ────────────────────────────────────────────────────────────────────────
@@ -109,7 +130,8 @@ def test_m2_mvp_du_domicile(page: Page, space_id, mvp_ctx):
     expect(page.locator(".mr-step--active")).to_have_text("3")
     expect(page.locator(".mr-banner-label")).to_contain_text("MVP 1 / 2")
     # Rien n'est choisi : le bouton de suite attend un joueur.
-    expect(page.locator(".match-report-mvp form.mr-nav-row button[type=submit]")).to_be_disabled()
+    _passer_en_saisie_manuelle(page)
+    expect(page.locator(_SUITE_MANUELLE)).to_be_disabled()
 
     _choisir_un_joueur_et_valider(page)
     page.wait_for_url(re.compile(rf".*/{mr_id}/mvp/away$"), timeout=10000)

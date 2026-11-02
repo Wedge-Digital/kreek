@@ -1,3 +1,4 @@
+use crate::app::match_report::domain::mvp_draw::DesignatedPlayer;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
@@ -155,6 +156,17 @@ pub enum MatchReportDomainEvent {
         team_side: TeamSide,
         deleted_by: CoachId,
     },
+    /// Le MVP d'un camp a été tiré au sort parmi six désignés (carte 638).
+    ///
+    /// **Toujours appendé avec l'`ActionRecorded` qui inscrit le tiré**, dans
+    /// le même `append_many` et juste après lui : `action_id` est celui de
+    /// cette action. Il ne sort pas du BC — à la publication, le MVP tiré est
+    /// une action `Mvp` comme une autre. Absent d'un flux : MVP saisi à la main.
+    MvpDrawn {
+        action_id: ActionId,
+        team_side: TeamSide,
+        designated: Vec<DesignatedPlayer>,
+    },
     PostMatchRecorded {
         home_gain: MatchGain,
         away_gain: MatchGain,
@@ -212,6 +224,7 @@ impl MatchReportDomainEvent {
             Self::TempPlayersReset { .. } => "TempPlayersReset",
             Self::ActionRecorded { .. } => "ActionRecorded",
             Self::ActionDeleted { .. } => "ActionDeleted",
+            Self::MvpDrawn { .. } => "MvpDrawn",
             Self::PostMatchRecorded { .. } => "PostMatchRecorded",
             Self::MatchReportPublished { .. } => "MatchReportPublished",
             Self::MatchReportUnpublished { .. } => "MatchReportUnpublished",

@@ -93,7 +93,10 @@ def recap_spp_ctx(browser, space_id):
     for turn, action in enumerate(["TOUCHDOWN", "TOUCHDOWN", "SORTIE", "SORTIE", "SORTIE"], 1):
         record_action_api(space_id, mr_id, "home", buteur, turn=turn, action_type=action)
     record_action_api(space_id, mr_id, "home", agresseur, turn=6, action_type="AGRESSION")
-    # Le MVP passe par son étape, au tour 16 (carte 637).
+    # Le MVP passe par son étape, au tour 16 (carte 637). Il est obligatoire
+    # des deux côtés (carte 638) : celui du domicile va au buteur, pour que
+    # l'agresseur reste sans aucun SPP.
+    record_mvp_api(space_id, mr_id, "home", buteur)
     record_mvp_api(space_id, mr_id, "away", adverse)
 
     # Le rapport reste en ReadyToPublish : le récapitulatif d'avant publication
@@ -116,16 +119,16 @@ def _ouvrir_le_recap(page: Page, space_id: str, mr_id: str) -> None:
 
 
 def test_01_le_buteur_affiche_la_somme_de_ses_actions(page: Page, space_id, recap_spp_ctx):
-    """Deux essais et trois sorties — pas un forfait, et pas non plus le
-    décompte des actions.
+    """Deux essais, trois sorties et le MVP du domicile (carte 638) — pas un
+    forfait, et pas non plus le décompte des actions.
     """
     ctx = recap_spp_ctx
     b = ctx["bareme_home"]
-    total = lambda bareme: 2 * bareme["td"] + 3 * bareme["cas"]
+    total = lambda bareme: 2 * bareme["td"] + 3 * bareme["cas"] + bareme["mvp"]
     attendu = total(b)
 
     assert attendu != STUB, "le total doit se distinguer du forfait de l'ancien stub"
-    assert attendu != 5, "et du simple nombre d'actions"
+    assert attendu != 6, "et du simple nombre d'actions"
     autre = BAREMES["normal"] if b is BAREMES["brawlin_brutes"] else BAREMES["brawlin_brutes"]
     assert attendu != total(autre), "et de ce que l'autre barème donnerait"
 

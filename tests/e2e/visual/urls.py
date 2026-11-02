@@ -152,7 +152,15 @@ def collecter() -> tuple[dict[str, str], list[str]]:
 
     rapport_prematch = rapport_en("PreMatch")
     rapport_publie = rapport_en("Published")
-    rapport_pret = rapport_en("ReadyToPublish")
+    # Un rapport prêt dont chaque camp a son MVP : sans, l'étape 5 renvoie à
+    # l'étape MVP (carte 638), et la capture montrerait une autre page.
+    rapport_pret = _un(
+        f"SELECT p.match_report_id FROM match_report_proj p "
+        f"WHERE p.space_id = '{espace}' AND p.phase = 'ReadyToPublish' AND ("
+        f"SELECT COUNT(DISTINCT a.team_side) FROM match_report_actions a "
+        f"WHERE a.match_report_id = p.match_report_id AND NOT a.is_deleted "
+        f"AND a.action_json = '\"Mvp\"'::jsonb) = 2 LIMIT 1"
+    )
     rapport_brouillon = rapport_en("Draft")
     # Le skill-picker exige un `roster_line_id` : sans lui il rend un 400, et la
     # capture ramenait une page d'erreur qui chargeait pourtant `common.css` —

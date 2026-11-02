@@ -21,6 +21,7 @@ from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
+from match_report_helpers import ensure_mvps
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
@@ -97,10 +98,13 @@ def _ensure_inducements(space_id: str, mr_id: str) -> None:
 
 def _advance_to_step5_ready(space_id: str, ctx: dict,
                              home_idx: int = 0, away_idx: int = 1) -> str:
-    """Crée et avance un match report jusqu'à step5 accessible (PreMatch + fan factor)."""
+    """Crée et avance un match report jusqu'à step5 accessible (PreMatch + fan factor + MVP)."""
     mr_id = _create_draft(space_id, ctx, home_idx, away_idx)
     _ensure_pre_match(space_id, mr_id, ctx, home_idx, away_idx)
     _ensure_inducements(space_id, mr_id)
+    # Chaque camp a son MVP : sans, l'étape 5 renvoie à l'étape MVP et refuse
+    # la clôture (carte 638).
+    ensure_mvps(space_id, mr_id)
     return mr_id
 
 

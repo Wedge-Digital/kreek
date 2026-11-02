@@ -131,6 +131,42 @@ def record_mvp_api(space_id, mr_id, side, player_id, player_type="regular"):
     return resp
 
 
+def ensure_mvps(space_id, mr_id):
+    """Donne son MVP à chaque camp qui n'en a pas (carte 638).
+
+    Le MVP est obligatoire : l'après-match ne se clôt pas sans. Les tests qui
+    ne s'intéressent pas au MVP traversent l'étape par ici, sans toucher à
+    ceux qui l'ont déjà désigné eux-mêmes.
+
+    Le MVP rapporte des SPP : il est donné au **dernier** joueur actif de
+    l'équipe qui n'a aucune action dans ce rapport, pour ne pas se mêler des
+    joueurs qu'un test observe — ceux-là ont marqué, sorti ou été blessés.
+    """
+    for side in ("home", "away"):
+        if not _has_mvp(mr_id, side):
+            record_mvp_api(space_id, mr_id, side, _mvp_candidate(mr_id, side))
+
+
+def _has_mvp(mr_id, side):
+    return bool(query_db(
+        f"SELECT 1 FROM match_report_actions WHERE match_report_id = '{mr_id}' "
+        f"AND team_side = '{side}' AND NOT is_deleted AND action_json = '\"Mvp\"'::jsonb"
+    ))
+
+
+def _mvp_candidate(mr_id, side):
+    rows = _query_side_team(mr_id, side)
+    assert rows, f"match report {mr_id} introuvable en DB"
+    candidates = query_db(
+        f"SELECT player_id FROM players_proj WHERE team_id = '{rows[0]}' "
+        f"AND membership = 'Active' AND player_id NOT IN ("
+        f"SELECT player_id FROM match_report_actions WHERE match_report_id = '{mr_id}' "
+        f"AND NOT is_deleted) ORDER BY player_id DESC LIMIT 1"
+    )
+    assert candidates, f"aucun joueur libre pour le MVP de l'équipe {rows[0]}"
+    return candidates[0]
+
+
 def first_player_id(mr_id, side):
     rows = _query_side_team(mr_id, side)
     assert rows, f"match report {mr_id} introuvable en DB"
@@ -151,7 +187,11 @@ def post_step5(space_id, mr_id, *, home_gain=50000, away_gain=40000):
     jeu : 50 000 kPo, soit cinquante fois le budget de création d'une équipe.
     Sans incidence tant qu'on regarde le classement ; à paramétrer dès qu'un test
     observe la trésorerie, qu'elles rendraient sinon inépuisable.
+
+    Chaque camp reçoit d'abord son MVP s'il n'en a pas : sans, l'après-match est
+    refusé (carte 638).
     """
+    ensure_mvps(space_id, mr_id)
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5",
         data={

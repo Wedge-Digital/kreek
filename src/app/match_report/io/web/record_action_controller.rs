@@ -196,6 +196,11 @@ pub async fn delete_action(
             .body(axum::body::Body::empty())
             .unwrap(),
         Err(DeleteActionError::Conflict) => conflict_response(),
+        // Un MVP tiré au sort est définitif (carte 638) : le ✕ n'est pas
+        // proposé, une requête forgée reçoit le motif.
+        Err(DeleteActionError::Domain(err @ DomainError::DrawnMvpIsFinal)) => {
+            (StatusCode::UNPROCESSABLE_ENTITY, err.to_string()).into_response()
+        }
         Err(e) => {
             tracing::error!("delete_action: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

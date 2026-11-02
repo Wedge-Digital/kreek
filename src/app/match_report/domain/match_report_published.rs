@@ -1,6 +1,7 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+use crate::app::match_report::domain::mvp_draw::DrawnMvp;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{
     CorrectionEligibility, D3Roll, DedicatedFans, EntryMode, FanFactorMod, InducementPurchase,
@@ -45,6 +46,9 @@ pub struct MatchReportPublished {
     pub away_temp_players: Vec<TempPlayer>,
     pub home_actions: Vec<MatchAction>,
     pub away_actions: Vec<MatchAction>,
+    /// Les MVP tirés au sort et leurs désignés (carte 638) : leur action ne
+    /// se supprime pas. Vide pour un rapport sans tirage.
+    pub drawn_mvps: Vec<DrawnMvp>,
     pub version: u64,
     pub home_gain: MatchGain,
     pub away_gain: MatchGain,
@@ -120,6 +124,7 @@ impl MatchReportPublished {
             away_temp_players: self.away_temp_players.clone(),
             home_actions: self.home_actions.clone(),
             away_actions: self.away_actions.clone(),
+            drawn_mvps: self.drawn_mvps.clone(),
             version: self.version + 1,
             home_gain: self.home_gain,
             away_gain: self.away_gain,
@@ -168,6 +173,7 @@ impl MatchReportPublished {
             away_temp_players: rtp.away_temp_players.clone(),
             home_actions: rtp.home_actions.clone(),
             away_actions: rtp.away_actions.clone(),
+            drawn_mvps: rtp.drawn_mvps.clone(),
             version: rtp.version + 1,
             home_gain: rtp.home_gain,
             away_gain: rtp.away_gain,
@@ -219,6 +225,7 @@ mod unpublish_tests {
             away_temp_players: vec![],
             home_actions: vec![],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: 7,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),

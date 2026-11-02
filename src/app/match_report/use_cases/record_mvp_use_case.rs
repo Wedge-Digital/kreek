@@ -40,7 +40,7 @@ pub enum RecordMvpError {
 }
 
 impl RecordMvpError {
-    fn from_repository(e: RepositoryError) -> Self {
+    pub(crate) fn from_repository(e: RepositoryError) -> Self {
         match e {
             RepositoryError::ConcurrentWrite => Self::Conflict,
             other => Self::Repository(other.to_string()),
@@ -49,7 +49,7 @@ impl RecordMvpError {
 
     /// La résolution du joueur est celle des actions : seuls ses deux refus
     /// peuvent en sortir.
-    fn from_resolution(e: RecordActionError) -> Self {
+    pub(crate) fn from_resolution(e: RecordActionError) -> Self {
         match e {
             RecordActionError::PlayerNotFound(id) => Self::PlayerNotFound(id),
             RecordActionError::TempPlayerNotFound(id) => Self::TempPlayerNotFound(id),
@@ -90,7 +90,7 @@ pub async fn execute(
 
 /// Un rapport prêt à publier repasse en avant-match : la correction d'un MVP
 /// est une saisie comme une autre.
-async fn load_pre_match(
+pub(crate) async fn load_pre_match(
     mr_id: &str,
     repo: &dyn IMatchReportRepository,
 ) -> Result<MatchReportPreMatch, RecordMvpError> {

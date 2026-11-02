@@ -222,8 +222,34 @@ pub fn pre_match() -> MatchReportPreMatch {
         away_temp_players: vec![],
         home_actions: vec![],
         away_actions: vec![],
+        drawn_mvps: vec![],
         version: 1,
     }
+}
+
+/// Le même avant-match, chaque camp ayant son MVP au tour 16 : l'après-match
+/// ne se clôt pas sans (carte 638).
+pub fn pre_match_with_mvps() -> MatchReportPreMatch {
+    with_mvps(pre_match())
+}
+
+/// Ajoute un MVP à chaque camp, comme l'étape MVP l'aurait inscrit.
+pub fn with_mvps(mut pm: MatchReportPreMatch) -> MatchReportPreMatch {
+    use crate::app::match_report::domain::value_objects::{
+        ActionId, ActionPlayer, MatchAction, MatchActionType, TurnNumber,
+    };
+    use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    let mvp = |id: &str| MatchAction {
+        id: ActionId(id.into()),
+        turn: TurnNumber::LAST,
+        player: ActionPlayer::Regular(PlayerId::new()),
+        action: MatchActionType::Mvp,
+        player_display_name: format!("MVP {id}"),
+        player_position: String::new(),
+    };
+    pm.home_actions.push(mvp("mvp-home"));
+    pm.away_actions.push(mvp("mvp-away"));
+    pm
 }
 
 /// Des équipes prêtes à jouer, valorisées et solvables : aucun refus ne vient

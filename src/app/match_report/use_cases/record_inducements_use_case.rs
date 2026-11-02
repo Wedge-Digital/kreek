@@ -579,6 +579,7 @@ mod tests {
             away_temp_players: vec![],
             home_actions: vec![],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: 1,
         }
     }
@@ -630,7 +631,7 @@ mod conflict_tests {
         FanFactorMod, MatchGain, NoStallingBonuses,
     };
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, ConflictingRepository, KnownPlayers, PlainCompetition, ReadyTeams,
+        pre_match, with_mvps, ConflictingRepository, KnownPlayers, PlainCompetition, ReadyTeams,
         RecordingRepository,
     };
     use crate::common::services::event_bus::event_bus::new_bus;
@@ -681,19 +682,21 @@ mod conflict_tests {
     /// R2 vaut depuis un `ReadyToPublish`, que le use case reconvertit.
     #[tokio::test]
     async fn une_equipe_qui_a_valide_est_refusee_apres_l_etape_5() {
-        let mut pm = pre_match();
+        let mut pm = with_mvps(pre_match());
         pm.home_inducements = Some(vec![]);
         let home = pm.home_team_id.clone();
-        let (ready, _) = pm.record_post_match(
-            MatchGain::try_new(10).unwrap(),
-            MatchGain::try_new(10).unwrap(),
-            NoStallingBonuses::default(),
-            FanFactorMod::try_new(0).unwrap(),
-            FanFactorMod::try_new(0).unwrap(),
-            None,
-            None,
-            CoachId::new(),
-        );
+        let (ready, _) = pm
+            .record_post_match(
+                MatchGain::try_new(10).unwrap(),
+                MatchGain::try_new(10).unwrap(),
+                NoStallingBonuses::default(),
+                FanFactorMod::try_new(0).unwrap(),
+                FanFactorMod::try_new(0).unwrap(),
+                None,
+                None,
+                CoachId::new(),
+            )
+            .unwrap();
         let repo = RecordingRepository::holding(MatchReportState::ReadyToPublish(ready));
         let result = run(&repo, home).await;
         assert!(

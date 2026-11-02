@@ -259,6 +259,20 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
+            // « tiré parmi 6 désignés » au journal (carte 638) : posé sur
+            // l'action que l'`ActionRecorded` du même append vient d'insérer.
+            MatchReportDomainEvent::MvpDrawn {
+                action_id,
+                designated,
+                ..
+            } => {
+                sqlx::query("UPDATE match_report_actions SET draw_size = $2 WHERE action_id = $1")
+                    .bind(&action_id.0)
+                    .bind(designated.len() as i16)
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(RepositoryError::Database)?;
+            }
             MatchReportDomainEvent::ActionDeleted { action_id, .. } => {
                 sqlx::query(
                     "UPDATE match_report_actions SET is_deleted = TRUE WHERE action_id = $1",
@@ -594,7 +608,8 @@ impl IMatchReportRepository for MatchReportRepository {
     ) -> Result<Vec<MatchActionRow>, RepositoryError> {
         let rows = sqlx::query(
             "SELECT action_id, team_side, turn_number, player_id, player_type,
-                    action_json, player_display_name, player_position, recorded_by
+                    action_json, player_display_name, player_position, recorded_by,
+                    draw_size
              FROM match_report_actions
              WHERE match_report_id = $1 AND NOT is_deleted
              ORDER BY turn_number DESC, recorded_at DESC",
@@ -629,6 +644,7 @@ fn action_row_from(r: &sqlx::postgres::PgRow) -> Result<MatchActionRow, Reposito
         player_display_name: r.get("player_display_name"),
         player_position: r.get("player_position"),
         recorded_by: r.get("recorded_by"),
+        draw_size: r.get("draw_size"),
     })
 }
 

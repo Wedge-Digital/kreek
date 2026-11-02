@@ -162,6 +162,8 @@ async fn aiguiller(
         | MatchReportDomainEvent::StarPlayerEngaged { .. }
         | MatchReportDomainEvent::ActionRecorded { .. }
         | MatchReportDomainEvent::ActionDeleted { .. }
+        // Le MVP tiré sort comme une action `Mvp` à la publication (carte 638).
+        | MatchReportDomainEvent::MvpDrawn { .. }
         | MatchReportDomainEvent::PostMatchRecorded { .. } => {}
     }
 }
@@ -849,6 +851,7 @@ mod unpublished_events_tests {
             away_temp_players: vec![],
             home_actions: vec![une_action()],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: 8,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),

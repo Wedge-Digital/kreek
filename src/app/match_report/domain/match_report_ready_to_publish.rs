@@ -1,9 +1,13 @@
+use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
-use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_pre_match::{
+    first_side_without_mvp, MatchReportPreMatch,
+};
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
+use crate::app::match_report::domain::mvp_draw::DrawnMvp;
 use crate::app::match_report::domain::value_objects::{
     D3Roll, DedicatedFans, EntryMode, FanFactorMod, InducementPurchase, InducementSpending,
-    MatchAction, MatchGain, MatchReportOrigin, TempPlayer, TempPlayerKind,
+    MatchAction, MatchGain, MatchReportOrigin, TeamSide, TempPlayer, TempPlayerKind,
 };
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -47,6 +51,9 @@ pub struct MatchReportReadyToPublish {
     pub away_temp_players: Vec<TempPlayer>,
     pub home_actions: Vec<MatchAction>,
     pub away_actions: Vec<MatchAction>,
+    /// Les MVP tirés au sort et leurs désignés (carte 638) : leur action ne
+    /// se supprime pas. Vide pour un rapport sans tirage.
+    pub drawn_mvps: Vec<DrawnMvp>,
     pub version: u64,
     // champs post-match
     pub home_gain: MatchGain,
@@ -147,6 +154,7 @@ impl MatchReportReadyToPublish {
             away_temp_players: pm.away_temp_players.clone(),
             home_actions: pm.home_actions.clone(),
             away_actions: pm.away_actions.clone(),
+            drawn_mvps: pm.drawn_mvps.clone(),
             version: pm.version + 1,
             home_gain,
             away_gain,
@@ -191,6 +199,7 @@ impl MatchReportReadyToPublish {
             away_temp_players: self.away_temp_players,
             home_actions: self.home_actions,
             away_actions: self.away_actions,
+            drawn_mvps: self.drawn_mvps,
             version: self.version,
         }
     }
@@ -205,7 +214,11 @@ impl MatchReportReadyToPublish {
         summary_title: Option<String>,
         summary_body: Option<String>,
         recorded_by: CoachId,
-    ) -> (Self, MatchReportDomainEvent) {
+    ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        // En correction aussi, chaque camp a son MVP (carte 638).
+        if let Some(side) = self.first_side_without_mvp() {
+            return Err(DomainError::MvpMissing(side));
+        }
         let event = MatchReportDomainEvent::PostMatchRecorded {
             home_gain,
             away_gain,
@@ -227,7 +240,14 @@ impl MatchReportReadyToPublish {
         updated.summary_title = summary_title;
         updated.summary_body = summary_body;
         updated.version += 1;
-        (updated, event)
+        Ok((updated, event))
+    }
+
+    /// Le premier camp sans MVP, domicile puis visiteur (carte 638). Un
+    /// rapport ancien peut n'en avoir aucun : il se rejoue tel quel, mais sa
+    /// correction passe par l'étape MVP.
+    pub fn first_side_without_mvp(&self) -> Option<TeamSide> {
+        first_side_without_mvp(&self.home_actions, &self.away_actions)
     }
 
     pub fn publish(&self, published_by: CoachId) -> (MatchReportPublished, MatchReportDomainEvent) {
@@ -281,6 +301,7 @@ mod tests {
             away_temp_players: vec![],
             home_actions: vec![],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: 5,
             home_gain: MatchGain::try_new(10_000).unwrap(),
             away_gain: MatchGain::try_new(5_000).unwrap(),

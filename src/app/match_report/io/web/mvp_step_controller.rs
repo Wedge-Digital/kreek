@@ -8,6 +8,7 @@ use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::mvp_draw::{DrawnMvp, DRAW_SIZE};
 use crate::app::match_report::domain::value_objects::{MatchAction, TeamSide};
 use crate::app::match_report::io::web::record_action_controller::build_player;
 use crate::app::match_report::io::web::write_conflict::conflict_response;
@@ -21,15 +22,18 @@ use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::Form;
 use serde::Deserialize;
 
-/// Un MVP déjà saisi pour le camp, avec de quoi le supprimer.
+/// Un MVP déjà saisi pour le camp, avec de quoi le supprimer — sauf s'il a
+/// été tiré au sort : le tirage est définitif (carte 638).
 pub struct MvpRowVm {
     pub player_name: String,
     pub player_position: String,
-    pub delete_url: String,
+    pub delete_url: Option<String>,
+    /// « Thorgrim, Borin, Durin, Balin, Nori et Gimli » pour un MVP tiré.
+    pub drawn_among: Option<String>,
 }
 
 /// L'équipe dont c'est l'étape.
@@ -66,6 +70,9 @@ pub struct MvpStepTemplate {
     pub player_selector_url: String,
     pub temp_player_selector_url: String,
     pub post_url: String,
+    /// Le tirage au sort, l'onglet coché par défaut (carte 638).
+    pub draw_url: String,
+    pub draw_size: usize,
     pub nav: MvpNavVm,
 }
 
@@ -104,12 +111,27 @@ pub async fn get_mvp_step(
         Ok(pm) => pm,
         Err(status) => return status.into_response(),
     };
-    let teams = load_teams(&state, &pm).await;
     let ids = PageIds {
         space_id: &space_id,
         mr_id: &mr_id,
     };
+    if let Some(redirect) = home_mvp_first(&ids, side, &pm) {
+        return redirect;
+    }
+    let teams = load_teams(&state, &pm).await;
     build_template(&ids, side, &pm, &teams).into_response()
+}
+
+/// Le visiteur attend que le domicile ait son MVP (carte 638) : le domaine
+/// dit quel camp en manque, la page renvoie à son étape.
+fn home_mvp_first(ids: &PageIds<'_>, side: TeamSide, pm: &MatchReportPreMatch) -> Option<Response> {
+    let home_missing = pm.first_side_without_mvp() == Some(TeamSide::Home);
+    (side == TeamSide::Away && home_missing).then(|| {
+        let url = AppRoutes::default()
+            .match_report
+            .mvp(ids.space_id, ids.mr_id, "home");
+        Redirect::to(&url).into_response()
+    })
 }
 
 /// Les deux équipes : celle de l'étape, et le domicile ou le visiteur que la
@@ -144,7 +166,7 @@ pub async fn post_mvp_step(
     }
 }
 
-fn parse_side(side: &str) -> Option<TeamSide> {
+pub(crate) fn parse_side(side: &str) -> Option<TeamSide> {
     match side {
         "home" => Some(TeamSide::Home),
         "away" => Some(TeamSide::Away),
@@ -152,7 +174,7 @@ fn parse_side(side: &str) -> Option<TeamSide> {
     }
 }
 
-fn side_slug(side: TeamSide) -> &'static str {
+pub(crate) fn side_slug(side: TeamSide) -> &'static str {
     match side {
         TeamSide::Home => "home",
         TeamSide::Away => "away",
@@ -202,13 +224,17 @@ fn build_template(
     MvpStepTemplate {
         is_home: side == TeamSide::Home,
         team: team_vm(team_info),
-        mvps: mvp_rows(ids, pm.mvps_of(side)),
+        mvps: mvp_rows(ids, pm, side),
         home_recap: home_recap(side, pm, &home.team_name),
         player_selector_url: routes.players.match_player_selector(ids.space_id, &team_id),
         temp_player_selector_url: temp_players_url(ids, side),
         post_url: routes
             .match_report
             .mvp(ids.space_id, ids.mr_id, side_slug(side)),
+        draw_url: routes
+            .match_report
+            .mvp_draw(ids.space_id, ids.mr_id, side_slug(side)),
+        draw_size: DRAW_SIZE,
         nav: nav_for(ids, side, &away.team_name),
         app_routes: routes,
         space_id: ids.space_id.to_string(),
@@ -232,17 +258,33 @@ fn initials_from(name: &str) -> String {
         .to_uppercase()
 }
 
-fn mvp_rows(ids: &PageIds<'_>, mvps: Vec<&MatchAction>) -> Vec<MvpRowVm> {
-    let routes = AppRoutes::default();
-    mvps.into_iter()
-        .map(|a| MvpRowVm {
-            player_name: a.player_display_name.clone(),
-            player_position: a.player_position.clone(),
-            delete_url: routes
-                .match_report
-                .delete_action(ids.space_id, ids.mr_id, &a.id.0),
-        })
+fn mvp_rows(ids: &PageIds<'_>, pm: &MatchReportPreMatch, side: TeamSide) -> Vec<MvpRowVm> {
+    pm.mvps_of(side)
+        .into_iter()
+        .map(|a| mvp_row(ids, a, pm.drawn_mvp(&a.id)))
         .collect()
+}
+
+/// Un MVP tiré au sort n'a pas de ✕ : le domaine refuse sa suppression.
+fn mvp_row(ids: &PageIds<'_>, action: &MatchAction, drawn: Option<&DrawnMvp>) -> MvpRowVm {
+    let routes = AppRoutes::default().match_report;
+    MvpRowVm {
+        player_name: action.player_display_name.clone(),
+        player_position: action.player_position.clone(),
+        delete_url: drawn
+            .is_none()
+            .then(|| routes.delete_action(ids.space_id, ids.mr_id, &action.id.0)),
+        drawn_among: drawn.map(|d| names_sentence(&d.designated_names())),
+    }
+}
+
+/// « A, B, C et D » : la liste des désignés, telle que l'écran la lit.
+fn names_sentence(names: &[&str]) -> String {
+    match names.split_last() {
+        None => String::new(),
+        Some((last, [])) => last.to_string(),
+        Some((last, rest)) => format!("{} et {last}", rest.join(", ")),
+    }
 }
 
 /// Au visiteur seulement : on ne revient pas en arrière pour vérifier le
@@ -298,17 +340,12 @@ fn next_url(space_id: &str, mr_id: &str, side: TeamSide) -> String {
     }
 }
 
-/// Le second MVP d'un camp vient d'une page périmée (un autre onglet l'a
-/// saisi) : 422, le motif, et la page se recharge sur le MVP qui existe.
-fn error_response(e: RecordMvpError) -> Response {
+/// Les refus de l'étape MVP, saisie manuelle comme tirage au sort (cartes
+/// 637 et 638).
+pub(crate) fn error_response(e: RecordMvpError) -> Response {
     match e {
         RecordMvpError::Conflict => conflict_response(),
-        RecordMvpError::Domain(err @ DomainError::MvpAlreadyRecorded) => (
-            StatusCode::UNPROCESSABLE_ENTITY,
-            [("HX-Refresh", "true")],
-            err.to_string(),
-        )
-            .into_response(),
+        RecordMvpError::Domain(err) => domain_refusal(err),
         RecordMvpError::NotFound => StatusCode::NOT_FOUND.into_response(),
         RecordMvpError::PlayerNotFound(_) | RecordMvpError::TempPlayerNotFound(_) => {
             tracing::warn!("post_mvp_step: joueur refusé ({e:?})");
@@ -318,6 +355,19 @@ fn error_response(e: RecordMvpError) -> Response {
             tracing::error!("post_mvp_step: {other:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+/// Un refus du domaine se dit en 422, avec son motif. Le second MVP d'un camp
+/// vient d'une page périmée : elle se recharge sur le MVP qui existe. Moins de
+/// six désignés, un doublon : le motif seul (carte 638).
+fn domain_refusal(err: DomainError) -> Response {
+    let status = StatusCode::UNPROCESSABLE_ENTITY;
+    match err {
+        DomainError::MvpAlreadyRecorded => {
+            (status, [("HX-Refresh", "true")], err.to_string()).into_response()
+        }
+        _ => (status, err.to_string()).into_response(),
     }
 }
 
@@ -352,6 +402,62 @@ mod tests {
         assert!(nav_for(&ids, TeamSide::Home, "Rats")
             .back_url
             .ends_with("/M/live"));
+    }
+
+    #[test]
+    fn les_designes_se_lisent_en_une_phrase() {
+        assert_eq!(
+            names_sentence(&["Thorgrim", "Borin", "Durin", "Balin", "Nori", "Gimli"]),
+            "Thorgrim, Borin, Durin, Balin, Nori et Gimli"
+        );
+        assert_eq!(names_sentence(&["Gimli"]), "Gimli");
+    }
+
+    /// Un MVP tiré n'a pas de ✕ et dit parmi qui ; un MVP saisi à la main
+    /// garde son ✕.
+    #[test]
+    fn un_mvp_tire_n_a_pas_de_croix() {
+        use crate::app::match_report::domain::mvp_draw::DesignatedPlayer;
+        use crate::app::match_report::domain::value_objects::{
+            ActionId, ActionPlayer, MatchActionType, TurnNumber,
+        };
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        let ids = PageIds {
+            space_id: "S",
+            mr_id: "M",
+        };
+        let action = MatchAction {
+            id: ActionId("tire".into()),
+            turn: TurnNumber::LAST,
+            player: ActionPlayer::Regular(PlayerId::new()),
+            action: MatchActionType::Mvp,
+            player_display_name: "Balin".into(),
+            player_position: "Coureur".into(),
+        };
+        let designated = ["Thorgrim", "Balin"]
+            .iter()
+            .map(|n| DesignatedPlayer {
+                player: ActionPlayer::Regular(PlayerId::new()),
+                display_name: n.to_string(),
+                position: String::new(),
+            })
+            .collect();
+        let drawn = DrawnMvp {
+            action_id: action.id.clone(),
+            team_side: TeamSide::Home,
+            designated,
+        };
+        let row = mvp_row(&ids, &action, Some(&drawn));
+        assert_eq!(row.delete_url, None);
+        assert_eq!(row.drawn_among.as_deref(), Some("Thorgrim et Balin"));
+        assert!(mvp_row(&ids, &action, None).delete_url.is_some());
+    }
+
+    #[test]
+    fn un_tirage_incomplet_est_refuse_en_422() {
+        let r = error_response(RecordMvpError::Domain(DomainError::DrawNeedsSixPlayers(5)));
+        assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(!r.headers().contains_key("HX-Refresh"));
     }
 
     #[test]

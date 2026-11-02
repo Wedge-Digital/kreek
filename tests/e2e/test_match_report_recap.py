@@ -8,7 +8,7 @@ Scénarios couverts :
 - TC-04 — Publication (clic bouton) → CTA devient "Retour" + "Voir fiche"
 - TC-05 — Double publication (POST direct sur un rapport déjà publié) → 409
 - TC-06 — Draft/PreMatch → 404, Cancelled → 410
-- TC-08 — Carte Performances (SPP) absente proprement si aucune action enregistrée
+- TC-08 — Sans action de match, la carte Performances ne montre que les deux MVP (carte 638)
 - TC-09 — « Publié par » nomme le coach qui a publié ; absent tant que rien n'est publié
 
 Allocation des paires d'équipes : une équipe est verrouillée (TeamNotAvailable) dès la
@@ -34,7 +34,7 @@ from db_helpers import query_db as _query_db
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
-from match_report_helpers import record_mvp_api
+from match_report_helpers import ensure_mvps, record_mvp_api
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 _INJURY_LABELS = ("Commotion", "Amoché", "Blessure Sérieuse", "Séquelle", "Mort")
@@ -126,6 +126,8 @@ def _first_player_id(mr_id: str, side: str) -> str:
 
 
 def _post_step5(space_id: str, mr_id: str, **overrides) -> requests.Response:
+    # Le MVP est obligatoire : sans, l'après-match est refusé (carte 638).
+    ensure_mvps(space_id, mr_id)
     data = {
         "home_gain": "50000",
         "away_gain": "40000",
@@ -352,10 +354,13 @@ def test_tc06_cancelled_returns_410(space_id, recap_ctx):
     assert resp.status_code == 410
 
 
-# ── TC-08 — Performances (SPP) absente sans action ────────────────────────────
+# ── TC-08 — Sans action de match, les Performances ne comptent que les MVP ────
 
-def test_tc08_performances_card_absent_without_actions(page: Page, space_id, recap_ctx):
-    """Paire teams[10..11] dédiée."""
+def test_tc08_performances_card_lists_only_the_mvps_without_actions(page: Page, space_id, recap_ctx):
+    """Paire teams[10..11] dédiée.
+
+    Carte 638 : le MVP est obligatoire, un rapport n'est donc jamais sans
+    performance. Sans action de match, la carte ne montre que les deux MVP."""
     round_id = recap_ctx["round_ids"][6]
     mr_id = _advance_to_ready_to_publish(
         space_id, recap_ctx, round_id, home_idx=10, away_idx=11, with_actions=False,
@@ -363,7 +368,8 @@ def test_tc08_performances_card_absent_without_actions(page: Page, space_id, rec
 
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/recap", wait_until="load")
 
-    expect(page.locator(".ms-card-header-title", has_text="Performances")).to_have_count(0)
+    expect(page.locator(".ms-card-header-title", has_text="Performances")).to_have_count(1)
+    expect(page.locator(".ms-perf-row")).to_have_count(2)
     expect(page.locator(".ms-hero")).to_be_visible()
 
 

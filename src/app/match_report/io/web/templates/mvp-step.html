@@ -3,15 +3,46 @@
 
 {% block content %}
 
+{# Deux moyens de désigner le MVP (cartes 637 et 638) : le tirage au sort parmi
+   six désignés, coché par défaut, ou la saisie manuelle d'un joueur. Les deux
+   partagent les mêmes puces ; c'est le mode qui dit ce qu'un clic veut dire. #}
 <div class="mr-container match-report-mvp" x-data="{
+    mode: 'draw',
+    drawSize: {{ draw_size }},
     playerId: '',
     playerType: 'regular',
+    designated: [],
     init() {
-        document.body.addEventListener('playerSelected', (e) => {
-            this.playerId = e.detail.player_id;
-            this.playerType = e.detail.player_type || 'regular';
-        });
+        document.body.addEventListener('playerSelected', (e) => this.onPlayer(e.detail));
         document.body.addEventListener('actionDeleted', () => window.location.reload(), { once: true });
+    },
+    setMode(mode) {
+        this.mode = mode;
+        this.playerId = '';
+        this.designated = [];
+        this.paint();
+    },
+    onPlayer(detail) {
+        if (this.mode === 'manual') {
+            this.playerId = detail.player_id;
+            this.playerType = detail.player_type || 'regular';
+            return;
+        }
+        this.toggle(detail);
+        this.paint();
+    },
+    toggle(detail) {
+        const i = this.designated.findIndex((p) => p.id === detail.player_id);
+        if (i >= 0) { this.designated.splice(i, 1); return; }
+        if (this.designated.length < this.drawSize) {
+            this.designated.push({ id: detail.player_id, type: detail.player_type || 'regular' });
+        }
+    },
+    paint() {
+        this.$root.querySelectorAll('.mr-player-chip').forEach((chip) => {
+            const chosen = this.mode === 'draw' && this.designated.some((p) => p.id === chip.dataset.playerId);
+            chip.classList.toggle('active', chosen);
+        });
     }
 }">
   <div class="mr-header">
@@ -48,41 +79,73 @@
   <div class="mr-card">
     <div class="mr-card-title">Le MVP</div>
     {% if mvps.is_empty() %}
-    <div class="text-tiny">Choisissez directement le MVP parmi les joueurs qui ont jou&eacute;. Il s'inscrit au journal comme une action du tour 16.</div>
+    <div class="choice-group mvp-mode-choice">
+      <button type="button" class="choice-btn mvp-mode-draw" :class="{ 'selected': mode === 'draw' }" @click="setMode('draw')">&#127922; Tirage au sort</button>
+      <button type="button" class="choice-btn mvp-mode-manual" :class="{ 'selected': mode === 'manual' }" @click="setMode('manual')">&#9995; Saisie manuelle</button>
+    </div>
 
-    <div class="mr-player-section">
-      <div class="mr-player-section-label">&Eacute;quipe</div>
-      <div hx-get="{{ player_selector_url }}"
+    <div class="mvp-draw-intro" x-show="mode === 'draw'">
+      <div class="text-tiny">D&eacute;signez {{ draw_size }} joueurs qui ont jou&eacute; : le MVP sera tir&eacute; au sort parmi eux. Il s'inscrit au journal comme une action du tour 16.</div>
+      <span class="mvp-draw-count"
+            :class="designated.length === drawSize ? 'mvp-draw-count--done' : 'mvp-draw-count--todo'"
+            x-text="designated.length + ' / ' + drawSize">0 / {{ draw_size }}</span>
+    </div>
+    <div class="text-tiny" x-show="mode === 'manual'" x-cloak>Choisissez directement le MVP parmi les joueurs qui ont jou&eacute;. Il s'inscrit au journal comme une action du tour 16.</div>
+
+    <div class="mvp-players" :class="{ 'mvp-players--draw': mode === 'draw' }">
+      <div class="mr-player-section">
+        <div class="mr-player-section-label">&Eacute;quipe</div>
+        <div hx-get="{{ player_selector_url }}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+        </div>
+      </div>
+      <div hx-get="{{ temp_player_selector_url }}"
            hx-trigger="load"
            hx-target="this"
            hx-swap="innerHTML">
       </div>
     </div>
-    <div hx-get="{{ temp_player_selector_url }}"
-         hx-trigger="load"
-         hx-target="this"
-         hx-swap="innerHTML">
-    </div>
     {% else %}
-    <div class="text-tiny">Le MVP de cette &eacute;quipe est d&eacute;sign&eacute;. Pour en choisir un autre, supprimez-le d'abord.</div>
     <div class="mvp-list">
       {% for mvp in mvps %}
       <div class="mvp-row">
         <span class="mvp-row-icon">&#11088;</span>
         <span class="mvp-row-name">{{ mvp.player_name }}</span>
         {% if !mvp.player_position.is_empty() %}<span class="mvp-row-position">{{ mvp.player_position }}</span>{% endif %}
+        {% if let Some(url) = mvp.delete_url %}
         <button type="button" class="mvp-row-delete" title="Supprimer ce MVP"
-                hx-delete="{{ mvp.delete_url }}"
+                hx-delete="{{ url }}"
                 hx-swap="none">&#10005;</button>
+        {% endif %}
       </div>
+      {% if let Some(among) = mvp.drawn_among %}
+      <div class="text-tiny mvp-drawn-among">Tir&eacute; au sort parmi {{ among }}. Le tirage est d&eacute;finitif.</div>
+      {% else %}
+      <div class="text-tiny">Le MVP de cette &eacute;quipe est d&eacute;sign&eacute;. Pour en choisir un autre, supprimez-le d'abord.</div>
+      {% endif %}
       {% endfor %}
     </div>
     {% endif %}
   </div>
 
   {% if mvps.is_empty() %}
-  {# Le bouton de suite enregistre le MVP choisi, puis mène à l'étape suivante. #}
-  <form class="mr-nav-row" hx-post="{{ post_url }}">
+  {# Tirage : les désignés partent au serveur, qui tire et montre le résultat
+     sur cette même page. #}
+  <form class="mr-nav-row mvp-draw-form" hx-post="{{ draw_url }}" x-show="mode === 'draw'">
+    <template x-for="p in designated" :key="p.id">
+      <span>
+        <input type="hidden" name="player_id" :value="p.id">
+        <input type="hidden" name="player_type" :value="p.type">
+      </span>
+    </template>
+    <a class="btn-outline-sm" href="{{ nav.back_url }}">&larr; {{ nav.back_label }}</a>
+    <button type="submit" class="btn-primary-sm" :disabled="designated.length !== drawSize">&#127922; Tirer le MVP</button>
+  </form>
+  {# Saisie manuelle : le bouton de suite enregistre le MVP choisi, puis mène
+     à l'étape suivante. #}
+  <form class="mr-nav-row mvp-manual-form" hx-post="{{ post_url }}" x-show="mode === 'manual'" x-cloak>
     <input type="hidden" name="player_id" :value="playerId">
     <input type="hidden" name="player_type" :value="playerType">
     <a class="btn-outline-sm" href="{{ nav.back_url }}">&larr; {{ nav.back_label }}</a>

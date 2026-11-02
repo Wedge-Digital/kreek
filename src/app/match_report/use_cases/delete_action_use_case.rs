@@ -104,6 +104,7 @@ mod tests {
             away_temp_players: vec![],
             home_actions: vec![],
             away_actions: vec![],
+            drawn_mvps: vec![],
             version: 1,
         };
         let action_id = ActionId("ACT01".into());

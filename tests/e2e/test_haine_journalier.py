@@ -34,6 +34,7 @@ import pytest
 import requests
 
 from db_helpers import attendre_que, query_db
+from match_report_helpers import ensure_mvps
 from competition_lifecycle import liberer_les_equipes
 
 from e2e_env import BASE_URL
@@ -112,6 +113,8 @@ def _enregistrer(space_id, mr_id, side, player_id, turn, **champs):
 
 
 def _publier(space_id, mr_id):
+    # Le MVP est obligatoire : sans, l'après-match est refusé (carte 638).
+    ensure_mvps(space_id, mr_id)
     resp = requests.post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step5",
         data={

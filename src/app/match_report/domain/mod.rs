@@ -6,5 +6,6 @@ pub mod match_report_published;
 pub mod match_report_ready_to_publish;
 pub mod match_report_repository_port;
 pub mod match_report_state;
+pub mod mvp_draw;
 pub mod underdog;
 pub mod value_objects;

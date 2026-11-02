@@ -77,21 +77,25 @@ mod tests {
     use crate::app::match_report::domain::value_objects::{
         FanFactorMod, MatchGain, NoStallingBonuses,
     };
-    use crate::app::match_report::use_cases::test_doubles::{pre_match, ConflictingRepository};
+    use crate::app::match_report::use_cases::test_doubles::{
+        pre_match_with_mvps, ConflictingRepository,
+    };
     use crate::common::services::event_bus::event_bus::new_bus;
 
     #[tokio::test]
     async fn un_conflit_d_ecriture_est_relaye() {
-        let (rtp, _) = pre_match().record_post_match(
-            MatchGain::try_new(10_000).unwrap(),
-            MatchGain::try_new(10_000).unwrap(),
-            NoStallingBonuses::default(),
-            FanFactorMod::try_new(0).unwrap(),
-            FanFactorMod::try_new(0).unwrap(),
-            None,
-            None,
-            CoachId::new(),
-        );
+        let (rtp, _) = pre_match_with_mvps()
+            .record_post_match(
+                MatchGain::try_new(10_000).unwrap(),
+                MatchGain::try_new(10_000).unwrap(),
+                NoStallingBonuses::default(),
+                FanFactorMod::try_new(0).unwrap(),
+                FanFactorMod::try_new(0).unwrap(),
+                None,
+                None,
+                CoachId::new(),
+            )
+            .unwrap();
         let repo = ConflictingRepository::holding(MatchReportState::ReadyToPublish(rtp));
         let cmd = PublishMatchReportCommand {
             match_report_id: MatchReportId::new(),
