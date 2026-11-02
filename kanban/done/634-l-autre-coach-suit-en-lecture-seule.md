@@ -59,12 +59,12 @@ n'est nécessaire : personne n'est bloqué.
 
 ## Checklist
 
-- [ ] `can_write_report` et sa lecture sur la projection ; le démarreur non coach
+- [x] `can_write_report` et sa lecture sur la projection ; le démarreur non coach
       ne compte pas (test : un admin non coach a démarré, les deux coachs écrivent)
-- [ ] Trois groupes de routes ; le refus en 403 ou en page lisible
-- [ ] Publication, dépublication, correction : `can_write_report` ; boutons masqués
-- [ ] Tests unitaires : démarreur, admin non démarreur, autre coach, tiers, brouillon
-- [ ] E2E : `test_match_report_access.py` — `test_le_coach_d_une_equipe_du_match_y_entre` migré (le membre simple n'a pas démarré) ; l'autre coach reçoit 403 sur une action et sur la publication
-- [ ] Mesure sur dump consignée, décision de l'utilisateur notée
-- [ ] `tests/impact-map.toml` mis à jour
-- [ ] `make lint`, `make check-arch`, `make test`, e2e impactés
+- [x] Trois groupes de routes ; le refus en 403 ou en page lisible
+- [x] Publication, dépublication, correction : `can_write_report` ; boutons masqués
+- [x] Tests unitaires : démarreur, admin non démarreur, autre coach, tiers, brouillon
+- [x] E2E : `test_match_report_access.py` — `test_le_coach_d_une_equipe_du_match_y_entre` migré (le membre simple n'a pas démarré) ; l'autre coach reçoit 403 sur une action et sur la publication
+- [x] Mesure sur dump consignée, décision de l'utilisateur notée
+- [x] `tests/impact-map.toml` mis à jour
+- [x] `make lint`, `make check-arch`, `make test`, e2e impactés

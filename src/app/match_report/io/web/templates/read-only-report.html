@@ -1,0 +1,16 @@
+{% extends "app-layout.html" %}
+
+{# Le refus lisible de la garde de saisie (carte 634) : l'autre coach d'un
+   compte rendu en « Je saisis tout ». La carte 636 le remplacera par la
+   redirection vers le match en direct. #}
+{% block content %}
+<div class="mr-container">
+  <div class="mr-header">
+    <div class="mr-header-icon">&#128065;</div>
+    <div class="mr-header-title">
+      {% if let Some(name) = starter_name.as_ref() %}Ce match est saisi par {{ name }}.{% else %}Ce match est saisi par le coach qui l'a d&eacute;marr&eacute;.{% endif %}
+    </div>
+    <div class="mr-header-sub">Vous suivez ce compte rendu sans pouvoir y &eacute;crire.</div>
+  </div>
+</div>
+{% endblock %}

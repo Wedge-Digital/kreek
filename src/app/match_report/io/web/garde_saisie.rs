@@ -1,37 +1,70 @@
-//! La garde des routes de saisie d'un compte rendu (carte 622).
+//! Les gardes des routes d'un compte rendu (cartes 622 et 634).
 //!
-//! **Qui** : les admins d'espace ou de compétition, et les coachs des deux
-//! équipes du match — la règle d'`is_authorized`, celle du récapitulatif. Les
-//! autres membres de l'espace reçoivent 403.
+//! **Deux gardes, pour deux groupes de routes** (`router.rs`) :
 //!
-//! **Où** : posée une fois, par `route_layer`, sur le groupe des routes de
-//! saisie (`router.rs`) — l'écriture et les écrans qui la préparent. Une route
-//! ajoutée à ce groupe est gardée sans qu'on y pense ; c'est le point du
-//! découpage, préféré à vingt appels recopiés dans autant de handlers. Même
-//! patron que `garde_action_equipe` dans `teams`.
+//! - `garde_suivi`, sur `routes_de_suivi()` : **lire** le compte rendu en
+//!   cours. Les admins d'espace ou de compétition, et les coachs des deux
+//!   équipes du match — la règle d'`is_authorized`, celle du récapitulatif.
+//! - `garde_saisie`, sur `routes_de_saisie()` : **écrire**, et ouvrir les
+//!   écrans qui préparent l'écriture. La même règle, puis `can_write_report` :
+//!   en « Je saisis tout », le démarreur et les admins seuls (R5 de E21).
 //!
-//! **Hors du groupe** : le hors-calendrier (`/new`), les feuilles imprimables
-//! et le récapitulatif, qui se garde lui-même (décision du 2026-11-01).
+//! Les autres membres de l'espace reçoivent 403 des deux. L'autre coach, que
+//! seule la seconde refuse, reçoit 403 sur une écriture ou une requête htmx,
+//! et une page lisible — « Ce match est saisi par … » — quand il demandait une
+//! page complète (décision du 2026-11-01). Cette page est servie en **200** :
+//! c'est une page de lecture, pas une erreur, et la mise en page n'affiche
+//! aucune réponse 4xx hors 422 — en 403, une navigation htmx n'aurait rien
+//! montré. La carte 636 la remplacera par la redirection vers le match en
+//! direct.
+//!
+//! **Où** : posées une fois, par `route_layer`. Une route ajoutée à un groupe
+//! est gardée sans qu'on y pense ; c'est le point du découpage, préféré à vingt
+//! appels recopiés dans autant de handlers. Même patron que
+//! `garde_action_equipe` dans `teams`.
+//!
+//! **Hors des groupes** : le hors-calendrier (`/new`), les feuilles
+//! imprimables et le récapitulatif, qui se garde lui-même.
 //!
 //! # La limite
 //!
-//! Elle lit `match_report_id` dans le **chemin**, comme `space_scope_middleware`.
-//! Une route qui désignerait son rapport autrement lui échapperait : toutes
-//! celles du groupe le portent dans le chemin.
+//! Elles lisent `match_report_id` dans le **chemin**, comme
+//! `space_scope_middleware`. Une route qui désignerait son rapport autrement
+//! leur échapperait : toutes celles des deux groupes le portent dans le chemin.
 
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::auth::domain::user::User;
 use crate::app::match_report::use_cases::match_report_access_service::{
-    is_authorized, AccesRapportDeps, PorteeRapport,
+    can_write_report, is_authorized, load_entry_scope, AccesRapportDeps, EntryScope, PorteeRapport,
 };
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
+use crate::web::htmx::veut_la_page_entiere;
+use askama::Template;
 use axum::extract::{Path, Request, State};
-use axum::http::StatusCode;
+use axum::http::request::Parts;
+use axum::http::{HeaderMap, Method, StatusCode};
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Response};
 use axum::RequestPartsExt;
 use std::collections::HashMap;
 
+/// Lire le compte rendu en cours : admins et coachs des deux équipes.
+pub async fn garde_suivi(
+    State(state): State<AppState>,
+    auth_session: AuthSession,
+    request: Request,
+    next: Next,
+) -> Response {
+    let (mut parts, corps) = request.into_parts();
+    let params = path_params(&mut parts).await;
+    if let Err(refus) = autoriser_suivi(&state, auth_session.user.as_ref(), &params).await {
+        return refus;
+    }
+    next.run(Request::from_parts(parts, corps)).await
+}
+
+/// Écrire dans le compte rendu : la garde de suivi, puis `can_write_report`.
 pub async fn garde_saisie(
     State(state): State<AppState>,
     auth_session: AuthSession,
@@ -39,34 +72,136 @@ pub async fn garde_saisie(
     next: Next,
 ) -> Response {
     let (mut parts, corps) = request.into_parts();
-    let params = match parts.extract::<Path<HashMap<String, String>>>().await {
-        Ok(Path(params)) => params,
-        Err(_) => HashMap::new(),
-    };
-    if let Err(refus) = autoriser(&state, auth_session.user.as_ref(), &params).await {
+    let params = path_params(&mut parts).await;
+    let wants_page = veut_une_page(&parts.method, &parts.headers);
+    let user = auth_session.user.as_ref();
+    if let Err(refus) = autoriser_saisie(&state, user, &params, wants_page).await {
         return refus;
     }
     next.run(Request::from_parts(parts, corps)).await
 }
 
-async fn autoriser(
+async fn path_params(parts: &mut Parts) -> HashMap<String, String> {
+    match parts.extract::<Path<HashMap<String, String>>>().await {
+        Ok(Path(params)) => params,
+        Err(_) => HashMap::new(),
+    }
+}
+
+/// Une page complète mérite un refus lisible plutôt qu'un 403 nu : un `GET`
+/// du navigateur, ou une navigation htmx vers le contenu applicatif.
+fn veut_une_page(method: &Method, headers: &HeaderMap) -> bool {
+    method == Method::GET && veut_la_page_entiere(headers)
+}
+
+/// Ce que la garde de suivi a établi, et dont la garde de saisie repart.
+struct RapportSuivi<'a> {
+    user: &'a User,
+    space_id: &'a str,
+    match_report_id: &'a str,
+    portee: PorteeRapport,
+}
+
+/// La règle d'`is_authorized`. `decider` n'accepte ni session absente ni
+/// rapport inconnu : les deux sont là quand il répond `Ok`.
+async fn autoriser_suivi<'a>(
+    state: &AppState,
+    user: Option<&'a User>,
+    params: &'a HashMap<String, String>,
+) -> Result<RapportSuivi<'a>, Response> {
+    let (space_id, match_report_id) = identifiants_du_chemin(params)?;
+    let portee = charger_portee(state, match_report_id).await?;
+    let deps = AccesRapportDeps::from_state(state);
+    let decision = decider(&deps, user, space_id, portee.as_ref()).await;
+    match (decision, user, portee) {
+        (Ok(()), Some(user), Some(portee)) => Ok(RapportSuivi {
+            user,
+            space_id,
+            match_report_id,
+            portee,
+        }),
+        (Err(status), _, _) => Err(status.into_response()),
+        _ => Err(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
+    }
+}
+
+/// `(space_id, match_report_id)`, lus dans le chemin.
+fn identifiants_du_chemin(params: &HashMap<String, String>) -> Result<(&str, &str), Response> {
+    match (params.get("space_id"), params.get("match_report_id")) {
+        (Some(space_id), Some(match_report_id)) => Ok((space_id, match_report_id)),
+        _ => {
+            // Une route du groupe sans ces deux segments : mal placée. La
+            // laisser passer ouvrirait une saisie sans que personne ne s'en
+            // aperçoive.
+            tracing::error!("garde_saisie : route sans space_id ou match_report_id dans le chemin");
+            Err(StatusCode::BAD_REQUEST.into_response())
+        }
+    }
+}
+
+async fn autoriser_saisie(
     state: &AppState,
     user: Option<&User>,
     params: &HashMap<String, String>,
+    wants_page: bool,
 ) -> Result<(), Response> {
-    let (Some(space_id), Some(match_report_id)) =
-        (params.get("space_id"), params.get("match_report_id"))
-    else {
-        // Une route du groupe sans ces deux segments : mal placée. La laisser
-        // passer ouvrirait une saisie sans que personne ne s'en aperçoive.
-        tracing::error!("garde_saisie : route sans space_id ou match_report_id dans le chemin");
-        return Err(StatusCode::BAD_REQUEST.into_response());
-    };
-    let portee = charger_portee(state, match_report_id).await?;
+    let rapport = autoriser_suivi(state, user, params).await?;
+    let entry = charger_entree(state, rapport.match_report_id).await?;
     let deps = AccesRapportDeps::from_state(state);
-    decider(&deps, user, space_id, portee.as_ref())
-        .await
-        .map_err(IntoResponse::into_response)
+    let RapportSuivi {
+        user,
+        space_id,
+        portee,
+        ..
+    } = &rapport;
+    if can_write_report(&deps, user, space_id, portee, &entry).await {
+        return Ok(());
+    }
+    Err(refuser_l_ecriture(state, &entry, wants_page).await)
+}
+
+/// Le mode de saisie et le démarreur. Absents alors que la portée vient
+/// d'être lue : une projection incohérente, qui refuse plutôt que d'ouvrir.
+async fn charger_entree(state: &AppState, match_report_id: &str) -> Result<EntryScope, Response> {
+    let repo = state.match_report.match_report_repo.as_ref();
+    match load_entry_scope(repo, match_report_id).await {
+        Ok(Some(entry)) => Ok(entry),
+        Ok(None) => Err(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!("garde_saisie : mode de saisie de {match_report_id} : {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
+    }
+}
+
+/// Le refus fait à l'autre coach : 403 nu sur une écriture ou un fragment, et
+/// en 200 une page qui dit qui saisit quand c'est une page complète qu'il
+/// demandait.
+async fn refuser_l_ecriture(state: &AppState, entry: &EntryScope, wants_page: bool) -> Response {
+    if !wants_page {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let starter_name = match entry.started_by.as_deref() {
+        Some(id) => state.match_report.coach_data.find_coach_name(id).await,
+        None => None,
+    };
+    let page = ReadOnlyReportTemplate {
+        app_routes: AppRoutes::default(),
+        starter_name,
+    };
+    match page.render() {
+        Ok(html) => Html(html).into_response(),
+        Err(_) => StatusCode::FORBIDDEN.into_response(),
+    }
+}
+
+/// « Ce match est saisi par … » (carte 634).
+#[derive(Template)]
+#[template(path = "read-only-report.html")]
+pub struct ReadOnlyReportTemplate {
+    pub app_routes: AppRoutes,
+    /// Le nom du démarreur ; `None` s'il est inconnu, et le gabarit le tait.
+    pub starter_name: Option<String>,
 }
 
 async fn charger_portee(
@@ -244,6 +379,51 @@ mod tests {
             decision(true, vec![], Some(&user()), None).await,
             Err(StatusCode::NOT_FOUND)
         );
+    }
+
+    fn headers(pairs: &[(&'static str, &'static str)]) -> HeaderMap {
+        let mut h = HeaderMap::new();
+        for (k, v) in pairs {
+            h.insert(*k, v.parse().unwrap());
+        }
+        h
+    }
+
+    /// Le refus lisible ne vaut que pour une page : une écriture, ou un
+    /// fragment demandé par htmx, reçoit un 403 nu (carte 634).
+    #[test]
+    fn only_a_page_request_gets_the_readable_refusal() {
+        assert!(veut_une_page(&Method::GET, &headers(&[])));
+        assert!(veut_une_page(
+            &Method::GET,
+            &headers(&[("hx-request", "true"), ("hx-target", "app-content")])
+        ));
+        assert!(!veut_une_page(
+            &Method::GET,
+            &headers(&[("hx-request", "true")])
+        ));
+        assert!(!veut_une_page(&Method::POST, &headers(&[])));
+        assert!(!veut_une_page(&Method::DELETE, &headers(&[])));
+    }
+
+    #[test]
+    fn the_readable_refusal_names_the_starter_or_stays_silent() {
+        let named = ReadOnlyReportTemplate {
+            app_routes: AppRoutes::default(),
+            starter_name: Some("Yann".to_string()),
+        };
+        assert!(named
+            .render()
+            .unwrap()
+            .contains("Ce match est saisi par Yann."));
+        let unknown = ReadOnlyReportTemplate {
+            app_routes: AppRoutes::default(),
+            starter_name: None,
+        };
+        assert!(unknown
+            .render()
+            .unwrap()
+            .contains("Ce match est saisi par le coach qui l'a d"));
     }
 
     #[tokio::test]

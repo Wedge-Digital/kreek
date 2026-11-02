@@ -205,7 +205,7 @@
         {% if is_published %}
         <a class="ms-btn-outline" href="{{ competition_url }}">&#8592; Retour aux r&eacute;sultats</a>
         <a class="ms-btn-primary" href="{{ home_team_detail_url }}">Voir la fiche {{ home_banner.team_name }} &#8594;</a>
-        {% else %}
+        {% else if can_write %}
         <a class="ms-btn-outline" href="{{ back_to_step5_url }}">&#8592; Modifier &eacute;tape 5</a>
         <form class="ms-cta-form" method="post" action="{{ publish_url }}">
           <button type="submit" class="ms-btn-primary">Publier &#8594;</button>

@@ -4,7 +4,7 @@ use crate::app::match_report::domain::match_report_repository_port::MatchActionR
 use crate::app::match_report::domain::value_objects::{MatchActionType, TeamSide};
 use crate::app::match_report::ports::{ICoachDataPort, IKeywordCatalogPort};
 use crate::app::match_report::use_cases::match_report_access_service::{
-    can_delete_actions, AccesRapportDeps, PorteeRapport,
+    can_delete_actions, load_entry_scope, AccesRapportDeps, EntryScope, PorteeRapport,
 };
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
@@ -126,8 +126,9 @@ async fn render_action_log(
     mr_id: &str,
 ) -> Result<ActionLogTemplate, StatusCode> {
     let scope = load_scope(state, mr_id).await?;
+    let entry = load_entry(state, mr_id).await?;
     let rows = load_rows(state, mr_id).await?;
-    let ctx = log_context(state, user, (space_id, mr_id), &scope, &rows).await;
+    let ctx = log_context(state, user, (space_id, mr_id), (&scope, &entry), &rows).await;
     let actions = rows
         .into_iter()
         .map(|r| ActionRowVm::from_row(r, &ctx))
@@ -141,7 +142,7 @@ async fn log_context<'a>(
     state: &'a AppState,
     user: &User,
     (space_id, match_report_id): (&'a str, &'a str),
-    scope: &PorteeRapport,
+    (scope, entry): (&PorteeRapport, &EntryScope),
     rows: &[MatchActionRow],
 ) -> ActionLogContext<'a> {
     let current_user_id = user.id.to_string();
@@ -153,7 +154,7 @@ async fn log_context<'a>(
             rows,
             &current_user_id
         ),
-        can_delete_actions(&deps, user, space_id, scope),
+        can_delete_actions(&deps, user, space_id, scope, entry),
     );
     ActionLogContext {
         space_id,
@@ -178,6 +179,19 @@ async fn load_scope(state: &AppState, mr_id: &str) -> Result<PorteeRapport, Stat
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(e) => {
             tracing::error!("journal : portée de {mr_id} : {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Le mode de saisie et le démarreur, d'où se décide le ✕ (carte 634).
+async fn load_entry(state: &AppState, mr_id: &str) -> Result<EntryScope, StatusCode> {
+    let repo = state.match_report.match_report_repo.as_ref();
+    match load_entry_scope(repo, mr_id).await {
+        Ok(Some(entry)) => Ok(entry),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            tracing::error!("journal : mode de saisie de {mr_id} : {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

@@ -19,7 +19,8 @@ use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::correction_eligibility_service;
 use crate::app::match_report::use_cases::match_report_access_service::{
-    est_administrateur, is_authorized, AccesRapportDeps, PorteeRapport,
+    can_write_report, est_administrateur, is_authorized, load_entry_scope, AccesRapportDeps,
+    PorteeRapport,
 };
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
@@ -45,6 +46,9 @@ pub struct RecapTemplate {
     pub space_id: String,
     pub match_report_id: String,
     pub is_published: bool,
+    /// Publier et revenir à l'étape 5 : pour qui peut écrire (carte 634). Le
+    /// droit vient du service d'accès, jamais du gabarit.
+    pub can_write: bool,
     pub round_context: Option<RoundContextVm>,
     pub published_by: Option<String>,
     pub home_banner: TeamBannerVm,
@@ -196,11 +200,17 @@ pub async fn get_recap(
     {
         return StatusCode::FORBIDDEN.into_response();
     }
+    // Le récapitulatif reste lisible aux deux coachs ; publier et corriger
+    // ne s'offrent qu'à qui peut écrire (carte 634). Une erreur cache.
+    let can_write = write_permission(&state, &user, &space_id, &match_report_id, &scope)
+        .await
+        .unwrap_or(false);
 
     build_recap_template(
         &space_id,
         &match_report_id,
         is_published,
+        can_write,
         source,
         &user,
         &state,
@@ -248,6 +258,7 @@ async fn build_recap_template(
     space_id: &str,
     match_report_id: &str,
     is_published: bool,
+    can_write: bool,
     source: RecapSource<'_>,
     user: &User,
     state: &AppState,
@@ -295,7 +306,8 @@ async fn build_recap_template(
 
     // Le garde-fou ne se calcule que pour un rapport publié : quatre
     // consultations inter-BC, dont une requête sur l'historique par équipe.
-    let correction = match is_published {
+    // Et pour qui peut écrire : la correction est une écriture (carte 634).
+    let correction = match is_published && can_write {
         true => Some(build_correction_zone_for(&source, space_id, match_report_id, state).await),
         false => None,
     };
@@ -307,6 +319,7 @@ async fn build_recap_template(
         space_id: space_id.to_string(),
         match_report_id: match_report_id.to_string(),
         is_published,
+        can_write,
         round_context,
         published_by,
         home_banner: build_team_banner(home_info, result.home_score, result.away_score),
@@ -454,12 +467,13 @@ pub async fn post_publish(
     )
 }
 
-/// Charge le rapport et vérifie que l'utilisateur a le droit d'agir dessus —
+/// Charge le rapport et vérifie que l'utilisateur a le droit d'y écrire —
 /// publier comme corriger, la règle est la même.
 ///
-/// Mêmes droits que la consultation du recap : sans ce contrôle, tout
-/// utilisateur connecté connaissant un `match_report_id` pouvait publier le
-/// rapport d'autrui.
+/// Sans ce contrôle, tout utilisateur connecté connaissant un
+/// `match_report_id` pouvait publier le rapport d'autrui. Depuis la carte 634,
+/// c'est la règle de l'écriture, `can_write_report`, et non plus celle de la
+/// consultation : l'autre coach lit le récapitulatif sans le publier.
 async fn authorize_recap_action(
     state: &AppState,
     user: &User,
@@ -467,10 +481,30 @@ async fn authorize_recap_action(
     match_report_id: &str,
 ) -> Result<(), StatusCode> {
     let scope = load_recap_scope(state, match_report_id).await?;
-    match is_authorized(&AccesRapportDeps::from_state(state), user, space_id, &scope).await {
+    match write_permission(state, user, space_id, match_report_id, &scope).await? {
         true => Ok(()),
         false => Err(StatusCode::FORBIDDEN),
     }
+}
+
+/// `can_write_report`, le mode de saisie et le démarreur lus sur la projection.
+async fn write_permission(
+    state: &AppState,
+    user: &User,
+    space_id: &str,
+    match_report_id: &str,
+    scope: &PorteeRapport,
+) -> Result<bool, StatusCode> {
+    let repo = state.match_report.match_report_repo.as_ref();
+    let entry = load_entry_scope(repo, match_report_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("recap : mode de saisie de {match_report_id} : {e}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    let deps = AccesRapportDeps::from_state(state);
+    Ok(can_write_report(&deps, user, space_id, scope, &entry).await)
 }
 
 async fn load_recap_scope(

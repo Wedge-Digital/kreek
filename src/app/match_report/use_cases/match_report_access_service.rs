@@ -9,6 +9,10 @@
 //! réécrit.
 
 use crate::app::auth::domain::user::User;
+use crate::app::match_report::domain::match_report_repository_port::{
+    EntryModeRow, IMatchReportRepository, RepositoryError,
+};
+use crate::app::match_report::domain::value_objects::EntryMode;
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::shared_kernel::bloodbowl::admin_access::{is_admin, IAdminAccessPort};
 use crate::app::shared_kernel::identity::ids::EntityId;
@@ -52,18 +56,112 @@ pub async fn is_authorized(
 
 /// Peut retirer une action du journal — ce qui décide du ✕ (carte 635).
 ///
-/// Aujourd'hui la règle d'`is_authorized`, celle de la garde qui couvre la
-/// suppression : un ✕ visible doit mener à une suppression acceptée. La carte
-/// 634 y substituera `can_write_report` ; c'est ici, et nulle part dans le
-/// gabarit, que ce changement se fera.
+/// La règle de l'écriture, `can_write_report` (carte 634) : un ✕ visible doit
+/// mener à une suppression acceptée, et la suppression passe par la garde de
+/// saisie. C'est ici, et nulle part dans le gabarit, que la règle se décide.
 // arch:no-instrument — service de lecture : une question de droit, aucune intention métier
 pub async fn can_delete_actions(
     deps: &AccesRapportDeps<'_>,
     user: &User,
     space_id: &str,
     scope: &PorteeRapport,
+    entry: &EntryScope,
 ) -> bool {
-    is_authorized(deps, user, space_id, scope).await
+    can_write_report(deps, user, space_id, scope, entry).await
+}
+
+/// Le mode de saisie d'un rapport et son démarreur (carte 631), lus sur la
+/// projection comme `PorteeRapport` : la garde les demande à chaque requête.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryScope {
+    /// La forme écrite de `EntryMode` ; une forme inconnue n'ouvre rien.
+    pub entry_mode: String,
+    /// Vide tant que le rapport n'est qu'un brouillon : personne ne l'a démarré.
+    pub started_by: Option<String>,
+}
+
+impl From<EntryModeRow> for EntryScope {
+    fn from(row: EntryModeRow) -> Self {
+        Self {
+            entry_mode: row.entry_mode,
+            started_by: row.started_by,
+        }
+    }
+}
+
+/// Le mode de saisie et le démarreur de ce rapport, `None` s'il n'existe pas.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn load_entry_scope(
+    repo: &dyn IMatchReportRepository,
+    match_report_id: &str,
+) -> Result<Option<EntryScope>, RepositoryError> {
+    Ok(repo
+        .find_entry_mode(match_report_id)
+        .await?
+        .map(EntryScope::from))
+}
+
+/// Peut écrire dans ce compte rendu — saisir, publier, dépublier, corriger
+/// (carte 634, règle R5 de E21).
+///
+/// - un admin, toujours ;
+/// - un tiers, jamais : la règle d'`is_authorized` reste en dessous ;
+/// - un brouillon n'a pas de démarreur : tout coach du match peut le démarrer ;
+/// - en « Je saisis tout », le démarreur seul — **sauf s'il ne coache aucune
+///   des deux équipes** (un admin qui a démarré pour eux) : il ne compte alors
+///   pas, et les deux coachs écrivent (décision du 2026-11-01).
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn can_write_report(
+    deps: &AccesRapportDeps<'_>,
+    user: &User,
+    space_id: &str,
+    scope: &PorteeRapport,
+    entry: &EntryScope,
+) -> bool {
+    if est_administrateur(deps, user, space_id, &scope.competition_id).await {
+        return true;
+    }
+    if !is_coach_of_either_team(deps, scope, &user.id.to_string()).await {
+        return false;
+    }
+    coach_may_write(deps.team_data, scope, entry, &user.id.to_string()).await
+}
+
+/// La part de la règle propre à un coach du match, admin exclu.
+async fn coach_may_write(
+    team_data: &dyn ITeamDataPort,
+    scope: &PorteeRapport,
+    entry: &EntryScope,
+    user_id: &str,
+) -> bool {
+    let Some(starter) = entry.started_by.as_deref() else {
+        return true;
+    };
+    if entry.entry_mode != EntryMode::SoloEntry.as_str() {
+        // Un mode que ce code ne connaît pas : un contrôle d'accès échoue fermé.
+        return false;
+    }
+    if starter == user_id {
+        return true;
+    }
+    !starter_coaches_a_team(team_data, scope, starter).await
+}
+
+/// Le démarreur coache-t-il l'une des deux équipes ?
+///
+/// **Une erreur de port vaut « oui »**, à l'inverse de `camp_du_coach` : ici,
+/// « non » ouvre l'écriture à l'autre coach. Le contrôle échoue fermé dans les
+/// deux cas, ce qui demande deux sens.
+async fn starter_coaches_a_team(
+    team_data: &dyn ITeamDataPort,
+    scope: &PorteeRapport,
+    starter: &str,
+) -> bool {
+    let (home, away) = tokio::join!(
+        team_data.is_coach_of_team(&scope.home_team_id, starter),
+        team_data.is_coach_of_team(&scope.away_team_id, starter),
+    );
+    home.unwrap_or(true) || away.unwrap_or(true)
 }
 
 /// Admin d'espace ou de compétition — **sans** les coachs des deux équipes.
@@ -226,5 +324,166 @@ mod tests {
             camp(vec![DOMICILE, VISITEUR], Some(DOMICILE)).await,
             CampDuCoach::Visiteur
         );
+    }
+}
+
+#[cfg(test)]
+mod write_tests {
+    use super::*;
+    use crate::app::match_report::ports::{JourneymanPositionDto, RosterPositionDto, TeamInfoDto};
+    use crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess;
+    use crate::app::shared_kernel::identity::coach_name::CoachName;
+    use crate::app::shared_kernel::identity::email::Email;
+    use crate::app::shared_kernel::identity::ids::UserId;
+
+    const HOME: &str = "home-team";
+    const AWAY: &str = "away-team";
+    const SPACE: &str = "00000000000000000000000041";
+    const COMPETITION: &str = "00000000000000000000000042";
+    /// Coach de l'équipe à domicile.
+    const HOME_COACH: &str = "00000000000000000000000043";
+    /// Coach de l'équipe visiteuse.
+    const AWAY_COACH: &str = "00000000000000000000000044";
+    /// Ni admin ni coach du match.
+    const THIRD_PARTY: &str = "00000000000000000000000045";
+    /// Admin de l'espace, sans équipe dans le match.
+    const ADMIN: &str = "00000000000000000000000046";
+
+    /// Chaque coach tient son équipe ; `failing` est l'équipe dont le port échoue.
+    struct FakeTeamData {
+        failing: Option<&'static str>,
+    }
+
+    #[async_trait::async_trait]
+    impl ITeamDataPort for FakeTeamData {
+        async fn is_coach_of_team(&self, team_id: &str, user_id: &str) -> Result<bool, String> {
+            if self.failing == Some(team_id) {
+                return Err("port indisponible".to_string());
+            }
+            Ok((team_id == HOME && user_id == HOME_COACH)
+                || (team_id == AWAY && user_id == AWAY_COACH))
+        }
+        async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
+            Ok(true)
+        }
+        async fn is_team_in_player_improvement(&self, _: &str) -> Result<bool, String> {
+            Ok(false)
+        }
+        async fn find_team_info(&self, _: &str) -> Option<TeamInfoDto> {
+            None
+        }
+        async fn find_team_value(&self, _: &str) -> Option<u32> {
+            None
+        }
+        async fn find_team_treasury(&self, _: &str) -> Option<u32> {
+            None
+        }
+        async fn find_journeyman_position(&self, _: &str) -> Option<JourneymanPositionDto> {
+            None
+        }
+        async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
+            vec![]
+        }
+        async fn find_team_season(&self, _: &str) -> Option<String> {
+            None
+        }
+    }
+
+    fn user(id: &str) -> User {
+        User::new(
+            UserId::try_new(id).unwrap(),
+            CoachName::try_new("Testeur".to_string()).unwrap(),
+            None,
+            Email::try_new("testeur@example.com".to_string()).unwrap(),
+            String::new(),
+        )
+    }
+
+    fn scope() -> PorteeRapport {
+        PorteeRapport {
+            competition_id: COMPETITION.to_string(),
+            home_team_id: HOME.to_string(),
+            away_team_id: AWAY.to_string(),
+        }
+    }
+
+    fn started_by(starter: Option<&str>) -> EntryScope {
+        EntryScope {
+            entry_mode: EntryMode::SoloEntry.as_str().to_string(),
+            started_by: starter.map(str::to_string),
+        }
+    }
+
+    async fn may_write_with(who: &str, entry: EntryScope, failing: Option<&'static str>) -> bool {
+        let admin_access = FakeAdminAccess::new().space_admin(
+            &EntityId::try_new(ADMIN).unwrap(),
+            &EntityId::try_new(SPACE).unwrap(),
+        );
+        let team_data = FakeTeamData { failing };
+        let deps = AccesRapportDeps {
+            admin_access: &admin_access,
+            team_data: &team_data,
+        };
+        can_write_report(&deps, &user(who), SPACE, &scope(), &entry).await
+    }
+
+    async fn may_write(who: &str, starter: Option<&str>) -> bool {
+        may_write_with(who, started_by(starter), None).await
+    }
+
+    #[tokio::test]
+    async fn the_starter_writes() {
+        assert!(may_write(HOME_COACH, Some(HOME_COACH)).await);
+    }
+
+    #[tokio::test]
+    async fn the_other_coach_only_follows() {
+        assert!(!may_write(AWAY_COACH, Some(HOME_COACH)).await);
+    }
+
+    #[tokio::test]
+    async fn an_admin_who_did_not_start_writes() {
+        assert!(may_write(ADMIN, Some(HOME_COACH)).await);
+    }
+
+    #[tokio::test]
+    async fn a_third_party_never_writes() {
+        assert!(!may_write(THIRD_PARTY, Some(THIRD_PARTY)).await);
+        assert!(!may_write(THIRD_PARTY, None).await);
+    }
+
+    /// Un brouillon n'est pas démarré : l'un ou l'autre coach peut le démarrer.
+    #[tokio::test]
+    async fn either_coach_writes_a_draft() {
+        assert!(may_write(HOME_COACH, None).await);
+        assert!(may_write(AWAY_COACH, None).await);
+    }
+
+    /// Décision du 2026-11-01 : un admin qui ne coache aucune des deux équipes
+    /// a démarré pour eux — il ne compte pas comme démarreur.
+    #[tokio::test]
+    async fn both_coaches_write_when_a_non_coach_admin_started() {
+        assert!(may_write(HOME_COACH, Some(ADMIN)).await);
+        assert!(may_write(AWAY_COACH, Some(ADMIN)).await);
+    }
+
+    /// Le port en erreur sur l'équipe du démarreur ne le fait pas passer pour
+    /// « non coach » : l'autre coach n'en gagne pas l'écriture.
+    #[tokio::test]
+    async fn a_failing_port_does_not_open_writing_to_the_other_coach() {
+        let entry = started_by(Some(HOME_COACH));
+        assert!(!may_write_with(AWAY_COACH, entry, Some(HOME)).await);
+    }
+
+    /// Un mode que ce code ne connaît pas n'ouvre rien à un coach ; l'admin,
+    /// lui, écrit quel que soit le mode.
+    #[tokio::test]
+    async fn an_unknown_entry_mode_opens_nothing_to_a_coach() {
+        let entry = EntryScope {
+            entry_mode: "TeamEntry".to_string(),
+            started_by: Some(ADMIN.to_string()),
+        };
+        assert!(!may_write_with(HOME_COACH, entry.clone(), None).await);
+        assert!(may_write_with(ADMIN, entry, None).await);
     }
 }

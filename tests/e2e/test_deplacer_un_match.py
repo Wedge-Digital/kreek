@@ -7,8 +7,8 @@ Scénarios :
   du rapport, lignes de classement, événements des joueurs ;
 - le déplacement vers une journée où l'une des deux équipes joue déjà est
   refusé, en nommant le match qui bloque ;
-- un coach voit « Corriger le rapport » mais pas le déplacement, et le widget
-  lui est refusé.
+- un coach qui peut écrire dans le rapport (carte 634) voit « Corriger le
+  rapport » mais pas le déplacement, et le widget lui est refusé.
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), `make seed_e2e`.
 """
@@ -228,7 +228,17 @@ def test_un_coach_voit_la_correction_mais_pas_le_deplacement(space_id, ctx):
     )
     if not equipes:
         pytest.skip(f"{COACH_SIMPLE} n'a pas d'équipe dans cette saison")
-    autre = next(t for t in ctx["teams"] if t != equipes[0])
+    # Carte 634 : un compte rendu publié ne se corrige que par son démarreur ou
+    # un admin. DevCoach, qui le démarre, ne doit donc coacher aucune des deux
+    # équipes — il ne compte alors pas comme démarreur, et le coach du match
+    # garde la correction (décision du 2026-11-01).
+    celles_de_devcoach = set(query_db(
+        f"SELECT team_id FROM team_proj WHERE season_id = '{ctx['season_id']}' "
+        "AND coach_name = 'DevCoach'"
+    ))
+    autre = next(
+        t for t in ctx["teams"] if t != equipes[0] and t not in celles_de_devcoach
+    )
     match = _publier_un_match(space_id, ctx, ctx["round_ids"][3], equipes[0], autre)
 
     page = requests.get(_url_recap(space_id, match["mr_id"]), headers=ENTETE_MEMBRE_SIMPLE)
