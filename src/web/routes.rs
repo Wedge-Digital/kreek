@@ -2,6 +2,8 @@
 pub mod path {
     pub const APP_LAYOUT: &str = "/app";
     pub const MENU: &str = "/app/menu";
+    /// Le flux SSE de l'onglet (carte 642) — sous `/app`, donc sous `require_auth`.
+    pub const REALTIME_STREAM: &str = "/app/realtime/stream";
     pub const SPACES_WIDGET_TESTER: &str = "/spaces/widget/tester";
     pub const KREEK_SELECT_TESTER: &str = "/kreek-select-tester";
     pub const KREEK_SELECT_TESTER_DATA: &str = "/kreek-select-tester/data";
@@ -24,5 +26,8 @@ impl Routes {
     }
     pub fn menu(&self) -> &'static str {
         path::MENU
+    }
+    pub fn realtime_stream(&self) -> &'static str {
+        path::REALTIME_STREAM
     }
 }

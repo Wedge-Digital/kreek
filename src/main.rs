@@ -618,6 +618,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 ),
             ),
         ),
+        realtime: Arc::new(crate::web::realtime::registry::ConnectionRegistry::new()),
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),

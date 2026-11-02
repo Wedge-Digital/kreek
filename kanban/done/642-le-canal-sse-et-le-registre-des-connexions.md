@@ -52,6 +52,8 @@ et l'événement d'accueil : la 644, la 645 et la 646 s'y branchent.
   qui garde l'identifiant de connexion et traduit chaque type de message en
   événement DOM sur `body`. À la reconnexion (`open` après `error`), il émet
   `realtimeResync`.
+- **Le retour du bfcache** : sur `pageshow` avec `persisted` et un flux fermé
+  (`readyState === CLOSED`), le client rouvre le flux et émet `realtimeResync`.
 - **Le journal**, cible `kreek::web::realtime`, niveau `info` : `flux ouvert`
   (`conn`, `coach`, `ouvertes=N`) et `flux fermé` (`conn`, `duree_s`,
   `livres`, `perdus`, `ouvertes=N`) ; `warn` sur une file pleine.

@@ -123,5 +123,70 @@
     });
   })();
   </script>
+  <!-- Canal temps réel — carte 642 (épic E23).
+       Un flux SSE par onglet, ouvert au chargement complet de la page et qui
+       survit aux navigations HTMX : le menu ne remplace que `#app-content`
+       (`hx-select`), ce script n'est donc pas rejoué. En JS nu pour la même
+       raison que le toast : Alpine est différé.
+       L'URL passe par un attribut et non par une chaîne dans le script : c'est
+       le parseur HTML qui décode l'échappement d'Askama, pas le moteur JS. -->
+  <div class="realtime-stream" data-url="{{ app_routes.web.realtime_stream() }}" hidden></div>
+  <script>
+  (function () {
+    var marker = document.currentScript.previousElementSibling;
+    // La restauration d'historique de htmx peut rejouer ce script : un second
+    // `EventSource` doublerait chaque message, et le premier resterait ouvert.
+    if (window.kreekRealtime) return;
+    var realtime = window.kreekRealtime = { connectionId: null, source: null };
+    var broken = false;
+
+    function emit(name, detail) {
+      htmx.trigger(document.body, name, detail || {});
+    }
+
+    // Un nom d'événement SSE → un événement DOM sur `body` (règle 2 des
+    // widgets). Un nom absent de cette table est ignoré.
+    var translations = {
+      hello: function (data) {
+        realtime.connectionId = data.connection_id;
+        emit('realtimeHello', { connectionId: data.connection_id });
+      }
+    };
+
+    function translate(name, evt) {
+      var data;
+      try { data = JSON.parse(evt.data); } catch (e) { return; }
+      translations[name](data);
+    }
+
+    // `open` après `error` est une reconnexion : les signaux perdus pendant la
+    // coupure ne seront pas rejoués (R3), les widgets abonnés se rechargent.
+    function listen(source) {
+      Object.keys(translations).forEach(function (name) {
+        source.addEventListener(name, function (evt) { translate(name, evt); });
+      });
+      source.addEventListener('open', function () {
+        if (broken) emit('realtimeResync');
+        broken = false;
+      });
+      source.addEventListener('error', function () { broken = true; });
+    }
+
+    function connect() {
+      realtime.source = new EventSource(marker.dataset.url);
+      listen(realtime.source);
+    }
+
+    // Retour depuis le bfcache : le navigateur a pu fermer le flux en mettant
+    // la page de côté, et ne le rouvre pas de lui-même.
+    window.addEventListener('pageshow', function (evt) {
+      if (!evt.persisted || realtime.source.readyState !== EventSource.CLOSED) return;
+      broken = true;
+      connect();
+    });
+
+    connect();
+  })();
+  </script>
 </body>
 </html>

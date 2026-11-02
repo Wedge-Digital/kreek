@@ -12,6 +12,7 @@ use crate::app::teams::context::TeamsContext;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::web::middleware::space_scope::ISpaceOwnership;
 use crate::web::ports::IHorsCalendrierPort;
+use crate::web::realtime::registry::ConnectionRegistry;
 use axum::extract::FromRef;
 use std::sync::Arc;
 
@@ -38,6 +39,9 @@ pub struct AppState {
     /// Qui est admin — le même adapter que celui des BCs (carte 570), exposé à
     /// l'hôte pour le menu : `src/web/` n'a pas de contexte de BC à lui.
     pub admin_access: Arc<dyn IAdminAccessPort>,
+    /// Les flux temps réel ouverts, en mémoire (carte 642). Le flux y
+    /// enregistre ses connexions ; les cartes 644 à 646 y livreront.
+    pub realtime: Arc<ConnectionRegistry>,
     pub bypass_auth: bool,
     pub event_bus: EventBus,
     pub app_event_bus: EventBus,

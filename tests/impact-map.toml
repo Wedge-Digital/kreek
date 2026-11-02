@@ -57,6 +57,13 @@
 # routeur ou une couche la met en jeu, quel que soit le BC concerné.
 "test_journal_identifiant_requete" = ["all"]
 
+# ── Canal temps réel (carte 642) ─────────────────────────────────────────────
+# Le flux vit dans `src/web/realtime` et le client dans `app-layout.html` : un
+# diff qui les touche est déjà `@core` pour `changed_bcs.sh`. Les BCs listés
+# sont ceux des pages visitées — la liste des compétitions, puis « Mes équipes »
+# par le menu, dont `spaces` porte l'appartenance lue par `app_menu`.
+"test_realtime_stream" = ["competitions", "team_creation", "spaces"]
+
 # ── Création de compétition (aucune équipe, aucun match) ─────────────────────
 # Phase 1 → recherche de coachs (widget du BC spaces).
 # Phase 2 → pickers roster/star/inducement (BC references) et catalogue des

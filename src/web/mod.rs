@@ -6,6 +6,7 @@ pub mod htmx;
 pub mod kreek_select_tester;
 pub mod middleware;
 pub mod ports;
+pub mod realtime;
 pub mod router;
 pub mod routes;
 pub mod spaces_widget_tester;

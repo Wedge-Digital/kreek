@@ -164,6 +164,60 @@ impl Harnais {
             corps,
         }
     }
+
+    /// `GET` d'un flux SSE, connecté : statut, en-têtes et **premier bloc** du
+    /// corps seulement.
+    ///
+    /// `envoyer` lit le corps jusqu'au bout, et un flux n'a pas de bout : le
+    /// test attendrait indéfiniment (carte 642). Le corps est abandonné après le
+    /// premier bloc, ce qui ferme le flux comme un onglet qu'on ferme.
+    pub async fn open_stream(&self, uri: &str) -> StreamHead {
+        let requete = Request::builder()
+            .uri(uri)
+            .header("cookie", &self.cookie)
+            .body(Body::empty())
+            .unwrap();
+        self.stream_head(requete).await
+    }
+
+    /// Le même `GET`, sans cookie de session.
+    pub async fn open_stream_anonymously(&self, uri: &str) -> StreamHead {
+        let requete = Request::builder().uri(uri).body(Body::empty()).unwrap();
+        self.stream_head(requete).await
+    }
+
+    async fn stream_head(&self, requete: Request) -> StreamHead {
+        use futures_util::StreamExt;
+        let reponse = self.routeur.clone().oneshot(requete).await.unwrap();
+        let status = reponse.status();
+        let headers = reponse.headers().clone();
+        let mut corps = reponse.into_body().into_data_stream();
+        let premier = tokio::time::timeout(std::time::Duration::from_secs(5), corps.next())
+            .await
+            .expect("aucun bloc dans les 5 s : le flux n'écrit rien");
+        let first_chunk = premier
+            .and_then(|bloc| bloc.ok())
+            .map(|o| String::from_utf8_lossy(&o).into_owned());
+        StreamHead {
+            status,
+            headers,
+            first_chunk,
+        }
+    }
+}
+
+/// Le début d'une réponse en flux : ce qu'on peut lire sans attendre sa fin.
+pub struct StreamHead {
+    pub status: StatusCode,
+    pub headers: axum::http::HeaderMap,
+    /// `None` quand le corps est vide — une redirection, par exemple.
+    pub first_chunk: Option<String>,
+}
+
+impl StreamHead {
+    pub fn header(&self, nom: &str) -> Option<&str> {
+        self.headers.get(nom).and_then(|v| v.to_str().ok())
+    }
 }
 
 pub struct Reponse {
