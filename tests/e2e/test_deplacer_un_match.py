@@ -10,6 +10,13 @@ Scénarios :
 - un coach qui peut écrire dans le rapport (carte 634) voit « Corriger le
   rapport » mais pas le déplacement, et le widget lui est refusé.
 
+Le membre simple (`X-Bypass-Auth-Profile: simple`, « E2E Coach 01 ») est le
+coach de la **deuxième** équipe que monte `build_full_competition` — les
+coachs y sont pris dans l'ordre alphabétique, DevCoach tient la première
+(même voie que `test_match_report_access.py`). Les équipes d'un coach se
+lisent par `team_proj.coach_id`, jamais par `team_proj.coach_name`, que
+`build_and_submit_team_http` laisse vide (carte 640).
+
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true), `make seed_e2e`.
 """
 
@@ -221,29 +228,46 @@ def test_une_journee_ou_une_equipe_joue_deja_est_refusee(space_id, ctx, match_pu
 
 # ── Le droit ──────────────────────────────────────────────────────────────────
 
+def _teams_coached_by(season_id: str, coach_name: str) -> set[str]:
+    """Les équipes de la saison dont le coach porte ce nom de compte.
+
+    Par `team_proj.coach_id` et `auth__users` — `team_proj.coach_name` est vide
+    pour les équipes que montent les tests (carte 640)."""
+    return set(query_db(
+        "SELECT t.team_id FROM team_proj t JOIN auth__users u ON u.id = t.coach_id "
+        f"WHERE t.season_id = '{season_id}' AND u.coach_name = '{coach_name}'"
+    ))
+
+
 def test_un_coach_voit_la_correction_mais_pas_le_deplacement(space_id, ctx):
-    equipes = query_db(
-        f"SELECT team_id FROM team_proj WHERE season_id = '{ctx['season_id']}' "
-        f"AND coach_name = '{COACH_SIMPLE}'"
+    # Un décor qui ne permet pas le scénario est un défaut du test : on échoue,
+    # on ne s'ignore pas (carte 640).
+    equipe = ctx["teams"][1]
+    assert equipe in _teams_coached_by(ctx["season_id"], COACH_SIMPLE), (
+        f"{COACH_SIMPLE} devrait coacher la deuxième équipe de build_full_competition "
+        "(coachs pris dans l'ordre alphabétique) — le décor ne permet pas le scénario"
     )
-    if not equipes:
-        pytest.skip(f"{COACH_SIMPLE} n'a pas d'équipe dans cette saison")
     # Carte 634 : un compte rendu publié ne se corrige que par son démarreur ou
     # un admin. DevCoach, qui le démarre, ne doit donc coacher aucune des deux
     # équipes — il ne compte alors pas comme démarreur, et le coach du match
     # garde la correction (décision du 2026-11-01).
-    celles_de_devcoach = set(query_db(
-        f"SELECT team_id FROM team_proj WHERE season_id = '{ctx['season_id']}' "
-        "AND coach_name = 'DevCoach'"
-    ))
-    autre = next(
-        t for t in ctx["teams"] if t != equipes[0] and t not in celles_de_devcoach
+    celles_de_devcoach = _teams_coached_by(ctx["season_id"], "DevCoach")
+    assert celles_de_devcoach, (
+        "DevCoach coache la première équipe — un ensemble vide rendrait le "
+        "filtre de l'adversaire inopérant"
     )
-    match = _publier_un_match(space_id, ctx, ctx["round_ids"][3], equipes[0], autre)
+    autre = next(
+        t for t in ctx["teams"] if t != equipe and t not in celles_de_devcoach
+    )
+    match = _publier_un_match(space_id, ctx, ctx["round_ids"][3], equipe, autre)
 
     page = requests.get(_url_recap(space_id, match["mr_id"]), headers=ENTETE_MEMBRE_SIMPLE)
     assert page.status_code == 200, page.status_code
     assert "ms-correct-btn" in page.text, "la correction reste ouverte au coach du match"
+    # Le bouton existe aussi désactivé, quand un match plus récent bloque la
+    # correction : seule l'URL de dépublication prouve qu'elle est offerte.
+    unpublish = f"/app/{space_id}/match-report/{match['mr_id']}/recap/unpublish"
+    assert f'hx-post="{unpublish}"' in page.text, "le bouton de correction est actif"
     assert "move-match/widget" not in page.text, "le déplacement est réservé aux administrateurs"
 
     widget = requests.get(

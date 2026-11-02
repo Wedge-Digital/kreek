@@ -36,6 +36,30 @@ n'est donc vérifié par personne, et la règle de correction de la carte 634
    par DevCoach, sans quoi DevCoach compte comme démarreur et le coach du match
    perd la correction.
 
+## Ce que la lecture a montré
+
+**La cause du vide** : `build_and_submit_team_http`
+(`tests/e2e/competition_lifecycle.py`) poste `"coach_name": ""` à
+`/team/create`. `TeamCreated` le reprend tel quel, et `team_proj.coach_name`
+reste vide ; `coach_id`, lui, est posté et projeté. Le test lit donc désormais
+les équipes d'un coach par `team_proj.coach_id` joint à `auth__users`.
+
+**La contrainte de la 634 ne tenait que par hasard** : `celles_de_devcoach`
+était lu par la même colonne vide, donc valait toujours `set()` — le filtre
+de l'adversaire n'excluait rien, et `next()` ne tombait sur un adversaire
+convenable que par l'ordre de `ctx["teams"]`. L'ensemble est maintenant lu par
+`coach_id`, et le test exige qu'il ne soit pas vide.
+
+**Une assertion trop lâche** : `recap.html` rend aussi un `ms-correct-btn`
+*désactivé* quand un match plus récent bloque la correction. Le test vérifie
+en plus le `hx-post` vers `…/recap/unpublish`.
+
+**Hors périmètre, à ouvrir si on le juge utile** : `team_proj.coach_name`
+n'est lu pour aucune décision (les droits passent par `coach_id`), seulement
+pour l'affichage — widgets d'inscription, tirage, calendrier. Mais le serveur
+prend le `coach_name` posté par le client au lieu de le résoudre depuis
+`coach_id` : un nom vide ou faux s'inscrit dans `TeamCreated`.
+
 ## Hors du périmètre
 
 Pourquoi `team_proj.coach_name` est vide pour ces équipes. Si la colonne est
