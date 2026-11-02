@@ -11,6 +11,7 @@ use crate::app::match_report::ports::{
     ICompetitionDataPort, IPlayerDataPort, ITeamDataPort, PositionCountDto, RosterPositionDto,
     TierRulesDto,
 };
+use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::match_report::use_cases::init_temp_players_use_case::{
     self, InitTempPlayersCommand, InitTempPlayersError,
 };
@@ -449,9 +450,7 @@ async fn persist_and_init(
     bus: &EventBus,
 ) -> Result<(), RecordInducementsError> {
     let version_before = version_after - events.len() as u64;
-    repo.append_many(mr_id, events, version_before)
-        .await
-        .map_err(RecordInducementsError::from_repository)?;
+    persist_and_emit(repo, bus, mr_id, events, version_before).await?;
     init_temp_players_use_case::execute(
         InitTempPlayersCommand {
             match_report_id,
@@ -464,6 +463,23 @@ async fn persist_and_init(
     )
     .await
     .map_err(RecordInducementsError::from_init_temp_players)
+}
+
+/// La sélection sort du BC dès qu'elle est écrite (carte 643) — avant
+/// l'initialisation des joueurs temporaires, dont un échec ne l'annule pas.
+/// Un conflit n'émet rien.
+async fn persist_and_emit(
+    repo: &dyn IMatchReportRepository,
+    bus: &EventBus,
+    mr_id: &str,
+    events: Vec<crate::app::match_report::domain::events::MatchReportDomainEvent>,
+    version_before: u64,
+) -> Result<(), RecordInducementsError> {
+    repo.append_many(mr_id, events.clone(), version_before)
+        .await
+        .map_err(RecordInducementsError::from_repository)?;
+    emit_all(bus, mr_id, &events);
+    Ok(())
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -650,15 +666,22 @@ mod conflict_tests {
         repo: &dyn IMatchReportRepository,
         team_id: TeamId,
     ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
+        run_on(repo, team_id, &new_bus()).await
+    }
+
+    async fn run_on(
+        repo: &dyn IMatchReportRepository,
+        team_id: TeamId,
+        bus: &EventBus,
+    ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
         let cmd = pass_command(team_id);
-        let bus = new_bus();
         execute(
             cmd,
             repo,
             &ReadyTeams,
             &PlainCompetition,
             &KnownPlayers,
-            &bus,
+            bus,
         )
         .await
     }
@@ -736,6 +759,25 @@ mod conflict_tests {
         ));
     }
 
+    /// Carte 643 : la sélection validée sort du BC une fois appendée, avant
+    /// ce que l'initialisation des joueurs temporaires pourrait émettre. La
+    /// doublure ne rend l'état qu'une fois : l'initialisation échoue ensuite,
+    /// et la sélection reste émise — elle est écrite.
+    #[tokio::test]
+    async fn validated_inducements_are_emitted_before_temp_players() {
+        let pm = pre_match();
+        let home = pm.home_team_id.clone();
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pm));
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+
+        let _ = run_on(&repo, home, &bus).await;
+
+        let first = subscriber.try_recv().expect("un événement émis");
+        assert_eq!(first.event_type, "InducementsRecorded");
+        assert!(subscriber.try_recv().is_err());
+    }
+
     #[test]
     fn les_refus_d_etat_sortent_de_domain() {
         assert!(matches!(
@@ -757,26 +799,14 @@ mod conflict_tests {
         let pm = pre_match();
         let team_id = pm.home_team_id.clone();
         let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pm));
-        let cmd = RecordInducementsCommand {
-            match_report_id: MatchReportId::new(),
-            team_id,
-            purchases: vec![],
-            mercenary_purchases: vec![],
-            recorded_by: CoachId::new(),
-        };
-        let resultat = execute(
-            cmd,
-            &repo,
-            &ReadyTeams,
-            &PlainCompetition,
-            &KnownPlayers,
-            &new_bus(),
-        )
-        .await;
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+        let resultat = run_on(&repo, team_id, &bus).await;
         assert!(
             matches!(resultat, Err(RecordInducementsError::Conflict)),
             "{resultat:?}"
         );
+        assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
     }
 
     /// L'initialisation des joueurs temporaires appende après les coups de

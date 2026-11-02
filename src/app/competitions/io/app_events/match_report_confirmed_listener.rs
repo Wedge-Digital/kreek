@@ -215,6 +215,8 @@ mod tests {
             season_id: SeasonId::new().to_string(),
             round_id: round_id.to_string(),
             competition_id: "01ARZ3NDEKTSV4RRFFQ69G5FAZ".to_string(),
+            confirmed_by: "01ARZ3NDEKTSV4RRFFQ69G5FB0".to_string(),
+            confirmed_by_name: None,
         }
     }
 

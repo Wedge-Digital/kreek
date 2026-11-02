@@ -29,24 +29,29 @@ pub struct MatchReportContext {
     pub event_bus: EventBus,
 }
 
+/// `coach_data` et `catalog` servent au publisher à nommer l'auteur d'un fait
+/// de saisie et les coups de pouce d'une sélection (carte 643).
 pub fn init_listeners(
     event_bus: &EventBus,
     app_event_bus: &EventBus,
     pool: PgPool,
     competition_data: Arc<dyn ICompetitionDataPort>,
     team_data: Arc<dyn ITeamDataPort>,
+    coach_data: Arc<dyn ICoachDataPort>,
+    catalog: Arc<dyn IReferenceCatalogPort>,
 ) {
     let repo = Arc::new(MatchReportRepository::new(pool));
     pairing_created_listener::init(app_event_bus, event_bus, repo.clone());
     pairing_deleted_listener::init(app_event_bus, event_bus, repo.clone());
     pairing_moved_listener::init(app_event_bus, event_bus, repo.clone());
-    app_event_publisher::match_report_app_event_publisher(
-        event_bus,
-        app_event_bus.clone(),
+    let ports = app_event_publisher::PublisherPorts {
         repo,
         competition_data,
         team_data,
-    );
+        coach_data,
+        catalog,
+    };
+    app_event_publisher::match_report_app_event_publisher(event_bus, app_event_bus.clone(), ports);
 }
 
 impl MatchReportContext {

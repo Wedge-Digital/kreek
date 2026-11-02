@@ -1,4 +1,5 @@
 use crate::app::match_report::domain::error::DomainError;
+use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_repository_port::{
     IMatchReportRepository, RepositoryError,
 };
@@ -7,8 +8,10 @@ use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, HatredKeyword, MatchActionType, TeamSide, TempPlayerId, TurnNumber,
 };
 use crate::app::match_report::ports::{IKeywordCatalogPort, IPlayerDataPort};
+use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
 pub struct RecordActionCommand {
@@ -93,6 +96,7 @@ pub async fn execute(
     repo: &dyn IMatchReportRepository,
     player_data: &dyn IPlayerDataPort,
     keywords: &dyn IKeywordCatalogPort,
+    bus: &EventBus,
 ) -> Result<RecordActionOutcome, RecordActionError> {
     // Le catalogue n'est consulté que si une Haine est déclarée, et le refus
     // tombe avant tout chargement d'agrégat.
@@ -126,13 +130,25 @@ pub async fn execute(
         )
         .map_err(RecordActionError::Domain)?;
 
-    let outcome = RecordActionOutcome {
-        action_id: action_id.0.clone(),
-    };
-    repo.append(&mr_id, &event, pm.version)
+    persist_and_emit(repo, bus, &mr_id, &event, pm.version).await?;
+    Ok(RecordActionOutcome {
+        action_id: action_id.0,
+    })
+}
+
+/// L'action ne sort du BC qu'une fois écrite : un conflit n'émet rien.
+async fn persist_and_emit(
+    repo: &dyn IMatchReportRepository,
+    bus: &EventBus,
+    mr_id: &str,
+    event: &MatchReportDomainEvent,
+    version: u64,
+) -> Result<(), RecordActionError> {
+    repo.append(mr_id, event, version)
         .await
         .map_err(RecordActionError::from_repository)?;
-    Ok(outcome)
+    emit_all(bus, mr_id, std::slice::from_ref(event));
+    Ok(())
 }
 
 /// Le nom et le poste figés dans l'action. Partagée avec l'étape MVP
@@ -446,6 +462,7 @@ mod tests {
             &DepotIntouchable,
             &JoueurAbsent,
             &CatalogueEspion::new(),
+            &crate::common::services::event_bus::event_bus::new_bus(),
         )
         .await;
         assert!(matches!(r, Err(RecordActionError::UnknownKeyword(_))));
@@ -484,9 +501,10 @@ mod tests {
 mod conflict_tests {
     use super::*;
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, ConflictingRepository, KnownPlayers,
+        pre_match, ConflictingRepository, KnownPlayers, RecordingRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::common::services::event_bus::event_bus::new_bus;
 
     struct NoKeywords;
 
@@ -499,10 +517,8 @@ mod conflict_tests {
         }
     }
 
-    #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
-        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
-        let cmd = RecordActionCommand {
+    fn touchdown() -> RecordActionCommand {
+        RecordActionCommand {
             match_report_id: MatchReportId::new(),
             team_side: TeamSide::Home,
             turn: TurnNumber::try_new(1).unwrap(),
@@ -510,12 +526,36 @@ mod conflict_tests {
             action: MatchActionType::Touchdown,
             hatred: None,
             recorded_by: CoachId::new(),
-        };
-        let resultat = execute(cmd, &repo, &KnownPlayers, &NoKeywords).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+        let resultat = execute(touchdown(), &repo, &KnownPlayers, &NoKeywords, &bus).await;
         assert!(
             matches!(resultat, Err(RecordActionError::Conflict)),
             "{:?}",
             resultat.err()
         );
+        assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 643 : l'action sort du BC une fois appendée.
+    #[tokio::test]
+    async fn a_recorded_action_is_emitted_after_append() {
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+
+        execute(touchdown(), &repo, &KnownPlayers, &NoKeywords, &bus)
+            .await
+            .expect("action saisie");
+
+        assert_eq!(repo.appended().len(), 1);
+        assert_eq!(subscriber.try_recv().unwrap().event_type, "ActionRecorded");
+        assert!(subscriber.try_recv().is_err());
     }
 }

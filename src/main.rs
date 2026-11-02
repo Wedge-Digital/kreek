@@ -364,12 +364,24 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             references.repository.clone(),
         ),
     );
+    let match_report_coach_data = Arc::new(
+        crate::infrastructure::match_report::coach_data_adapter::CoachDataAdapter::new(
+            Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
+        ),
+    );
+    let match_report_reference_catalog = Arc::new(
+        crate::infrastructure::match_report::reference_catalog_adapter::ReferenceCatalogAdapter::new(
+            references.repository.clone(),
+        ),
+    );
     match_report::context::init_listeners(
         &event_bus,
         &app_event_bus,
         pool.clone(),
         match_report_comp_data.clone(),
         match_report_team_data.clone(),
+        match_report_coach_data.clone(),
+        match_report_reference_catalog.clone(),
     );
     players::context::init_listeners(
         &event_bus,
@@ -502,11 +514,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     Arc::new(crate::app::players::io::repository::player_repository::PgPlayerRepository::new(pool.clone())),
                 ),
             );
-            let coach_data = Arc::new(
-                crate::infrastructure::match_report::coach_data_adapter::CoachDataAdapter::new(
-                    Arc::new(crate::app::spaces::io::repository::user_cache_repository::SpaceUserCacheRepository::new(pool.clone())),
-                ),
-            );
+            let coach_data = match_report_coach_data.clone();
             let spp_calculator = Arc::new(
                 crate::infrastructure::match_report::spp_calculator_adapter::SppCalculatorAdapter::new(
                     references.repository.clone(),
@@ -517,11 +525,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                     references.repository.clone(),
                 ),
             );
-            let reference_catalog = Arc::new(
-                crate::infrastructure::match_report::reference_catalog_adapter::ReferenceCatalogAdapter::new(
-                    references.repository.clone(),
-                ),
-            );
+            let reference_catalog = match_report_reference_catalog.clone();
             match_report::context::MatchReportContext::new(&pool, comp_data, team_data, player_data, coach_data, admin_access.clone(), spp_calculator, keyword_catalog, reference_catalog, event_bus.clone())
         },
         teams: {

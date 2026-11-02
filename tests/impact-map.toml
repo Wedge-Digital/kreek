@@ -200,6 +200,10 @@
 # camp par le sélecteur de joueurs du BC `players`, et l'autre coach qui suit.
 "test_match_report_live" = ["match_report", "players", "references", "teams",
                             "competitions", "team_creation", "ranking", "spaces"]
+# Les faits de saisie sortent du BC (carte 643) : le parcours de
+# `test_match_report_live`, lu dans `event_log`, que remplit `event_log_feeder`.
+"test_match_report_outgoing_facts" = ["match_report", "players", "references", "teams",
+                                      "competitions", "team_creation", "ranking", "spaces"]
 # L'étape MVP (carte 637) : le sélecteur de joueurs est celui du BC `players`.
 "test_match_report_mvp_step" = ["match_report", "players", "references", "teams",
                                 "competitions", "team_creation", "ranking", "spaces"]

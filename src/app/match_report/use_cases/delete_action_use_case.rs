@@ -4,8 +4,10 @@ use crate::app::match_report::domain::match_report_repository_port::{
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::ActionId;
+use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
 pub struct DeleteActionCommand {
@@ -38,6 +40,7 @@ impl DeleteActionError {
 pub async fn execute(
     cmd: DeleteActionCommand,
     repo: &dyn IMatchReportRepository,
+    bus: &EventBus,
 ) -> Result<(), DeleteActionError> {
     let mr_id = cmd.match_report_id.to_string();
     let state = repo
@@ -55,8 +58,10 @@ pub async fn execute(
         .map_err(DeleteActionError::Domain)?;
     repo.append(&mr_id, &event, pm.version)
         .await
-        .map(|_| ())
-        .map_err(DeleteActionError::from_repository)
+        .map_err(DeleteActionError::from_repository)?;
+    // Le retrait sort du BC une fois écrit (carte 643) : un conflit n'émet rien.
+    emit_all(bus, &mr_id, std::slice::from_ref(&event));
+    Ok(())
 }
 
 #[cfg(test)]
@@ -144,12 +149,13 @@ mod conflict_tests {
     use crate::app::match_report::domain::value_objects::{
         ActionPlayer, MatchActionType, TeamSide, TurnNumber,
     };
-    use crate::app::match_report::use_cases::test_doubles::{pre_match, ConflictingRepository};
+    use crate::app::match_report::use_cases::test_doubles::{
+        pre_match, ConflictingRepository, RecordingRepository,
+    };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::common::services::event_bus::event_bus::new_bus;
 
-    #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
-        let action_id = ActionId("ACT01".into());
+    fn pre_match_with_action(action_id: &ActionId) -> MatchReportState {
         let (pm, _) = pre_match()
             .record_action(
                 TeamSide::Home,
@@ -162,16 +168,45 @@ mod conflict_tests {
                 CoachId::new(),
             )
             .expect("action de test valide");
-        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pm));
-        let cmd = DeleteActionCommand {
+        MatchReportState::PreMatch(pm)
+    }
+
+    fn command(action_id: ActionId) -> DeleteActionCommand {
+        DeleteActionCommand {
             match_report_id: MatchReportId::new(),
             action_id,
             deleted_by: CoachId::new(),
-        };
-        let resultat = execute(cmd, &repo).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn un_conflit_d_ecriture_est_relaye() {
+        let action_id = ActionId("ACT01".into());
+        let repo = ConflictingRepository::holding(pre_match_with_action(&action_id));
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+        let resultat = execute(command(action_id), &repo, &bus).await;
         assert!(
             matches!(resultat, Err(DeleteActionError::Conflict)),
             "{resultat:?}"
         );
+        assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 643 : le retrait sort du BC une fois appendé.
+    #[tokio::test]
+    async fn a_deleted_action_is_emitted_after_append() {
+        let action_id = ActionId("ACT01".into());
+        let repo = RecordingRepository::holding(pre_match_with_action(&action_id));
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+
+        execute(command(action_id), &repo, &bus)
+            .await
+            .expect("action retirée");
+
+        assert_eq!(repo.appended().len(), 1);
+        assert_eq!(subscriber.try_recv().unwrap().event_type, "ActionDeleted");
+        assert!(subscriber.try_recv().is_err());
     }
 }

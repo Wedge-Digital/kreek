@@ -106,6 +106,7 @@ async fn post_action(
         state.match_report.match_report_repo.as_ref(),
         state.match_report.player_data.as_ref(),
         state.match_report.keyword_catalog.as_ref(),
+        &state.match_report.event_bus,
     )
     .await
     {
@@ -189,8 +190,8 @@ pub async fn delete_action(
         action_id: ActionId(action_id),
         deleted_by: user.id,
     };
-    match delete_action_use_case::execute(cmd, state.match_report.match_report_repo.as_ref()).await
-    {
+    let repo = state.match_report.match_report_repo.as_ref();
+    match delete_action_use_case::execute(cmd, repo, &state.match_report.event_bus).await {
         Ok(_) => Response::builder()
             .header("HX-Trigger", r#"{"actionDeleted": {}}"#)
             .body(axum::body::Body::empty())

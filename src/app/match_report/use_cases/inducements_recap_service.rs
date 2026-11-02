@@ -10,7 +10,7 @@ use crate::app::match_report::domain::value_objects::{InducementPurchase, Purcha
 use crate::app::match_report::ports::{ICoachDataPort, IReferenceCatalogPort, ITeamDataPort};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::CoachId;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Les ports que le récapitulatif interroge.
 pub struct RecapPorts<'a> {
@@ -108,6 +108,39 @@ async fn recap_lines(
         .collect()
 }
 
+/// Une ligne d'une sélection validée, nommée : ce que l'annonce de la
+/// validation porte hors du BC (carte 643).
+#[derive(Debug, PartialEq, Eq)]
+pub struct LabelledPurchase {
+    pub label: String,
+    pub qty: u8,
+    pub kind: PurchaseKind,
+}
+
+/// Nomme les achats d'une sélection **sans l'agrégat** : la nature d'une
+/// vedette se lit au catalogue (`find_star_players`), et non sur les
+/// engagements de l'avant-match, que le publisher ne relit pas.
+// arch:no-instrument — service d'hydratation : nomme une sélection, sans intention métier
+pub async fn labelled_purchases(
+    purchases: &[InducementPurchase],
+    team_id: &TeamId,
+    roster_id: &str,
+    ports: &RecapPorts<'_>,
+) -> Vec<LabelledPurchase> {
+    let names = Names::load(purchases, team_id, roster_id, ports).await;
+    purchases
+        .iter()
+        .map(|p| {
+            let kind = names.kind_of(p);
+            LabelledPurchase {
+                label: names.of(p, &kind),
+                qty: p.qty.into_inner(),
+                kind,
+            }
+        })
+        .collect()
+}
+
 async fn recorded_by(
     author: Option<CoachId>,
     viewer: CoachId,
@@ -129,6 +162,7 @@ async fn recorded_by(
 struct Names {
     by_uid: HashMap<String, String>,
     by_position: HashMap<String, String>,
+    star_uids: HashSet<String>,
 }
 
 impl Names {
@@ -141,6 +175,7 @@ impl Names {
         let uids: Vec<String> = purchases.iter().map(|p| p.uid.0.clone()).collect();
         let labels = ports.catalog.find_inducement_labels(&uids);
         let stars = ports.catalog.find_star_players(&uids, roster_id);
+        let star_uids = stars.iter().map(|s| s.uid.clone()).collect();
         let by_uid = labels
             .into_iter()
             .map(|l| (l.uid, l.name))
@@ -149,6 +184,18 @@ impl Names {
         Self {
             by_uid,
             by_position: positions(purchases, team_id, ports.team_data).await,
+            star_uids,
+        }
+    }
+
+    /// La nature d'un achat d'après son identifiant et le catalogue.
+    fn kind_of(&self, purchase: &InducementPurchase) -> PurchaseKind {
+        if let Some(kind) = purchase.mercenary_kind() {
+            return kind;
+        }
+        match self.star_uids.contains(&purchase.uid.0) {
+            true => PurchaseKind::StarPlayer,
+            false => PurchaseKind::Inducement,
         }
     }
 
@@ -391,5 +438,43 @@ mod tests {
         pm.away_inducements = Some(vec![purchase("UNKNOWN", 1, 10)]);
         let recap = recap_of(&pm, viewer).await;
         assert_eq!(recap.sides[1].lines[0].name, "UNKNOWN");
+    }
+
+    /// Carte 643 : sans l'agrégat, la sélection est nommée et typée comme au
+    /// récapitulatif — la vedette reconnue au catalogue.
+    #[tokio::test]
+    async fn labelled_purchases_name_and_type_each_line_without_the_aggregate() {
+        let pm = pre_match();
+        let teams = Teams {
+            home: pm.home_team_id.clone(),
+        };
+        let ports = RecapPorts {
+            team_data: &teams,
+            coach_data: &Coaches,
+            catalog: &Catalog,
+        };
+        let purchases = vec![
+            purchase("WAGON", 2, 15),
+            purchase("MORG", 1, 300),
+            purchase("MERCO:dwarf-blocker:base", 1, 150),
+        ];
+
+        let lines = labelled_purchases(&purchases, &pm.home_team_id, "ROSTER", &ports).await;
+
+        let labels: Vec<_> = lines.iter().map(|l| (l.label.as_str(), l.qty)).collect();
+        assert_eq!(
+            labels,
+            [
+                ("Chariot de Vivres", 2),
+                ("Morg 'n' Thorg", 1),
+                ("Bloqueur nain", 1)
+            ]
+        );
+        assert_eq!(lines[0].kind, PurchaseKind::Inducement);
+        assert_eq!(lines[1].kind, PurchaseKind::StarPlayer);
+        assert!(matches!(
+            lines[2].kind,
+            PurchaseKind::Mercenary { skilled: false, .. }
+        ));
     }
 }

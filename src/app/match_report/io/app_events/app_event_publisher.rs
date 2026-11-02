@@ -8,7 +8,10 @@ use crate::app::match_report::domain::value_objects::{
     ActionPlayer, InducementSpending, InjuryType, MatchAction, MatchActionType, SequelStat,
     TempPlayer, TempPlayerId, TempPlayerKind,
 };
-use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
+use crate::app::match_report::io::app_events::entry_facts;
+use crate::app::match_report::ports::{
+    ICoachDataPort, ICompetitionDataPort, IReferenceCatalogPort, ITeamDataPort,
+};
 use crate::app::shared_kernel::app_events::match_report_app_events::{
     ActionTypePayload, FieldedJourneyman, MatchActionPublishedPayload, MatchReportAppEvent,
     MatchReportPublishedPayload, MatchReportUnpublishedPayload, PlayerRefPayload,
@@ -18,7 +21,7 @@ use crate::app::shared_kernel::app_events::player_match_impact_app_events::{
     InjuryTypePayload, PlayerMatchContextPayload, PlayerMatchImpactAppEvent,
 };
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
-use crate::app::shared_kernel::identity::ids::EventId;
+use crate::app::shared_kernel::identity::ids::{CoachId, EventId};
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::app_event_publication::publier;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -26,29 +29,32 @@ use crate::common::services::event_bus::supervision::spawn_listener;
 use std::sync::Arc;
 use tracing::Instrument;
 
+/// Ce que le publisher interroge pour compléter un app event : la projection
+/// et l'agrégat, la compétition, les équipes, les coachs (carte 643 : pour
+/// nommer l'auteur d'un fait de saisie) et le catalogue (pour nommer les coups
+/// de pouce d'une sélection).
+pub struct PublisherPorts {
+    pub repo: Arc<dyn IMatchReportRepository>,
+    pub competition_data: Arc<dyn ICompetitionDataPort>,
+    pub team_data: Arc<dyn ITeamDataPort>,
+    pub coach_data: Arc<dyn ICoachDataPort>,
+    pub catalog: Arc<dyn IReferenceCatalogPort>,
+}
+
 /// Souscrit au bus interne du BC match_report, convertit les domain events pertinents
 /// en app events, et les republie sur l'app event bus. Même pattern que
 /// `competitions_app_event_publisher`.
 pub fn match_report_app_event_publisher(
     event_bus: &EventBus,
     app_event_bus: EventBus,
-    repo: Arc<dyn IMatchReportRepository>,
-    competition_data: Arc<dyn ICompetitionDataPort>,
-    team_data: Arc<dyn ITeamDataPort>,
+    ports: PublisherPorts,
 ) {
     let mut rx = event_bus.subscribe();
     spawn_listener(module_path!(), async move {
         loop {
             match rx.recv().await {
                 Ok(envelope) => {
-                    handle_envelope(
-                        envelope,
-                        &app_event_bus,
-                        repo.as_ref(),
-                        competition_data.as_ref(),
-                        team_data.as_ref(),
-                    )
-                    .await;
+                    handle_envelope(envelope, &app_event_bus, &ports).await;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("match_report_app_event_publisher: lagged by {n}");
@@ -63,9 +69,7 @@ pub fn match_report_app_event_publisher(
 async fn handle_envelope(
     envelope: crate::common::event_envelope::EventEnvelope,
     app_event_bus: &EventBus,
-    repo: &dyn IMatchReportRepository,
-    competition_data: &dyn ICompetitionDataPort,
-    team_data: &dyn ITeamDataPort,
+    ports: &PublisherPorts,
 ) {
     let Ok(event) = serde_json::from_value::<MatchReportDomainEvent>(envelope.payload.clone())
     else {
@@ -77,28 +81,29 @@ async fn handle_envelope(
         domain_event = %envelope.event_type,
         cause = %envelope.event_id
     );
-    aiguiller(
-        event,
-        &match_report_id,
-        app_event_bus,
-        repo,
-        competition_data,
-        team_data,
-    )
-    .instrument(span)
-    .await;
+    aiguiller(event, &match_report_id, app_event_bus, ports)
+        .instrument(span)
+        .await;
 }
 
 /// Séparée de `handle_envelope` pour que le span enveloppe un futur entier
 /// plutôt qu'une garde tenue au travers de plusieurs `await`.
-async fn aiguiller(
+pub(super) async fn aiguiller(
     event: MatchReportDomainEvent,
     match_report_id: &str,
     app_event_bus: &EventBus,
-    repo: &dyn IMatchReportRepository,
-    competition_data: &dyn ICompetitionDataPort,
-    team_data: &dyn ITeamDataPort,
+    ports: &PublisherPorts,
 ) {
+    let (repo, competition_data, team_data) = (
+        ports.repo.as_ref(),
+        ports.competition_data.as_ref(),
+        ports.team_data.as_ref(),
+    );
+    let to = entry_facts::Target {
+        match_report_id,
+        app_event_bus,
+        ports,
+    };
     match event {
         MatchReportDomainEvent::MatchReportPublished { .. } => {
             handle_published(
@@ -110,8 +115,8 @@ async fn aiguiller(
             )
             .await
         }
-        MatchReportDomainEvent::SelectionConfirmed { .. } => {
-            handle_confirmed(match_report_id, app_event_bus, repo).await
+        MatchReportDomainEvent::SelectionConfirmed { confirmed_by } => {
+            handle_confirmed(match_report_id, confirmed_by, app_event_bus, ports).await
         }
         MatchReportDomainEvent::MatchReportUnpublished { .. } => {
             handle_unpublished(match_report_id, app_event_bus, repo).await
@@ -147,6 +152,50 @@ async fn aiguiller(
             )
             .await
         }
+        // Les faits de saisie (carte 643) : ils s'annoncent, personne ne les
+        // enregistre hors du BC.
+        MatchReportDomainEvent::ActionRecorded {
+            team_side,
+            turn,
+            action,
+            player_display_name,
+            recorded_by,
+            ..
+        } => {
+            let fact = entry_facts::RecordedAction {
+                team_side,
+                turn,
+                action,
+                player_display_name,
+                recorded_by,
+            };
+            entry_facts::publish_action_recorded(&to, fact).await
+        }
+        MatchReportDomainEvent::ActionDeleted {
+            team_side,
+            deleted_by,
+            ..
+        } => {
+            entry_facts::publish_action_deleted(&to, team_side, deleted_by).await
+        }
+        MatchReportDomainEvent::InducementsRecorded {
+            team_id,
+            purchases,
+            recorded_by,
+        } => {
+            let selection = entry_facts::RecordedSelection {
+                team_id,
+                purchases,
+                recorded_by,
+            };
+            entry_facts::publish_inducements_recorded(&to, selection).await
+        }
+        // La trésorerie n'est débitée qu'à la publication, et le retrait des
+        // journaliers passe par `TempPlayersReset` : l'annulation ne sort que
+        // pour s'annoncer (carte 643).
+        MatchReportDomainEvent::InducementsCancelled { cancelled_by } => {
+            entry_facts::publish_inducements_cancelled(&to, cancelled_by).await
+        }
         // Ce qui ne sort pas du BC, nommé un à un et sans joker (carte 631) :
         // un événement ajouté casse la compilation ici, et son auteur tranche
         // — il sort, ou il rejoint cette liste.
@@ -155,14 +204,10 @@ async fn aiguiller(
         | MatchReportDomainEvent::EntryModeChosen { .. }
         | MatchReportDomainEvent::FanFactorRecorded { .. }
         | MatchReportDomainEvent::TeamValuesRecorded { .. }
-        | MatchReportDomainEvent::InducementsRecorded { .. }
-        // L'annulation ne sort pas : la trésorerie n'est débitée qu'à la
-        // publication, et le retrait des journaliers passe par `TempPlayersReset`.
-        | MatchReportDomainEvent::InducementsCancelled { .. }
         | MatchReportDomainEvent::StarPlayerEngaged { .. }
-        | MatchReportDomainEvent::ActionRecorded { .. }
-        | MatchReportDomainEvent::ActionDeleted { .. }
-        // Le MVP tiré sort comme une action `Mvp` à la publication (carte 638).
+        // Le MVP tiré sort comme une action `Mvp` à la publication (carte
+        // 638) ; sa notification est celle de l'`ActionRecorded` appendé avec
+        // lui (carte 643, décision 10).
         | MatchReportDomainEvent::MvpDrawn { .. }
         | MatchReportDomainEvent::PostMatchRecorded { .. } => {}
     }
@@ -372,22 +417,36 @@ async fn handle_published(
 /// saisie, `competitions` passe le match « en cours ». L'événement se construit
 /// sur l'agrégat relu, qui garde tout en avant-match — comme pour la
 /// publication — plutôt que d'alourdir un domain event persisté.
+///
+/// L'auteur vient de l'événement domaine et son nom d'`ICoachDataPort`
+/// (carte 643) : c'est lui qui a démarré la saisie.
 async fn handle_confirmed(
     match_report_id: &str,
+    confirmed_by: CoachId,
     app_event_bus: &EventBus,
-    repo: &dyn IMatchReportRepository,
+    ports: &PublisherPorts,
 ) {
-    match repo.find_by_id(match_report_id).await {
+    match ports.repo.find_by_id(match_report_id).await {
         Ok(Some(MatchReportState::PreMatch(pm))) => {
-            publier(app_event_bus, build_confirmed_event(match_report_id, &pm));
+            let name = entry_facts::coach_name(ports.coach_data.as_ref(), &confirmed_by).await;
+            let author = (confirmed_by, name);
+            publier(
+                app_event_bus,
+                build_confirmed_event(match_report_id, &pm, author),
+            );
         }
         Ok(_) => log_unexpected_state(match_report_id, "PreMatch"),
         Err(e) => log_reread_error(match_report_id, e),
     }
 }
 
-/// Le même contenu que les use cases publiaient eux-mêmes avant la carte 352.
-fn build_confirmed_event(match_report_id: &str, pm: &MatchReportPreMatch) -> EventEnvelope {
+/// Le même contenu que les use cases publiaient eux-mêmes avant la carte 352,
+/// plus l'auteur du démarrage et son nom (carte 643).
+fn build_confirmed_event(
+    match_report_id: &str,
+    pm: &MatchReportPreMatch,
+    (confirmed_by, confirmed_by_name): (CoachId, Option<String>),
+) -> EventEnvelope {
     MatchReportAppEvent::MatchReportConfirmed {
         event_id: EventId::new(),
         match_report_id: match_report_id.to_string(),
@@ -398,6 +457,8 @@ fn build_confirmed_event(match_report_id: &str, pm: &MatchReportPreMatch) -> Eve
         season_id: pm.season_id.to_string(),
         round_id: pm.round_id.to_string(),
         competition_id: pm.competition_id.to_string(),
+        confirmed_by: confirmed_by.to_string(),
+        confirmed_by_name,
     }
     .to_enveloppe()
 }
@@ -759,7 +820,7 @@ fn build_player_ref(player: &ActionPlayer, temp_players: &[TempPlayer]) -> Playe
     }
 }
 
-fn build_action_type(action: &MatchActionType) -> ActionTypePayload {
+pub(super) fn build_action_type(action: &MatchActionType) -> ActionTypePayload {
     match action {
         MatchActionType::Touchdown => ActionTypePayload::Touchdown,
         MatchActionType::Passe => ActionTypePayload::Passe,
@@ -1195,8 +1256,9 @@ mod confirmed_event_tests {
     #[test]
     fn the_confirmed_event_carries_what_teams_and_competitions_read() {
         let pm = pre_match();
+        let starter = CoachId::new();
 
-        let envelope = build_confirmed_event("mr-1", &pm);
+        let envelope = build_confirmed_event("mr-1", &pm, (starter, Some("Morgane".into())));
 
         let event: MatchReportAppEvent = serde_json::from_value(envelope.payload).unwrap();
         let MatchReportAppEvent::MatchReportConfirmed {
@@ -1208,11 +1270,15 @@ mod confirmed_event_tests {
             season_id,
             round_id,
             competition_id,
+            confirmed_by,
+            confirmed_by_name,
             ..
         } = event
         else {
             panic!("MatchReportConfirmed attendu");
         };
+        assert_eq!(confirmed_by, starter.to_string());
+        assert_eq!(confirmed_by_name.as_deref(), Some("Morgane"));
         assert_eq!(match_report_id, "mr-1");
         assert_eq!(home_team_id, pm.home_team_id.to_string());
         assert_eq!(away_team_id, pm.away_team_id.to_string());

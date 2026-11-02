@@ -59,11 +59,17 @@ Chemins relatifs à `src/app/match_report/`.
     `recorded_by_name` ;
   - `MatchActionDeleted` : `team_side`, `deleted_by` ;
   - `MatchInducementsRecorded` : `team_id`, `team_name`, `recorded_by`,
-    `recorded_by_name`, `items: Vec<{ label, qty }>`, libellés résolus par
-    `IReferenceCatalogPort`, quantités prises dans `purchases` ; liste vide pour
-    une sélection vide ;
+    `recorded_by_name`, `items: Vec<{ label, qty, kind }>`, libellés résolus par
+    `IReferenceCatalogPort` (vedettes comprises) et, pour un mercenaire, par le
+    poste du roster, quantités prises dans `purchases` ; liste vide pour une
+    sélection vide. `kind: Inducement | StarPlayer | Mercenary { skilled }`
+    (décision du 2026-11-02) : sans lui, un mercenaire ne s'annoncerait que par
+    son poste, et la 645 devrait décoder l'identifiant `MERCO:…` ;
   - `MatchInducementsCancelled` : `cancelled_by`, `cancelled_by_name`.
   `event_type()` et `to_enveloppe()` les nomment (`match_report_app_events.rs:200-240`).
+  Tous les `*_name` sont des `Option<String>` (décision du 2026-11-02) : un nom
+  introuvable n'est pas inventé, c'est au canal de dire comment l'annoncer. Le
+  camp est un `TeamSidePayload { Home, Away }`.
 - **Le publisher** : un bras par fait ; la portée se lit sur la projection
   (`find_access_scope`, `find_space_id`, `domain/match_report_repository_port.rs:71-85`),
   pas par la relecture de l'agrégat ; les noms par `ICoachDataPort` et
@@ -117,5 +123,5 @@ les app events ne sont pas persistés.
 - [ ] La validation des coups de pouce d'un camp produit `MatchInducementsRecorded` avec ses libellés et quantités
 - [ ] Le démarrage d'un match produit `MatchReportConfirmed` portant le nom du démarreur
 - [ ] Un conflit d'écriture n'émet rien
-- [ ] Les listeners de `teams`, `competitions`, `players`, `ranking` passent leurs tests sans modification
+- [ ] Les listeners de `teams`, `competitions`, `players`, `ranking` passent leurs tests sans modification de leur code. Seul change un test : celui de `competitions/io/app_events/match_report_confirmed_listener.rs` construit `MatchReportConfirmed` champ par champ et reçoit les deux champs ajoutés (`confirmed_by`, `confirmed_by_name`) ; le listener, lui, lit l'événement avec `..` et n'est pas touché
 - [ ] `make lint`, `make check-arch`, `make test`, e2e impactés

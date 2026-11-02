@@ -13,11 +13,13 @@ use crate::app::match_report::domain::match_report_repository_port::{
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, TeamSide};
 use crate::app::match_report::ports::IPlayerDataPort;
+use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::match_report::use_cases::record_action_use_case::{
     resolve_player_info, RecordActionError,
 };
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
 pub struct RecordMvpCommand {
@@ -63,6 +65,7 @@ pub async fn execute(
     cmd: RecordMvpCommand,
     repo: &dyn IMatchReportRepository,
     player_data: &dyn IPlayerDataPort,
+    bus: &EventBus,
 ) -> Result<(), RecordMvpError> {
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pre_match(&mr_id, repo).await?;
@@ -85,6 +88,8 @@ pub async fn execute(
     repo.append(&mr_id, &event, pm.version)
         .await
         .map_err(RecordMvpError::from_repository)?;
+    // Le MVP sort du BC comme une action (carte 643) : un conflit n'émet rien.
+    emit_all(bus, &mr_id, std::slice::from_ref(&event));
     Ok(())
 }
 
@@ -116,6 +121,7 @@ mod tests {
         pre_match, ConflictingRepository, KnownPlayers, RecordingRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::common::services::event_bus::event_bus::new_bus;
 
     fn command(side: TeamSide) -> RecordMvpCommand {
         RecordMvpCommand {
@@ -129,7 +135,7 @@ mod tests {
     #[tokio::test]
     async fn le_mvp_est_appende_au_tour_16() {
         let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match()));
-        execute(command(TeamSide::Away), &repo, &KnownPlayers)
+        execute(command(TeamSide::Away), &repo, &KnownPlayers, &new_bus())
             .await
             .unwrap();
         let appended = repo.appended();
@@ -159,7 +165,7 @@ mod tests {
             player_position: String::new(),
         });
         let repo = RecordingRepository::holding(MatchReportState::PreMatch(pm));
-        let r = execute(command(TeamSide::Home), &repo, &KnownPlayers).await;
+        let r = execute(command(TeamSide::Home), &repo, &KnownPlayers, &new_bus()).await;
         assert!(matches!(
             r,
             Err(RecordMvpError::Domain(DomainError::MvpAlreadyRecorded))
@@ -170,7 +176,25 @@ mod tests {
     #[tokio::test]
     async fn un_conflit_d_ecriture_est_relaye() {
         let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
-        let r = execute(command(TeamSide::Home), &repo, &KnownPlayers).await;
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+        let r = execute(command(TeamSide::Home), &repo, &KnownPlayers, &bus).await;
         assert!(matches!(r, Err(RecordMvpError::Conflict)), "{:?}", r.err());
+        assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 643 : le MVP saisi sort du BC comme une action, une fois appendé.
+    #[tokio::test]
+    async fn a_recorded_mvp_is_emitted_after_append() {
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+
+        execute(command(TeamSide::Home), &repo, &KnownPlayers, &bus)
+            .await
+            .expect("MVP saisi");
+
+        assert_eq!(subscriber.try_recv().unwrap().event_type, "ActionRecorded");
+        assert!(subscriber.try_recv().is_err());
     }
 }

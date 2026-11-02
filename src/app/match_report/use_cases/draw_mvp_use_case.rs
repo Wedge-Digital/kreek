@@ -14,10 +14,12 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::mvp_draw::DesignatedPlayer;
 use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, TeamSide};
 use crate::app::match_report::ports::IPlayerDataPort;
+use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::match_report::use_cases::record_action_use_case::resolve_player_info;
 use crate::app::match_report::use_cases::record_mvp_use_case::{load_pre_match, RecordMvpError};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::event_bus::EventBus;
 use rand::Rng;
 
 #[derive(Debug)]
@@ -39,6 +41,7 @@ pub async fn execute<R: Rng + Send>(
     repo: &dyn IMatchReportRepository,
     player_data: &dyn IPlayerDataPort,
     rng: &mut R,
+    bus: &EventBus,
 ) -> Result<(), DrawMvpError> {
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pre_match(&mr_id, repo).await?;
@@ -48,10 +51,12 @@ pub async fn execute<R: Rng + Send>(
     let (_, events) = pm
         .draw_mvp(cmd.team_side, designated, rng, action_id, cmd.recorded_by)
         .map_err(DrawMvpError::Domain)?;
-    // `ActionRecorded` puis `MvpDrawn`, dans une seule transaction.
-    repo.append_many(&mr_id, events, pm.version)
+    // `ActionRecorded` puis `MvpDrawn`, dans une seule transaction, puis émis
+    // dans cet ordre (carte 643) : un conflit n'émet rien.
+    repo.append_many(&mr_id, events.clone(), pm.version)
         .await
         .map_err(DrawMvpError::from_repository)?;
+    emit_all(bus, &mr_id, &events);
     Ok(())
 }
 
@@ -86,6 +91,7 @@ mod tests {
         pre_match, ConflictingRepository, KnownPlayers, RecordingRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+    use crate::common::services::event_bus::event_bus::{new_bus, EventBus};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
@@ -104,7 +110,16 @@ mod tests {
         repo: &dyn IMatchReportRepository,
         cmd: DrawMvpCommand,
     ) -> Result<(), DrawMvpError> {
-        execute(cmd, repo, &KnownPlayers, &mut StdRng::seed_from_u64(638)).await
+        run_on(repo, cmd, &new_bus()).await
+    }
+
+    async fn run_on(
+        repo: &dyn IMatchReportRepository,
+        cmd: DrawMvpCommand,
+        bus: &EventBus,
+    ) -> Result<(), DrawMvpError> {
+        let mut rng = StdRng::seed_from_u64(638);
+        execute(cmd, repo, &KnownPlayers, &mut rng, bus).await
     }
 
     /// L'action tirée puis le tirage, appendés ensemble ; le tiré est l'un des six.
@@ -150,7 +165,27 @@ mod tests {
     #[tokio::test]
     async fn un_conflit_d_ecriture_est_relaye() {
         let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
-        let r = run(&repo, command(6)).await;
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+        let r = run_on(&repo, command(6), &bus).await;
         assert!(matches!(r, Err(RecordMvpError::Conflict)), "{:?}", r.err());
+        assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 643 : l'action tirée puis le tirage sortent dans l'ordre de
+    /// l'append ; c'est l'`ActionRecorded` qui fera la notification.
+    #[tokio::test]
+    async fn the_draw_emits_the_action_then_the_draw() {
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match()));
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+
+        run_on(&repo, command(6), &bus).await.expect("tirage");
+
+        let emitted: Vec<_> = (0..2)
+            .map(|_| subscriber.try_recv().unwrap().event_type)
+            .collect();
+        assert_eq!(emitted, ["ActionRecorded", "MvpDrawn"]);
+        assert!(subscriber.try_recv().is_err());
     }
 }

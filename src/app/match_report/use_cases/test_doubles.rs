@@ -192,6 +192,97 @@ impl IMatchReportRepository for RecordingRepository {
     }
 }
 
+/// La portée d'un rapport telle que la projection la rend — espace, puis
+/// compétition et équipes —, pour le publisher, qui ne relit pas l'agrégat
+/// d'un fait de saisie (carte 643). `None` : un rapport inconnu.
+pub struct ScopedRepository {
+    scope: Option<(String, String, String, String)>,
+}
+
+impl ScopedRepository {
+    pub fn of(space_id: &str, home_team_id: &str, away_team_id: &str) -> Self {
+        Self {
+            scope: Some((
+                space_id.into(),
+                "COMPETITION".into(),
+                home_team_id.into(),
+                away_team_id.into(),
+            )),
+        }
+    }
+
+    pub fn unknown() -> Self {
+        Self { scope: None }
+    }
+}
+
+#[async_trait]
+impl IMatchReportRepository for ScopedRepository {
+    async fn append(
+        &self,
+        _: &str,
+        _: &MatchReportDomainEvent,
+        _: u64,
+    ) -> Result<u64, RepositoryError> {
+        panic!("le publisher n'écrit pas")
+    }
+    async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        Ok(self.scope.as_ref().map(|s| s.0.clone()))
+    }
+    async fn find_by_id(&self, _: &str) -> Result<Option<MatchReportState>, RepositoryError> {
+        panic!("un fait de saisie ne relit pas l'agrégat")
+    }
+    async fn find_team_ids(&self, _: &str) -> Result<Option<(String, String)>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_entry_mode(
+        &self,
+        _: &str,
+    ) -> Result<
+        Option<crate::app::match_report::domain::match_report_repository_port::EntryModeRow>,
+        RepositoryError,
+    > {
+        Ok(None)
+    }
+    async fn find_access_scope(
+        &self,
+        _: &str,
+    ) -> Result<Option<(String, String, String)>, RepositoryError> {
+        Ok(self
+            .scope
+            .as_ref()
+            .map(|s| (s.1.clone(), s.2.clone(), s.3.clone())))
+    }
+    async fn append_many(
+        &self,
+        _: &str,
+        _: Vec<MatchReportDomainEvent>,
+        _: u64,
+    ) -> Result<u64, RepositoryError> {
+        panic!("le publisher n'écrit pas")
+    }
+    async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_phases_by_pairings(
+        &self,
+        _: &[String],
+    ) -> Result<Vec<(String, String)>, RepositoryError> {
+        Ok(vec![])
+    }
+    async fn find_id_by_round_and_teams(
+        &self,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_actions_by_match(&self, _: &str) -> Result<Vec<MatchActionRow>, RepositoryError> {
+        Ok(vec![])
+    }
+}
+
 /// Un avant-match dont les valeurs d'équipe sont déjà saisies.
 pub fn pre_match() -> MatchReportPreMatch {
     MatchReportPreMatch {

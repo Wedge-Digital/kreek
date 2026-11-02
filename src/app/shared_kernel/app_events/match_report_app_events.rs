@@ -27,6 +27,10 @@ pub enum MatchReportAppEvent {
         /// Porté pour le même motif : l'événement domaine `PairingCreated` que
         /// `competitions` émettra en fabriquant l'appariement l'exige.
         competition_id: String,
+        /// Le coach qui a démarré la saisie (carte 643), et son pseudonyme —
+        /// `None` si l'identité ne le connaît pas.
+        confirmed_by: String,
+        confirmed_by_name: Option<String>,
     },
     /// Le rapport est annulé — son pairing a été supprimé. Les BCs qui avaient
     /// réagi à `MatchReportConfirmed` doivent défaire leur réaction.
@@ -87,6 +91,81 @@ pub enum MatchReportAppEvent {
         season_id: String,
         round_id: String,
         round_label: String,
+    },
+    /// Une action a été saisie — un MVP, tiré au sort ou non, compris (carte
+    /// 643). Un fait de saisie : personne ne l'enregistre, il s'annonce.
+    MatchActionRecorded {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        team_side: TeamSidePayload,
+        team_name: Option<String>,
+        turn: u8,
+        action: ActionTypePayload,
+        player_display_name: String,
+        recorded_by: String,
+        recorded_by_name: Option<String>,
+    },
+    /// Une action a été retirée du journal (carte 643).
+    MatchActionDeleted {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        team_side: TeamSidePayload,
+        deleted_by: String,
+    },
+    /// Un camp a validé sa sélection de coups de pouce (carte 643). `items`
+    /// est vide pour une sélection vide : valider sans rien prendre est un fait.
+    MatchInducementsRecorded {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        team_id: String,
+        team_name: Option<String>,
+        recorded_by: String,
+        recorded_by_name: Option<String>,
+        items: Vec<InducementItemPayload>,
+    },
+    /// Les coups de pouce des deux camps ont été annulés (carte 643).
+    MatchInducementsCancelled {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        cancelled_by: String,
+        cancelled_by_name: Option<String>,
+    },
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+pub enum TeamSidePayload {
+    Home,
+    Away,
+}
+
+/// Une ligne de la sélection validée : son libellé résolu au catalogue (ou le
+/// poste, pour un mercenaire), sa quantité, et sa nature.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub struct InducementItemPayload {
+    pub label: String,
+    pub qty: u8,
+    pub kind: InducementKindPayload,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub enum InducementKindPayload {
+    Inducement,
+    StarPlayer,
+    /// `skilled` : mercenaire de niveau 1, qui porte une compétence de plus.
+    Mercenary {
+        skilled: bool,
     },
 }
 
@@ -196,6 +275,10 @@ impl MatchReportAppEvent {
     pub const JOURNEYMEN_FIELDED: &'static str = "MatchReportJourneymenFielded";
     pub const JOURNEYMEN_WITHDRAWN: &'static str = "MatchReportJourneymenWithdrawn";
     pub const MATCH_REPORT_ROUND_REASSIGNED: &'static str = "MatchReportRoundReassigned";
+    pub const MATCH_ACTION_RECORDED: &'static str = "MatchActionRecorded";
+    pub const MATCH_ACTION_DELETED: &'static str = "MatchActionDeleted";
+    pub const MATCH_INDUCEMENTS_RECORDED: &'static str = "MatchInducementsRecorded";
+    pub const MATCH_INDUCEMENTS_CANCELLED: &'static str = "MatchInducementsCancelled";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -206,6 +289,10 @@ impl MatchReportAppEvent {
             Self::JourneymenFielded { .. } => Self::JOURNEYMEN_FIELDED,
             Self::JourneymenWithdrawn { .. } => Self::JOURNEYMEN_WITHDRAWN,
             Self::MatchReportRoundReassigned { .. } => Self::MATCH_REPORT_ROUND_REASSIGNED,
+            Self::MatchActionRecorded { .. } => Self::MATCH_ACTION_RECORDED,
+            Self::MatchActionDeleted { .. } => Self::MATCH_ACTION_DELETED,
+            Self::MatchInducementsRecorded { .. } => Self::MATCH_INDUCEMENTS_RECORDED,
+            Self::MatchInducementsCancelled { .. } => Self::MATCH_INDUCEMENTS_CANCELLED,
         }
     }
 
@@ -226,6 +313,18 @@ impl MatchReportAppEvent {
                 match_report_id, ..
             }
             | Self::MatchReportRoundReassigned {
+                match_report_id, ..
+            }
+            | Self::MatchActionRecorded {
+                match_report_id, ..
+            }
+            | Self::MatchActionDeleted {
+                match_report_id, ..
+            }
+            | Self::MatchInducementsRecorded {
+                match_report_id, ..
+            }
+            | Self::MatchInducementsCancelled {
                 match_report_id, ..
             } => match_report_id.clone(),
         };

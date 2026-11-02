@@ -160,7 +160,11 @@ pub async fn post_mvp_step(
     };
     let next_url = next_url(&space_id, &mr_id, cmd.team_side);
     let repo = state.match_report.match_report_repo.as_ref();
-    match record_mvp_use_case::execute(cmd, repo, state.match_report.player_data.as_ref()).await {
+    let (players, bus) = (
+        &state.match_report.player_data,
+        &state.match_report.event_bus,
+    );
+    match record_mvp_use_case::execute(cmd, repo, players.as_ref(), bus).await {
         Ok(()) => (StatusCode::OK, [("HX-Redirect", next_url)]).into_response(),
         Err(e) => error_response(e),
     }

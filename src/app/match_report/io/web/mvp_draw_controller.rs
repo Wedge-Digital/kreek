@@ -53,11 +53,12 @@ pub async fn post_mvp_draw(
             .match_report
             .mvp(&space_id, &mr_id, side_slug(cmd.team_side));
     let mut rng = StdRng::from_os_rng();
-    let (repo, players) = (
+    let (repo, players, bus) = (
         &state.match_report.match_report_repo,
         &state.match_report.player_data,
+        &state.match_report.event_bus,
     );
-    match draw_mvp_use_case::execute(cmd, repo.as_ref(), players.as_ref(), &mut rng).await {
+    match draw_mvp_use_case::execute(cmd, repo.as_ref(), players.as_ref(), &mut rng, bus).await {
         Ok(()) => (StatusCode::OK, [("HX-Redirect", page_url)]).into_response(),
         Err(e) => error_response(e),
     }
