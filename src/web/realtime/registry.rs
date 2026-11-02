@@ -169,3 +169,44 @@ impl ConnectionRegistry {
         self.by_user.get(user_id).map(|ids| ids.len()).unwrap_or(0)
     }
 }
+
+// ── Carte 645 : la livraison des notifications ───────────────────────────────
+
+/// Ce qu'a donné la livraison à un utilisateur : ses onglets, et ceux dont la
+/// file a accepté le message.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct UserDelivery {
+    pub connections: usize,
+    pub queued: usize,
+}
+
+impl ConnectionRegistry {
+    /// Livre un message à **tous** les onglets d'un utilisateur, sans attendre.
+    ///
+    /// Les identifiants sont copiés hors de l'index avant de livrer : aucune
+    /// garde de `by_user` n'est tenue pendant qu'on touche `connections`.
+    pub fn deliver_to_user(&self, user_id: &UserId, message: &RealtimeMessage) -> UserDelivery {
+        let ids: Vec<ConnectionId> = self
+            .by_user
+            .get(user_id)
+            .map(|ids| ids.iter().copied().collect())
+            .unwrap_or_default();
+        let queued = ids
+            .iter()
+            .filter(|id| self.deliver(id, message.clone()) == Delivery::Queued)
+            .count();
+        UserDelivery {
+            connections: ids.len(),
+            queued,
+        }
+    }
+
+    /// Livre un message à toutes les connexions ouvertes ; rend le nombre de
+    /// files qui l'ont accepté.
+    pub fn deliver_to_all(&self, message: &RealtimeMessage) -> usize {
+        let ids: Vec<ConnectionId> = self.connections.iter().map(|c| *c.key()).collect();
+        ids.iter()
+            .filter(|id| self.deliver(id, message.clone()) == Delivery::Queued)
+            .count()
+    }
+}

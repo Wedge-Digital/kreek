@@ -68,6 +68,22 @@
   opacity: 0.8;
 }
 
+/* Le toast d'une notification de match — carte 645. Un titre, et un
+   sous-titre qui est un lien vers le match : le toast doit donc capter le clic,
+   comme l'erreur, mais il s'efface seul (6 s) et ne porte pas de croix. */
+.toast--linked {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toast .toast-link {
+  color: inherit;
+  font-weight: 400;
+  text-decoration: underline;
+}
+
 /* La tabbar mobile occupe le bas de l'écran (~64px) : sans ce décalage, le
    toast se poserait dessus. */
 @media (max-width: 768px) {

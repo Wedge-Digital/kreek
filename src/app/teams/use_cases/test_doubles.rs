@@ -64,6 +64,14 @@ impl FakeTeamRepository {
 impl ITeamRepository for FakeTeamRepository {
     /// Doublure : le contrôle d'appartenance est exercé par les tests de
     /// handler, sur une vraie base.
+    async fn find_coach_ids_in_space(
+        &self,
+        _: &[&str],
+        _: &str,
+    ) -> Result<Vec<String>, RepositoryError> {
+        Ok(Vec::new())
+    }
+
     async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
         Ok(None)
     }

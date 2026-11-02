@@ -198,9 +198,9 @@ de `space_id`, `home_team_id`, `away_team_id` pour le routage :
 | App event | Depuis | Contenu propre | Toast | Signal |
 |---|---|---|---|---|
 | `MatchReportConfirmed` **enrichi** | `SelectionConfirmed` | `confirmed_by`, `confirmed_by_name` | « Saisie du match démarrée par Morgane » | oui |
-| `MatchActionRecorded` | `ActionRecorded` | `team_side`, `team_name`, `turn`, `action: ActionTypePayload` (déjà partagé, `:162-171`), `player_display_name`, `recorded_by`, `recorded_by_name` | « Touchdown du 9 des London Rats saisi par Morgane » ; MVP compris | oui |
+| `MatchActionRecorded` | `ActionRecorded` | `team_side`, `team_name`, `turn`, `action: ActionTypePayload` (déjà partagé, `:162-171`), `player_display_name`, `recorded_by`, `recorded_by_name` | « Touchdown : Griff #9 (London Rats) — par Morgane » ; MVP compris | oui |
 | `MatchActionDeleted` | `ActionDeleted` | `team_side`, `deleted_by` | non (§ 11.7) | oui |
-| `MatchInducementsRecorded` | `InducementsRecorded` | `team_id`, `team_name`, `recorded_by`, `recorded_by_name`, `items: Vec<{ label, qty }>` | « London Rats : 2 relances, 1 pot-de-vin — validé par Morgane » ; sélection vide : « London Rats : aucun coup de pouce — validé par Morgane » | oui |
+| `MatchInducementsRecorded` | `InducementsRecorded` | `team_id`, `team_name`, `recorded_by`, `recorded_by_name`, `items: Vec<{ label, qty }>` | « London Rats : Relance d'équipe ×2, Pot-de-vin — validé par Morgane » ; sélection vide : « London Rats : aucun coup de pouce — validé par Morgane » | oui |
 | `MatchInducementsCancelled` | `InducementsCancelled` | `cancelled_by`, `cancelled_by_name` | « Coups de pouce annulés par Morgane » | oui |
 
 La liste du toast des coups de pouce (décision du 2026-11-02) : le publisher
@@ -209,6 +209,16 @@ résout les libellés de `purchases` par `IReferenceCatalogPort`, comme
 quantités viennent de l'événement. Aucun événement nouveau : le panier n'est
 pas enregistré avant validation, et un toast par clic serait du bruit pour
 l'adversaire.
+
+**La forme des phrases** (carte 645, arbitrée le 2026-11-02). Le joueur arrive
+tel que `match_report` l'affiche, `player_display_name` (« Griff #9 ») : en
+tirer le seul numéro pour écrire « le 9 des London Rats » serait recomposer une
+valeur, et « du », « des », « saisi(e) » demanderaient des élisions et des
+accords selon l'action. D'où la forme à deux-points, et un libellé de coup de
+pouce suivi de `×N` au-delà d'un, sans pluriel fabriqué. Un nom absent (les
+`*_name` sont des `Option`) retire sa clause — « Saisie du match démarrée » —,
+il n'est jamais remplacé. Le sous-titre de tout toast de match est « Voir le
+match », qui porte le lien vers `/live`.
 
 `MvpDrawn` reste dans le bras groupé : l'`ActionRecorded` appendé avec lui
 porte l'auteur et produit déjà la notification (§ 11.6). Les variants existants

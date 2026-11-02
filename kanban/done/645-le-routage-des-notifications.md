@@ -7,9 +7,12 @@
 ## Objectif
 
 Un coach est prévenu, où qu'il soit dans l'application, de ce qui se passe sur
-ses matchs : « Saisie du match démarrée par Morgane », « Touchdown du 9 des
-London Rats saisi par Morgane », « London Rats : 2 relances, 1 pot-de-vin —
-validé par Morgane ». Il ne reçoit que les faits de ses propres matchs, jamais
+ses matchs : « Saisie du match démarrée par Morgane », « Touchdown : Griff #9
+(London Rats) — par Morgane », « London Rats : Relance d'équipe ×2,
+Pot-de-vin — validé par Morgane ».
+Le joueur est écrit tel que `match_report` l'affiche (`player_display_name`) :
+en tirer le seul numéro serait recomposer une valeur (arbitrage du
+2026-11-02). Il ne reçoit que les faits de ses propres matchs, jamais
 les siens, et rien n'est gardé pour plus tard.
 
 ## Ce que le code fait
@@ -63,6 +66,10 @@ les siens, et rien n'est gardé pour plus tard.
 `src/web/realtime/` (`notification_router.rs`, `toast.rs`), `src/web/ports.rs`,
 `src/infrastructure/web/match_audience_adapter.rs`, `src/main.rs`,
 `src/web/templates/app-layout.html`, `assets/static/css/components/toast.css`.
+Et, arbitré le 2026-11-02, `ITeamRepository::find_coach_ids_in_space`
+(`src/app/teams/ports.rs`, `team_repository.rs` et ses trois doublures) : une
+lecture de `team_proj` — `coach_id`, jamais `coach_name` (carte 640) — plutôt
+que deux rejeux d'agrégat par fait saisi.
 
 ## Tests
 
@@ -96,7 +103,7 @@ onglet ouvert du destinataire.
 
 ## Terminé quand
 
-- [ ] Un touchdown saisi par Morgane fait apparaître, chez le coach de l'autre équipe, « Touchdown du 9 des London Rats saisi par Morgane » avec un lien vers le match
+- [ ] Un touchdown saisi par Morgane fait apparaître, chez le coach de l'autre équipe, « Touchdown : Griff #9 (London Rats) — par Morgane » avec le lien « Voir le match » vers `/live`
 - [ ] Morgane ne reçoit pas le toast de son propre fait
 - [ ] Un coach étranger au match ne reçoit rien
 - [ ] La validation des coups de pouce affiche la liste de ce qui a été pris

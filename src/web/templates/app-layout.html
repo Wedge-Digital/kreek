@@ -93,27 +93,52 @@
       setTimeout(function () { el.remove(); }, 200);
     }
 
-    window.kreekToast = function (message, type) {
+    // Carte 645 — le toast enrichi d'une notification de match : un titre, et
+    // un sous-titre qui porte le lien. Tout passe par `textContent` et par la
+    // propriété `href` : aucun texte venu du serveur n'est lu comme du HTML.
+    function fillRich(el, message, options) {
+      var title = document.createElement('div');
+      title.className = 'toast-title';
+      title.textContent = message;
+      el.appendChild(title);
+      if (!options.subtitle) return;
+      var subtitle = document.createElement(options.link ? 'a' : 'div');
+      subtitle.className = 'toast-link';
+      subtitle.textContent = options.subtitle;
+      if (options.link) subtitle.href = options.link;
+      el.appendChild(subtitle);
+    }
+
+    // `options`, facultatif, ne sert qu'aux notifications (carte 645) : sans
+    // lui, mêmes classes, même texte, mêmes 2,5 s qu'avant.
+    window.kreekToast = function (message, type, options) {
       if (!message) return null;
       var erreur = type === 'error';
+      var linked = !!(options && options.link);
       var el = document.createElement('div');
       el.className = 'toast toast--' + (erreur ? 'error' : 'success') + ' toast--enter';
-      el.textContent = message;
+      if (linked) el.classList.add('toast--linked');
+      if (options) fillRich(el, message, options); else el.textContent = message;
       zone.appendChild(el);
       // Deux images d'écart : poser la classe et la retirer dans la même frame
       // ne déclencherait aucune transition.
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { el.classList.remove('toast--enter'); });
       });
+      scheduleRemoval(el, erreur, linked);
+      return el;
+    };
 
-      if (erreur) {
+    function scheduleRemoval(el, isError, linked) {
+      if (isError) {
         // Reste jusqu'au clic : un refus qu'on perd de vue est un refus non reçu.
         el.addEventListener('click', function () { retirer(el); });
       } else {
-        setTimeout(function () { retirer(el); }, 2500);
+        // Un toast à lien dure 6 s, le temps de le lire et de cliquer
+        // (décision 14 de E23) ; les autres gardent leurs 2,5 s.
+        setTimeout(function () { retirer(el); }, linked ? 6000 : 2500);
       }
-      return el;
-    };
+    }
 
     // Les trois `HX-Trigger: showToast` de `team_creation` partaient dans le
     // vide faute de cet écouteur — aucune ligne de Rust ne change.
@@ -150,6 +175,14 @@
       hello: function (data) {
         realtime.connectionId = data.connection_id;
         emit('realtimeHello', { connectionId: data.connection_id });
+      },
+      // ── Carte 645 : les notifications de match ──
+      toast: function (data) {
+        window.kreekToast(data.title, 'success', { subtitle: data.subtitle, link: data.link });
+      },
+      // Le serveur a perdu des messages : même effet qu'une reconnexion.
+      resync: function () {
+        emit('realtimeResync');
       }
     };
 

@@ -444,6 +444,24 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             Arc::new(crate::app::auth::io::repository::user_repository::UserRepository::new(pool.clone())),
         ));
 
+    // Le registre temps réel et le routeur des notifications de match (carte
+    // 645) : le routeur livre dans le registre que l'état expose au flux.
+    let realtime = Arc::new(crate::web::realtime::registry::ConnectionRegistry::new());
+    crate::web::realtime::notification_router::init(
+        &app_event_bus,
+        realtime.clone(),
+        Arc::new(
+            crate::infrastructure::web::match_audience_adapter::MatchAudienceAdapter::new(
+                Arc::new(
+                    crate::app::teams::io::repository::team_repository::TeamRepository::new(
+                        pool.clone(),
+                        event_bus.clone(),
+                    ),
+                ),
+            ),
+        ),
+    );
+
     AppState {
         auth: AuthContext::new(
             &pool,
@@ -622,7 +640,7 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
                 ),
             ),
         ),
-        realtime: Arc::new(crate::web::realtime::registry::ConnectionRegistry::new()),
+        realtime,
         bypass_auth: cfg.bypass_auth,
         event_bus: event_bus.clone(),
         app_event_bus: app_event_bus.clone(),

@@ -9,5 +9,9 @@ pub mod message;
 pub mod registry;
 pub mod stream_controller;
 
+// Carte 645 : les notifications de match.
+pub mod notification_router;
+pub mod toast;
+
 #[cfg(test)]
 mod tests;

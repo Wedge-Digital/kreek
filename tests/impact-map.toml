@@ -63,6 +63,13 @@
 # sont ceux des pages visitées — la liste des compétitions, puis « Mes équipes »
 # par le menu, dont `spaces` porte l'appartenance lue par `app_menu`.
 "test_realtime_stream" = ["competitions", "team_creation", "spaces"]
+# Les notifications de match (carte 645) : le routeur vit dans `src/web/realtime`
+# (déjà `@core`) ; le match est monté et saisi comme dans
+# `test_match_report_solo_entry`, les destinataires viennent de `teams` par le
+# port `coaches_of_match`, et le tiers se connecte par `auth`.
+"test_realtime_notifications" = ["match_report", "competitions", "teams", "players",
+                                 "references", "team_creation", "ranking", "spaces",
+                                 "auth"]
 
 # ── Création de compétition (aucune équipe, aucun match) ─────────────────────
 # Phase 1 → recherche de coachs (widget du BC spaces).

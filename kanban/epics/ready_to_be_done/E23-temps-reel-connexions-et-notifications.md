@@ -28,8 +28,8 @@ connexions.
 
 Deux usages :
 
-- **les notifications** — « Saisie du match démarrée par Morgane », « Touchdown
-  du 9 des London Rats saisi par Morgane », la sélection des coups de pouce
+- **les notifications** — « Saisie du match démarrée par Morgane », « Touchdown :
+  Griff #9 (London Rats) — par Morgane », la sélection des coups de pouce
   validée avec ce qui a été pris : un toast, où que soit le coach dans
   l'application ;
 - **le direct** — le journal et le score de `/live` se mettent à jour chez qui

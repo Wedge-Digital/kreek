@@ -40,3 +40,26 @@ pub trait IHorsCalendrierPort: Send + Sync {
     /// mènera à un refus. La garde serveur, elle, ne se relâche pas.
     async fn un_espace_interdit(&self, space_id: &str) -> bool;
 }
+
+// ── Carte 645 : les destinataires d'une notification de match ────────────────
+
+/// Les coachs qu'un match concerne — le canal temps réel en tire les
+/// destinataires de ses toasts (carte 645, épic E23).
+///
+/// L'app event reste un fait, sans liste de destinataires (décision 5) : c'est
+/// l'hôte qui demande, au moment de router, qui coache les deux équipes.
+#[async_trait]
+pub trait IMatchAudiencePort: Send + Sync {
+    /// Le coach de chaque équipe **de cet espace** (décision 6) : une équipe
+    /// d'un autre espace ne rend pas le sien. Pas d'intersection avec les
+    /// membres — un coach qui a quitté l'espace reste concerné par son match.
+    ///
+    /// Vide en cas d'échec : un contrôle de destinataires échoue fermé, aucun
+    /// toast plutôt qu'un toast mal adressé.
+    async fn coaches_of_match(
+        &self,
+        space_id: &str,
+        home_team_id: &str,
+        away_team_id: &str,
+    ) -> Vec<crate::app::shared_kernel::identity::ids::UserId>;
+}

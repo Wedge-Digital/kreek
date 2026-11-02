@@ -511,6 +511,22 @@ impl ITeamRepository for TeamRepository {
         Ok(row.map(|r| r.0))
     }
 
+    async fn find_coach_ids_in_space(
+        &self,
+        team_ids: &[&str],
+        space_id: &str,
+    ) -> Result<Vec<String>, RepositoryError> {
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT coach_id FROM team_proj WHERE team_id = ANY($1) AND space_id = $2",
+        )
+        .bind(team_ids)
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
     async fn find_by_id(&self, team_id: &str) -> Result<Option<Team>, RepositoryError> {
         let rows = sqlx::query(
             "SELECT payload FROM team_event_store

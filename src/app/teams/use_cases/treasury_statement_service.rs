@@ -370,6 +370,14 @@ mod tests {
         ) -> Result<u64, RepositoryError> {
             Ok(0)
         }
+        async fn find_coach_ids_in_space(
+            &self,
+            _: &[&str],
+            _: &str,
+        ) -> Result<Vec<String>, RepositoryError> {
+            Ok(Vec::new())
+        }
+
         async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
             Ok(None)
         }

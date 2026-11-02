@@ -324,6 +324,19 @@ pub trait ITeamRepository: Send + Sync {
     /// store, hors de prix pour un contrôle exécuté à chaque requête.
     async fn find_space_id(&self, team_id: &str) -> Result<Option<String>, RepositoryError>;
 
+    /// Les coachs de ces équipes, **pour celles qui sont de cet espace** — une
+    /// équipe d'un autre espace ne rend rien (carte 645, décision 6 de E23).
+    ///
+    /// Lue depuis la projection, comme `find_space_id` : le canal temps réel la
+    /// pose à chaque fait de saisie, et rejouer deux agrégats par touchdown
+    /// ferait décrocher son abonnement au bus. `coach_id` et jamais
+    /// `coach_name`, vide sur la plupart des équipes importées (carte 640).
+    async fn find_coach_ids_in_space(
+        &self,
+        team_ids: &[&str],
+        space_id: &str,
+    ) -> Result<Vec<String>, RepositoryError>;
+
     async fn find_by_id(&self, team_id: &str) -> Result<Option<Team>, RepositoryError>;
 
     /// Liste les équipes inscrites à une saison par statut.

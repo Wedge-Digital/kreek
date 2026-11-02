@@ -10,3 +10,5 @@
 //! qu'il se lit sans expliquer. Ce ne sera pas la dernière fois que le layout
 //! aura besoin d'une donnée de BC.
 pub mod hors_calendrier_adapter;
+// Carte 645 : les coachs d'un match, pour le routage des notifications.
+pub mod match_audience_adapter;
