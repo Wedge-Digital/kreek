@@ -70,14 +70,32 @@ impl Harnais {
     /// Le compte doit avoir été semé par `seed_e2e`, qui pose le même mot de
     /// passe sur tous les siens.
     pub async fn connecte_en_tant_que(pool: sqlx::PgPool, coach_name: &str) -> Self {
-        let state = crate::compose(AppConfig::for_tests(), pool).await;
         let mut harnais = Self {
-            routeur: crate::build_router(state),
+            routeur: Self::mount(pool).await,
             cookie: String::new(),
             set_cookie_brut: String::new(),
         };
         harnais.connecter(coach_name).await;
         harnais
+    }
+
+    /// Le même navigateur après un redémarrage du serveur (carte 491).
+    ///
+    /// `compose`, le routeur **et le magasin de sessions** sont reconstruits —
+    /// rien n'est repris de l'instance précédente que la base et le cookie.
+    /// Réutiliser l'ancien magasin ferait passer n'importe quel magasin en
+    /// mémoire pour persistant.
+    pub async fn after_restart(self, pool: sqlx::PgPool) -> Self {
+        Self {
+            routeur: Self::mount(pool).await,
+            ..self
+        }
+    }
+
+    async fn mount(pool: sqlx::PgPool) -> Router {
+        let sessions = crate::common::session_store::app_session_store(pool.clone());
+        let state = crate::compose(AppConfig::for_tests(), pool).await;
+        crate::build_router(state, sessions)
     }
 
     async fn connecter(&mut self, coach_name: &str) {
@@ -98,6 +116,24 @@ impl Harnais {
                     reponse.corps
                 )
             });
+    }
+
+    /// Le même routeur, présenté avec un autre cookie de session — celui d'un
+    /// navigateur qui aurait volé une valeur ailleurs (carte 491).
+    pub fn with_session_cookie(self, valeur: &str) -> Self {
+        let nom = self.cookie.split('=').next().unwrap_or("id").to_string();
+        Self {
+            cookie: format!("{nom}={valeur}"),
+            ..self
+        }
+    }
+
+    /// La valeur du cookie de session, telle que le navigateur la renvoie.
+    pub fn session_cookie_value(&self) -> &str {
+        self.cookie
+            .split_once('=')
+            .map(|(_, v)| v)
+            .unwrap_or_default()
     }
 
     /// L'en-tête `Set-Cookie` de la connexion, attributs compris.

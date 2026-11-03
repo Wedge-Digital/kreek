@@ -3,6 +3,7 @@ mod test_candidats_ajout_direct;
 mod test_contrat_feuilles_imprimees;
 mod test_cookie_de_session;
 mod test_menu_administration;
+mod test_persistent_session;
 mod test_realtime_presence;
 mod test_realtime_stream;
 mod test_statistiques_espace;

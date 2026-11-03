@@ -32,7 +32,7 @@ use crate::common::event_listener::event_log_feeder;
 use crate::common::services::email::{ConsoleEmailService, IEmailService, ResendMailService};
 use crate::common::services::event_bus::event_bus::new_bus;
 use crate::common::services::observability::use_case_journal::UseCaseJournal;
-use crate::common::session_store::DashMapStore;
+use crate::common::session_store::AppSessionStore;
 use crate::infrastructure::spaces::host_layout_adapter::KreekSpacesLayout;
 use crate::infrastructure::team_creation::competition_rules_adapter::CompetitionRulesAdapter;
 use crate::infrastructure::team_creation::reference_data_adapter::ReferenceDataAdapter;
@@ -659,7 +659,10 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
 /// `bypass_auth` est posé en `route_layer` — le harnais peut donc poser sa
 /// propre couche d'identité à la place, sans que le code de production ait à
 /// connaître les besoins des tests.
-pub fn build_router(state: AppState) -> Router {
+///
+/// Le magasin de sessions est reçu, pas construit ici (carte 491) : sa durée de
+/// vie est celle du processus — ou de la base —, pas celle d'un routeur.
+pub fn build_router(state: AppState, sessions: AppSessionStore) -> Router {
     // Un doublon de paramètre est une erreur de câblage : mieux vaut un
     // démarrage qui échoue qu'un résolveur silencieusement ignoré.
     crate::web::middleware::space_scope::verifier_unicite_des_parametres(&state.space_ownership);
@@ -674,10 +677,14 @@ pub fn build_router(state: AppState) -> Router {
     // son navigateur le soir et se retrouvait déconnecté d'une session dont le
     // serveur se souvenait encore.
     //
-    // `OnInactivity` et non `AtDateTime` : la fenêtre glisse à chaque requête,
-    // donc un coach qui vient toutes les semaines n'est jamais déconnecté, tandis
-    // qu'un compte inactif trente jours l'est. Une date fixe déconnecterait tout
-    // le monde le même jour.
+    // **La fenêtre ne glisse pas à chaque requête**, contrairement à ce que ce
+    // commentaire a affirmé. `tower-sessions` 0.14 ne réécrit l'enregistrement
+    // et le cookie que si la session est modifiée (`service.rs:251`, sans
+    // `with_always_save`) — et rien ne la modifie après la connexion. La session
+    // expire donc **trente jours après la connexion**, tant que rien ne la
+    // modifie. Faire glisser la fenêtre est un autre sujet que la carte 491.
+    // `OnInactivity` reste préférable à `AtDateTime` : une date fixe
+    // déconnecterait tout le monde le même jour.
     //
     // **`Lax` et non `Strict`.** Un cookie `Strict` n'est pas envoyé quand on
     // arrive depuis un lien extérieur — un e-mail, un message, un lien partagé :
@@ -685,7 +692,7 @@ pub fn build_router(state: AppState) -> Router {
     // navigation de premier niveau et le retient sur les requêtes inter-sites ;
     // le middleware CSRF maison, qui exige `HX-Request: true` sur toute mutation,
     // reste la garde qui compte ici.
-    let session_layer = SessionManagerLayer::new(DashMapStore::new())
+    let session_layer = SessionManagerLayer::new(sessions)
         .with_expiry(Expiry::OnInactivity(time::Duration::days(30)))
         .with_same_site(SameSite::Lax);
     let auth_layer = AuthManagerLayerBuilder::new(
@@ -789,7 +796,10 @@ async fn run_server(cfg: AppConfig, pool: sqlx::PgPool) {
     // échec ici refuse le démarrage — cf. `infrastructure::data_migrations`.
     infrastructure::data_migrations::executer(&state, &pool).await;
 
-    let app = build_router(state);
+    // Construit ici et non dans `build_router` : le magasin et sa purge vivent
+    // autant que le processus (carte 491).
+    common::session_store::spawn_expired_sessions_purge(pool.clone());
+    let app = build_router(state, common::session_store::app_session_store(pool));
 
     let listener = tokio::net::TcpListener::bind(&server_address)
         .await

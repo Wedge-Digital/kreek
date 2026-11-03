@@ -1558,42 +1558,54 @@ déployée.
 
 ## Sessions
 
-**Il n'y aura pas de Redis.** Ce fichier a longtemps annoncé une « phase 2 :
-migration vers `RedisStore` ». La décision est prise, et c'est non : Postgres est
-déjà là, déjà sauvegardé, déjà surveillé, et Redis ajouterait une infrastructure,
-un point de panne et une sauvegarde de plus pour stocker quelques centaines de
-sessions de ligue amateur — un volume où la différence de performance ne se
-mesure pas. Le magasin persistant sera `tower-sessions-sqlx-store`.
+**Il n'y aura pas de Redis.** Postgres est déjà là, déjà sauvegardé, déjà
+surveillé ; Redis ajouterait une infrastructure, un point de panne et une
+sauvegarde de plus pour quelques centaines de sessions de ligue amateur.
 
-Aujourd'hui : **`DashMapStore`, en mémoire** (`common/session_store.rs`), donc
-volatile. Chaque redéploiement déconnecte tout le monde en même temps ; c'est le
-défaut connu, et il reste à corriger.
-
-Le cookie, lui, est configuré (carte 490) :
+Les sessions vivent dans la table **`sessions`** (carte 491), par
+`tower-sessions-sqlx-store` **0.15.0** — la 0.14.x suit `tower-sessions-core`
+0.13, pas le 0.14 du projet. Elles survivent donc à un redéploiement. Le
+magasin est construit dans `run_server` et passé à `build_router` : sa durée de
+vie est celle du processus, pas celle d'un routeur.
 
 ```rust
-SessionManagerLayer::new(DashMapStore::new())
+SessionManagerLayer::new(sessions)   // common::session_store::app_session_store(pool)
     .with_expiry(Expiry::OnInactivity(time::Duration::days(30)))
     .with_same_site(SameSite::Lax)
 ```
 
-**Les deux lignes comptent, et leur absence ne se voit nulle part.**
+**La table ne contient pas les cookies.** L'identifiant de session *est* la
+valeur du cookie, non signée : `HashedIds` range chaque session sous son
+empreinte SHA-256, et une ligne volée ne se rejoue pas. Chaque ligne porte quand
+même une copie de l'empreinte du mot de passe (`session_auth_hash`
+d'axum-login) : le dump de production en exclut les données
+(`--exclude-table-data=sessions`).
 
-Sans `with_expiry`, `tower-sessions` laisse `expiry: None` et le cookie n'a **ni
-`Max-Age` ni `Expires`** : le navigateur le jette à sa fermeture, alors que le
-serveur garde la session **deux semaines** (`DEFAULT_DURATION`). Le coach fermait
-son navigateur le soir et se retrouvait déconnecté d'une session dont le serveur
-se souvenait encore. `OnInactivity` fait glisser la fenêtre à chaque requête —
-une date fixe déconnecterait tout le monde le même jour.
+**Un échec du magasin se journalise sous `kreek::`.** Le 500 que rend la couche
+de session est écrit par `tower_sessions` et `axum_login`, sur des cibles que le
+filtre n'active pas — `Logged` existe pour que ce 500 ait une ligne. Base
+indisponible : toute page qui passe par la couche de session rend un 500, seuls
+`/static` et `/css` restent servis. C'est accepté.
 
-`SameSite::Strict`, l'autre défaut de la crate, **n'envoie pas le cookie** quand
-on arrive depuis un lien extérieur : le coach qui suit un lien partagé atterrit
-déconnecté sans avoir rien fait. `Lax` l'envoie sur une navigation de premier
-niveau et le retient sur les requêtes inter-sites ; la garde qui compte contre le
-CSRF reste le middleware maison, qui exige `HX-Request: true` sur toute mutation.
+**La purge** des sessions expirées est une boucle horaire à nous
+(`spawn_expired_sessions_purge`) : `continuously_delete_expired` s'arrête au
+premier échec, la nôtre réessaie au tour suivant.
 
-`src/web/tests/test_cookie_de_session.rs` lit l'en-tête **réellement émis** par
-le routeur de production — pas la configuration censée le produire.
+**Les deux lignes de configuration comptent, et leur absence ne se voit nulle
+part.** Sans `with_expiry`, le cookie n'a ni `Max-Age` ni `Expires`, et le
+navigateur le jette à sa fermeture. `SameSite::Strict` n'envoie pas le cookie
+quand on arrive par un lien extérieur ; `Lax` l'envoie, et ne retient le cookie
+que sur les requêtes inter-sites. **C'est aujourd'hui la seule protection des
+mutations contre le CSRF** : le middleware que décrit « Middleware — ordre
+d'exécution » n'existe pas (carte 648).
+
+**La fenêtre ne glisse pas.** Sans `with_always_save`, `tower-sessions` ne
+réécrit ni la session ni le cookie tant que rien ne la modifie : une session
+expire **trente jours après la connexion** (carte 651).
+
+`src/web/tests/test_cookie_de_session.rs` lit l'en-tête **réellement émis** ;
+`src/web/tests/test_persistent_session.rs` reconstruit le routeur et son
+magasin sur la même base et rejoue le cookie.
 
 ---
 

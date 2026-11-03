@@ -80,7 +80,14 @@ dumper_production() {
     #
     # Un `pg_dump` en échec laisse un fichier vide, qui passerait pour une
     # sauvegarde : il est retiré avant d'échouer.
-    pg_dump --format=custom --no-owner --no-privileges --file="$DUMP" "$SOURCE_URL" \
+    #
+    # `--exclude-table-data=sessions` (carte 491) : la table est gardée, ses lignes
+    # non. Elles ne sont rangées que sous l'empreinte des cookies, donc ne se
+    # rejouent pas, mais chacune porte une copie de l'empreinte du mot de passe de
+    # son coach — et une base locale n'a aucun usage des sessions de production.
+    # Sans `--strict-names`, le motif est ignoré tant que la table n'existe pas.
+    pg_dump --format=custom --no-owner --no-privileges --exclude-table-data=sessions \
+        --file="$DUMP" "$SOURCE_URL" \
         || { rm -f "$DUMP"; echec "Le dump a échoué — aucun fichier n'est conservé."; }
     echo "      $DUMP ($(du -h "$DUMP" | cut -f1))"
 }

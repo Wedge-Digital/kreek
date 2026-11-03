@@ -60,7 +60,7 @@ canal, le routage demandant le canal et les faits. Puis **646**, qui a besoin
 des trois. Puis **647**.
 
 **Posé par écrit dans la fiche technique** : le registre vit en mémoire,
-comme les sessions aujourd'hui (`DashMapStore`, carte 491). C'est juste tant
+comme les sessions jusqu'à la carte 491. C'est juste tant
 qu'il n'y a qu'une instance ; à plusieurs, il faudra un relais —
 `LISTEN/NOTIFY` de Postgres, puisque Redis est écarté.
 
@@ -84,9 +84,10 @@ l'exploitation :
   configuration, à appliquer avant la livraison ;
 - une connexion ouverte par onglet authentifié — négligeable à l'échelle d'une
   ligue amateur ;
-- un redéploiement coupe les flux ; les sessions en mémoire étant perdues
-  (carte 491), le coach est de toute façon déconnecté, et le flux ne se
-  reconnecte pas ;
+- un redéploiement coupe les flux ; le coach reste connecté, les sessions
+  survivant désormais en base (carte 491), mais le flux ne se rouvre pas : un
+  `EventSource` qui reçoit le 502 de nginx pendant le redémarrage se ferme
+  pour de bon, et la page n'en rouvre pas d'autre ;
 - l'enum partagée des app events gagne des variants. **Aucun listener des
   autres BCs n'est exhaustif** : ils filtrent par `let … else` ou par un joker,
   rien ne casse et le compilateur n'exige rien d'eux ;

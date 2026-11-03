@@ -36,6 +36,13 @@ argon2 = "0.5"
 async-trait = "0.1.89"
 axum-login = "0.18"
 tower-sessions = "0.14"
+# Le magasin de sessions persistant (carte 491). **0.15.0** et non 0.14 : la
+# 0.14.x dépend de `tower-sessions-core` 0.13, c'est la 0.15.0 qui suit le
+# `tower-sessions` 0.14 du projet.
+tower-sessions-sqlx-store = { version = "0.15.0", features = ["postgres"] }
+# Empreinte de l'identifiant de session, pour qu'une ligne de `sessions` ne
+# serve pas de cookie (carte 491). Déjà dans l'arbre par `sqlx`.
+sha2 = "0.10"
 dashmap = "6"
 reqwest = { version = "0.12", features = ["json"] }
 chrono = { version = "0.4.44", features = ["serde"] }
