@@ -1,6 +1,6 @@
 # E23 — Le temps réel : connexions, présence et notifications
 
-**État :** `en_cours` — 6 cartes, 642 à 647 ; 4 faites (642 à 645). Découpage validé le 2026-11-01 ; cadrage et décisions le 2026-11-02.
+**État :** `en_cours` — 6 cartes, 642 à 647 ; 5 faites (642 à 646). Découpage validé le 2026-11-01 ; cadrage et décisions le 2026-11-02.
 **Cadrage :** `docs/specs/saisie-mobile/E23-cadrage.md`. Née le 2026-11-01 des maquettes
 mobiles. Dépend de E21 (le journal des deux camps). **Ordre décidé le 2026-11-01 :
 E21, E23, puis E22** — le mode « Je saisis tout » en profite déjà : la lecture
@@ -85,9 +85,11 @@ l'exploitation :
 - une connexion ouverte par onglet authentifié — négligeable à l'échelle d'une
   ligue amateur ;
 - un redéploiement coupe les flux ; le coach reste connecté, les sessions
-  survivant désormais en base (carte 491), mais le flux ne se rouvre pas : un
-  `EventSource` qui reçoit le 502 de nginx pendant le redémarrage se ferme
-  pour de bon, et la page n'en rouvre pas d'autre ;
+  survivant désormais en base (carte 491). Un `EventSource` qui reçoit le 502
+  de nginx pendant le redémarrage se ferme pour de bon — mesuré : il ne revient
+  pas, même le serveur rétabli. La 646 fait rouvrir le flux par la page, après
+  un délai de 5 à 60 s qui double à chaque échec, avec un aléa qui étale la
+  vague de reconnexions ;
 - l'enum partagée des app events gagne des variants. **Aucun listener des
   autres BCs n'est exhaustif** : ils filtrent par `let … else` ou par un joker,
   rien ne casse et le compilateur n'exige rien d'eux ;

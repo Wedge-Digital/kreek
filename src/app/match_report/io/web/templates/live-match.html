@@ -28,9 +28,14 @@
       {% endif %}
       <div class="live-score-name">{{ home.name }}</div>
     </div>
-    <div class="live-score-center">
-      <div class="live-score-nums"><span class="live-score-value">{{ score.home }}</span><span class="live-score-sep">&#8212;</span><span class="live-score-value">{{ score.away }}</span></div>
-      <div class="live-score-cas" title="Sorties"><span>{{ score.home_cas }}</span><span class="live-score-cas-sep">&#8211;</span><span>{{ score.away_cas }}</span></div>
+    {# Le score est un widget (carte 646) : il se recharge sur le signal du
+       canal temps réel, comme le journal. Les noms et les logos, qui ne
+       changent pas pendant un match, restent dans la page. #}
+    <div class="live-score-slot"
+         hx-get="{{ live_score_url }}"
+         hx-trigger="load, actionDeleted from:body, matchChanged[detail.id=='{{ match_report_id }}'] from:body, realtimeResync from:body"
+         hx-target="this"
+         hx-swap="innerHTML">
     </div>
     <div class="live-score-team">
       {% if let Some(url) = away.logo_url.as_ref() %}
@@ -61,11 +66,14 @@
   </div>
   {% endif %}
 
-  {# Qui suit voit le journal se remettre à jour de lui-même ; qui saisit le
-     recharge à chaque suppression. #}
+  {# Le journal se recharge sur le signal du canal temps réel — un fait de ce
+     match, saisi par n'importe qui (carte 646) — et à la reconnexion du flux ;
+     qui saisit le recharge aussi à chaque suppression, sans dépendre du canal.
+     Plus d'interrogation à intervalle fixe : une panne du canal doit se voir
+     (décision 8 de E23). #}
   <div class="live-log"
        hx-get="{{ action_log_url }}"
-       hx-trigger="load, actionDeleted from:body{% if write.is_none() %}, every 15s{% endif %}"
+       hx-trigger="load, actionDeleted from:body, matchChanged[detail.id=='{{ match_report_id }}'] from:body, realtimeResync from:body"
        hx-target="this"
        hx-swap="innerHTML">
   </div>

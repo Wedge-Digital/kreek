@@ -50,3 +50,16 @@ async fn without_a_session_the_stream_is_not_opened(pool: sqlx::PgPool) {
     assert_eq!(head.status, StatusCode::SEE_OTHER);
     assert_ne!(head.header("content-type"), Some("text/event-stream"));
 }
+
+/// Carte 646 : la coupure des flux est réservée aux e2e. Le harnais tourne
+/// sans `bypass_auth`, comme la production : la route n'existe pas pour lui.
+#[sqlx::test]
+async fn the_stream_close_route_is_not_found_without_bypass_auth(pool: sqlx::PgPool) {
+    let harnais = connected(pool).await;
+
+    let response = harnais
+        .post_htmx(path::REALTIME_TEST_CLOSE_STREAMS, "")
+        .await;
+
+    assert_eq!(response.statut, StatusCode::NOT_FOUND);
+}

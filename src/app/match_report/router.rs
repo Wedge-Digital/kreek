@@ -22,6 +22,7 @@ use crate::app::match_report::io::web::widgets::action_log_widget::get_action_lo
 use crate::app::match_report::io::web::widgets::action_panel_widget::{
     get_action_panel_step3, get_action_panel_step4,
 };
+use crate::app::match_report::io::web::widgets::live_score_widget::get_live_score;
 use crate::app::match_report::io::web::widgets::mercenary_selector_widget::get_mercenary_selector;
 use crate::app::match_report::io::web::widgets::print_inducements_widget::{
     get_print_inducements, get_print_inducements_with,
@@ -100,6 +101,8 @@ fn routes_de_suivi() -> Router<AppState> {
         // Le journal des deux camps (carte 635) : le ✕ y suit le droit
         // d'écrire, la lecture non.
         .route(path::MATCH_REPORT_ACTION_LOG, get(get_action_log))
+        // Le score du direct (carte 646) : un widget, rechargé sur le signal.
+        .route(path::MATCH_REPORT_LIVE_SCORE, get(get_live_score))
 }
 
 fn routes_de_saisie() -> Router<AppState> {

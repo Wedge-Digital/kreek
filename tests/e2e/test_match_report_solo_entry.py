@@ -14,7 +14,8 @@ rapport, aucun état n'est partagé entre eux :
 - P1 (ordinateur) et P2 (viewport mobile) — le parcours complet, par les mêmes
   routes : DevCoach démarre depuis le calendrier et saisit tout ; l'autre
   coach suit dans un second contexte de navigateur — aucun bouton d'écriture,
-  le journal à jour au rechargement, la publication refusée.
+  le journal et le score à jour sans rechargement, par le signal du canal
+  temps réel (carte 646), la publication refusée.
 - A1 — Un compte rendu commencé avant E21 : un flux sans `EntryModeChosen`,
   deux MVP dans le même camp à des tours quelconques, écrits comme le faisait
   l'ancien code. Il se termine et se publie par les écrans d'aujourd'hui.
@@ -257,6 +258,12 @@ def _publier(page: Page, mr_id: str) -> None:
 # ══ Ce que voit l'autre coach ════════════════════════════════════════════════
 
 
+def _presence_declaree(reponse) -> bool:
+    """La déclaration de présence de l'onglet (carte 644) : tant qu'elle n'a pas
+    répondu, l'onglet ne reçoit pas le signal du match (carte 646)."""
+    return reponse.url.endswith("/app/realtime/presence") and reponse.request.method == "POST"
+
+
 def _l_autre_coach_suit(vue: Page, space_id: str, mr_id: str, entrees: int) -> None:
     """Le match en direct, sans aucun bouton d'écriture ; `entrees` actions au
     journal, chacune « saisie par DevCoach »."""
@@ -319,7 +326,9 @@ def test_le_parcours_je_saisis_tout(browser, match_du_calendrier, taille):
         _de_l_avant_match_au_direct(page, mr_id)
 
         _saisir_un_touchdown(page, mr_id, rang=0, tour=4)
-        vue.goto(_url(space_id, mr_id, "live"), wait_until="load")
+        # La présence déclarée, l'onglet recevra le signal du match (carte 646).
+        with vue.expect_response(_presence_declaree):
+            vue.goto(_url(space_id, mr_id, "live"), wait_until="load")
         _l_autre_coach_suit(vue, space_id, mr_id, entrees=1)
 
         _saisir_un_touchdown(page, mr_id, rang=1, tour=5)
@@ -331,10 +340,12 @@ def test_le_parcours_je_saisis_tout(browser, match_du_calendrier, taille):
             entree = page.locator(f".match-report-live .mr-log-entry--{camp}")
             expect(entree).to_have_count(1, timeout=10000)
             expect(entree).to_contain_text("saisi par vous")
-        # Sans mise à jour en direct (E23), l'autre coach voit l'action du
-        # visiteur au rechargement.
-        vue.reload(wait_until="load")
+        # Le direct (carte 646) : l'autre coach voit l'action du visiteur, et le
+        # score, sans recharger sa page.
         _l_autre_coach_suit(vue, space_id, mr_id, entrees=2)
+        scores_suivis = vue.locator(".match-report-live .live-score-value")
+        expect(scores_suivis.nth(0)).to_have_text("1", timeout=10000)
+        expect(scores_suivis.nth(1)).to_have_text("1", timeout=10000)
 
         _mvp_du_domicile_tire_au_sort(page, mr_id)
         _mvp_du_visiteur_a_la_main(page, mr_id)

@@ -99,6 +99,7 @@ CLASSE_ATTENDUE = {
     "rapport-inducements": ".match-report-inducements",
     "rapport-mercenaires": ".merco-selector",
     "widget-presence": ".presence-widget",
+    "widget-live-score": ".live-score-center",
 }
 
 
@@ -248,7 +249,11 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         # le capture seul, mais sa racine est rendue.
         "widget-presence":       (f"{a}/realtime/matches/{rapport_prematch}/presence"
                                   if rapport_prematch else None),
+        # Le score du direct (carte 646) : ses règles vivent sous
+        # `.match-report-live`, il paraît donc sans style capturé seul.
+        "widget-live-score":     (f"{a}/match-report/{rapport_prematch}/live/score"
+                                  if rapport_prematch else None),
     }
-    pages = {n: u for n, u in candidates.items() if u}
+    pages ={n: u for n, u in candidates.items() if u}
     manquantes = [n for n, u in candidates.items() if not u]
     return pages, manquantes

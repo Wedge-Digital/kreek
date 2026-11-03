@@ -42,27 +42,6 @@ impl LiveTeamVm {
     }
 }
 
-/// Le score et les sorties, tels que le domaine les compte.
-pub struct LiveScoreVm {
-    pub home: u8,
-    pub away: u8,
-    pub home_cas: u8,
-    pub away_cas: u8,
-}
-
-impl LiveScoreVm {
-    pub fn from_domain(pm: &MatchReportPreMatch) -> Self {
-        let (home, away) = pm.compute_score();
-        let (home_cas, away_cas) = pm.compute_cas();
-        Self {
-            home,
-            away,
-            home_cas,
-            away_cas,
-        }
-    }
-}
-
 /// Les gestes d'écriture : la saisie d'un camp, et la fin du match.
 pub struct LiveWriteVm {
     pub home_step_url: String,
@@ -84,7 +63,9 @@ pub struct LiveMatchTemplate {
     pub app_routes: AppRoutes,
     pub home: LiveTeamVm,
     pub away: LiveTeamVm,
-    pub score: LiveScoreVm,
+    /// Le score est un widget (carte 646) : la page n'en garde que le
+    /// conteneur, rechargé sur le signal du canal temps réel.
+    pub live_score_url: String,
     pub action_log_url: String,
     /// `None` pour qui suit : aucun bouton d'écriture n'est rendu.
     pub write: Option<LiveWriteVm>,
@@ -141,12 +122,7 @@ async fn render_live(
     let (home, away) = load_teams(state, &pm).await;
     let access = load_access(state, user, ids).await?;
     let teams = (LiveTeamVm::from_info(&home), LiveTeamVm::from_info(&away));
-    Ok(build_template(
-        ids,
-        teams,
-        LiveScoreVm::from_domain(&pm),
-        access,
-    ))
+    Ok(build_template(ids, teams, access))
 }
 
 /// Le match en cours, ou prêt à publier — l'écran sert aussi à la correction.
@@ -228,11 +204,11 @@ async fn starter_name(state: &AppState, entry: &EntryScope) -> Option<String> {
 pub fn build_template(
     ids: &LiveIds<'_>,
     (home, away): (LiveTeamVm, LiveTeamVm),
-    score: LiveScoreVm,
     access: LiveAccess,
 ) -> LiveMatchTemplate {
     let routes = AppRoutes::default();
     LiveMatchTemplate {
+        live_score_url: routes.match_report.live_score(ids.space_id, ids.mr_id),
         action_log_url: routes.match_report.action_log(ids.space_id, ids.mr_id),
         write: access.can_write.then(|| write_vm(ids)),
         starter_name: access.starter_name,
@@ -242,7 +218,6 @@ pub fn build_template(
         app_routes: routes,
         home,
         away,
-        score,
     }
 }
 
@@ -281,22 +256,11 @@ mod tests {
     }
 
     fn template(can_write: bool, starter_name: Option<&str>) -> LiveMatchTemplate {
-        let score = LiveScoreVm {
-            home: 2,
-            away: 1,
-            home_cas: 1,
-            away_cas: 0,
-        };
         let access = LiveAccess {
             can_write,
             starter_name: starter_name.map(str::to_string),
         };
-        build_template(
-            &IDS,
-            (team("Nains de Fer"), team("London Rats")),
-            score,
-            access,
-        )
+        build_template(&IDS, (team("Nains de Fer"), team("London Rats")), access)
     }
 
     #[test]
@@ -344,10 +308,33 @@ mod tests {
         assert!(html.contains("Ce match est saisi par le coach qui l'a d"));
     }
 
+    /// Le score est un widget (carte 646) : la page n'en rend que le
+    /// conteneur ; ses chiffres sont éprouvés dans `live_score_widget`.
     #[test]
-    fn the_score_is_the_domain_score() {
+    fn the_page_keeps_only_the_score_container() {
+        let html = template(false, None).render().unwrap();
+        assert!(html.contains(r#"hx-get="/app/espace/match-report/rapport/live/score""#));
+        assert!(!html.contains("live-score-value"));
+    }
+
+    /// Décision 8 de E23 : le signal et `realtimeResync` remplacent
+    /// l'interrogation à intervalle fixe, pour qui suit comme pour qui saisit.
+    #[test]
+    fn the_live_page_never_polls() {
+        for can_write in [true, false] {
+            let html = template(can_write, None).render().unwrap();
+            assert!(!html.contains("every "), "can_write={can_write}");
+        }
+    }
+
+    /// Le journal et le score écoutent le signal de **ce** match, la
+    /// resynchronisation, et la suppression locale.
+    #[test]
+    fn both_widgets_listen_to_this_match_and_to_resync() {
         let html = template(true, None).render().unwrap();
-        assert!(html.contains(r#"<span class="live-score-value">2</span>"#));
-        assert!(html.contains(r#"<span class="live-score-value">1</span>"#));
+        let trigger = "load, actionDeleted from:body, \
+                       matchChanged[detail.id=='rapport'] from:body, \
+                       realtimeResync from:body";
+        assert_eq!(html.matches(trigger).count(), 2, "{html}");
     }
 }

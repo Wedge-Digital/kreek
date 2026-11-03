@@ -284,6 +284,13 @@ chaque chargement complet. À la reconnexion (`open` après `error`), le client
 émet `realtimeResync` : les widgets abonnés se rechargent, ce qui couvre les
 signaux perdus pendant la coupure.
 
+**Un flux refusé ne revient pas de lui-même** (mesuré le 2026-11-03, carte
+646) : une reconnexion qui reçoit une réponse HTTP en erreur — le 502 de nginx
+pendant un redéploiement — fait passer l'`EventSource` à `CLOSED` pour de bon.
+Le client le rouvre donc lui-même, après un délai qui double à chaque échec
+(5 s à 60 s) avec un aléa de ±50 %, et la reconnexion suit le chemin ordinaire :
+`realtimeResync`, puis `hello` qui redéclare la présence.
+
 **Le routage.** Un listener `spawn_listener` sur l'`app_event_bus`
 (`init(app_event_bus: &EventBus, …)`, la convention cross-BC de l'axe 5).
 Pour un `MatchReportAppEvent` :
@@ -426,7 +433,10 @@ n'est perdu ni réécrit.
 carte 491 n'est pas livrée, la session est perdue, la reconnexion reçoit un
 `303` vers la connexion et l'`EventSource` s'arrête — pas de tempête de
 reconnexions. Après 491, il se reconnecte en 5 s avec son cookie, et le
-`realtimeResync` recharge les widgets. Si `with_graceful_shutdown` est un jour
+`realtimeResync` recharge les widgets — si le serveur répond déjà. Derrière
+nginx, une reconnexion qui tombe pendant l'arrêt reçoit un 502 et passe le flux
+à `CLOSED` ; depuis la 646, la page le rouvre (5 à 60 s, aléa de ±50 %), ce qui
+étale la vague de reconnexions sur quelques secondes. Si `with_graceful_shutdown` est un jour
 ajouté, les flux devront être fermés par le signal d'arrêt, sans quoi
 l'extinction attendrait leur fin.
 

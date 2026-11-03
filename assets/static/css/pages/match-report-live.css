@@ -38,6 +38,8 @@
   font-weight: 600;
   color: var(--dark-1);
 }
+/* Le conteneur du widget de score (carte 646) : l'élément flex du bandeau. */
+.match-report-live .live-score-slot { flex-shrink: 0; }
 .match-report-live .live-score-center {
   display: flex;
   flex-direction: column;

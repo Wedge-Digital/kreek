@@ -4,6 +4,12 @@
 //! la convention de l'axe 5 : il reçoit des faits déjà commités par
 //! `match_report`, et n'écrit rien.
 //!
+//! Pour **tout** fait de match, un signal « le match X a changé » part
+//! d'abord vers les connexions présentes sur ce match, auteur compris (carte
+//! 646, R4) : la page recharge ses widgets par leurs routes, qui gardent leurs
+//! droits. Aucun port n'est appelé pour cela — la présence (644) n'est
+//! inscrite qu'avec le droit de suivre.
+//!
 //! Pour un fait qui fait un toast (décision 7) : destinataires = les coachs des
 //! deux équipes, moins l'auteur (R2), croisés avec le registre, livrés à
 //! **toutes** leurs connexions — y compris l'onglet qui regarde ce match
@@ -17,7 +23,7 @@
 //! `resync`, qui fait recharger les widgets abonnés.
 
 use crate::app::shared_kernel::app_events::match_report_app_events::MatchReportAppEvent;
-use crate::app::shared_kernel::identity::ids::UserId;
+use crate::app::shared_kernel::identity::ids::{EntityId, UserId};
 use crate::common::event_envelope::EventEnvelope;
 use crate::common::services::event_bus::event_bus::EventBus;
 use crate::common::services::event_bus::supervision::spawn_listener;
@@ -58,22 +64,73 @@ pub fn init(
     });
 }
 
-/// Un app event reçu : routé s'il fait un toast, ignoré sinon.
+/// Un app event reçu. Un fait de match signale d'abord ses présents (646),
+/// puis fait son toast s'il en porte un (645) ; les faits des autres BCs sont
+/// ignorés.
 pub async fn handle(
     envelope: &EventEnvelope,
     registry: &ConnectionRegistry,
     audience: &dyn IMatchAudiencePort,
 ) {
-    let Some(notice) = notice_from(envelope) else {
+    let Some(event) = decode(envelope) else {
         return;
     };
+    // Le signal d'abord, et sans `await` : il n'attend pas le port du toast.
+    signal(&event, envelope, registry);
+    if let Some(notice) = notice_of(&event) {
+        toast(envelope, &notice, registry, audience).await;
+    }
+}
+
+/// Le fait de match d'une enveloppe, ou `None` pour un fait d'un autre BC.
+///
+/// Un échec de lecture est silencieux, comme dans tout listener de
+/// `MatchReportAppEvent` — sauf pour un `event_type` qui fait un toast : ce
+/// fait-là devait être lu, son échec se journalise.
+fn decode(envelope: &EventEnvelope) -> Option<MatchReportAppEvent> {
+    match serde_json::from_value::<MatchReportAppEvent>(envelope.payload.clone()) {
+        Ok(event) => Some(event),
+        Err(e) => {
+            if TOAST_EVENT_TYPES.contains(&envelope.event_type.as_str()) {
+                tracing::warn!(event_id = %envelope.event_id, error = %e, "fait de match illisible");
+            }
+            None
+        }
+    }
+}
+
+/// « Le match X a changé », à toutes les connexions présentes sur ce match,
+/// auteur compris (carte 646). Pas de ligne propre au journal : chaque
+/// livraison est comptée dans les `delivered` de sa connexion. Rend le nombre
+/// de files qui ont accepté le signal.
+pub fn signal(
+    event: &MatchReportAppEvent,
+    envelope: &EventEnvelope,
+    registry: &ConnectionRegistry,
+) -> usize {
+    match EntityId::try_new(event.match_report_id()) {
+        Ok(match_report_id) => registry.notify_match_changed(&match_report_id),
+        Err(_) => {
+            tracing::warn!(event_id = %envelope.event_id, "match illisible, signal abandonné");
+            0
+        }
+    }
+}
+
+/// Le toast d'un fait, routé puis journalisé.
+async fn toast(
+    envelope: &EventEnvelope,
+    notice: &MatchNotice,
+    registry: &ConnectionRegistry,
+    audience: &dyn IMatchAudiencePort,
+) {
     let Ok(author) = UserId::try_new(&notice.author) else {
         // Abandonné plutôt que routé sans exclusion : l'auteur recevrait son
         // propre toast.
         tracing::warn!(event_id = %envelope.event_id, "auteur illisible, notification abandonnée");
         return;
     };
-    let outcome = route(&notice, &author, registry, audience).await;
+    let outcome = route(notice, &author, registry, audience).await;
     tracing::info!(
         event_id = %envelope.event_id,
         match_report_id = %notice.match_report_id,
@@ -82,21 +139,6 @@ pub async fn handle(
         delivered = outcome.delivered,
         "notification routée"
     );
-}
-
-/// Le toast d'une enveloppe. Seuls les `event_type` qui en font un sont
-/// désérialisés : les faits des autres BCs ne coûtent qu'une comparaison.
-fn notice_from(envelope: &EventEnvelope) -> Option<MatchNotice> {
-    if !TOAST_EVENT_TYPES.contains(&envelope.event_type.as_str()) {
-        return None;
-    }
-    match serde_json::from_value::<MatchReportAppEvent>(envelope.payload.clone()) {
-        Ok(event) => notice_of(&event),
-        Err(e) => {
-            tracing::warn!(event_id = %envelope.event_id, error = %e, "fait de match illisible");
-            None
-        }
-    }
 }
 
 /// Livre le toast aux coachs du match, auteur exclu, sur tous leurs onglets.

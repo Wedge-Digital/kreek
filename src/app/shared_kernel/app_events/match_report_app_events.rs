@@ -296,16 +296,19 @@ impl MatchReportAppEvent {
         }
     }
 
-    pub fn to_enveloppe(&self) -> EventEnvelope {
-        let emitter = match self {
+    /// Le match de ce fait, quel que soit le variant (carte 646 : le canal
+    /// temps réel en tire le signal « le match X a changé »). Sans joker :
+    /// un variant ajouté casse la compilation ici.
+    pub fn match_report_id(&self) -> &str {
+        match self {
             Self::MatchReportConfirmed {
                 match_report_id, ..
-            } => match_report_id.clone(),
+            } => match_report_id,
             Self::MatchReportCancelled {
                 match_report_id, ..
-            } => match_report_id.clone(),
-            Self::MatchReportPublished(payload) => payload.match_report_id.clone(),
-            Self::MatchReportUnpublished(payload) => payload.match_report_id.clone(),
+            } => match_report_id,
+            Self::MatchReportPublished(payload) => &payload.match_report_id,
+            Self::MatchReportUnpublished(payload) => &payload.match_report_id,
             Self::JourneymenFielded {
                 match_report_id, ..
             }
@@ -326,8 +329,12 @@ impl MatchReportAppEvent {
             }
             | Self::MatchInducementsCancelled {
                 match_report_id, ..
-            } => match_report_id.clone(),
-        };
+            } => match_report_id,
+        }
+    }
+
+    pub fn to_enveloppe(&self) -> EventEnvelope {
+        let emitter = self.match_report_id().to_string();
         EventEnvelope {
             event_id: EventId::new().to_string(),
             emitter,
@@ -336,5 +343,50 @@ impl MatchReportAppEvent {
             payload: serde_json::to_value(self).unwrap(),
             occurred_at: time::OffsetDateTime::now_utc(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cancelled(match_report_id: &str) -> MatchReportAppEvent {
+        MatchReportAppEvent::MatchReportCancelled {
+            event_id: EventId::new(),
+            match_report_id: match_report_id.into(),
+            home_team_id: "home".into(),
+            away_team_id: "away".into(),
+            pairing_id: None,
+            journeymen: vec![],
+        }
+    }
+
+    fn unpublished(match_report_id: &str) -> MatchReportAppEvent {
+        MatchReportAppEvent::MatchReportUnpublished(MatchReportUnpublishedPayload {
+            match_report_id: match_report_id.into(),
+            space_id: "space".into(),
+            competition_id: "competition".into(),
+            season_id: "season".into(),
+            round_id: "round".into(),
+            pairing_id: None,
+            home_team_id: "home".into(),
+            away_team_id: "away".into(),
+            unpublished_at: Utc::now(),
+        })
+    }
+
+    /// Carte 646 : le canal temps réel lit le match de tout fait, variant à
+    /// champs comme variant à charge utile.
+    #[test]
+    fn match_report_id_is_read_on_every_variant_shape() {
+        assert_eq!(cancelled("m1").match_report_id(), "m1");
+        assert_eq!(unpublished("m2").match_report_id(), "m2");
+    }
+
+    /// L'émetteur de l'enveloppe reste le match, comme avant l'extraction.
+    #[test]
+    fn the_envelope_emitter_is_the_match() {
+        assert_eq!(cancelled("m1").to_enveloppe().emitter, "m1");
+        assert_eq!(unpublished("m2").to_enveloppe().emitter, "m2");
     }
 }

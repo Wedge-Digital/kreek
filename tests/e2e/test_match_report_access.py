@@ -183,6 +183,30 @@ def test_un_tiers_ne_suit_pas_le_match(rapports):
     assert reponse.status_code == 403, reponse.status_code
 
 
+# ── Le score du direct, en widget (carte 646) ─────────────────────────────────
+
+
+def test_a_third_party_cannot_read_the_live_score(rapports):
+    """Le widget du score est derrière la garde de suivi, comme la page."""
+    reponse = requests.get(
+        _url(rapports, "etranger", "live/score"), headers=MEMBRE_SIMPLE,
+        allow_redirects=False, timeout=15,
+    )
+    assert reponse.status_code == 403, reponse.status_code
+
+
+def test_the_other_coach_reads_the_live_score(rapports):
+    """Le témoin du refus : l'autre coach lit le score du match qu'il suit —
+    le touchdown de DevCoach, 1 à 0."""
+    reponse = requests.get(
+        _url(rapports, "adverse", "live/score"), headers=MEMBRE_SIMPLE,
+        allow_redirects=False, timeout=15,
+    )
+    assert reponse.status_code == 200, reponse.status_code
+    assert '<span class="live-score-value">1</span>' in reponse.text, reponse.text
+    assert '<span class="live-score-value">0</span>' in reponse.text, reponse.text
+
+
 def test_l_autre_coach_voit_le_recapitulatif_sans_bouton_de_publication(rapports):
     reponse = requests.get(
         _url(rapports, "adverse", "recap"), headers=PROFIL_SIMPLE,

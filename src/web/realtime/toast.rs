@@ -34,8 +34,8 @@ use crate::web::realtime::message::ToastPayload;
 /// Le sous-titre de tout toast de match : c'est lui qui porte le lien.
 pub const SEE_MATCH: &str = "Voir le match";
 
-/// Les seuls `event_type` qui font un toast : le routeur ne désérialise rien
-/// d'autre, et n'appelle son port pour rien d'autre.
+/// Les seuls `event_type` qui font un toast : le routeur n'appelle son port
+/// pour rien d'autre, et ne journalise l'échec de lecture que de ceux-là.
 pub const TOAST_EVENT_TYPES: [&str; 4] = [
     MatchReportAppEvent::MATCH_REPORT_CONFIRMED,
     MatchReportAppEvent::MATCH_ACTION_RECORDED,

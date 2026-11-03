@@ -77,6 +77,11 @@
 # démarré —, d'où la même traversée.
 "test_realtime_presence" = ["match_report", "players", "references", "teams",
                             "competitions", "team_creation", "ranking", "spaces"]
+# Le direct sur `/live` (carte 646) : le signal part de `src/web/realtime`
+# (déjà `@core`), le journal et le score sont des widgets de `match_report`.
+# Même décor que `test_realtime_presence`, d'où la même traversée.
+"test_realtime_direct" = ["match_report", "players", "references", "teams",
+                          "competitions", "team_creation", "ranking", "spaces"]
 
 # ── Création de compétition (aucune équipe, aucun match) ─────────────────────
 # Phase 1 → recherche de coachs (widget du BC spaces).

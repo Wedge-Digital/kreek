@@ -155,6 +155,27 @@ impl ConnectionRegistry {
         connection.presence.map(|p| p.match_report_id)
     }
 
+    /// Ferme tous les flux de cet utilisateur ; rend leur nombre (carte 646).
+    ///
+    /// Retirer la connexion détruit son `Sender` : le flux voit sa file se
+    /// fermer, se termine, et le navigateur reçoit la fin de réponse qu'il
+    /// recevrait d'un serveur qui s'arrête. La garde du flux, détruite ensuite,
+    /// ne trouve plus rien à retirer. Les présents du match quitté
+    /// l'apprennent, comme à la fermeture d'un onglet.
+    pub fn close_user_connections(&self, user_id: &UserId) -> usize {
+        let ids: Vec<ConnectionId> = self
+            .by_user
+            .get(user_id)
+            .map(|ids| ids.iter().copied().collect())
+            .unwrap_or_default();
+        for id in &ids {
+            if let Some(match_report_id) = self.close(id) {
+                self.notify_presence_changed(&match_report_id, None);
+            }
+        }
+        ids.len()
+    }
+
     /// Livre un message à une connexion, sans jamais attendre.
     pub fn deliver(&self, id: &ConnectionId, message: RealtimeMessage) -> Delivery {
         let Some(connection) = self.connections.get(id) else {

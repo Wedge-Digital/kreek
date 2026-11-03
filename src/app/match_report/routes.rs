@@ -11,6 +11,10 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/cancel-inducements";
     /// Le match en direct : le journal d'où se saisit le match (carte 636).
     pub const MATCH_REPORT_LIVE: &str = "/app/{space_id}/match-report/{match_report_id}/live";
+    /// Le score du match en direct, en widget : il se recharge sur le signal
+    /// du canal temps réel (carte 646).
+    pub const MATCH_REPORT_LIVE_SCORE: &str =
+        "/app/{space_id}/match-report/{match_report_id}/live/score";
     pub const MATCH_REPORT_STEP3: &str = "/app/{space_id}/match-report/{match_report_id}/step3";
     pub const MATCH_REPORT_STEP4: &str = "/app/{space_id}/match-report/{match_report_id}/step4";
     pub const MATCH_REPORT_STEP5: &str = "/app/{space_id}/match-report/{match_report_id}/step5";
@@ -122,6 +126,13 @@ impl Routes {
     /// Le match en direct (carte 636).
     pub fn live(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_LIVE
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    /// Le score du match en direct, en widget (carte 646).
+    pub fn live_score(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_LIVE_SCORE
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }

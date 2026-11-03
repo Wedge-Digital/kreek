@@ -15,5 +15,8 @@ pub mod stream_controller;
 pub mod notification_router;
 pub mod toast;
 
+// Carte 646 : la coupure des flux, réservée aux e2e.
+pub mod close_streams_controller;
+
 #[cfg(test)]
 mod tests;

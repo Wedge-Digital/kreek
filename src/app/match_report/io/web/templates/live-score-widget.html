@@ -1,0 +1,7 @@
+{# Le score du match en direct (carte 646) : sorti de live-match.html pour se
+   recharger sur le signal du canal temps réel. Ses règles restent dans
+   pages/match-report-live.css : le widget ne vit que sous .match-report-live. #}
+<div class="live-score-center" hx-disinherit="*">
+  <div class="live-score-nums"><span class="live-score-value">{{ score.home }}</span><span class="live-score-sep">&#8212;</span><span class="live-score-value">{{ score.away }}</span></div>
+  <div class="live-score-cas" title="Sorties"><span>{{ score.home_cas }}</span><span class="live-score-cas-sep">&#8211;</span><span>{{ score.away_cas }}</span></div>
+</div>

@@ -188,6 +188,11 @@
       // (carte 644) : le widget de présence se recharge.
       presence: function (data) {
         emit('presenceChanged', { id: data.match_report_id });
+      },
+      // Un fait de ce match vient d'être saisi (carte 646) : les widgets de
+      // `/live` se rechargent par leur propre route.
+      match: function (data) {
+        emit('matchChanged', { id: data.match_report_id });
       }
     };
 
@@ -197,8 +202,26 @@
       translations[name](data);
     }
 
-    // `open` après `error` est une reconnexion : les signaux perdus pendant la
-    // coupure ne seront pas rejoués (R3), les widgets abonnés se rechargent.
+    // Carte 646 — un flux refusé (le 502 de nginx pendant un redéploiement)
+    // passe à `CLOSED` pour de bon : le navigateur ne retente plus, mesuré.
+    // La page le rouvre elle-même, après un délai qui double à chaque échec
+    // (5 s, 10 s, 20 s… 60 s au plus), avec un aléa de ±50 % qui étale la
+    // vague de reconnexions d'après un redéploiement. Sans limite : un onglet
+    // dont la session est perdue coûte une requête par minute, et le prochain
+    // chargement complet le ramène à la connexion.
+    var REOPEN_MIN_MS = 5000, REOPEN_MAX_MS = 60000;
+    var reopenDelay = REOPEN_MIN_MS, reopenTimer = null;
+
+    function scheduleReopen() {
+      if (reopenTimer) return;
+      var wait = reopenDelay * (0.5 + Math.random());
+      reopenDelay = Math.min(reopenDelay * 2, REOPEN_MAX_MS);
+      reopenTimer = setTimeout(function () { reopenTimer = null; connect(); }, wait);
+    }
+
+    // `open` après `error` est une reconnexion — native, ou rouverte par la
+    // page : les signaux perdus pendant la coupure ne seront pas rejoués (R3),
+    // les widgets abonnés se rechargent, et le `hello` redéclare la présence.
     function listen(source) {
       Object.keys(translations).forEach(function (name) {
         source.addEventListener(name, function (evt) { translate(name, evt); });
@@ -206,8 +229,12 @@
       source.addEventListener('open', function () {
         if (broken) emit('realtimeResync');
         broken = false;
+        reopenDelay = REOPEN_MIN_MS;
       });
-      source.addEventListener('error', function () { broken = true; });
+      source.addEventListener('error', function () {
+        broken = true;
+        if (source.readyState === EventSource.CLOSED) scheduleReopen();
+      });
     }
 
     function connect() {
@@ -219,6 +246,9 @@
     // la page de côté, et ne le rouvre pas de lui-même.
     window.addEventListener('pageshow', function (evt) {
       if (!evt.persisted || realtime.source.readyState !== EventSource.CLOSED) return;
+      // Une réouverture déjà programmée ferait un second flux.
+      clearTimeout(reopenTimer);
+      reopenTimer = null;
       broken = true;
       connect();
     });

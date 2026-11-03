@@ -30,6 +30,11 @@ pub enum RealtimeMessage {
     /// Quelqu'un est arrivé sur ce match, en est parti, ou y a changé de rôle
     /// (carte 644) : le widget de présence se recharge.
     PresenceChanged { match_report_id: EntityId },
+    // ── Carte 646 : le direct ──
+    /// Un fait de ce match vient d'être commité : les widgets de `/live`
+    /// abonnés se rechargent par leur propre route (R4, décision 3). Le
+    /// message ne porte que l'identifiant — aucun HTML, aucune donnée de BC.
+    MatchChanged { match_report_id: EntityId },
 }
 
 /// Ce que le layout passe à `kreekToast(title, 'success', { subtitle, link })`.
@@ -56,6 +61,13 @@ impl RealtimeMessage {
             // ── Carte 644 ──
             RealtimeMessage::PresenceChanged { match_report_id } => {
                 Event::default().event("presence").data(
+                    serde_json::json!({ "match_report_id": match_report_id.to_string() })
+                        .to_string(),
+                )
+            }
+            // ── Carte 646 ──
+            RealtimeMessage::MatchChanged { match_report_id } => {
+                Event::default().event("match").data(
                     serde_json::json!({ "match_report_id": match_report_id.to_string() })
                         .to_string(),
                 )

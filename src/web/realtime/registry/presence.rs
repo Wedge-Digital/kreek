@@ -7,7 +7,7 @@
 //! **Le rôle inscrit est celui que le serveur a calculé** : ce module ne le
 //! décide pas, il le range. C'est `presence_controller` qui le calcule.
 
-use super::{ConnectionId, ConnectionRegistry};
+use super::{ConnectionId, ConnectionRegistry, Delivery};
 use crate::app::shared_kernel::identity::coach_name::CoachName;
 use crate::app::shared_kernel::identity::ids::{EntityId, UserId};
 use crate::web::ports::MatchRole;
@@ -114,5 +114,21 @@ impl ConnectionRegistry {
                 self.deliver(&present.id, message.clone());
             }
         }
+    }
+
+    /// Prévient **tous** les présents d'un match — l'auteur du fait compris —
+    /// que ce match a changé (carte 646). Rend le nombre de files qui ont
+    /// accepté le signal.
+    ///
+    /// Être présent suffit : la présence n'est inscrite qu'avec un rôle
+    /// calculé par `match_role`, donc avec le droit de suivre (R6).
+    pub fn notify_match_changed(&self, match_report_id: &EntityId) -> usize {
+        let message = RealtimeMessage::MatchChanged {
+            match_report_id: *match_report_id,
+        };
+        self.present_on(match_report_id)
+            .iter()
+            .filter(|present| self.deliver(&present.id, message.clone()) == Delivery::Queued)
+            .count()
     }
 }

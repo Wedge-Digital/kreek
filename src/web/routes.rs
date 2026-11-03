@@ -6,6 +6,9 @@ pub mod path {
     pub const REALTIME_STREAM: &str = "/app/realtime/stream";
     /// Un onglet déclare le match qu'il regarde, ou aucun (carte 644).
     pub const REALTIME_PRESENCE: &str = "/app/realtime/presence";
+    /// Ferme les flux de l'appelant (carte 646) — **réservée aux e2e** : 404
+    /// hors `bypass_auth`.
+    pub const REALTIME_TEST_CLOSE_STREAMS: &str = "/app/realtime/test/close-my-streams";
     /// Le widget « qui suit, qui saisit » d'un match (carte 644) — sous
     /// `space_scope`, qui résout `match_report_id`.
     pub const REALTIME_MATCH_PRESENCE: &str =
