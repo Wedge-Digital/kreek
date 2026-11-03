@@ -232,6 +232,19 @@ Directives de travail pour Claude Code sur ce projet.
     maquette tutoie** : la maquette dit la mise en page, pas le ton. Décidé le
     2026-11-01, sur la carte 632, pour rester cohérent avec l'existant.
 
+20. **Une avance qui n'est pas fast-forward se rebase, elle ne se merge pas.**
+    Qu'il s'agisse de pousser sur une branche qui a avancé ou de reporter le
+    travail d'un worktree sur `demo`, on rejoue ses commits par `git rebase`
+    au-dessus de la cible, jamais par `git merge`.
+
+    **Pourquoi** : un historique linéaire se corrige commit par commit — un
+    `revert`, un `rebase` ciblé, un `bisect` lisent une ligne droite. Un commit
+    de merge mêle deux histoires, et ce qui s'y est résolu n'appartient à aucun
+    des deux côtés : c'est là que se perd une résolution de conflit.
+
+    Un rebase réécrit l'histoire locale : il ne se fait que sur des commits
+    **non poussés**. Un commit déjà sur `origin` ne se rebase pas.
+
 
 ---
 
