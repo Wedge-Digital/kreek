@@ -36,7 +36,10 @@ jobs:
   # la compilation des macros query! l'exige, d'où SQLX_OFFLINE.
   qualite:
     name: Qualité (fmt, clippy, architecture)
-    runs-on: ubuntu-latest
+    # Pas `ubuntu-latest` : passé en 26.04 le 2026-11-02, il casse le job e2e
+    # sans prévenir — Playwright 1.60 n'y installe pas Chromium. On montera
+    # l'image quand Playwright la supportera.
+    runs-on: ubuntu-24.04
     env:
       SQLX_OFFLINE: "true"
 
@@ -65,7 +68,7 @@ jobs:
   # étape d'audit qui ne s'exécutait jamais.
   audit:
     name: Audit des dépendances
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pas `ubuntu-latest`, cf. job qualite
 
     steps:
       - uses: actions/checkout@v4
@@ -86,7 +89,7 @@ jobs:
 
   unit:
     name: Tests unitaires
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pas `ubuntu-latest`, cf. job qualite
     env:
       # Injectée par le Makefile comme DATABASE_URL pour `reset_test_db` et `cargo test`.
       # Aligne l'URL sur le service Postgres ci-dessous (port 5432, user `dev`).
@@ -126,7 +129,7 @@ jobs:
 
   e2e:
     name: Tests E2E
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pas `ubuntu-latest`, cf. job qualite
     env:
       # Le fichier .env.e2e n'est chargé qu'au runtime (dotenvy) ; la compilation
       # des macros query!/query_as! a besoin de la variable dès la compilation.
