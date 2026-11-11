@@ -1,5 +1,9 @@
 # Une erreur JavaScript à l'ouverture du recrutement
 
+> **Carte annulée le 2026-11-11 — doublon de la 592.** Le script fautif est
+> celui de la macro `cloudinary_upload`, chargée par le widget du logo de la
+> fiche équipe ; la cause prouvée et la correction vivent dans la 592.
+
 **Priorité : moyenne** — un test e2e est rouge ; l'effet pour l'utilisateur
 reste à établir
 **Trouvée par :** la suite e2e complète lancée pour la carte 622 (2026-11-01).

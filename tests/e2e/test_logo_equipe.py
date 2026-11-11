@@ -128,6 +128,45 @@ def test_annuler_une_fois_puis_envoyer_enregistre_le_logo(page: Page, logo_ctx):
     assert logo_en_base(equipe) == url
 
 
+def test_quitter_la_fiche_ne_reveille_pas_cloudinary(page: Page, logo_ctx):
+    """Carte 592. Le champ téléchargeait `all.js` dès l'ouverture de la fiche,
+    puis branchait son clic à l'arrivée du chargeur, en cherchant la zone dans
+    tout le document. Quitter la fiche pendant le téléchargement laissait ce
+    rappel sans zone : `TypeError` sur `addEventListener`, au teardown des tests
+    qui ouvrent la fiche puis cliquent sur le bandeau.
+
+    Les requêtes Cloudinary sont **retenues** jusqu'à ce que la fiche soit
+    quittée, puis relâchées : la course est rejouée à coup sûr, sans réseau.
+    La fixture `_fail_on_console_errors` relève l'erreur si elle revient."""
+    retenues = []
+    page.route("**/widget.cloudinary.com/**", lambda route: retenues.append(route))
+    page.goto(f"{BASE_URL}/app/{logo_ctx['space_id']}/teams/{logo_ctx['equipes'][0]}", wait_until="load")
+    # Le wrapper des boutons est posé par le script du widget, qui suit celui
+    # de la macro : sa présence atteste que les deux scripts ont tourné.
+    expect(page.locator(".team-logo .team-logo-actions-wrapper")).to_have_count(1, timeout=10000)
+    avant_le_clic = len(retenues)
+
+    page.locator(".team-back-link").click()
+    expect(page.locator(".team-logo")).to_have_count(0, timeout=10000)
+    relacher(page, retenues)
+
+    assert avant_le_clic == 0, "Cloudinary est téléchargé sans que personne ait cliqué sur le champ"
+
+
+def relacher(page: Page, retenues: list):
+    """Répond aux requêtes retenues, puis attend que tous les écouteurs `load`
+    du chargeur aient tourné — le nôtre, posé en dernier, passe après eux."""
+    if not retenues:
+        return
+    page.evaluate(
+        "document.getElementById('cloudinary-loader')"
+        ".addEventListener('load', () => { window.__chargeurArrive = true; })"
+    )
+    while retenues:
+        retenues.pop().fulfill(content_type="application/javascript", body=FAUX_CLOUDINARY)
+    page.wait_for_function("window.__chargeurArrive === true")
+
+
 def test_le_nouveau_logo_atteint_le_calendrier(page: Page, logo_ctx):
     """Carte 581 : `competitions` garde sa propre copie du logo, faite à
     l'appariement. Le nouveau logo doit y arriver sans réappariement."""

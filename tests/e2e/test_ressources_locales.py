@@ -10,10 +10,11 @@ dans une revue. D'où ces tests, qui regardent le réseau et non le DOM.
 La quatrième, `widget.cloudinary.com`, est **conservée** : la remplacer par un
 champ maison faisait perdre la source URL, le glisser-déposer et le recadrage.
 Mais son chargeur tire de lui-même Google Tag Manager, GA4 et Rollbar, donc il
-n'est plus dans le layout : la macro du champ d'upload le pose elle-même, sur
-les deux seules pages concernées. C'est **cette frontière** que le second test
-tient — sans lui, un retour du script dans le layout ne casserait rien de
-visible, et les trois traqueurs suivraient à nouveau le coach partout.
+n'est plus dans le layout : la macro du champ d'upload le pose elle-même, et
+seulement au premier clic sur la zone (carte 592). C'est **cette frontière** que
+le second test tient — sans lui, un retour du script dans le layout, ou un
+chargement à l'ouverture de la page, ne casserait rien de visible, et les trois
+traqueurs suivraient à nouveau le coach partout.
 
 Prérequis : serveur kreek lancé en dev.
 """
@@ -30,7 +31,7 @@ DANS_LE_PAQUET_CLOUDINARY = ("cloudinary.com", "googletagmanager.com", "cdnjs.cl
 RESSOURCES = ("script", "stylesheet", "font")
 
 
-def _tierces(page: Page, chemin: str, space_id: str) -> list[str]:
+def _ecouter(page: Page) -> list[str]:
     vues: list[str] = []
     page.on(
         "request",
@@ -38,6 +39,11 @@ def _tierces(page: Page, chemin: str, space_id: str) -> list[str]:
         if "localhost" not in r.url and r.resource_type in RESSOURCES
         else None,
     )
+    return vues
+
+
+def _tierces(page: Page, chemin: str, space_id: str) -> list[str]:
+    vues = _ecouter(page)
     page.goto(f"{BASE_URL}/app/{space_id}/{chemin}", wait_until="load")
     page.wait_for_timeout(2500)
     return vues
@@ -49,26 +55,30 @@ def test_une_page_sans_upload_ne_sort_pas_de_nos_domaines(page: Page, space_id):
     assert _tierces(page, "home", space_id) == []
 
 
-def test_le_chargeur_cloudinary_reste_cantonne_a_la_page_qui_l_utilise(page: Page, space_id):
-    """Sur la page qui porte le champ, le widget se charge — et n'amène que ce
-    qu'on lui connaît."""
+def test_le_chargeur_cloudinary_ne_part_qu_au_clic_sur_le_champ(page: Page, space_id):
+    """Sur la page qui porte le champ, rien ne sort tant qu'on n'y touche pas.
+    Au clic, le chargeur part — et n'amène que ce qu'on lui connaît."""
     vues = _tierces(page, "team/create", space_id)
+    assert vues == [], "Cloudinary est chargé sans clic :\n  " + "\n  ".join(vues)
+
+    page.locator("#zone-logo_url").click()
+    page.wait_for_function("() => !!window.cloudinary", timeout=15000)
+    page.wait_for_timeout(2500)
     inconnues = [v for v in vues if not any(h in v for h in DANS_LE_PAQUET_CLOUDINARY)]
 
     assert any("widget.cloudinary.com" in v for v in vues), (
-        "le chargeur Cloudinary ne se charge plus : le champ d'upload est inerte"
+        "le clic ne charge pas Cloudinary : le champ d'upload est inerte"
     )
     assert not inconnues, "origines inattendues :\n  " + "\n  ".join(inconnues)
 
 
-def test_le_champ_d_upload_s_ouvre_malgre_le_chargement_differe(page: Page, space_id):
-    """Le point fragile du chargement à la demande : `all.js` n'est plus là
-    quand le script en ligne du champ s'exécute. Son corps est donc différé
-    jusqu'à ce que `cloudinary` existe — si ce report casse, la zone devient
-    muette au clic, et **aucun test de réseau ne le verrait**."""
+def test_le_premier_clic_ouvre_le_champ_d_upload(page: Page, space_id):
+    """Le point fragile du chargement au clic : `all.js` n'est pas là quand la
+    zone est cliquée. Le clic doit le télécharger, créer le widget **et**
+    l'ouvrir — si l'un des trois casse, la zone devient muette, et **aucun
+    test de réseau ne le verrait**."""
     page.goto(f"{BASE_URL}/app/{space_id}/team/create", wait_until="load")
     page.wait_for_selector("#zone-logo_url", timeout=5000)
-    page.wait_for_function("() => !!window.cloudinary", timeout=15000)
 
     page.locator("#zone-logo_url").click()
 
