@@ -64,6 +64,7 @@ pub mod m004_rapports_en_double;
 pub mod m005_gblr_j11;
 pub mod m006_blessures_persistantes;
 pub mod m007_solde_spp;
+pub mod m008_recompute_team_values;
 
 /// Le registre, dans son ordre d'exécution.
 ///
@@ -79,6 +80,11 @@ fn registre() -> Vec<Box<dyn DataMigration>> {
         Box::new(m005_gblr_j11::GblrJ11),
         Box::new(m006_blessures_persistantes::BlessuresPersistantes),
         Box::new(m007_solde_spp::SoldeSpp),
+        // Carte 664 : rattrape les valeurs d'équipe dont le recalcul s'est
+        // perdu sur une écriture concurrente, avant que le use case ne sache
+        // retenter. En dernier, pour sommer des valeurs joueurs que toutes les
+        // migrations précédentes ont déjà corrigées.
+        Box::new(m008_recompute_team_values::RecomputeTeamValues),
     ]
 }
 
@@ -106,6 +112,7 @@ pub async fn appliquer(
 
         let debut = std::time::Instant::now();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+        lever_le_delai_d_oisivete(&mut tx).await?;
 
         let touches = m.executer(state, &mut tx).await?;
 
@@ -134,6 +141,23 @@ async fn deja_appliquee(pool: &PgPool, nom: &str) -> Result<bool, String> {
         .await
         .map(|n| n > 0)
         .map_err(|e| format!("lecture du registre : {e}"))
+}
+
+/// Le pool pose `idle_in_transaction_session_timeout` sur chaque connexion
+/// (carte 317), contre les transactions abandonnées par un handler. La
+/// transaction d'une migration n'en est pas une : une migration qui travaille
+/// par le pool — `m002`, `m008` — la laisse oisive le temps de sa boucle, et
+/// Postgres tuait la session avant le marquage. Le serveur refusait alors de
+/// démarrer, et chaque essai rejouait la migration entière (carte 664).
+///
+/// `SET LOCAL` ne vaut que pour cette transaction : la connexion retourne au
+/// pool avec le délai de la carte 317.
+async fn lever_le_delai_d_oisivete(tx: &mut Transaction<'_, Postgres>) -> Result<(), String> {
+    sqlx::query("SET LOCAL idle_in_transaction_session_timeout = 0")
+        .execute(&mut **tx)
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("levée du délai d'oisiveté : {e}"))
 }
 
 #[cfg(test)]
@@ -284,5 +308,55 @@ mod tests {
             1,
             "la suivante ne doit pas tourner"
         );
+    }
+
+    /// Une migration qui ne touche sa transaction qu'au marquage : elle
+    /// travaille par le pool, comme `m002` et `m008`, et la transaction reste
+    /// oisive le temps de la boucle.
+    struct Lente;
+
+    #[async_trait]
+    impl DataMigration for Lente {
+        fn nom(&self) -> &'static str {
+            "lente"
+        }
+
+        async fn executer(
+            &self,
+            _state: &AppState,
+            _tx: &mut Transaction<'_, Postgres>,
+        ) -> Result<usize, String> {
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            Ok(0)
+        }
+    }
+
+    /// Le pool de production pose `idle_in_transaction_session_timeout` sur
+    /// chaque connexion (carte 317). Une migration plus longue que ce délai
+    /// voyait sa session tuée, et son marquage échouer : le serveur refusait
+    /// de démarrer (carte 664, 9 534 équipes en base e2e). Ici le délai vaut
+    /// une seconde, la migration en dure deux.
+    #[sqlx::test]
+    async fn une_migration_plus_longue_que_le_delai_d_oisivete_se_marque(pool: sqlx::PgPool) {
+        let state = etat(pool.clone()).await;
+        let impatient = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .after_connect(|conn, _meta| {
+                Box::pin(async move {
+                    sqlx::query("SET idle_in_transaction_session_timeout = '1s'")
+                        .execute(conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect_with(pool.connect_options().as_ref().clone())
+            .await
+            .unwrap();
+
+        appliquer(&state, &impatient, vec![Box::new(Lente)])
+            .await
+            .unwrap();
+
+        assert_eq!(noms(&pool).await, vec!["lente".to_string()]);
     }
 }
