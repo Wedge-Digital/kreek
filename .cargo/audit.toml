@@ -37,6 +37,13 @@ ignore = [
     # n'entre pas dans le binaire. À retirer quand askama s'en passera.
     # Constaté le 2026-11-02.
     "RUSTSEC-2026-0374",
+
+    # libsqlite3-sys 0.30.1 — CVE de la bibliothèque C SQLite (6.8). Correctif en
+    # 0.39, hors de portée de sqlx 0.8. Tirée par `sqlx-sqlite`, que le verrou
+    # garde pour la même raison que `sqlx-mysql` ci-dessus : `sqlx-macros-core`
+    # en dépend, alors que nous n'utilisons que PostgreSQL. Absente du graphe.
+    # Constaté le 2026-11-11.
+    "RUSTSEC-2026-0459",
 ]
 
 # `spin` 0.9.8 était *yanked* — ce qui n'est pas un avis et n'a donc pas
