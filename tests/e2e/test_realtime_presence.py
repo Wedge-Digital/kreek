@@ -40,18 +40,12 @@ from playwright.sync_api import Browser, Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from match_report_helpers import create_draft, ensure_inducements, ensure_pre_match
+from realtime_helpers import HELLO_RECEIVED, login, match_url
 
 SIMPLE_MEMBER = {"X-Bypass-Auth-Profile": "simple"}
 THIRD_PARTY = "E2E Coach 02"
-# `src/cli/seed_e2e.rs` — le mot de passe de tous les comptes semés.
-SEED_PASSWORD = "changeme-dev-only"
 PRESENCE = ".match-report-live .live-presence"
 WRITER_MENTION = "DevCoach saisit"
-HELLO_RECEIVED = "() => window.kreekRealtime && window.kreekRealtime.connectionId"
-
-
-def _url(space_id, mr_id, suffix):
-    return f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/{suffix}"
 
 
 def _widget_url(space_id, mr_id):
@@ -73,7 +67,7 @@ def presence_ctx(browser, space_id):
 def _open_writer(browser: Browser, space_id, mr_id) -> Page:
     """DevCoach sur la saisie du premier camp, présence déclarée."""
     writer = browser.new_context().new_page()
-    writer.goto(_url(space_id, mr_id, "step3"), wait_until="load")
+    writer.goto(match_url(space_id, mr_id, "step3"), wait_until="load")
     assert writer.url.endswith(f"/{mr_id}/step3"), writer.url
     writer.wait_for_function(HELLO_RECEIVED, timeout=15000)
     return writer
@@ -81,19 +75,9 @@ def _open_writer(browser: Browser, space_id, mr_id) -> Page:
 
 def _open_follower(browser: Browser, space_id, mr_id) -> Page:
     follower = browser.new_context(extra_http_headers=SIMPLE_MEMBER).new_page()
-    follower.goto(_url(space_id, mr_id, "live"), wait_until="load")
+    follower.goto(match_url(space_id, mr_id, "live"), wait_until="load")
     assert follower.url.endswith(f"/{mr_id}/live"), follower.url
     return follower
-
-
-def _login(browser: Browser, coach_name: str) -> Page:
-    page = browser.new_context().new_page()
-    page.goto(f"{BASE_URL}/auth/login", wait_until="load")
-    page.fill("input[name='coach_name']", coach_name)
-    page.fill("input[name='password']", SEED_PASSWORD)
-    page.click("button[type='submit']")
-    page.wait_for_url("**/auth/login/success", timeout=10000)
-    return page
 
 
 # ── P1 et P2 ──────────────────────────────────────────────────────────────────
@@ -156,7 +140,7 @@ DECLARE = """async ([url, space, match]) => {
 
 def test_p4_a_third_party_can_neither_declare_nor_read(browser, presence_ctx):
     space_id, mr_id = presence_ctx["space_id"], presence_ctx["mr_id"]
-    third = _login(browser, THIRD_PARTY)
+    third = login(browser, THIRD_PARTY)
     try:
         third.goto(f"{BASE_URL}/app/{space_id}/competitions", wait_until="load")
         third.wait_for_function(HELLO_RECEIVED, timeout=15000)

@@ -27,9 +27,18 @@ from db_helpers import query_db
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
-def create_draft(space_id, ctx, round_id, home_team_id, away_team_id):
+def create_draft(space_id, ctx, round_id, home_team_id, away_team_id, via=None):
+    """Malgré son nom, **démarre** le rapport : `POST /match-report/new` le
+    confirme au nom de qui l'envoie, et `ensure_pre_match` n'a plus rien à
+    faire ensuite.
+
+    `via` : une session `requests` portant une autre identité que DevCoach
+    (`realtime_helpers.http_session_of`) — c'est elle qui devient alors le
+    démarreur (carte 647). `liberer_les_equipes` reste sous DevCoach : retirer
+    un appariement est un geste d'admin.
+    """
     liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], round_id, home_team_id, away_team_id)
-    resp = requests.post(
+    resp = (via or requests).post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
         data={
             "competition_id": ctx["competition_id"],
@@ -94,8 +103,9 @@ def ensure_pre_match(space_id, mr_id, ctx, round_id, home_team_id, away_team_id)
     assert resp.status_code in (302, 303), f"confirm: {resp.status_code}\n{resp.text[:200]}"
 
 
-def ensure_inducements(space_id, mr_id):
-    resp = requests.post(
+def ensure_inducements(space_id, mr_id, via=None):
+    http = via or requests
+    resp = http.post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2",
         data={"home_fan_roll": "2", "away_fan_roll": "3"},
         allow_redirects=False,
@@ -105,10 +115,20 @@ def ensure_inducements(space_id, mr_id):
     for _ in range(3):
         if not location or "/inducements/" not in location:
             break
-        resp = requests.post(f"{BASE_URL}{location}", data={"selection": ""}, allow_redirects=False)
+        resp = http.post(f"{BASE_URL}{location}", data={"selection": ""}, allow_redirects=False)
         if resp.status_code not in (302, 303):
             break
         location = resp.headers.get("Location", "")
+
+
+def start_match(space_id, ctx, round_id, home, away, via=None) -> str:
+    """Un rapport démarré, coups de pouce passés — ramené de
+    `test_realtime_direct.py` (carte 647). `via` : qui le démarre — par
+    `create_draft` —, puis passe les coups de pouce ; DevCoach par défaut."""
+    mr_id = create_draft(space_id, ctx, round_id, home, away, via=via)
+    ensure_pre_match(space_id, mr_id, ctx, round_id, home, away)
+    ensure_inducements(space_id, mr_id, via=via)
+    return mr_id
 
 
 def pass_topdog_first(space_id, mr_id, team_id):
@@ -157,9 +177,10 @@ def pass_inducements_in_browser(page) -> None:
             coup_d_envoi.click()
 
 
-def record_action_api(space_id, mr_id, side, player_id, turn, action_type):
+def record_action_api(space_id, mr_id, side, player_id, turn, action_type, via=None):
+    """`via` : comme pour `create_draft`, l'auteur de la saisie."""
     endpoint = "step3" if side == "home" else "step4"
-    resp = requests.post(
+    resp = (via or requests).post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/{endpoint}/actions",
         data={"turn": str(turn), "player_id": player_id, "player_type": "regular", "action_type": action_type},
     )

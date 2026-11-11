@@ -65,6 +65,32 @@ les tests e2e des cartes 642 à 646 si leurs helpers y sont ramenés,
 - **E2E** : le scénario ci-dessus, en ordinateur.
 - **Unitaires** : aucun de nouveau — l'étanchéité entre trois matchs est déjà
   éprouvée par le routeur (645) ; cette carte la constate en navigateur.
+  Écart relevé avec la fiche (§ 8, « trois matchs simultanés restent
+  étanches ») : l'unitaire du routeur en éprouve **deux**
+  (`two_simultaneous_matches_stay_sealed`, `test_notification_router.rs`).
+  Deux suffisent à la logique — un troisième match n'ajoute aucun cas —, et
+  l'e2e en joue trois.
+
+## Ce qui a été fait
+
+- **Chaque match est démarré par son coach domicile** (DevCoach, E2E Coach 02,
+  E2E Coach 04), par `create_draft`, sous son identité : `POST
+  /match-report/new` démarre le rapport au nom de qui l'envoie. Démarré par
+  DevCoach, admin qui ne coache pas, M2 aurait eu deux saisisseurs, et `/live`
+  ne montre la présence qu'à qui ne saisit pas (`write.is_none()`). La fixture
+  le vérifie : le démarreur lu en base doit être le coach domicile.
+  Première version fausse : le `via` passé à `ensure_pre_match` n'agissait
+  jamais, le rapport étant déjà démarré par `create_draft` sous DevCoach —
+  T2 échouait sur un widget de présence absent.
+- **Le match d'un toast se lit à son lien** : le journal de la 645, déplacé
+  tel quel, puis étendu à `{ text, href }`.
+- **L'ordre des coachs est vérifié en base** dans la fixture, pas supposé.
+- `realtime_helpers.py` reçoit les copies des cartes 642, 644, 645 et 646 ;
+  `match_report_helpers.py` reçoit `start_match` (ex-`_started` de la 646) et
+  un paramètre `via` sur `create_draft`, `ensure_inducements` et
+  `record_action_api`.
+- `test_auth_coach_name_casse.py` garde sa propre connexion : ce n'est pas une
+  copie laissée par l'épic.
 
 ## Hors périmètre
 

@@ -42,22 +42,22 @@ Prérequis : `make e2e-server` (port 3211, base kreek_e2e), `make init_e2e_db`.
 """
 
 import pytest
-from playwright.sync_api import Browser, Page, expect
+from playwright.sync_api import Page, expect
 
-from competition_lifecycle import BASE_URL, build_full_competition
-from match_report_helpers import (
-    create_draft,
-    ensure_inducements,
-    ensure_pre_match,
-    first_player_id,
-    record_action_api,
+from competition_lifecycle import build_full_competition
+from match_report_helpers import first_player_id, record_action_api, start_match
+from realtime_helpers import (
+    DIRECT_TIMEOUT_MS,
+    LOG_ENTRIES,
+    SCORES,
+    count_navigations,
+    count_widget_requests,
+    home_score,
+    match_url,
+    open_live,
 )
 
 SIMPLE_MEMBER = {"X-Bypass-Auth-Profile": "simple"}
-LOG_ENTRIES = ".match-report-live .mr-log-entry"
-SCORES = ".match-report-live .live-score-value"
-# Le direct doit battre l'ancienne interrogation : moins de 15 s.
-DIRECT_TIMEOUT_MS = 14000
 # Une reconnexion attend le `retry` de 5 s ; une réouverture après `CLOSED`,
 # de 2,5 à 7,5 s de plus. Puis les widgets se rechargent.
 RECONNECT_TIMEOUT_MS = 30000
@@ -72,66 +72,18 @@ CLOSE_MY_STREAMS = """() => fetch('/app/realtime/test/close-my-streams', {
 }).then(r => r.status)"""
 
 
-def _url(space_id, mr_id, suffix):
-    return f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/{suffix}"
-
-
-def _started(space_id, ctx, round_id, home, away) -> str:
-    mr_id = create_draft(space_id, ctx, round_id, home, away)
-    ensure_pre_match(space_id, mr_id, ctx, round_id, home, away)
-    ensure_inducements(space_id, mr_id)
-    return mr_id
-
-
 @pytest.fixture(scope="module")
 def direct_ctx(browser, space_id):
     full = build_full_competition(browser, space_id, num_teams=4, num_rounds=2)
     t, rounds = full["team_ids"], full["round_ids"]
-    followed = _started(space_id, full, rounds[1], t[0], t[1])
-    other = _started(space_id, full, rounds[0], t[2], t[3])
+    followed = start_match(space_id, full, rounds[1], t[0], t[1])
+    other = start_match(space_id, full, rounds[0], t[2], t[3])
     return {"space_id": space_id, "followed": followed, "other": other}
-
-
-def _presence_declared(response) -> bool:
-    return response.url.endswith("/app/realtime/presence") and response.request.method == "POST"
-
-
-def _open_live(browser: Browser, space_id, mr_id, headers=None) -> Page:
-    """`/live`, ses deux widgets chargés et sa présence inscrite."""
-    page = browser.new_context(extra_http_headers=headers or {}).new_page()
-    with page.expect_response(_presence_declared):
-        with page.expect_response(lambda r: r.url.endswith(f"/{mr_id}/live/score")):
-            with page.expect_response(lambda r: r.url.endswith(f"/{mr_id}/action-log")):
-                page.goto(_url(space_id, mr_id, "live"), wait_until="load")
-    assert page.url.endswith(f"/{mr_id}/live"), page.url
-    return page
-
-
-def _home_score(page: Page) -> int:
-    first = page.locator(SCORES).first
-    expect(first).to_be_visible(timeout=10000)
-    return int(first.inner_text())
-
-
-def _count_navigations(page: Page) -> list:
-    navigations: list = []
-    page.on("framenavigated", lambda f: f.parent_frame is None and navigations.append(f.url))
-    return navigations
-
-
-def _count_widget_requests(page: Page, mr_id: str) -> list:
-    requests_seen: list = []
-    page.on(
-        "request",
-        lambda r: (f"/{mr_id}/action-log" in r.url or f"/{mr_id}/live/score" in r.url)
-        and requests_seen.append(r.url),
-    )
-    return requests_seen
 
 
 def _record_touchdown_in_browser(writer: Page, space_id, mr_id) -> None:
     """DevCoach, sur la saisie du domicile : un touchdown au tour 4."""
-    writer.goto(_url(space_id, mr_id, "step3"), wait_until="load")
+    writer.goto(match_url(space_id, mr_id, "step3"), wait_until="load")
     writer.wait_for_selector("#turn-selector .mr-turn-btn", timeout=10000)
     writer.wait_for_selector("#player-selector .mr-player-chip", timeout=10000)
     writer.locator(".mr-turn-btn[data-turn='4']").first.click()
@@ -153,11 +105,11 @@ def _record_touchdown_by_api(space_id, mr_id) -> None:
 
 def test_d1_the_follower_sees_the_log_and_score_change_without_reloading(browser, direct_ctx):
     space_id, mr_id = direct_ctx["space_id"], direct_ctx["followed"]
-    follower = _open_live(browser, space_id, mr_id, SIMPLE_MEMBER)
+    follower = open_live(browser, space_id, mr_id, SIMPLE_MEMBER)
     writer = browser.new_context().new_page()
     try:
-        entries, score = follower.locator(LOG_ENTRIES).count(), _home_score(follower)
-        navigations = _count_navigations(follower)
+        entries, score = follower.locator(LOG_ENTRIES).count(), home_score(follower)
+        navigations = count_navigations(follower)
 
         _record_touchdown_in_browser(writer, space_id, mr_id)
 
@@ -175,11 +127,11 @@ def test_d1_the_follower_sees_the_log_and_score_change_without_reloading(browser
 def test_d2_a_signal_of_another_match_reloads_nothing(browser, direct_ctx):
     space_id = direct_ctx["space_id"]
     followed, other = direct_ctx["followed"], direct_ctx["other"]
-    follower = _open_live(browser, space_id, followed, SIMPLE_MEMBER)
-    witness = _open_live(browser, space_id, other)
+    follower = open_live(browser, space_id, followed, SIMPLE_MEMBER)
+    witness = open_live(browser, space_id, other)
     try:
-        widget_requests = _count_widget_requests(follower, followed)
-        witness_score = _home_score(witness)
+        widget_requests = count_widget_requests(follower, followed)
+        witness_score = home_score(witness)
 
         _record_touchdown_by_api(space_id, other)
 
@@ -207,9 +159,9 @@ def _expect_the_outage_action(follower: Page, entries: int, score: int) -> None:
 
 def test_d3a_the_widgets_reload_after_the_browser_reconnects(browser, direct_ctx):
     space_id, mr_id = direct_ctx["space_id"], direct_ctx["followed"]
-    follower = _open_live(browser, space_id, mr_id, SIMPLE_MEMBER)
+    follower = open_live(browser, space_id, mr_id, SIMPLE_MEMBER)
     try:
-        entries, score = follower.locator(LOG_ENTRIES).count(), _home_score(follower)
+        entries, score = follower.locator(LOG_ENTRIES).count(), home_score(follower)
         old_connection = follower.evaluate(CONNECTION_ID)
 
         _close_my_streams(follower)
@@ -230,10 +182,10 @@ def test_d3a_the_widgets_reload_after_the_browser_reconnects(browser, direct_ctx
 
 def test_d3b_the_page_reopens_a_stream_refused_by_the_server(browser, direct_ctx):
     space_id, mr_id = direct_ctx["space_id"], direct_ctx["followed"]
-    follower = _open_live(browser, space_id, mr_id, SIMPLE_MEMBER)
+    follower = open_live(browser, space_id, mr_id, SIMPLE_MEMBER)
     refused: list = []
     try:
-        entries, score = follower.locator(LOG_ENTRIES).count(), _home_score(follower)
+        entries, score = follower.locator(LOG_ENTRIES).count(), home_score(follower)
         old_connection = follower.evaluate(CONNECTION_ID)
         # Le redéploiement derrière nginx : toute reconnexion reçoit un 502.
         follower.route(

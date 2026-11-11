@@ -21,13 +21,11 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_env import BASE_URL
+from realtime_helpers import HELLO_RECEIVED
 
 STREAM_PATH = "/app/realtime/stream"
 # Un ULID fait 26 caractères en Crockford base32.
 ULID_LENGTH = 26
-HELLO_RECEIVED = (
-    "() => window.kreekRealtime && window.kreekRealtime.connectionId"
-)
 
 
 def _is_stream(url: str) -> bool:

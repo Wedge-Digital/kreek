@@ -82,6 +82,12 @@
 # Même décor que `test_realtime_presence`, d'où la même traversée.
 "test_realtime_direct" = ["match_report", "players", "references", "teams",
                           "competitions", "team_creation", "ranking", "spaces"]
+# Trois matchs en parallèle (carte 647) : le décor du direct, plus quatre coachs
+# réellement connectés par `auth`, et l'étanchéité du routeur et de la présence
+# (`src/web/realtime`, déjà `@core`).
+"test_realtime_three_matches" = ["match_report", "players", "references", "teams",
+                                 "competitions", "team_creation", "ranking", "spaces",
+                                 "auth"]
 
 # ── Création de compétition (aucune équipe, aucun match) ─────────────────────
 # Phase 1 → recherche de coachs (widget du BC spaces).

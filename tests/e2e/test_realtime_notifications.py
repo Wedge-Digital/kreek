@@ -34,32 +34,20 @@ from playwright.sync_api import Page, expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from match_report_helpers import pass_inducements_in_browser
+from realtime_helpers import (
+    linked_toasts_seen,
+    log_in,
+    recording_context,
+    toast,
+    wait_for_stream,
+)
 
 SIMPLE_MEMBER_HEADER = {"X-Bypass-Auth-Profile": "simple"}
 STRANGER_NAME = "E2E Coach 02"
-# `src/cli/seed_e2e.rs`, `SEED_PASSWORD`.
-SEED_PASSWORD = "changeme-dev-only"
-DESKTOP = {"width": 1280, "height": 900}
 # Un toast à lien dure 6 s : l'attente doit tenir dans sa vie.
 TOAST_TIMEOUT_MS = 5000
 
 _ULID = r"[0-9A-Z]{26}"
-
-HELLO_RECEIVED = "() => window.kreekRealtime && window.kreekRealtime.connectionId"
-
-# Note chaque toast à lien inséré, dans un journal qui survit aux navigations.
-RECORD_LINKED_TOASTS = """
-new MutationObserver(function (mutations) {
-  mutations.forEach(function (m) {
-    m.addedNodes.forEach(function (node) {
-      if (!node.classList || !node.classList.contains('toast--linked')) return;
-      var seen = JSON.parse(sessionStorage.getItem('linkedToasts') || '[]');
-      seen.push(node.textContent);
-      sessionStorage.setItem('linkedToasts', JSON.stringify(seen));
-    });
-  });
-}).observe(document, { childList: true, subtree: true });
-"""
 
 
 @pytest.fixture
@@ -70,36 +58,10 @@ def match_of_two(browser, space_id):
     return {**full, "space_id": space_id}
 
 
-def _context(browser, headers=None):
-    context = browser.new_context(viewport=DESKTOP, extra_http_headers=headers or {})
-    context.add_init_script(RECORD_LINKED_TOASTS)
-    return context
-
-
-def _wait_for_stream(page: Page) -> None:
-    page.wait_for_function(HELLO_RECEIVED, timeout=15000)
-
-
-def _log_in_as_stranger(page: Page) -> None:
-    page.goto(f"{BASE_URL}/auth/login", wait_until="load")
-    page.fill("input[name='coach_name']", STRANGER_NAME)
-    page.fill("input[name='password']", SEED_PASSWORD)
-    page.click("button[type='submit']")
-    page.wait_for_url("**/auth/login/success", timeout=5000)
-
-
 def _park_on_competitions(page: Page, space_id: str) -> None:
     """Une page de l'application qui n'est pas celle du match, flux ouvert."""
     page.goto(f"{BASE_URL}/app/{space_id}/competitions", wait_until="load")
-    _wait_for_stream(page)
-
-
-def _linked_toasts_seen(page: Page) -> list[str]:
-    return page.evaluate("() => JSON.parse(sessionStorage.getItem('linkedToasts') || '[]')")
-
-
-def _toast(page: Page, text: str):
-    return page.locator(".toast-zone .toast--linked", has_text=text)
+    wait_for_stream(page)
 
 
 def _start_from_the_schedule(page: Page, ctx: dict) -> str:
@@ -150,32 +112,32 @@ def _record_a_home_touchdown(page: Page, mr_id: str) -> None:
 def test_the_other_coach_is_notified_and_a_stranger_is_not(browser, match_of_two):
     ctx = match_of_two
     space_id = ctx["space_id"]
-    entry = _context(browser).new_page()
-    follower = _context(browser, SIMPLE_MEMBER_HEADER).new_page()
-    stranger = _context(browser).new_page()
-    _log_in_as_stranger(stranger)
+    entry = recording_context(browser).new_page()
+    follower = recording_context(browser, SIMPLE_MEMBER_HEADER).new_page()
+    stranger = recording_context(browser).new_page()
+    log_in(stranger, STRANGER_NAME)
     _park_on_competitions(follower, space_id)
     _park_on_competitions(stranger, space_id)
 
     mr_id = _start_from_the_schedule(entry, ctx)
-    expect(_toast(follower, "Saisie du match démarrée par DevCoach")).to_be_visible(
+    expect(toast(follower, "Saisie du match démarrée par DevCoach")).to_be_visible(
         timeout=TOAST_TIMEOUT_MS
     )
 
     if _through_pre_match(entry):
-        expect(_toast(follower, "aucun coup de pouce — validé par DevCoach").first).to_be_visible(
+        expect(toast(follower, "aucun coup de pouce — validé par DevCoach").first).to_be_visible(
             timeout=TOAST_TIMEOUT_MS
         )
     entry.wait_for_url(re.compile(rf".*/{mr_id}/live$"), timeout=10000)
 
     _record_a_home_touchdown(entry, mr_id)
-    touchdown = _toast(follower, "Touchdown : ")
+    touchdown = toast(follower, "Touchdown : ")
     expect(touchdown).to_contain_text("— par DevCoach", timeout=TOAST_TIMEOUT_MS)
     expect(touchdown.locator("a.toast-link")).to_have_text("Voir le match")
 
     # Le témoin positif est là : un toast mal adressé serait arrivé aussi.
-    assert _linked_toasts_seen(stranger) == [], _linked_toasts_seen(stranger)
-    assert _linked_toasts_seen(entry) == [], _linked_toasts_seen(entry)
+    assert linked_toasts_seen(stranger) == [], linked_toasts_seen(stranger)
+    assert linked_toasts_seen(entry) == [], linked_toasts_seen(entry)
 
     with follower.expect_navigation(wait_until="load"):
         touchdown.locator("a.toast-link").click()
