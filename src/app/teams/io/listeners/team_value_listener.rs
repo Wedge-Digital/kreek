@@ -114,10 +114,20 @@ pub fn init(event_bus: &EventBus, deps: TeamValueDeps) {
 /// la même convention que `init`, et l'exempte de la règle de transaction unique
 /// — l'événement vient d'un commit déjà passé dans un autre BC.
 ///
-/// Aucun ordre n'est à garantir vis-à-vis de l'autre abonnement :
-/// `TeamValueRecomputed` porte une valeur **absolue**, donc un recalcul
-/// prématuré est écrasé par celui-ci. C'est ce qui rend inoffensif le recalcul
-/// que `DismissalsPhaseValidated` déclenche trop tôt.
+/// Aucun ordre n'est à garantir vis-à-vis de l'autre abonnement, mais ce
+/// n'est pas parce qu'un recalcul « écrase » l'autre. Quand les deux se
+/// chevauchent, ils lisent la même version de l'agrégat, et c'est la
+/// **concurrence optimiste** qui les départage : le premier à écrire gagne, le
+/// second reçoit `ConcurrentWrite`. Ce second-là n'est pas perdu — le use case
+/// relit l'agrégat et recalcule, en nombre de tentatives borné (carte 664). La
+/// valeur étant **absolue** et recalculée depuis l'état relu, la dernière
+/// écrite est juste, quel que soit l'ordre. C'est ce qui rend inoffensif le
+/// recalcul que `DismissalsPhaseValidated` ou `ManualPhaseClosed` déclenche
+/// trop tôt.
+///
+/// Jusqu'à la carte 664, ce commentaire affirmait que le recalcul prématuré
+/// était écrasé : c'était faux dès que les deux se chevauchaient — le second à
+/// écrire échouait, et rien ne le refaisait.
 pub fn init_from_app_events(app_event_bus: &EventBus, deps: TeamValueDeps) {
     let mut rx = app_event_bus.subscribe();
     spawn_listener(module_path!(), async move {

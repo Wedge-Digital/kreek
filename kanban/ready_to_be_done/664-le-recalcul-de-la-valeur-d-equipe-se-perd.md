@@ -56,4 +56,89 @@ Après le déploiement, **l'utilisateur** :
    écrire avec le correctif (un recalcul existant, ou une sous-commande de
    `src/cli/` si aucun n'est déjà exposé).
 
-Aucune migration ; les événements existants ne changent pas.
+Aucune migration de schéma ; les événements existants ne changent pas.
+
+### Ce qui existe aujourd'hui
+
+- **Aucune sous-commande** de `src/cli/` ne recalcule une valeur d'équipe :
+  `serve`, `seed-accounts`, `seed-e2e`, `send-notifications`, rien d'autre.
+- **Un recalcul de toutes les équipes existe déjà**, sous forme de migration de
+  données : `infrastructure/data_migrations/m002_recalcul_valeurs_equipe.rs`
+  (carte 388). Elle boucle sur `team_proj` et appelle
+  `recompute_team_value_use_case::execute` — le mécanisme nominal, désormais
+  muni des nouvelles tentatives. Elle est marquée appliquée en production
+  depuis la carte 388 : elle ne repassera pas.
+
+### Le piège : `docker logs` ne remonte pas au-delà du conteneur courant
+
+Un redéploiement **recrée** le conteneur, et le journal de l'ancien part avec
+lui. Chercher après le déploiement ne trouve donc rien d'antérieur ; chercher
+avant ne trouve que ce qui a eu lieu depuis le dernier déploiement. La liste des
+équipes touchées n'est **jamais complète** — c'est ce qui fait préférer un
+recalcul de toutes les équipes à un recalcul ciblé.
+
+La recherche, à lancer **avant** de déployer, sur le conteneur encore en place
+(`<conteneur>` : le nom du conteneur applicatif) :
+
+```bash
+docker logs <conteneur> 2>&1 \
+  | grep 'team_value_listener' | grep 'écriture concurrente détectée' \
+  | grep -oE 'recalcul de [0-9A-Z]{26}' | sort | uniq -c
+```
+
+Elle rend les équipes qui ont perdu un recalcul depuis le dernier démarrage, et
+combien de fois. Après le correctif, la même recherche ne doit plus rien rendre :
+le libellé de l'épuisement (`… (3 tentatives épuisées)`) garde la même chaîne, à
+dessein, et une ligne qui sortirait encore serait un vrai défaut. Les nouvelles
+tentatives, elles, se journalisent en `warn` sous un autre libellé — `conflit de
+version, relecture et nouvelle tentative` — qui ne pollue pas cette recherche :
+
+```bash
+docker logs <conteneur> 2>&1 | grep 'conflit de version, relecture'
+```
+
+### Proposition — à valider avant d'écrire
+
+**A. Une migration de données `m008`, recommandée.** Une copie de `m002`, sans
+sa garde `LOW_COST_LINEMEN` (la règle est au corpus de production depuis la
+carte 388), nommée `664-recalcul-valeurs-equipe` et ajoutée en fin de
+`registre()`. Elle recalcule **toutes** les équipes une fois, au premier
+démarrage du binaire déployé, avant que le serveur n'écoute. Aucune commande à
+lancer : l'utilisateur constate seulement qu'elle est passée.
+
+```bash
+docker logs <conteneur> 2>&1 | grep '664-recalcul-valeurs-equipe'
+# attendu : « migration de données appliquée … agregats=<nombre d'équipes> »
+```
+
+Coût : un `TeamValueRecomputed` de plus dans l'historique de chaque équipe, y
+compris celles dont la valeur était juste — `m002` en a fait autant. Risque : un
+échec refuse le démarrage ; avec les nouvelles tentatives, seule une panne de
+base le provoquerait, et elle le provoquerait de toute façon.
+
+**B. Une sous-commande `kreek recompute-team-values [--team <id>]…`**, si l'on
+veut un outil réutilisable plutôt qu'un rattrapage unique. Le plus petit
+nécessaire :
+
+- un variant `RecomputeTeamValues { #[arg(long = "team")] teams: Vec<String> }`
+  dans `Command` (`main.rs`), et sa branche dans `match`, qui sort en `1` au
+  premier échec, comme `send-notifications` ;
+- `src/cli/recompute_team_values.rs` : `compose(cfg, pool)` pour obtenir
+  `state.teams`, la liste donnée — ou toutes les équipes de `team_proj` si
+  elle est vide —, puis `recompute_team_value_use_case::execute` équipe par
+  équipe, avec une ligne `info` par équipe et un total ;
+- un test `#[sqlx::test]` sur une équipe seedée.
+
+La commande, après déploiement :
+
+```bash
+cd /srv/kreek && EXEC_PROFILE=prod ./kreek recompute-team-values
+```
+
+(ou, si l'application tourne en conteneur, la même sous-commande par
+`docker exec <conteneur> kreek recompute-team-values`.)
+
+B demande un geste manuel qu'on peut oublier ; A non. Comme la recherche
+`docker logs` ne peut de toute façon pas lister toutes les équipes touchées,
+le ciblage `--team` de B n'apporte rien ici. **A est proposée** ; B reste
+l'option si l'on veut garder l'outil.
