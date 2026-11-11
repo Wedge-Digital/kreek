@@ -58,8 +58,13 @@ def _publier_un_match(space_id, ctx, round_id, home, away) -> dict:
 
 @pytest.fixture(scope="module")
 def match_publie(space_id, ctx):
-    """Paire teams[0..1], publiée sur la première journée."""
-    return _publier_un_match(space_id, ctx, ctx["round_ids"][0], ctx["teams"][0], ctx["teams"][1])
+    """Paire teams[0] et teams[2], publiée sur la première journée.
+
+    **Pas teams[1]** : c'est l'équipe du membre simple, que le scénario du droit
+    fait jouer à son tour. Publier un match l'envoie en amélioration des joueurs,
+    et `teams` refuse alors la séquence post-match du suivant (« phase de jeu
+    incorrecte ») — le test passait pour elle par accident (carte 663)."""
+    return _publier_un_match(space_id, ctx, ctx["round_ids"][0], ctx["teams"][0], ctx["teams"][2])
 
 
 def _face_a_face(round_id: str, home: str, away: str) -> bool:
@@ -239,6 +244,11 @@ def _teams_coached_by(season_id: str, coach_name: str) -> set[str]:
     ))
 
 
+def _phase(team_id: str) -> str | None:
+    rows = query_db(f"SELECT game_phase FROM team_proj WHERE team_id = '{team_id}'")
+    return rows[0] if rows else None
+
+
 def test_un_coach_voit_la_correction_mais_pas_le_deplacement(space_id, ctx):
     # Un décor qui ne permet pas le scénario est un défaut du test : on échoue,
     # on ne s'ignore pas (carte 640).
@@ -256,10 +266,23 @@ def test_un_coach_voit_la_correction_mais_pas_le_deplacement(space_id, ctx):
         "DevCoach coache la première équipe — un ensemble vide rendrait le "
         "filtre de l'adversaire inopérant"
     )
+    # Les deux équipes doivent être prêtes à jouer : c'est ce qui ouvre leur
+    # séquence post-match, dont la correction dépend.
+    assert _phase(equipe) == "ReadyToPlay", f"l'équipe du coach est en {_phase(equipe)}"
     autre = next(
-        t for t in ctx["teams"] if t != equipe and t not in celles_de_devcoach
+        t for t in ctx["teams"]
+        if t != equipe and t not in celles_de_devcoach and _phase(t) == "ReadyToPlay"
     )
     match = _publier_un_match(space_id, ctx, ctx["round_ids"][3], equipe, autre)
+
+    # Carte 663. La correction n'est offerte qu'à deux équipes en amélioration
+    # des joueurs, et `teams` les y fait entrer **après** la publication, sur
+    # l'app event. Lire la page aussitôt mesurait la vitesse de la machine : le
+    # bouton sortait désactivé en CI, actif en local.
+    attendre_que(
+        lambda: _phase(equipe) == "PlayerImprovement" and _phase(autre) == "PlayerImprovement",
+        quoi="les deux équipes du match en amélioration des joueurs",
+    )
 
     page = requests.get(_url_recap(space_id, match["mr_id"]), headers=ENTETE_MEMBRE_SIMPLE)
     assert page.status_code == 200, page.status_code
