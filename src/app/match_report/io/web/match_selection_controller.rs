@@ -7,6 +7,7 @@ use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::{
     CreationAppariementError, ICompetitionDataPort, ITeamDataPort,
 };
+use crate::app::match_report::use_cases::match_report_access_service::may_choose_entry_mode;
 use crate::app::match_report::use_cases::{
     create_match_report_use_case, update_match_selection_use_case,
 };
@@ -358,14 +359,57 @@ pub struct UpdateMatchSelectionForm {
 /// **Absent, il vaut « Je saisis tout »**, le défaut déclaré par l'épic E21
 /// (décision 2 du cadrage) : les tests et les appels qui postent sans la carte
 /// « Qui saisit ? » démarrent comme avant. Une valeur inconnue est une requête
-/// mal formée — `Err`, que le handler rend en 400. « Chacun son équipe » n'a
-/// pas encore de valeur : l'option est grisée, elle n'est jamais envoyée.
+/// mal formée — `Err`, que le handler rend en 400. « Chacun son équipe »
+/// (`TeamEntry`, carte 652) est lu, mais l'option reste grisée jusqu'à la
+/// carte 659 : seul un POST direct l'envoie.
 pub(crate) fn read_entry_mode(field: Option<&str>) -> Result<EntryMode, ()> {
     match field {
         None => Ok(EntryMode::SoloEntry),
-        Some(value) if value == EntryMode::SoloEntry.as_str() => Ok(EntryMode::SoloEntry),
-        Some(_) => Err(()),
+        Some(value) => EntryMode::from_written(value).ok_or(()),
     }
+}
+
+/// Le mode du formulaire, et le droit de le choisir pour ces deux équipes :
+/// « Chacun son équipe » exige deux coachs distincts (§ 12.9 de E22). Les
+/// deux refus rendent `None`, que le handler rend en 400 avant tout effet.
+async fn mode_choisi(
+    team_data: &dyn ITeamDataPort,
+    field: Option<&str>,
+    home_team_id: &str,
+    away_team_id: &str,
+) -> Option<EntryMode> {
+    let mode = read_entry_mode(field).ok()?;
+    if may_choose_entry_mode(team_data, home_team_id, away_team_id, mode).await {
+        return Some(mode);
+    }
+    tracing::info!(
+        home_team_id,
+        away_team_id,
+        "mode « Chacun son équipe » refusé pour ce match"
+    );
+    None
+}
+
+/// `mode_choisi` sur le formulaire de création : les équipes qu'il envoie.
+async fn mode_du_formulaire(state: &AppState, form: &CreateMatchReportForm) -> Option<EntryMode> {
+    let team_data = state.match_report.team_data.as_ref();
+    let field = form.entry_mode.as_deref();
+    mode_choisi(team_data, field, &form.home_team_id, &form.away_team_id).await
+}
+
+/// `mode_choisi` sur un rapport existant : les équipes du brouillon, lues sur
+/// la projection. Un rapport introuvable ou illisible refuse.
+async fn mode_du_rapport(
+    state: &AppState,
+    match_report_id: &str,
+    field: Option<&str>,
+) -> Option<EntryMode> {
+    let repo = state.match_report.match_report_repo.as_ref();
+    let Ok(Some((_, home, away))) = repo.find_access_scope(match_report_id).await else {
+        tracing::warn!("update_match_selection : portée de {match_report_id} illisible");
+        return None;
+    };
+    mode_choisi(state.match_report.team_data.as_ref(), field, &home, &away).await
 }
 
 // ── Handlers POST ────────────────────────────────────────────────────────────
@@ -380,7 +424,7 @@ pub async fn create_match_report(
         return StatusCode::UNAUTHORIZED.into_response();
     };
     // Lu avant tout effet : un mode inconnu ne doit rien programmer.
-    let Ok(entry_mode) = read_entry_mode(form.entry_mode.as_deref()) else {
+    let Some(entry_mode) = mode_du_formulaire(&state, &form).await else {
         return StatusCode::BAD_REQUEST.into_response();
     };
     if let Err(refus) = garde_hors_calendrier(&state, &form).await {
@@ -632,7 +676,7 @@ pub async fn update_match_selection(
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let cmd = match build_update_command(&match_report_id, &form, user.id) {
+    let cmd = match allowed_update_command(&state, &match_report_id, &form, user.id).await {
         Ok(cmd) => cmd,
         Err(refus) => return refus,
     };
@@ -644,6 +688,22 @@ pub async fn update_match_selection(
     )
     .await;
     update_response(result, &space_id, &match_report_id)
+}
+
+/// La commande du POST, puis le droit de choisir son mode pour les équipes du
+/// rapport (§ 12.9 de E22) : 400 avant tout effet dans les deux cas.
+async fn allowed_update_command(
+    state: &AppState,
+    match_report_id: &str,
+    form: &UpdateMatchSelectionForm,
+    confirmed_by: crate::app::shared_kernel::identity::ids::CoachId,
+) -> Result<update_match_selection_use_case::UpdateMatchSelectionCommand, Response> {
+    let cmd = build_update_command(match_report_id, form, confirmed_by)?;
+    let field = form.entry_mode.as_deref();
+    match mode_du_rapport(state, match_report_id, field).await {
+        Some(_) => Ok(cmd),
+        None => Err(StatusCode::BAD_REQUEST.into_response()),
+    }
 }
 
 /// Le parsing du POST, et rien d'autre : le mode d'abord, refusé en 400 avant
@@ -719,11 +779,20 @@ mod entry_mode_tests {
         );
     }
 
-    /// Une valeur inconnue est refusée — dont « Chacun son équipe », qui
-    /// n'existe pas avant E22 : le handler répond 400.
+    /// « Chacun son équipe » se lit depuis la carte 652, même si l'option
+    /// reste grisée jusqu'à la 659.
+    #[test]
+    fn the_team_entry_value_reads_as_team_entry() {
+        assert_eq!(
+            read_entry_mode(Some(EntryMode::TeamEntry.as_str())),
+            Ok(EntryMode::TeamEntry)
+        );
+    }
+
+    /// Une valeur inconnue est refusée : le handler répond 400.
     #[test]
     fn an_unknown_value_is_refused() {
-        assert_eq!(read_entry_mode(Some("TeamEntry")), Err(()));
+        assert_eq!(read_entry_mode(Some("UnknownEntry")), Err(()));
         assert_eq!(read_entry_mode(Some("")), Err(()));
     }
 

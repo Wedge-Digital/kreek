@@ -869,6 +869,27 @@ mod tests {
         assert_eq!(pm.version, 3);
     }
 
+    /// « Chacun son équipe » se rejoue tel qu'il a été choisi (carte 652).
+    #[test]
+    fn a_team_entry_choice_replays_as_team_entry() {
+        let (draft, confirmer) = draft_by_competition();
+        let events = vec![
+            created_event_of(&draft),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: confirmer,
+            },
+            MatchReportDomainEvent::EntryModeChosen {
+                mode: EntryMode::TeamEntry,
+                started_by: confirmer,
+            },
+        ];
+        let MatchReportState::PreMatch(pm) = rehydrate(events).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(pm.entry_mode, EntryMode::TeamEntry);
+        assert_eq!(pm.started_by, confirmer);
+    }
+
     /// Le démarreur traverse la publication et la dépublication, comme
     /// `created_by`.
     #[test]

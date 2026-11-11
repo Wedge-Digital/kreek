@@ -163,6 +163,9 @@ mod tests {
             Ok((team_id == HOME && user_id == HOME_COACH)
                 || (team_id == AWAY && user_id == AWAY_COACH))
         }
+        async fn find_team_coach(&self, _: &str) -> Result<Option<String>, String> {
+            Ok(None)
+        }
         async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
             Ok(true)
         }

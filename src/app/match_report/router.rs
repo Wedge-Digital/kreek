@@ -1,6 +1,6 @@
 use crate::app::match_report::io::web::actions_step_controller::{get_step3, get_step4};
 use crate::app::match_report::io::web::cancel_inducements_controller::post_cancel_inducements;
-use crate::app::match_report::io::web::garde_saisie::{garde_saisie, garde_suivi};
+use crate::app::match_report::io::web::garde_saisie::{garde_camp, garde_saisie, garde_suivi};
 use crate::app::match_report::io::web::inducements_controller::{
     get_inducements, post_inducements,
 };
@@ -38,14 +38,19 @@ use crate::app::match_report::io::web::widgets::turn_selector_widget::{
 };
 use crate::app::match_report::routes::path;
 use crate::state::AppState;
+use axum::extract::Request;
+use axum::response::IntoResponse;
+use axum::routing::Route;
 use axum::{
     middleware::from_fn_with_state,
     routing::{delete, get, post},
     Router,
 };
+use std::convert::Infallible;
+use tower::{Layer, Service};
 
-/// Trois groupes, et les frontières entre eux sont des décisions (cartes 622
-/// et 634).
+/// Quatre groupes, et les frontières entre eux sont des décisions (cartes 622,
+/// 634 et 652). Le quatrième, `routes_de_camp()`, est décrit avec sa fonction.
 ///
 /// `routes_de_saisie()` porte l'écriture d'un compte rendu et les écrans qui
 /// la préparent : `garde_saisie` y est posée **une fois** — admins, et en « Je
@@ -63,10 +68,38 @@ use axum::{
 /// exige une valeur à la construction.
 pub fn router(state: AppState) -> Router<AppState> {
     let suivi = from_fn_with_state(state.clone(), garde_suivi);
-    let saisie = from_fn_with_state(state, garde_saisie);
+    let saisie = from_fn_with_state(state.clone(), garde_saisie);
+    let camp = from_fn_with_state(state, garde_camp);
     routes_ouvertes()
         .merge(routes_de_suivi().route_layer(suivi))
         .merge(routes_de_saisie().route_layer(saisie))
+        .merge(garder_si_non_vide(routes_de_camp(), camp))
+}
+
+/// `route_layer` sur un routeur sans route **panique** (axum 0.8) : le groupe
+/// de camp naît vide, et le serveur ne démarrerait pas.
+fn garder_si_non_vide<S, L>(routes: Router<S>, layer: L) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    L: Layer<Route> + Clone + Send + Sync + 'static,
+    L::Service: Service<Request> + Clone + Send + Sync + 'static,
+    <L::Service as Service<Request>>::Response: IntoResponse + 'static,
+    <L::Service as Service<Request>>::Error: Into<Infallible> + 'static,
+    <L::Service as Service<Request>>::Future: Send + 'static,
+{
+    if !routes.has_routes() {
+        return routes;
+    }
+    routes.route_layer(layer)
+}
+
+/// Les routes dont le chemin désigne un camp — `side`, ou un `team_id` du
+/// match —, gardées par `garde_camp` (carte 652, R3 de E22) : en « Chacun son
+/// équipe », chaque coach n'y écrit que dans le sien. **Vide à la carte 652** :
+/// les cartes 654 à 659 y rangent leurs routes, en les retirant de
+/// `routes_de_saisie()`.
+fn routes_de_camp() -> Router<AppState> {
+    Router::new()
 }
 
 fn routes_ouvertes() -> Router<AppState> {
@@ -164,4 +197,35 @@ fn routes_de_saisie() -> Router<AppState> {
         .route(path::MATCH_REPORT_STEP3_ACTIONS, post(post_action_step3))
         .route(path::MATCH_REPORT_STEP4_ACTIONS, post(post_action_step4))
         .route(path::MATCH_REPORT_ACTION, delete(delete_action))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::StatusCode;
+    use axum::middleware::{from_fn, Next};
+    use axum::response::Response;
+    use tower::ServiceExt;
+
+    /// Une couche témoin : elle répond à la place de la route.
+    async fn temoin(_: Request, _: Next) -> Response {
+        StatusCode::IM_A_TEAPOT.into_response()
+    }
+
+    /// Le groupe de camp naît vide : le garder ne doit pas paniquer.
+    #[test]
+    fn an_empty_group_gets_no_route_layer() {
+        let routes = garder_si_non_vide(Router::<()>::new(), from_fn(temoin));
+        assert!(!routes.has_routes());
+    }
+
+    #[tokio::test]
+    async fn a_non_empty_group_is_guarded() {
+        let routes = Router::<()>::new().route("/camp", get(|| async { "ouvert" }));
+        let routes = garder_si_non_vide(routes, from_fn(temoin));
+        let request = Request::builder().uri("/camp").body(Body::empty()).unwrap();
+        let response = routes.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::IM_A_TEAPOT);
+    }
 }

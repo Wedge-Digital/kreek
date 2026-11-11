@@ -68,6 +68,15 @@ impl ITeamDataPort for RefTeamDataAdapter {
             .unwrap_or(false))
     }
 
+    async fn find_team_coach(&self, team_id: &str) -> Result<Option<String>, String> {
+        let team = self
+            .team_repo
+            .find_by_id(team_id)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(team.map(|t| t.coach_id.to_string()))
+    }
+
     async fn find_team_info(&self, team_id: &str) -> Option<TeamInfoDto> {
         let team = self.team_repo.find_by_id(team_id).await.ok()??;
         Some(TeamInfoDto {

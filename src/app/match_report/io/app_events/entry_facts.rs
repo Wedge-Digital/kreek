@@ -337,6 +337,9 @@ mod tests {
         async fn is_coach_of_team(&self, _: &str, _: &str) -> Result<bool, String> {
             Ok(true)
         }
+        async fn find_team_coach(&self, _: &str) -> Result<Option<String>, String> {
+            Ok(None)
+        }
         async fn find_team_info(&self, team_id: &str) -> Option<TeamInfoDto> {
             let name = if team_id == self.home {
                 "Nains de Fer"

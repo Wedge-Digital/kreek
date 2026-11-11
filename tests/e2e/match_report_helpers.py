@@ -27,7 +27,7 @@ from db_helpers import query_db
 _ULID_RE = re.compile(r"/app/[0-9A-Z]{26}/match-report/([0-9A-Z]{26})")
 
 
-def create_draft(space_id, ctx, round_id, home_team_id, away_team_id, via=None):
+def create_draft(space_id, ctx, round_id, home_team_id, away_team_id, via=None, entry_mode=None):
     """Malgré son nom, **démarre** le rapport : `POST /match-report/new` le
     confirme au nom de qui l'envoie, et `ensure_pre_match` n'a plus rien à
     faire ensuite.
@@ -36,17 +36,24 @@ def create_draft(space_id, ctx, round_id, home_team_id, away_team_id, via=None):
     (`realtime_helpers.http_session_of`) — c'est elle qui devient alors le
     démarreur (carte 647). `liberer_les_equipes` reste sous DevCoach : retirer
     un appariement est un geste d'admin.
+
+    `entry_mode` : le mode de saisie posté ; absent, il vaut « Je saisis tout »
+    (décision E21 § 8.2). `"TeamEntry"` démarre en « Chacun son équipe »
+    (carte 652), que l'interface ne propose pas encore.
     """
     liberer_les_equipes(space_id, ctx["competition_id"], ctx["season_id"], round_id, home_team_id, away_team_id)
+    data = {
+        "competition_id": ctx["competition_id"],
+        "season_id": ctx["season_id"],
+        "round_id": round_id,
+        "home_team_id": home_team_id,
+        "away_team_id": away_team_id,
+    }
+    if entry_mode is not None:
+        data["entry_mode"] = entry_mode
     resp = (via or requests).post(
         f"{BASE_URL}/app/{space_id}/match-report/new",
-        data={
-            "competition_id": ctx["competition_id"],
-            "season_id": ctx["season_id"],
-            "round_id": round_id,
-            "home_team_id": home_team_id,
-            "away_team_id": away_team_id,
-        },
+        data=data,
         allow_redirects=False,
     )
     assert resp.status_code in (302, 303), f"create: {resp.status_code}\n{resp.text[:200]}"

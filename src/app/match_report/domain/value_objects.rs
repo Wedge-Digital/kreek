@@ -37,13 +37,15 @@ pub enum MatchReportOrigin {
 /// Le mode de saisie d'un compte rendu, choisi une fois par celui qui le
 /// démarre (carte 631, règle R1 de l'épic E21).
 ///
-/// **Une seule variante en E21** : « Je saisis tout ». Une variante « Chacun
-/// son équipe » sans son comportement serait un mode qu'on peut choisir et qui
-/// ne fait rien ; E22 l'ajoute avec ce qui la fait exister.
+/// « Chacun son équipe » arrive avec E22 (carte 652) : le droit d'écrire par
+/// camp existe, mais l'option reste grisée dans « Qui saisit ? » jusqu'à la
+/// carte 659, qui l'ouvre quand tout le parcours est coupé en deux.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EntryMode {
     /// « Je saisis tout » : le démarreur saisit les deux camps.
     SoloEntry,
+    /// « Chacun son équipe » : chaque coach saisit son camp (épic E22).
+    TeamEntry,
 }
 
 impl EntryMode {
@@ -52,7 +54,16 @@ impl EntryMode {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::SoloEntry => "SoloEntry",
+            Self::TeamEntry => "TeamEntry",
         }
+    }
+
+    /// Relit la forme écrite. Une forme inconnue rend `None` : à l'appelant de
+    /// refuser — un formulaire en 400, un contrôle d'accès en fermant.
+    pub fn from_written(value: &str) -> Option<Self> {
+        [Self::SoloEntry, Self::TeamEntry]
+            .into_iter()
+            .find(|mode| mode.as_str() == value)
     }
 }
 
@@ -505,6 +516,21 @@ pub struct MatchAction {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// La forme écrite de chaque mode se relit en ce mode (carte 652).
+    #[test]
+    fn team_entry_is_written_and_read_back() {
+        assert_eq!(EntryMode::TeamEntry.as_str(), "TeamEntry");
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            assert_eq!(EntryMode::from_written(mode.as_str()), Some(mode));
+        }
+    }
+
+    #[test]
+    fn an_unknown_written_mode_reads_as_none() {
+        assert_eq!(EntryMode::from_written("UnknownEntry"), None);
+        assert_eq!(EntryMode::from_written(""), None);
+    }
 
     #[test]
     fn team_value_ord() {

@@ -1,6 +1,8 @@
-//! Les gardes des routes d'un compte rendu (cartes 622 et 634).
+//! Les gardes des routes d'un compte rendu (cartes 622, 634 et 652).
 //!
-//! **Deux gardes, pour deux groupes de routes** (`router.rs`) :
+//! **Trois gardes, pour trois groupes de routes** (`router.rs`) — la
+//! troisième, `garde_camp`, est décrite avec sa fonction : elle garde les
+//! routes dont le chemin désigne un camp (« Chacun son équipe », épic E22).
 //!
 //! - `garde_suivi`, sur `routes_de_suivi()` : **lire** le compte rendu en
 //!   cours. Les admins d'espace ou de compétition, et les coachs des deux
@@ -33,8 +35,11 @@
 
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::auth::domain::user::User;
+use crate::app::match_report::domain::value_objects::TeamSide;
+use crate::app::match_report::io::web::mvp_step_controller::parse_side;
 use crate::app::match_report::use_cases::match_report_access_service::{
-    can_write_report, is_authorized, load_entry_scope, AccesRapportDeps, EntryScope, PorteeRapport,
+    can_write_report, can_write_side, is_authorized, load_entry_scope, AccesRapportDeps,
+    EntryScope, PorteeRapport,
 };
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
@@ -186,6 +191,82 @@ fn refuser_l_ecriture(space_id: &str, match_report_id: &str, wants_page: bool) -
     Redirect::to(&live).into_response()
 }
 
+/// Écrire dans **un camp** du compte rendu (carte 652, R3 de E22) : la garde
+/// de suivi, puis `can_write_side` sur le camp que désigne la route. Elle
+/// remplace `garde_saisie` sur son groupe, `can_write_side` portant aussi la
+/// règle du mode A.
+pub async fn garde_camp(
+    State(state): State<AppState>,
+    auth_session: AuthSession,
+    request: Request,
+    next: Next,
+) -> Response {
+    let (mut parts, corps) = request.into_parts();
+    let params = path_params(&mut parts).await;
+    let wants_page = veut_une_page(&parts.method, &parts.headers);
+    let user = auth_session.user.as_ref();
+    if let Err(refus) = autoriser_camp(&state, user, &params, wants_page).await {
+        return refus;
+    }
+    next.run(Request::from_parts(parts, corps)).await
+}
+
+async fn autoriser_camp(
+    state: &AppState,
+    user: Option<&User>,
+    params: &HashMap<String, String>,
+    wants_page: bool,
+) -> Result<(), Response> {
+    let rapport = autoriser_suivi(state, user, params).await?;
+    let entry = charger_entree(state, rapport.match_report_id).await?;
+    let side = camp_de_la_route(params, &rapport.portee)?;
+    let deps = AccesRapportDeps::from_state(state);
+    let RapportSuivi {
+        user,
+        space_id,
+        portee,
+        match_report_id,
+    } = &rapport;
+    if can_write_side(&deps, user, space_id, portee, &entry, side).await {
+        return Ok(());
+    }
+    Err(refuser_le_camp(space_id, match_report_id, wants_page))
+}
+
+/// Le camp que désigne la route : son paramètre `side`, sinon son `team_id`
+/// comparé aux deux équipes du match. Une équipe hors du match n'a pas de camp
+/// (403) ; une route du groupe qui ne désigne aucun camp est mal placée (400).
+fn camp_de_la_route(
+    params: &HashMap<String, String>,
+    portee: &PorteeRapport,
+) -> Result<TeamSide, Response> {
+    if let Some(side) = params.get("side") {
+        return parse_side(side).ok_or_else(|| StatusCode::BAD_REQUEST.into_response());
+    }
+    match params.get("team_id") {
+        Some(team_id) if *team_id == portee.home_team_id => Ok(TeamSide::Home),
+        Some(team_id) if *team_id == portee.away_team_id => Ok(TeamSide::Away),
+        Some(_) => Err(StatusCode::FORBIDDEN.into_response()),
+        None => {
+            tracing::error!("garde_camp : route sans side ni team_id dans le chemin");
+            Err(StatusCode::BAD_REQUEST.into_response())
+        }
+    }
+}
+
+/// Le refus fait au coach de l'autre camp : 403 nu sur une écriture ou un
+/// fragment, et la redirection vers son avant-match quand c'est une page
+/// complète qu'il demandait (R3 de E22).
+fn refuser_le_camp(space_id: &str, match_report_id: &str, wants_page: bool) -> Response {
+    if !wants_page {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let step2 = AppRoutes::default()
+        .match_report
+        .step2(space_id, match_report_id);
+    Redirect::to(&step2).into_response()
+}
+
 async fn charger_portee(
     state: &AppState,
     match_report_id: &str,
@@ -255,6 +336,9 @@ mod tests {
     impl ITeamDataPort for FakeTeamData {
         async fn is_coach_of_team(&self, team_id: &str, _: &str) -> Result<bool, String> {
             Ok(self.0.contains(&team_id))
+        }
+        async fn find_team_coach(&self, _: &str) -> Result<Option<String>, String> {
+            Ok(None)
         }
         async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
             Ok(true)
@@ -402,6 +486,63 @@ mod tests {
     #[test]
     fn a_write_is_forbidden_without_redirection() {
         let response = refuser_l_ecriture("espace", "rapport", false);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    // ── Le camp de la route (carte 652) ───────────────────────────────────────
+
+    fn params(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    fn camp(pairs: &[(&str, &str)]) -> Result<TeamSide, StatusCode> {
+        camp_de_la_route(&params(pairs), &portee()).map_err(|r| r.status())
+    }
+
+    #[test]
+    fn the_side_comes_from_the_side_parameter() {
+        assert_eq!(camp(&[("side", "home")]), Ok(TeamSide::Home));
+        assert_eq!(camp(&[("side", "away")]), Ok(TeamSide::Away));
+        assert_eq!(camp(&[("side", "ailleurs")]), Err(StatusCode::BAD_REQUEST));
+    }
+
+    #[test]
+    fn the_side_comes_from_the_team_of_the_match() {
+        assert_eq!(camp(&[("team_id", HOME)]), Ok(TeamSide::Home));
+        assert_eq!(camp(&[("team_id", AWAY)]), Ok(TeamSide::Away));
+    }
+
+    #[test]
+    fn a_team_outside_the_match_is_forbidden() {
+        assert_eq!(
+            camp(&[("team_id", "une-autre-equipe")]),
+            Err(StatusCode::FORBIDDEN)
+        );
+    }
+
+    /// Une route du groupe qui ne désigne aucun camp : mal placée, refusée.
+    #[test]
+    fn a_route_without_side_is_refused() {
+        assert_eq!(camp(&[]), Err(StatusCode::BAD_REQUEST));
+    }
+
+    #[test]
+    fn a_side_refusal_on_a_page_leads_to_step2() {
+        let response = refuser_le_camp("espace", "rapport", true);
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        let location = response.headers().get("location").unwrap();
+        assert_eq!(
+            location.to_str().unwrap(),
+            "/app/espace/match-report/rapport/step2"
+        );
+    }
+
+    #[test]
+    fn a_side_refusal_on_a_write_is_forbidden() {
+        let response = refuser_le_camp("espace", "rapport", false);
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 

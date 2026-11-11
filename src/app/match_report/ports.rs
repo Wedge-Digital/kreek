@@ -140,6 +140,10 @@ pub trait ITeamDataPort: Send + Sync {
 
     async fn is_coach_of_team(&self, team_id: &str, user_id: &str) -> Result<bool, String>;
 
+    /// L'identifiant du coach de l'équipe, `None` si l'équipe est introuvable.
+    /// Sert à reconnaître deux équipes d'un même coach (carte 652, § 12.9).
+    async fn find_team_coach(&self, team_id: &str) -> Result<Option<String>, String>;
+
     async fn find_team_info(&self, team_id: &str) -> Option<TeamInfoDto>;
 
     async fn find_team_value(&self, team_id: &str) -> Option<u32>;

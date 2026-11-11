@@ -650,6 +650,9 @@ mod authorization_tests {
             }
             Ok(self.coached.contains(&team_id))
         }
+        async fn find_team_coach(&self, _: &str) -> Result<Option<String>, String> {
+            Ok(None)
+        }
         async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
             Ok(true)
         }

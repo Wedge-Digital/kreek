@@ -189,7 +189,7 @@ sur des camps indépendants.
 | # | Règle |
 |---|---|
 | R1 | En « Chacun son équipe », **chaque coach écrit dans son camp seul** : fan factor, coups de pouce, actions, MVP, gains, fan factor d'après-match, paragraphe, validation. Le camp de l'autre est en lecture seule. |
-| R2 | Le **camp** d'un coach est celui de `camp_du_coach`. Un coach des deux équipes ne se voit pas proposer le mode B (§ 12, Q9). L'admin écrit et valide les deux camps, titre compris (§ 12, Q6). |
+| R2 | Le **camp** d'un coach est celui de `camp_du_coach`. Deux équipes d'un même coach ne démarrent pas en mode B, quel que soit le démarreur (§ 12, Q9, élargi). L'admin écrit et valide les deux camps, titre compris (§ 12, Q6). |
 | R3 | Écrire dans le camp de l'autre est refusé **par la route** : 403 sur une écriture ou un fragment, 303 vers sa propre page pour une page complète (forme de E21). |
 | R4 | Les **valeurs d'équipe** se figent au premier fan factor de mode B, pour les deux équipes ; le second fan factor ne les relit pas. |
 | R5 | **Coups de pouce** : le favori achète d'abord ; « J'ai fini mes achats » est la validation existante, même vide. L'outsider voit un écran d'attente qui s'ouvre quand le favori a validé. L'annulation globale reste ouverte aux deux coachs, aux conditions de E20. |
@@ -546,6 +546,12 @@ Les neuf recommandations du § 10 sont retenues telles quelles.
 9. **Un coach des deux équipes ne se voit pas proposer le mode B** (Q9) :
    `match_mode_page` et la sélection hors calendrier consultent `camp_du_coach`,
    et le POST le refuse en 400.
+   **Élargi le 2026-11-11, à la réalisation de la 652** : le mode B est refusé
+   **dès que les deux équipes ont le même coach, quel que soit le démarreur,
+   admin compris** — sans quoi un admin démarrerait en B un match qui n'a qu'un
+   interlocuteur. `may_choose_entry_mode` compare les coachs des deux équipes
+   (`ITeamDataPort::find_team_coach`, ajouté), sans regarder qui démarre ; une
+   équipe introuvable ou un port en erreur refusent, 400 et `tracing::warn!`.
 
 ## 13. Correction de l'épic
 

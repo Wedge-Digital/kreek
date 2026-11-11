@@ -21,8 +21,12 @@ carte n'y touche pas.
 ## Ce qui change
 
 - **`EntryMode::TeamEntry`**, forme écrite `TeamEntry` ; `read_entry_mode`
-  l'accepte (`match_selection_controller.rs:363-366`). Un coach des deux
-  équipes qui l'envoie reçoit 400 (§ 12.9).
+  l'accepte (`match_selection_controller.rs:363-366`). **Le mode B est refusé
+  en 400 dès que les deux équipes ont le même coach**, quel que soit le
+  démarreur, admin compris (§ 12.9, élargi le 2026-11-11) :
+  `may_choose_entry_mode` compare les coachs des deux équipes, lus par une
+  méthode ajoutée au port, `ITeamDataPort::find_team_coach`. Une équipe
+  introuvable ou un port en erreur refusent aussi, avec un `tracing::warn!`.
 - **`coach_may_write`** gagne la branche `TeamEntry` : les deux coachs écrivent
   dans le rapport.
 - **`can_write_side(deps, user, space_id, scope, entry, side)`**, à côté de
@@ -42,8 +46,12 @@ carte n'y touche pas.
 
 `domain/value_objects.rs`, `io/web/match_selection_controller.rs`,
 `use_cases/match_report_access_service.rs`, `io/web/garde_saisie.rs`,
-`router.rs` (chemins relatifs à `src/app/match_report/`) ;
-`tests/e2e/test_match_report_entry_mode.py`.
+`router.rs`, `ports.rs` (`find_team_coach`) et ses doublures de test,
+`domain/match_report_state.rs` (test de rejeu) (chemins relatifs à
+`src/app/match_report/`) ; `src/infrastructure/match_report/ref_team_data_adapter.rs`,
+`src/infrastructure/web/match_role_adapter.rs` (doublure) ;
+`tests/e2e/test_match_report_entry_mode.py`, `tests/e2e/match_report_helpers.py`
+(`create_draft(..., entry_mode=None)`).
 
 ## Règles et invariants
 
@@ -52,13 +60,16 @@ carte n'y touche pas.
 - Un contrôle d'accès échoue fermé : un mode inconnu, une erreur de port
   refusent.
 - L'admin écrit les deux camps (§ 12.6).
-- Un coach des deux équipes ne démarre pas en mode B (§ 12.9).
+- Deux équipes d'un même coach ne démarrent pas en mode B, quel que soit le
+  démarreur (§ 12.9).
 
 ## Tests
 
 - **Unitaires** : `read_entry_mode("TeamEntry")` ; `can_write_side` — coach de
-  son camp, de l'autre, admin, tiers, mode A inchangé ; un coach des deux
-  équipes refusé en mode B. Les trois tests qui prenaient `TeamEntry` pour un
+  son camp, de l'autre, admin, tiers, mode A inchangé ; deux équipes d'un
+  même coach refusées en mode B ; `garde_camp` (camp de la route, refus) et
+  `garder_si_non_vide` (un groupe vide ne pose pas de couche : `route_layer`
+  panique sur un routeur vide). Les trois tests qui prenaient `TeamEntry` pour un
   mode inconnu (`match_selection_controller.rs:726`,
   `match_report_access_service.rs:481-483`) passent à une autre valeur.
 - **E2E** : `test_match_report_entry_mode.py:40-57` change de valeur inconnue ;
@@ -71,6 +82,10 @@ Aucune migration. Une **valeur nouvelle**, `TeamEntry`, peut entrer dans
 `EntryModeChosen.mode` et `match_report_proj.entry_mode` (colonne `TEXT` sans
 contrainte). Aucun compte rendu existant n'est concerné : aucun n'est en mode B,
 et l'option reste fermée dans l'interface.
+
+**Ouverture transitoire, acceptée** : jusqu'à ce que les cartes 654 à 659
+rangent leurs routes dans `routes_de_camp()`, un rapport `TeamEntry` laisse
+écrire les deux coachs partout — étapes, MVP, après-match, publication.
 
 ## Terminé quand
 

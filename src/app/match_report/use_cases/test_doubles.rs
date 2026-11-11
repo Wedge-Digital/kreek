@@ -358,6 +358,9 @@ impl ITeamDataPort for ReadyTeams {
     async fn is_coach_of_team(&self, _: &str, _: &str) -> Result<bool, String> {
         Ok(true)
     }
+    async fn find_team_coach(&self, _: &str) -> Result<Option<String>, String> {
+        Ok(None)
+    }
     async fn find_team_info(&self, _: &str) -> Option<TeamInfoDto> {
         None
     }

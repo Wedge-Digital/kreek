@@ -12,7 +12,7 @@ use crate::app::auth::domain::user::User;
 use crate::app::match_report::domain::match_report_repository_port::{
     EntryModeRow, IMatchReportRepository, RepositoryError,
 };
-use crate::app::match_report::domain::value_objects::EntryMode;
+use crate::app::match_report::domain::value_objects::{EntryMode, TeamSide};
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::shared_kernel::bloodbowl::admin_access::{is_admin, IAdminAccessPort};
 use crate::app::shared_kernel::identity::ids::EntityId;
@@ -137,14 +137,84 @@ async fn coach_may_write(
     let Some(starter) = entry.started_by.as_deref() else {
         return true;
     };
-    if entry.entry_mode != EntryMode::SoloEntry.as_str() {
+    match EntryMode::from_written(&entry.entry_mode) {
+        Some(EntryMode::SoloEntry) => solo_entry_writer(team_data, scope, starter, user_id).await,
+        // « Chacun son équipe » : les deux coachs écrivent dans le rapport ;
+        // c'est `can_write_side` qui coupe ensuite par camp (carte 652).
+        Some(EntryMode::TeamEntry) => true,
         // Un mode que ce code ne connaît pas : un contrôle d'accès échoue fermé.
-        return false;
+        None => false,
     }
+}
+
+/// En « Je saisis tout », le démarreur — ou les deux coachs, si le démarreur
+/// ne coache aucune des deux équipes.
+async fn solo_entry_writer(
+    team_data: &dyn ITeamDataPort,
+    scope: &PorteeRapport,
+    starter: &str,
+    user_id: &str,
+) -> bool {
     if starter == user_id {
         return true;
     }
     !starter_coaches_a_team(team_data, scope, starter).await
+}
+
+/// Peut écrire dans **ce camp** du compte rendu (carte 652, R1 à R3 de E22).
+///
+/// - hors « Chacun son équipe », la règle de `can_write_report`, inchangée —
+///   et un mode inconnu y reste fermé ;
+/// - en « Chacun son équipe », l'admin écrit les deux camps (§ 12.6), un coach
+///   le sien seul, d'après `camp_du_coach`.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn can_write_side(
+    deps: &AccesRapportDeps<'_>,
+    user: &User,
+    space_id: &str,
+    scope: &PorteeRapport,
+    entry: &EntryScope,
+    side: TeamSide,
+) -> bool {
+    if EntryMode::from_written(&entry.entry_mode) != Some(EntryMode::TeamEntry) {
+        return can_write_report(deps, user, space_id, scope, entry).await;
+    }
+    if est_administrateur(deps, user, space_id, &scope.competition_id).await {
+        return true;
+    }
+    camp_du_coach(deps.team_data, scope, &user.id.to_string())
+        .await
+        .holds(side)
+}
+
+/// Ce mode peut-il être choisi pour ce match ? (carte 652, § 12.9 de E22)
+///
+/// « Je saisis tout », toujours. « Chacun son équipe » exige **deux coachs
+/// distincts**, quel que soit le démarreur, admin compris : le mode B garde
+/// toujours deux interlocuteurs. Une équipe introuvable ou un port en erreur
+/// refusent — un contrôle d'accès échoue fermé.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn may_choose_entry_mode(
+    team_data: &dyn ITeamDataPort,
+    home_team_id: &str,
+    away_team_id: &str,
+    mode: EntryMode,
+) -> bool {
+    if mode == EntryMode::SoloEntry {
+        return true;
+    }
+    let (home, away) = tokio::join!(
+        team_data.find_team_coach(home_team_id),
+        team_data.find_team_coach(away_team_id),
+    );
+    match (home, away) {
+        (Ok(Some(home)), Ok(Some(away))) => home != away,
+        (Err(e), _) | (_, Err(e)) => {
+            tracing::warn!("may_choose_entry_mode : coach illisible, mode B refusé : {e}");
+            false
+        }
+        _ => false,
+    }
 }
 
 /// Le démarreur coache-t-il l'une des deux équipes ?
@@ -213,6 +283,18 @@ pub enum CampDuCoach {
     Aucun,
 }
 
+impl CampDuCoach {
+    /// Ce camp est-il le sien ? Un coach des deux équipes tient les deux.
+    pub fn holds(&self, side: TeamSide) -> bool {
+        matches!(
+            (self, side),
+            (Self::LesDeux, _)
+                | (Self::Domicile, TeamSide::Home)
+                | (Self::Visiteur, TeamSide::Away)
+        )
+    }
+}
+
 /// Qui est ce coach dans ce match. Une erreur de port vaut « pas coach » de
 /// cette équipe : un contrôle d'accès échoue fermé.
 // arch:no-instrument — service de lecture : une question de droit, aucune intention métier
@@ -254,6 +336,9 @@ mod tests {
                 return Err("port indisponible".to_string());
             }
             Ok(self.coached.contains(&team_id))
+        }
+        async fn find_team_coach(&self, _: &str) -> Result<Option<String>, String> {
+            Ok(None)
         }
         async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
             Ok(true)
@@ -338,6 +423,8 @@ mod write_tests {
 
     const HOME: &str = "home-team";
     const AWAY: &str = "away-team";
+    /// Une seconde équipe du coach à domicile.
+    const SECOND_HOME: &str = "second-home-team";
     const SPACE: &str = "00000000000000000000000041";
     const COMPETITION: &str = "00000000000000000000000042";
     /// Coach de l'équipe à domicile.
@@ -354,14 +441,29 @@ mod write_tests {
         failing: Option<&'static str>,
     }
 
+    impl FakeTeamData {
+        fn coach_of(team_id: &str) -> Option<String> {
+            match team_id {
+                HOME | SECOND_HOME => Some(HOME_COACH.to_string()),
+                AWAY => Some(AWAY_COACH.to_string()),
+                _ => None,
+            }
+        }
+    }
+
     #[async_trait::async_trait]
     impl ITeamDataPort for FakeTeamData {
         async fn is_coach_of_team(&self, team_id: &str, user_id: &str) -> Result<bool, String> {
             if self.failing == Some(team_id) {
                 return Err("port indisponible".to_string());
             }
-            Ok((team_id == HOME && user_id == HOME_COACH)
-                || (team_id == AWAY && user_id == AWAY_COACH))
+            Ok(Self::coach_of(team_id).as_deref() == Some(user_id))
+        }
+        async fn find_team_coach(&self, team_id: &str) -> Result<Option<String>, String> {
+            if self.failing == Some(team_id) {
+                return Err("port indisponible".to_string());
+            }
+            Ok(Self::coach_of(team_id))
         }
         async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
             Ok(true)
@@ -480,10 +582,130 @@ mod write_tests {
     #[tokio::test]
     async fn an_unknown_entry_mode_opens_nothing_to_a_coach() {
         let entry = EntryScope {
-            entry_mode: "TeamEntry".to_string(),
+            entry_mode: "UnknownEntry".to_string(),
             started_by: Some(ADMIN.to_string()),
         };
         assert!(!may_write_with(HOME_COACH, entry.clone(), None).await);
         assert!(may_write_with(ADMIN, entry, None).await);
+    }
+
+    // ── « Chacun son équipe » (carte 652) ─────────────────────────────────────
+
+    fn team_entry() -> EntryScope {
+        EntryScope {
+            entry_mode: EntryMode::TeamEntry.as_str().to_string(),
+            started_by: Some(HOME_COACH.to_string()),
+        }
+    }
+
+    async fn may_write_side_with(
+        who: &str,
+        entry: EntryScope,
+        side: TeamSide,
+        failing: Option<&'static str>,
+    ) -> bool {
+        let admin_access = FakeAdminAccess::new().space_admin(
+            &EntityId::try_new(ADMIN).unwrap(),
+            &EntityId::try_new(SPACE).unwrap(),
+        );
+        let team_data = FakeTeamData { failing };
+        let deps = AccesRapportDeps {
+            admin_access: &admin_access,
+            team_data: &team_data,
+        };
+        can_write_side(&deps, &user(who), SPACE, &scope(), &entry, side).await
+    }
+
+    async fn may_write_side(who: &str, side: TeamSide) -> bool {
+        may_write_side_with(who, team_entry(), side, None).await
+    }
+
+    /// Le démarreur ne compte plus : les deux coachs écrivent dans le rapport.
+    #[tokio::test]
+    async fn both_coaches_write_a_team_entry_report() {
+        assert!(may_write_with(HOME_COACH, team_entry(), None).await);
+        assert!(may_write_with(AWAY_COACH, team_entry(), None).await);
+        assert!(!may_write_with(THIRD_PARTY, team_entry(), None).await);
+    }
+
+    #[tokio::test]
+    async fn a_team_entry_coach_writes_his_own_side() {
+        assert!(may_write_side(HOME_COACH, TeamSide::Home).await);
+        assert!(may_write_side(AWAY_COACH, TeamSide::Away).await);
+    }
+
+    #[tokio::test]
+    async fn a_team_entry_coach_does_not_write_the_other_side() {
+        assert!(!may_write_side(HOME_COACH, TeamSide::Away).await);
+        assert!(!may_write_side(AWAY_COACH, TeamSide::Home).await);
+    }
+
+    /// § 12.6 : l'admin écrit les deux camps, sans en coacher aucun.
+    #[tokio::test]
+    async fn an_admin_writes_both_sides() {
+        assert!(may_write_side(ADMIN, TeamSide::Home).await);
+        assert!(may_write_side(ADMIN, TeamSide::Away).await);
+    }
+
+    #[tokio::test]
+    async fn a_third_party_writes_no_side() {
+        assert!(!may_write_side(THIRD_PARTY, TeamSide::Home).await);
+        assert!(!may_write_side(THIRD_PARTY, TeamSide::Away).await);
+    }
+
+    /// En « Je saisis tout », le camp ne change rien : la règle du rapport.
+    #[tokio::test]
+    async fn solo_entry_sides_follow_the_report_rule() {
+        let solo = || started_by(Some(HOME_COACH));
+        for side in [TeamSide::Home, TeamSide::Away] {
+            assert!(may_write_side_with(HOME_COACH, solo(), side, None).await);
+            assert!(!may_write_side_with(AWAY_COACH, solo(), side, None).await);
+        }
+    }
+
+    /// Un mode inconnu reste fermé aux coachs, camp ou pas.
+    #[tokio::test]
+    async fn an_unknown_entry_mode_opens_no_side() {
+        let entry = EntryScope {
+            entry_mode: "UnknownEntry".to_string(),
+            started_by: Some(ADMIN.to_string()),
+        };
+        assert!(!may_write_side_with(HOME_COACH, entry, TeamSide::Home, None).await);
+    }
+
+    #[tokio::test]
+    async fn a_failing_port_denies_the_side() {
+        let entry = team_entry();
+        assert!(!may_write_side_with(HOME_COACH, entry, TeamSide::Home, Some(HOME)).await);
+    }
+
+    async fn may_choose(home: &str, away: &str, failing: Option<&'static str>) -> bool {
+        let team_data = FakeTeamData { failing };
+        may_choose_entry_mode(&team_data, home, away, EntryMode::TeamEntry).await
+    }
+
+    #[tokio::test]
+    async fn two_distinct_coaches_may_start_in_team_entry() {
+        assert!(may_choose(HOME, AWAY, None).await);
+    }
+
+    /// § 12.9 élargi : deux équipes d'un même coach, quel que soit le démarreur.
+    #[tokio::test]
+    async fn two_teams_of_one_coach_may_not_start_in_team_entry() {
+        assert!(!may_choose(HOME, SECOND_HOME, None).await);
+    }
+
+    #[tokio::test]
+    async fn a_failing_port_or_an_unknown_team_refuses_team_entry() {
+        assert!(!may_choose(HOME, AWAY, Some(AWAY)).await);
+        assert!(!may_choose(HOME, "equipe-inconnue", None).await);
+    }
+
+    #[tokio::test]
+    async fn solo_entry_may_always_be_chosen() {
+        let team_data = FakeTeamData {
+            failing: Some(HOME),
+        };
+        assert!(may_choose_entry_mode(&team_data, HOME, HOME, EntryMode::SoloEntry).await);
     }
 }
