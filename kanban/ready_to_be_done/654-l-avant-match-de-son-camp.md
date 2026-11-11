@@ -1,0 +1,84 @@
+# L'avant-match de son camp
+
+**Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 3 · **Dépend de :** 652, 653
+**Conception :** `docs/specs/saisie-mobile/E22-cadrage.md` (R1, R4, § 3, § 5, § 12.6, § 12.7)
+**Maquette :** `assets/rawpages/html/app-mobile-duo-pre-match.html` (B1)
+
+## Le constat
+
+- `FanFactorRecorded` porte les **deux** jets (`src/app/match_report/domain/events.rs:49-57`),
+  et le formulaire de `step2` les exige tous les deux
+  (`io/web/pre_match_controller.rs:167-171`) : en parallèle, le dernier qui
+  enregistre écrase le jet de l'autre.
+- Les valeurs d'équipe **ne sont pas figées** : chaque enregistrement relit et
+  réappende `TeamValuesRecorded` (`use_cases/record_fan_factor_use_case.rs:101-122`).
+- **Le fan factor n'est pas émis sur le bus** : le use case n'a pas de bus
+  (`record_fan_factor_use_case.rs:51-68`). Aucun app event, donc aucun
+  `MatchChanged` : la page de l'adversaire ne peut pas le voir arriver.
+- **`pre-match.html` ne déclare pas sa présence** : seuls `actions-step.html:7`,
+  `mvp-step.html:7` et `live-match.html:12` le font, et le signal ne va qu'aux
+  présents (`src/web/realtime/registry/presence.rs:118-132`).
+
+## Ce qui change
+
+- **`TeamFanFactorRecorded { team_side: TeamSide, fan_roll: D3Roll,
+  dedicated_fans: DedicatedFans, recorded_by: CoachId }`**, nommé dans
+  `type_name`. `MatchReportPreMatch::record_team_fan_factor` pose le jet et les
+  fans du seul camp. Rejeu en `PreMatch` et en `ReadyToPublish`, comme
+  `FanFactorRecorded` (`domain/match_report_state.rs:119-135`, `331-347`).
+- **Gel des valeurs d'équipe** (R4) : le premier `TeamFanFactorRecorded` est
+  appendé avec `TeamValuesRecorded` (les deux équipes) ; le second ne relit
+  rien. La règle est dans l'agrégat : « des valeurs d'équipe sont-elles déjà
+  enregistrées ? ».
+- **Le use case** prend le camp du coach (jamais du formulaire), un bus, et
+  **émet** par `emettre`. En mode A, `FanFactorRecorded` reste tel quel.
+- **L'app event `MatchFanFactorRecorded`** (`space_id`, équipes, `team_side`,
+  `recorded_by`) : le publisher le produit ; `notice_of` le range sans toast
+  (§ 12.7) ; le signal part de lui-même.
+- **`step2` en mode B** : son jet en saisie ; celui de l'autre en lecture seule
+  (« ✓ London Rats · 1 + 2 = 3, lancé par Morgane », ou « en attente ») dans un
+  widget rechargé sur `matchChanged` ; la page déclare sa présence
+  (`data-activity="write"`). L'admin choisit le camp qu'il saisit (§ 12.6).
+- La suite : sa page de coups de pouce, ou le match si le palier n'en a pas.
+- Projection : `TeamFanFactorRecorded` n'écrit rien, comme `FanFactorRecorded`
+  (`match_report_repository.rs:119`).
+
+## Fichiers touchés
+
+`domain/events.rs`, `domain/match_report_pre_match.rs`,
+`domain/match_report_state.rs`, `use_cases/record_fan_factor_use_case.rs`,
+`io/web/pre_match_controller.rs`, `io/web/templates/pre-match.html`, un widget
+« avant-match adverse », `io/app_events/app_event_publisher.rs`,
+`io/repository/match_report_repository.rs`,
+`src/app/shared_kernel/app_events/match_report_app_events.rs`,
+`src/web/realtime/toast.rs` ; `tests/impact-map.toml`.
+
+## Règles et invariants
+
+- Chacun son jet ; écrire le jet de l'autre est impossible par construction
+  (le camp vient de la session).
+- Les valeurs d'équipe se figent au premier fan factor du mode B, pour les deux
+  équipes (R4) ; le mode A les relit comme aujourd'hui.
+- Le rejeu de tout flux existant est inchangé.
+
+## Tests
+
+- **Unitaires** : rejeu d'un flux mode B (un fan factor par camp, une seule
+  `TeamValuesRecorded`) et d'un flux mode A ; le second fan factor ne relit pas
+  les valeurs d'équipe ; le use case émet `TeamFanFactorRecorded` ; le
+  publisher en fait `MatchFanFactorRecorded`, sans toast.
+- **E2E** : deux contextes ; chacun son jet ; le jet du domicile apparaît chez
+  le visiteur sans rechargement ; un POST de `step2` par le visiteur ne touche
+  pas le jet du domicile.
+
+## Conséquences sur les données de production
+
+Un événement **ajouté**, propre au mode B. `FanFactorRecorded`, à deux camps,
+reste celui du mode A et se rejoue tel quel ; aucun compte rendu existant n'est
+en mode B. `event_log` reçoit une ligne par fan factor de mode B.
+
+## Terminé quand
+
+Dans un match en mode B, chaque coach saisit son seul jet, voit celui de
+l'autre arriver sans recharger, et les valeurs d'équipe ne changent plus après
+le premier jet.
