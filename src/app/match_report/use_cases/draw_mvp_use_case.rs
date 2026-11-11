@@ -14,6 +14,7 @@ use crate::app::match_report::domain::match_report_repository_port::IMatchReport
 use crate::app::match_report::domain::mvp_draw::DesignatedPlayer;
 use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, TeamSide};
 use crate::app::match_report::ports::IPlayerDataPort;
+use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle};
 use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::match_report::use_cases::record_action_use_case::resolve_player_info;
 use crate::app::match_report::use_cases::record_mvp_use_case::{load_pre_match, RecordMvpError};
@@ -43,13 +44,42 @@ pub async fn execute<R: Rng + Send>(
     rng: &mut R,
     bus: &EventBus,
 ) -> Result<(), DrawMvpError> {
+    let action_id = ActionId(ulid::Ulid::new().to_string());
+    // Carte 653 : une course perdue contre l'autre camp se rejoue une fois. Le
+    // tirage est alors refait : le premier n'a été ni écrit, ni montré.
+    let first = draw_once(&cmd, &action_id, repo, player_data, rng, bus).await;
+    if !lost_the_race(COMMAND, &first) {
+        return first;
+    }
+    settle(
+        COMMAND,
+        draw_once(&cmd, &action_id, repo, player_data, rng, bus).await,
+    )
+}
+
+const COMMAND: &str = "draw_mvp";
+
+/// Un essai : relire l'agrégat, tirer, appender à la version lue.
+async fn draw_once<R: Rng + Send>(
+    cmd: &DrawMvpCommand,
+    action_id: &ActionId,
+    repo: &dyn IMatchReportRepository,
+    player_data: &dyn IPlayerDataPort,
+    rng: &mut R,
+    bus: &EventBus,
+) -> Result<(), DrawMvpError> {
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pre_match(&mr_id, repo).await?;
-    let designated = resolve_designated(&cmd, &pm, player_data).await?;
-    let action_id = ActionId(ulid::Ulid::new().to_string());
+    let designated = resolve_designated(cmd, &pm, player_data).await?;
     // Six désignés, distincts, un MVP par camp : les refus viennent du domaine.
     let (_, events) = pm
-        .draw_mvp(cmd.team_side, designated, rng, action_id, cmd.recorded_by)
+        .draw_mvp(
+            cmd.team_side,
+            designated,
+            rng,
+            action_id.clone(),
+            cmd.recorded_by.clone(),
+        )
         .map_err(DrawMvpError::Domain)?;
     // `ActionRecorded` puis `MvpDrawn`, dans une seule transaction, puis émis
     // dans cet ordre (carte 643) : un conflit n'émet rien.
@@ -88,7 +118,7 @@ mod tests {
     use crate::app::match_report::domain::match_report_state::MatchReportState;
     use crate::app::match_report::domain::value_objects::MatchActionType;
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, ConflictingRepository, KnownPlayers, RecordingRepository,
+        pre_match, KnownPlayers, RecordingRepository, ScriptedRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
     use crate::common::services::event_bus::event_bus::{new_bus, EventBus};
@@ -162,14 +192,46 @@ mod tests {
         assert!(repo.appended().is_empty());
     }
 
+    fn two_reads() -> Vec<MatchReportState> {
+        vec![
+            MatchReportState::PreMatch(pre_match()),
+            MatchReportState::PreMatch(pre_match()),
+        ]
+    }
+
+    /// Carte 653 : deux conflits de suite sont relayés, après deux appends.
     #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
-        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+    async fn two_conflicts_are_relayed() {
+        let repo = ScriptedRepository::reading(two_reads()).refusing(2);
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
         let r = run_on(&repo, command(6), &bus).await;
         assert!(matches!(r, Err(RecordMvpError::Conflict)), "{:?}", r.err());
+        assert_eq!(repo.append_attempts(), 2);
         assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 653 : la course perdue se rejoue ; un seul tirage est écrit et
+    /// émis — celui du réessai.
+    #[tokio::test]
+    async fn a_lost_race_is_retried_and_one_draw_lands() {
+        let repo = ScriptedRepository::reading(two_reads()).refusing(1);
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+
+        run_on(&repo, command(6), &bus)
+            .await
+            .expect("le réessai passe");
+
+        assert_eq!(repo.appended().len(), 2, "ActionRecorded puis MvpDrawn");
+        let emitted: Vec<_> = (0..2)
+            .map(|_| subscriber.try_recv().unwrap().event_type)
+            .collect();
+        assert_eq!(emitted, ["ActionRecorded", "MvpDrawn"]);
+        assert!(
+            subscriber.try_recv().is_err(),
+            "l'essai perdu n'a rien émis"
+        );
     }
 
     /// Carte 643 : l'action tirée puis le tirage sortent dans l'ordre de

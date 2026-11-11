@@ -1,9 +1,11 @@
 use crate::app::match_report::domain::error::DomainError;
+use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::{
     IMatchReportRepository, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::ActionId;
+use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle, ConflictAware};
 use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
@@ -42,19 +44,33 @@ pub async fn execute(
     repo: &dyn IMatchReportRepository,
     bus: &EventBus,
 ) -> Result<(), DeleteActionError> {
-    let mr_id = cmd.match_report_id.to_string();
-    let state = repo
-        .find_by_id(&mr_id)
-        .await
-        .map_err(DeleteActionError::from_repository)?;
-    let pm = match state.ok_or(DeleteActionError::NotFound)? {
-        MatchReportState::PreMatch(pm) => pm,
-        MatchReportState::ReadyToPublish(rtp) => rtp.into_pre_match(),
-        _ => return Err(DeleteActionError::NotInPreMatchPhase),
-    };
+    // Carte 653 : une course perdue contre l'autre camp se rejoue une fois. Une
+    // action que l'autre a déjà retirée sort alors en `ActionNotFound`.
+    let first = delete_once(&cmd, repo, bus).await;
+    if !lost_the_race(COMMAND, &first) {
+        return first;
+    }
+    settle(COMMAND, delete_once(&cmd, repo, bus).await)
+}
 
+const COMMAND: &str = "delete_action";
+
+impl ConflictAware for DeleteActionError {
+    fn is_conflict(&self) -> bool {
+        matches!(self, Self::Conflict)
+    }
+}
+
+/// Un essai : relire l'agrégat, le laisser décider, appender à la version lue.
+async fn delete_once(
+    cmd: &DeleteActionCommand,
+    repo: &dyn IMatchReportRepository,
+    bus: &EventBus,
+) -> Result<(), DeleteActionError> {
+    let mr_id = cmd.match_report_id.to_string();
+    let pm = load_pre_match(repo, &mr_id).await?;
     let (_, event) = pm
-        .delete_action(&cmd.action_id, cmd.deleted_by)
+        .delete_action(&cmd.action_id, cmd.deleted_by.clone())
         .map_err(DeleteActionError::Domain)?;
     repo.append(&mr_id, &event, pm.version)
         .await
@@ -62,6 +78,21 @@ pub async fn execute(
     // Le retrait sort du BC une fois écrit (carte 643) : un conflit n'émet rien.
     emit_all(bus, &mr_id, std::slice::from_ref(&event));
     Ok(())
+}
+
+async fn load_pre_match(
+    repo: &dyn IMatchReportRepository,
+    mr_id: &str,
+) -> Result<MatchReportPreMatch, DeleteActionError> {
+    let state = repo
+        .find_by_id(mr_id)
+        .await
+        .map_err(DeleteActionError::from_repository)?;
+    match state.ok_or(DeleteActionError::NotFound)? {
+        MatchReportState::PreMatch(pm) => Ok(pm),
+        MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
+        _ => Err(DeleteActionError::NotInPreMatchPhase),
+    }
 }
 
 #[cfg(test)]
@@ -150,7 +181,7 @@ mod conflict_tests {
         ActionPlayer, MatchActionType, TeamSide, TurnNumber,
     };
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, ConflictingRepository, RecordingRepository,
+        pre_match, RecordingRepository, ScriptedRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
     use crate::common::services::event_bus::event_bus::new_bus;
@@ -179,10 +210,15 @@ mod conflict_tests {
         }
     }
 
+    /// Carte 653 : deux conflits de suite sont relayés, après deux appends.
     #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
+    async fn two_conflicts_are_relayed() {
         let action_id = ActionId("ACT01".into());
-        let repo = ConflictingRepository::holding(pre_match_with_action(&action_id));
+        let reads = vec![
+            pre_match_with_action(&action_id),
+            pre_match_with_action(&action_id),
+        ];
+        let repo = ScriptedRepository::reading(reads).refusing(2);
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
         let resultat = execute(command(action_id), &repo, &bus).await;
@@ -190,7 +226,44 @@ mod conflict_tests {
             matches!(resultat, Err(DeleteActionError::Conflict)),
             "{resultat:?}"
         );
+        assert_eq!(repo.append_attempts(), 2);
         assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 653 : la course perdue se rejoue, le retrait est écrit.
+    #[tokio::test]
+    async fn a_lost_race_is_retried_and_the_action_is_deleted() {
+        let action_id = ActionId("ACT01".into());
+        let reads = vec![
+            pre_match_with_action(&action_id),
+            pre_match_with_action(&action_id),
+        ];
+        let repo = ScriptedRepository::reading(reads).refusing(1);
+        execute(command(action_id), &repo, &new_bus())
+            .await
+            .expect("le réessai passe");
+        assert_eq!(repo.appended().len(), 1);
+    }
+
+    /// Carte 653 : l'autre écriture a déjà retiré l'action. Relu, le domaine
+    /// le dit — `ActionNotFound`, pas un 409.
+    #[tokio::test]
+    async fn an_action_already_deleted_on_reread_is_refused_by_the_domain() {
+        let action_id = ActionId("ACT01".into());
+        let reads = vec![
+            pre_match_with_action(&action_id),
+            MatchReportState::PreMatch(pre_match()),
+        ];
+        let repo = ScriptedRepository::reading(reads).refusing(1);
+        let resultat = execute(command(action_id), &repo, &new_bus()).await;
+        assert!(
+            matches!(
+                resultat,
+                Err(DeleteActionError::Domain(DomainError::ActionNotFound(_)))
+            ),
+            "{resultat:?}"
+        );
+        assert!(repo.appended().is_empty());
     }
 
     /// Carte 643 : le retrait sort du BC une fois appendé.

@@ -6,6 +6,7 @@ use crate::app::match_report::domain::value_objects::{
     TeamSide, TempPlayer, TempPlayerId, TempPlayerKind,
 };
 use crate::app::match_report::ports::{IPlayerDataPort, ITeamDataPort};
+use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle, ConflictAware};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::common::services::event_bus::domain_event_publication::emettre;
@@ -61,6 +62,35 @@ impl InitTempPlayersError {
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: InitTempPlayersCommand,
+    repo: &dyn IMatchReportRepository,
+    team_data: &dyn ITeamDataPort,
+    player_data: &dyn IPlayerDataPort,
+    bus: &EventBus,
+) -> Result<(), InitTempPlayersError> {
+    // Carte 653 : une course perdue contre l'autre camp se rejoue une fois.
+    // Sûr même si le retrait a été écrit au premier essai : relu, le camp n'a
+    // plus de temporaires, et le réessai ne le refait pas.
+    let first = init_once(&cmd, repo, team_data, player_data, bus).await;
+    if !lost_the_race(COMMAND, &first) {
+        return first;
+    }
+    settle(
+        COMMAND,
+        init_once(&cmd, repo, team_data, player_data, bus).await,
+    )
+}
+
+const COMMAND: &str = "init_temp_players";
+
+impl ConflictAware for InitTempPlayersError {
+    fn is_conflict(&self) -> bool {
+        matches!(self, Self::Conflict)
+    }
+}
+
+/// Un essai : relire l'agrégat, retirer puis réinscrire les temporaires du camp.
+async fn init_once(
+    cmd: &InitTempPlayersCommand,
     repo: &dyn IMatchReportRepository,
     team_data: &dyn ITeamDataPort,
     player_data: &dyn IPlayerDataPort,
@@ -508,23 +538,51 @@ async fn collect_journeymen(
 mod conflict_tests {
     use super::*;
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, ConflictingRepository, KnownPlayers, ReadyTeams,
+        pre_match, KnownPlayers, ReadyTeams, ScriptedRepository,
     };
     use crate::common::services::event_bus::event_bus::new_bus;
 
-    #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
+    fn command_and_reads() -> (InitTempPlayersCommand, Vec<MatchReportState>) {
         let pm = pre_match();
-        let team_id = pm.home_team_id.clone();
-        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pm));
         let cmd = InitTempPlayersCommand {
             match_report_id: MatchReportId::new(),
-            team_id,
+            team_id: pm.home_team_id.clone(),
         };
+        let reads = vec![
+            MatchReportState::PreMatch(pm.clone()),
+            MatchReportState::PreMatch(pm),
+        ];
+        (cmd, reads)
+    }
+
+    /// Carte 653 : deux conflits de suite sont relayés, après deux appends.
+    #[tokio::test]
+    async fn two_conflicts_are_relayed() {
+        let (cmd, reads) = command_and_reads();
+        let repo = ScriptedRepository::reading(reads).refusing(2);
         let resultat = execute(cmd, &repo, &ReadyTeams, &KnownPlayers, &new_bus()).await;
         assert!(
             matches!(resultat, Err(InitTempPlayersError::Conflict)),
             "{resultat:?}"
+        );
+        assert_eq!(repo.append_attempts(), 2);
+    }
+
+    /// Carte 653 : la course perdue se rejoue ; les temporaires sont inscrits.
+    #[tokio::test]
+    async fn a_lost_race_is_retried_and_temp_players_are_initialized() {
+        let (cmd, reads) = command_and_reads();
+        let repo = ScriptedRepository::reading(reads).refusing(1);
+        execute(cmd, &repo, &ReadyTeams, &KnownPlayers, &new_bus())
+            .await
+            .expect("le réessai passe");
+        let appended = repo.appended();
+        assert!(
+            matches!(
+                appended.as_slice(),
+                [crate::app::match_report::domain::events::MatchReportDomainEvent::TempPlayersInitialized { .. }]
+            ),
+            "{appended:?}"
         );
     }
 }

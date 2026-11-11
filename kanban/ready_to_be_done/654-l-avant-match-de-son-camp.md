@@ -42,6 +42,12 @@
 - La suite : sa page de coups de pouce, ou le match si le palier n'en a pas.
 - Projection : `TeamFanFactorRecorded` n'écrit rien, comme `FanFactorRecorded`
   (`match_report_repository.rs:119`).
+- **Le réessai sur conflit** (carte 653, cadrage § 12.2) : devenu une commande
+  d'un seul camp, le fan factor entre dans la liste blanche de
+  `use_cases/conflict_retry.rs` — deux tours, `lost_the_race` puis `settle`,
+  avec les valeurs d'équipe relues **dans** chaque essai. La 653 l'en avait
+  écarté parce que `record_fan_factor` écrasait les deux camps sans refuser ;
+  le réessai suppose que le domaine refuse un second jet du même camp.
 
 ## Fichiers touchés
 

@@ -13,6 +13,7 @@ use crate::app::match_report::domain::match_report_repository_port::{
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{ActionId, ActionPlayer, TeamSide};
 use crate::app::match_report::ports::IPlayerDataPort;
+use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle, ConflictAware};
 use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::match_report::use_cases::record_action_use_case::{
     resolve_player_info, RecordActionError,
@@ -67,22 +68,51 @@ pub async fn execute(
     player_data: &dyn IPlayerDataPort,
     bus: &EventBus,
 ) -> Result<(), RecordMvpError> {
+    let action_id = ActionId(ulid::Ulid::new().to_string());
+    // Carte 653 : une course perdue contre l'autre camp se rejoue une fois. Un
+    // MVP que le même camp vient d'inscrire sort alors en `MvpAlreadyRecorded`.
+    let first = record_once(&cmd, &action_id, repo, player_data, bus).await;
+    if !lost_the_race(COMMAND, &first) {
+        return first;
+    }
+    settle(
+        COMMAND,
+        record_once(&cmd, &action_id, repo, player_data, bus).await,
+    )
+}
+
+const COMMAND: &str = "record_mvp";
+
+/// Partagé avec le tirage au sort, dont l'erreur est la même.
+impl ConflictAware for RecordMvpError {
+    fn is_conflict(&self) -> bool {
+        matches!(self, Self::Conflict)
+    }
+}
+
+/// Un essai : relire l'agrégat, le laisser décider, appender à la version lue.
+async fn record_once(
+    cmd: &RecordMvpCommand,
+    action_id: &ActionId,
+    repo: &dyn IMatchReportRepository,
+    player_data: &dyn IPlayerDataPort,
+    bus: &EventBus,
+) -> Result<(), RecordMvpError> {
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pre_match(&mr_id, repo).await?;
     let (display_name, position) =
         resolve_player_info(&cmd.player, cmd.team_side, &pm, player_data)
             .await
             .map_err(RecordMvpError::from_resolution)?;
-    let action_id = ActionId(ulid::Ulid::new().to_string());
     // Le refus d'un second MVP vient du domaine — le use case ne fait que le porter.
     let (_, event) = pm
         .record_mvp(
             cmd.team_side,
-            cmd.player,
+            cmd.player.clone(),
             display_name,
             position,
-            action_id,
-            cmd.recorded_by,
+            action_id.clone(),
+            cmd.recorded_by.clone(),
         )
         .map_err(RecordMvpError::Domain)?;
     repo.append(&mr_id, &event, pm.version)
@@ -118,7 +148,7 @@ mod tests {
         MatchAction, MatchActionType, TurnNumber,
     };
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, ConflictingRepository, KnownPlayers, RecordingRepository,
+        pre_match, KnownPlayers, RecordingRepository, ScriptedRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
     use crate::common::services::event_bus::event_bus::new_bus;
@@ -173,14 +203,67 @@ mod tests {
         assert!(repo.appended().is_empty());
     }
 
+    fn reads(second: MatchReportPreMatch) -> Vec<MatchReportState> {
+        vec![
+            MatchReportState::PreMatch(pre_match()),
+            MatchReportState::PreMatch(second),
+        ]
+    }
+
+    /// Carte 653 : deux conflits de suite sont relayés, après deux appends.
     #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
-        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+    async fn two_conflicts_are_relayed() {
+        let repo = ScriptedRepository::reading(reads(pre_match())).refusing(2);
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
         let r = execute(command(TeamSide::Home), &repo, &KnownPlayers, &bus).await;
         assert!(matches!(r, Err(RecordMvpError::Conflict)), "{:?}", r.err());
+        assert_eq!(repo.append_attempts(), 2);
         assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 653 : l'autre camp a écrit pendant ce temps ; le MVP passe au
+    /// réessai.
+    #[tokio::test]
+    async fn a_lost_race_against_the_other_side_is_retried() {
+        let mut other_side_wrote = pre_match();
+        other_side_wrote.away_actions.push(mvp_at(16, "visiteur"));
+        let repo = ScriptedRepository::reading(reads(other_side_wrote)).refusing(1);
+        execute(command(TeamSide::Home), &repo, &KnownPlayers, &new_bus())
+            .await
+            .expect("le réessai passe");
+        assert_eq!(repo.appended().len(), 1);
+    }
+
+    /// Carte 653 : la course est perdue contre un MVP **du même camp**. Relu,
+    /// le domaine refuse le second — `MvpAlreadyRecorded`, pas un 409, et rien
+    /// n'est écrasé.
+    #[tokio::test]
+    async fn a_same_side_mvp_written_meanwhile_is_refused_by_the_domain() {
+        let mut same_side_wrote = pre_match();
+        same_side_wrote.home_actions.push(mvp_at(16, "domicile"));
+        let repo = ScriptedRepository::reading(reads(same_side_wrote)).refusing(1);
+        let r = execute(command(TeamSide::Home), &repo, &KnownPlayers, &new_bus()).await;
+        assert!(
+            matches!(
+                r,
+                Err(RecordMvpError::Domain(DomainError::MvpAlreadyRecorded))
+            ),
+            "{:?}",
+            r.err()
+        );
+        assert!(repo.appended().is_empty());
+    }
+
+    fn mvp_at(turn: u8, id: &str) -> MatchAction {
+        MatchAction {
+            id: ActionId(id.into()),
+            turn: TurnNumber::try_new(turn).unwrap(),
+            player: ActionPlayer::Regular(PlayerId::new()),
+            action: MatchActionType::Mvp,
+            player_display_name: "Borin".into(),
+            player_position: String::new(),
+        }
     }
 
     /// Carte 643 : le MVP saisi sort du BC comme une action, une fois appendé.

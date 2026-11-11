@@ -518,6 +518,13 @@
 "test_match_report_entry_mode" = ["match_report", "competitions", "teams", "auth", "spaces",
                                   "references", "team_creation"]
 
+# Carte 653 : deux coachs d'un match « Chacun son équipe » postent une action
+# chacun dans son camp, au même instant ; les deux sont au journal. Le réessai
+# vit dans `match_report` ; l'action résout le nom du joueur par `players`, la
+# fixture traverse la construction de compétition.
+"test_match_report_concurrent_writes" = ["match_report", "players", "competitions", "teams",
+                                         "auth", "spaces", "references", "team_creation"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni

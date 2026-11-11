@@ -524,6 +524,16 @@ Les neuf recommandations du § 10 sont retenues telles quelles.
    change à la 659.
 2. **Une commande d'un camp est réessayée une fois sur conflit de version**
    (Q2), carte 653. Un second conflit reste un 409 avec rechargement.
+   **Précisé le 2026-11-11, à la réalisation de la 653** : le réessai porte
+   sur une **liste blanche** de commandes que le domaine protège d'une seconde
+   écriture du même camp — `record_action`, `delete_action`, `record_mvp`,
+   `draw_mvp`, `record_inducements`, `init_temp_players`. L'event store ne dit
+   pas qui a gagné la course (`ConcurrentWrite` ne porte ni l'auteur ni le
+   camp) : on ne distingue donc pas un conflit entre camps d'un conflit sur le
+   même camp, c'est le domaine, sur l'état relu, qui fait la garde — une action
+   s'ajoute, un MVP ou des coups de pouce déjà saisis sont refusés. Le fan
+   factor et l'après-match, qui écrivent encore les deux camps et écrasent sans
+   refuser, y entrent aux cartes 654 et 658.
 3. **Le match commence quand les deux fans factors et les deux sélections de
    coups de pouce sont enregistrés** (Q3). Avant, `/live` et les étapes
    d'action renvoient le coach à son avant-match ou à ses coups de pouce ; une

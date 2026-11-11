@@ -47,6 +47,14 @@ paragraphes de résumé » de l'épic : même formulaire, même événement.
 - **Le récapitulatif** affiche le résumé dès qu'il y a un titre ou un
   paragraphe : le titre s'il existe, puis le paragraphe de chaque camp, chacun
   avec son équipe ; « Publié par » ne dépend plus du titre.
+- **Le réessai sur conflit** (carte 653, cadrage § 12.2) : devenu une commande
+  d'un seul camp, l'après-match entre dans la liste blanche de
+  `use_cases/conflict_retry.rs` — deux tours, `lost_the_race` puis `settle`.
+  La 653 l'en avait écarté parce que `record_post_match` réécrivait les deux
+  camps sans refuser (`record_again`). Reste à trancher ici : en
+  `ReadyToPublish`, `TeamPostMatchRecorded` **remplace** les valeurs de son
+  camp — un réessai y rejouerait une correction par-dessus celle qu'un autre
+  vient d'écrire pour le même camp, sans que le domaine le refuse.
 
 ## Fichiers touchés
 

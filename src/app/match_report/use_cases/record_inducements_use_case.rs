@@ -11,6 +11,7 @@ use crate::app::match_report::ports::{
     ICompetitionDataPort, IPlayerDataPort, ITeamDataPort, PositionCountDto, RosterPositionDto,
     TierRulesDto,
 };
+use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle, ConflictAware};
 use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::match_report::use_cases::init_temp_players_use_case::{
     self, InitTempPlayersCommand, InitTempPlayersError,
@@ -148,50 +149,106 @@ pub async fn execute(
     player_data: &dyn IPlayerDataPort,
     bus: &EventBus,
 ) -> Result<RecordInducementsOutcome, RecordInducementsError> {
+    let ports = Ports {
+        repo,
+        team_data,
+        competition_data,
+        player_data,
+        bus,
+    };
+    // Carte 653 : une course perdue contre l'autre camp se rejoue une fois.
+    // Une sélection que le même camp vient de valider sort alors en
+    // `AlreadyRecorded`. Les joueurs temporaires ont leur propre réessai : la
+    // sélection est déjà écrite quand ils s'inscrivent.
+    let first = record_once(&cmd, &ports).await;
+    let updated_pm = if lost_the_race(COMMAND, &first) {
+        settle(COMMAND, record_once(&cmd, &ports).await)?
+    } else {
+        first?
+    };
+    init_temp_players(&cmd, &ports).await?;
+    Ok(route_outcome(&updated_pm, &cmd.team_id))
+}
+
+const COMMAND: &str = "record_inducements";
+
+impl ConflictAware for RecordInducementsError {
+    fn is_conflict(&self) -> bool {
+        matches!(self, Self::Conflict)
+    }
+}
+
+/// Les ports, portés ensemble d'un essai à l'autre.
+struct Ports<'a> {
+    repo: &'a dyn IMatchReportRepository,
+    team_data: &'a dyn ITeamDataPort,
+    competition_data: &'a dyn ICompetitionDataPort,
+    player_data: &'a dyn IPlayerDataPort,
+    bus: &'a EventBus,
+}
+
+/// Un essai : relire l'agrégat, tout revalider sur l'état relu — valeurs
+/// d'équipe, trésorerie, budget —, laisser le domaine décider, appender à la
+/// version lue. Rien n'est repris d'un essai perdu.
+async fn record_once(
+    cmd: &RecordInducementsCommand,
+    ports: &Ports<'_>,
+) -> Result<MatchReportPreMatch, RecordInducementsError> {
     let mr_id = cmd.match_report_id.to_string();
-    let mut pm = load_pre_match(repo, &mr_id).await?;
-    resolve_team_values(&mut pm, team_data).await?;
+    let mut pm = load_pre_match(ports.repo, &mr_id).await?;
+    resolve_team_values(&mut pm, ports.team_data).await?;
     // Avant tout contrôle d'achat : une équipe qui a validé, ou l'outsider qui
     // devance le favori, est refusée pour ce qu'elle est (carte 627).
     pm.check_inducements_open_for(&cmd.team_id)
         .map_err(RecordInducementsError::from_domain)?;
-    let tier = fetch_tier_rules(&pm, &cmd.team_id, team_data, competition_data).await?;
-    validate_purchase_uids(&cmd.purchases, &tier)?;
-    let roster_positions = team_data
-        .find_roster_positions(&cmd.team_id.to_string())
-        .await;
-    let validated_mercs =
-        validate_mercenary_positions(&cmd.mercenary_purchases, &roster_positions)?;
-    let player_counts = fetch_player_counts(&cmd.team_id, player_data).await?;
-    validate_roster_availability(&validated_mercs, &player_counts)?;
-    let treasury = fetch_treasury(&cmd.team_id, team_data).await?;
-    let budget = pm.inducement_budget_for(&cmd.team_id, treasury);
-    let (allowed_specs, purchases_tuples) =
-        build_all_specs_and_purchases(&tier, &cmd.purchases, &validated_mercs);
+    let selection = validate_selection(cmd, &pm, ports).await?;
     let opponent_star_uids = collect_opponent_star_uids(&pm, &cmd.team_id);
     let (updated_pm, events) = pm
         .record_inducements(
             &cmd.team_id,
-            &purchases_tuples,
-            budget,
-            &allowed_specs,
+            &selection.purchases,
+            selection.budget,
+            &selection.allowed_specs,
             &opponent_star_uids,
-            cmd.recorded_by,
+            cmd.recorded_by.clone(),
         )
         .map_err(RecordInducementsError::from_domain)?;
-    persist_and_init(
-        &mr_id,
-        events,
-        updated_pm.version,
-        cmd.match_report_id,
-        cmd.team_id,
-        repo,
-        team_data,
-        player_data,
-        bus,
-    )
-    .await?;
-    Ok(route_outcome(&updated_pm, &cmd.team_id))
+    let version_before = updated_pm.version - events.len() as u64;
+    persist_and_emit(ports.repo, ports.bus, &mr_id, events, version_before).await?;
+    Ok(updated_pm)
+}
+
+/// Ce que le palier, l'effectif et la trésorerie permettent, au moment présent.
+struct ValidatedSelection {
+    allowed_specs: Vec<AllowedInducementSpec>,
+    purchases: Vec<(InducementId, u8)>,
+    budget: u32,
+}
+
+async fn validate_selection(
+    cmd: &RecordInducementsCommand,
+    pm: &MatchReportPreMatch,
+    ports: &Ports<'_>,
+) -> Result<ValidatedSelection, RecordInducementsError> {
+    let tier = fetch_tier_rules(pm, &cmd.team_id, ports.team_data, ports.competition_data).await?;
+    validate_purchase_uids(&cmd.purchases, &tier)?;
+    let roster_positions = ports
+        .team_data
+        .find_roster_positions(&cmd.team_id.to_string())
+        .await;
+    let validated_mercs =
+        validate_mercenary_positions(&cmd.mercenary_purchases, &roster_positions)?;
+    let player_counts = fetch_player_counts(&cmd.team_id, ports.player_data).await?;
+    validate_roster_availability(&validated_mercs, &player_counts)?;
+    let treasury = fetch_treasury(&cmd.team_id, ports.team_data).await?;
+    let budget = pm.inducement_budget_for(&cmd.team_id, treasury);
+    let (allowed_specs, purchases) =
+        build_all_specs_and_purchases(&tier, &cmd.purchases, &validated_mercs);
+    Ok(ValidatedSelection {
+        allowed_specs,
+        purchases,
+        budget,
+    })
 }
 
 // ── Validation helpers ────────────────────────────────────────────────────────
@@ -437,29 +494,21 @@ fn build_merco_specs(
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
-#[allow(clippy::too_many_arguments)]
-async fn persist_and_init(
-    mr_id: &str,
-    events: Vec<crate::app::match_report::domain::events::MatchReportDomainEvent>,
-    version_after: u64,
-    match_report_id: MatchReportId,
-    team_id: TeamId,
-    repo: &dyn IMatchReportRepository,
-    team_data: &dyn ITeamDataPort,
-    player_data: &dyn IPlayerDataPort,
-    bus: &EventBus,
+/// Les joueurs temporaires du camp, une fois la sélection écrite. Le use case
+/// a son propre réessai (carte 653).
+async fn init_temp_players(
+    cmd: &RecordInducementsCommand,
+    ports: &Ports<'_>,
 ) -> Result<(), RecordInducementsError> {
-    let version_before = version_after - events.len() as u64;
-    persist_and_emit(repo, bus, mr_id, events, version_before).await?;
     init_temp_players_use_case::execute(
         InitTempPlayersCommand {
-            match_report_id,
-            team_id,
+            match_report_id: cmd.match_report_id.clone(),
+            team_id: cmd.team_id.clone(),
         },
-        repo,
-        team_data,
-        player_data,
-        bus,
+        ports.repo,
+        ports.team_data,
+        ports.player_data,
+        ports.bus,
     )
     .await
     .map_err(RecordInducementsError::from_init_temp_players)
@@ -647,8 +696,8 @@ mod conflict_tests {
         FanFactorMod, MatchGain, NoStallingBonuses,
     };
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, with_mvps, ConflictingRepository, KnownPlayers, PlainCompetition, ReadyTeams,
-        RecordingRepository,
+        pre_match, with_mvps, KnownPlayers, PlainCompetition, ReadyTeams, RecordingRepository,
+        ScriptedRepository,
     };
     use crate::common::services::event_bus::event_bus::new_bus;
 
@@ -794,11 +843,20 @@ mod conflict_tests {
         ));
     }
 
+    /// Les lectures d'un même avant-match, autant que d'essais attendus.
+    fn reads(pm: &MatchReportPreMatch, n: usize) -> Vec<MatchReportState> {
+        (0..n)
+            .map(|_| MatchReportState::PreMatch(pm.clone()))
+            .collect()
+    }
+
+    /// Carte 653 : deux conflits de suite sont relayés, après deux appends, et
+    /// rien n'est émis.
     #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
+    async fn two_conflicts_are_relayed() {
         let pm = pre_match();
         let team_id = pm.home_team_id.clone();
-        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pm));
+        let repo = ScriptedRepository::reading(reads(&pm, 2)).refusing(2);
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
         let resultat = run_on(&repo, team_id, &bus).await;
@@ -806,7 +864,125 @@ mod conflict_tests {
             matches!(resultat, Err(RecordInducementsError::Conflict)),
             "{resultat:?}"
         );
+        assert_eq!(repo.append_attempts(), 2);
         assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 653 : la course perdue se rejoue ; la sélection est écrite une
+    /// fois, puis les joueurs temporaires — trois lectures, trois appends.
+    #[tokio::test]
+    async fn a_lost_race_is_retried_and_the_selection_lands() {
+        let pm = pre_match();
+        let home = pm.home_team_id.clone();
+        let repo = ScriptedRepository::reading(reads(&pm, 3)).refusing(1);
+
+        run(&repo, home).await.expect("le réessai passe");
+
+        let appended = repo.appended();
+        assert!(
+            matches!(
+                appended.as_slice(),
+                [
+                    MatchReportDomainEvent::InducementsRecorded { .. },
+                    MatchReportDomainEvent::TempPlayersInitialized { .. }
+                ]
+            ),
+            "{appended:?}"
+        );
+        assert_eq!(repo.append_attempts(), 3);
+    }
+
+    /// Carte 653 : la course est perdue contre une validation **du même
+    /// camp**. Relu, le domaine refuse — `AlreadyRecorded`, rien n'est écrasé.
+    #[tokio::test]
+    async fn a_selection_validated_meanwhile_is_refused_by_the_domain() {
+        let pm = pre_match();
+        let home = pm.home_team_id.clone();
+        let mut validated = pm.clone();
+        validated.home_inducements = Some(vec![]);
+        let states = vec![
+            MatchReportState::PreMatch(pm),
+            MatchReportState::PreMatch(validated),
+        ];
+        let repo = ScriptedRepository::reading(states).refusing(1);
+
+        let result = run(&repo, home).await;
+
+        assert!(
+            matches!(result, Err(RecordInducementsError::AlreadyRecorded)),
+            "{result:?}"
+        );
+        assert!(repo.appended().is_empty());
+    }
+
+    /// Carte 653 : la trésorerie — donc le budget — est relue à chaque essai,
+    /// jamais reprise de l'essai perdu.
+    #[tokio::test]
+    async fn the_treasury_is_read_again_on_retry() {
+        let pm = pre_match();
+        let home = pm.home_team_id.clone();
+        let repo = ScriptedRepository::reading(reads(&pm, 3)).refusing(1);
+        let teams = CountingTreasury::default();
+
+        execute(
+            pass_command(home),
+            &repo,
+            &teams,
+            &PlainCompetition,
+            &KnownPlayers,
+            &new_bus(),
+        )
+        .await
+        .expect("le réessai passe");
+
+        assert_eq!(*teams.treasury_reads.lock().unwrap(), 2);
+    }
+
+    /// `ReadyTeams`, qui compte ses lectures de trésorerie.
+    #[derive(Default)]
+    struct CountingTreasury {
+        treasury_reads: std::sync::Mutex<u32>,
+    }
+
+    #[async_trait::async_trait]
+    impl ITeamDataPort for CountingTreasury {
+        async fn is_team_ready_to_play(&self, id: &str) -> Result<bool, String> {
+            ReadyTeams.is_team_ready_to_play(id).await
+        }
+        async fn is_team_in_player_improvement(&self, id: &str) -> Result<bool, String> {
+            ReadyTeams.is_team_in_player_improvement(id).await
+        }
+        async fn is_coach_of_team(&self, id: &str, user: &str) -> Result<bool, String> {
+            ReadyTeams.is_coach_of_team(id, user).await
+        }
+        async fn find_team_coach(&self, id: &str) -> Result<Option<String>, String> {
+            ReadyTeams.find_team_coach(id).await
+        }
+        async fn find_team_info(
+            &self,
+            id: &str,
+        ) -> Option<crate::app::match_report::ports::TeamInfoDto> {
+            ReadyTeams.find_team_info(id).await
+        }
+        async fn find_team_value(&self, id: &str) -> Option<u32> {
+            ReadyTeams.find_team_value(id).await
+        }
+        async fn find_team_treasury(&self, id: &str) -> Option<u32> {
+            *self.treasury_reads.lock().unwrap() += 1;
+            ReadyTeams.find_team_treasury(id).await
+        }
+        async fn find_journeyman_position(
+            &self,
+            id: &str,
+        ) -> Option<crate::app::match_report::ports::JourneymanPositionDto> {
+            ReadyTeams.find_journeyman_position(id).await
+        }
+        async fn find_roster_positions(&self, id: &str) -> Vec<RosterPositionDto> {
+            ReadyTeams.find_roster_positions(id).await
+        }
+        async fn find_team_season(&self, id: &str) -> Option<String> {
+            ReadyTeams.find_team_season(id).await
+        }
     }
 
     /// L'initialisation des joueurs temporaires appende après les coups de

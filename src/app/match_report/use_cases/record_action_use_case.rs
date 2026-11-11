@@ -1,5 +1,6 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
+use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::{
     IMatchReportRepository, RepositoryError,
 };
@@ -8,6 +9,7 @@ use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, HatredKeyword, MatchActionType, TeamSide, TempPlayerId, TurnNumber,
 };
 use crate::app::match_report::ports::{IKeywordCatalogPort, IPlayerDataPort};
+use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle, ConflictAware};
 use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
@@ -99,41 +101,90 @@ pub async fn execute(
     bus: &EventBus,
 ) -> Result<RecordActionOutcome, RecordActionError> {
     // Le catalogue n'est consulté que si une Haine est déclarée, et le refus
-    // tombe avant tout chargement d'agrégat.
-    let action = appliquer_haine(cmd.action, cmd.hatred.as_ref(), keywords)?;
-
-    let mr_id = cmd.match_report_id.to_string();
-    let state = repo
-        .find_by_id(&mr_id)
-        .await
-        .map_err(RecordActionError::from_repository)?;
-    let pm = match state.ok_or(RecordActionError::NotFound)? {
-        MatchReportState::PreMatch(pm) => pm,
-        MatchReportState::ReadyToPublish(rtp) => rtp.into_pre_match(),
-        _ => return Err(RecordActionError::NotInPreMatchPhase),
+    // tombe avant tout chargement d'agrégat. Il ne dépend pas de l'état : il
+    // reste hors du réessai, comme l'identifiant de l'action.
+    let action = appliquer_haine(cmd.action.clone(), cmd.hatred.as_ref(), keywords)?;
+    let action_id = ActionId(ulid::Ulid::new().to_string());
+    let recording = Recording {
+        cmd: &cmd,
+        action: &action,
+        action_id: &action_id,
     };
+    // Carte 653 : une course perdue contre l'autre camp se rejoue une fois.
+    let first = record_once(&recording, repo, player_data, bus).await;
+    if lost_the_race(COMMAND, &first) {
+        settle(
+            COMMAND,
+            record_once(&recording, repo, player_data, bus).await,
+        )?;
+    } else {
+        first?;
+    }
+    Ok(RecordActionOutcome {
+        action_id: action_id.0,
+    })
+}
 
+const COMMAND: &str = "record_action";
+
+impl ConflictAware for RecordActionError {
+    fn is_conflict(&self) -> bool {
+        matches!(self, Self::Conflict)
+    }
+}
+
+/// Ce que chaque essai rejoue : la commande, et ce qui a été fixé avant.
+struct Recording<'a> {
+    cmd: &'a RecordActionCommand,
+    action: &'a MatchActionType,
+    action_id: &'a ActionId,
+}
+
+/// Un essai : relire l'agrégat, le laisser décider, appender à la version lue.
+async fn record_once(
+    recording: &Recording<'_>,
+    repo: &dyn IMatchReportRepository,
+    player_data: &dyn IPlayerDataPort,
+    bus: &EventBus,
+) -> Result<(), RecordActionError> {
+    let Recording {
+        cmd,
+        action,
+        action_id,
+    } = recording;
+    let mr_id = cmd.match_report_id.to_string();
+    let pm = load_pre_match(repo, &mr_id).await?;
     let (display_name, position) =
         resolve_player_info(&cmd.player, cmd.team_side, &pm, player_data).await?;
-    let action_id = ActionId(ulid::Ulid::new().to_string());
     // Le refus vient du domaine — le use case ne fait que le porter.
     let (_, event) = pm
         .record_action(
             cmd.team_side,
             cmd.turn,
-            cmd.player,
-            action,
+            cmd.player.clone(),
+            (*action).clone(),
             display_name,
             position,
-            action_id.clone(),
-            cmd.recorded_by,
+            (*action_id).clone(),
+            cmd.recorded_by.clone(),
         )
         .map_err(RecordActionError::Domain)?;
+    persist_and_emit(repo, bus, &mr_id, &event, pm.version).await
+}
 
-    persist_and_emit(repo, bus, &mr_id, &event, pm.version).await?;
-    Ok(RecordActionOutcome {
-        action_id: action_id.0,
-    })
+async fn load_pre_match(
+    repo: &dyn IMatchReportRepository,
+    mr_id: &str,
+) -> Result<MatchReportPreMatch, RecordActionError> {
+    let state = repo
+        .find_by_id(mr_id)
+        .await
+        .map_err(RecordActionError::from_repository)?;
+    match state.ok_or(RecordActionError::NotFound)? {
+        MatchReportState::PreMatch(pm) => Ok(pm),
+        MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
+        _ => Err(RecordActionError::NotInPreMatchPhase),
+    }
 }
 
 /// L'action ne sort du BC qu'une fois écrite : un conflit n'émet rien.
@@ -501,7 +552,7 @@ mod tests {
 mod conflict_tests {
     use super::*;
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, ConflictingRepository, KnownPlayers, RecordingRepository,
+        pre_match, KnownPlayers, RecordingRepository, ScriptedRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
     use crate::common::services::event_bus::event_bus::new_bus;
@@ -529,9 +580,19 @@ mod conflict_tests {
         }
     }
 
+    /// L'agrégat lu à chaque essai : avant, puis après l'écriture concurrente.
+    fn two_reads() -> Vec<MatchReportState> {
+        vec![
+            MatchReportState::PreMatch(pre_match()),
+            MatchReportState::PreMatch(pre_match()),
+        ]
+    }
+
+    /// Carte 653 : deux conflits de suite — l'état change sous la main, le
+    /// client reçoit le 409. Deux appends tentés, pas un de plus.
     #[tokio::test]
-    async fn un_conflit_d_ecriture_est_relaye() {
-        let repo = ConflictingRepository::holding(MatchReportState::PreMatch(pre_match()));
+    async fn two_conflicts_are_relayed() {
+        let repo = ScriptedRepository::reading(two_reads()).refusing(2);
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
         let resultat = execute(touchdown(), &repo, &KnownPlayers, &NoKeywords, &bus).await;
@@ -540,7 +601,36 @@ mod conflict_tests {
             "{:?}",
             resultat.err()
         );
+        assert_eq!(repo.append_attempts(), 2);
         assert!(subscriber.try_recv().is_err(), "un conflit n'émet rien");
+    }
+
+    /// Carte 653 : la course perdue contre l'autre camp se rejoue sur l'état
+    /// relu ; l'action est écrite et émise une seule fois.
+    #[tokio::test]
+    async fn a_lost_race_is_retried_and_the_action_lands() {
+        let repo = ScriptedRepository::reading(two_reads()).refusing(1);
+        let bus = new_bus();
+        let mut subscriber = bus.subscribe();
+
+        let outcome = execute(touchdown(), &repo, &KnownPlayers, &NoKeywords, &bus)
+            .await
+            .expect("le réessai passe");
+
+        let appended = repo.appended();
+        let [MatchReportDomainEvent::ActionRecorded { action_id, .. }] = appended.as_slice() else {
+            panic!("attendu un seul ActionRecorded : {appended:?}");
+        };
+        assert_eq!(
+            action_id.0, outcome.action_id,
+            "l'identifiant rendu est l'écrit"
+        );
+        assert_eq!(repo.append_attempts(), 2);
+        assert_eq!(subscriber.try_recv().unwrap().event_type, "ActionRecorded");
+        assert!(
+            subscriber.try_recv().is_err(),
+            "l'essai perdu n'a rien émis"
+        );
     }
 
     /// Carte 643 : l'action sort du BC une fois appendée.

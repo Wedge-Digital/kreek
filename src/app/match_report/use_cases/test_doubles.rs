@@ -2,7 +2,9 @@
 //!
 //! `ConflictingRepository` rend l'état qu'on lui confie, puis refuse toute
 //! écriture par `ConcurrentWrite` — ce que fait l'event store quand une autre
-//! écriture est passée entre le chargement et l'append.
+//! écriture est passée entre le chargement et l'append. `ScriptedRepository`
+//! en refuse un nombre choisi, puis accepte : c'est la doublure du réessai
+//! (carte 653).
 
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
@@ -22,6 +24,7 @@ use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, Ro
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use async_trait::async_trait;
+use std::collections::VecDeque;
 use std::sync::Mutex;
 
 /// Rend l'état confié au premier `find_by_id`, et refuse tout append.
@@ -169,6 +172,128 @@ impl IMatchReportRepository for RecordingRepository {
         let count = events.len() as u64;
         self.appended.lock().unwrap().extend(events);
         Ok(version + count)
+    }
+    async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_phases_by_pairings(
+        &self,
+        _: &[String],
+    ) -> Result<Vec<(String, String)>, RepositoryError> {
+        Ok(vec![])
+    }
+    async fn find_id_by_round_and_teams(
+        &self,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_actions_by_match(&self, _: &str) -> Result<Vec<MatchActionRow>, RepositoryError> {
+        Ok(vec![])
+    }
+}
+
+/// Rend un état par lecture, dans l'ordre confié, refuse les `n` premiers
+/// appends par `ConcurrentWrite`, puis enregistre les suivants (carte 653).
+///
+/// La file d'états joue l'agrégat **avant** et **après** l'écriture
+/// concurrente : le réessai d'un use case relit le second, et un test peut y
+/// mettre ce que l'autre camp vient d'écrire — un MVP, des coups de pouce.
+pub struct ScriptedRepository {
+    states: Mutex<VecDeque<MatchReportState>>,
+    conflicts_left: Mutex<u32>,
+    append_attempts: Mutex<u32>,
+    appended: Mutex<Vec<MatchReportDomainEvent>>,
+}
+
+impl ScriptedRepository {
+    /// Un état par lecture attendue ; aucun conflit tant que `refusing` n'en
+    /// demande pas.
+    pub fn reading(states: Vec<MatchReportState>) -> Self {
+        Self {
+            states: Mutex::new(states.into()),
+            conflicts_left: Mutex::new(0),
+            append_attempts: Mutex::new(0),
+            appended: Mutex::new(vec![]),
+        }
+    }
+
+    /// Les `conflicts` premiers appends perdent la course.
+    pub fn refusing(self, conflicts: u32) -> Self {
+        *self.conflicts_left.lock().unwrap() = conflicts;
+        self
+    }
+
+    /// Les événements effectivement écrits, dans l'ordre.
+    pub fn appended(&self) -> Vec<MatchReportDomainEvent> {
+        self.appended.lock().unwrap().clone()
+    }
+
+    /// Les appends tentés, perdus compris.
+    pub fn append_attempts(&self) -> u32 {
+        *self.append_attempts.lock().unwrap()
+    }
+
+    fn write(
+        &self,
+        events: Vec<MatchReportDomainEvent>,
+        version: u64,
+    ) -> Result<u64, RepositoryError> {
+        *self.append_attempts.lock().unwrap() += 1;
+        let mut left = self.conflicts_left.lock().unwrap();
+        if *left > 0 {
+            *left -= 1;
+            return Err(RepositoryError::ConcurrentWrite);
+        }
+        let count = events.len() as u64;
+        self.appended.lock().unwrap().extend(events);
+        Ok(version + count)
+    }
+}
+
+#[async_trait]
+impl IMatchReportRepository for ScriptedRepository {
+    async fn append(
+        &self,
+        _: &str,
+        event: &MatchReportDomainEvent,
+        version: u64,
+    ) -> Result<u64, RepositoryError> {
+        self.write(vec![event.clone()], version)
+    }
+    async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_by_id(&self, _: &str) -> Result<Option<MatchReportState>, RepositoryError> {
+        Ok(self.states.lock().unwrap().pop_front())
+    }
+    async fn find_team_ids(&self, _: &str) -> Result<Option<(String, String)>, RepositoryError> {
+        Ok(None)
+    }
+    async fn find_entry_mode(
+        &self,
+        _: &str,
+    ) -> Result<
+        Option<crate::app::match_report::domain::match_report_repository_port::EntryModeRow>,
+        RepositoryError,
+    > {
+        Ok(None)
+    }
+    async fn find_access_scope(
+        &self,
+        _: &str,
+    ) -> Result<Option<(String, String, String)>, RepositoryError> {
+        Ok(None)
+    }
+    async fn append_many(
+        &self,
+        _: &str,
+        events: Vec<MatchReportDomainEvent>,
+        version: u64,
+    ) -> Result<u64, RepositoryError> {
+        self.write(events, version)
     }
     async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
         Ok(None)
