@@ -1,6 +1,6 @@
 # E23 — Le temps réel : connexions, présence et notifications
 
-**État :** `en_cours` — 6 cartes, 642 à 647 ; 6 faites. Découpage validé le 2026-11-01 ; cadrage et décisions le 2026-11-02.
+**État :** `done` — 6 cartes, 642 à 647, toutes faites ; close le 2026-11-11, son critère constaté par les e2e T1 et T2 de la 647 (trois matchs en parallèle, onglet fermé). Avant le déploiement : le bloc nginx du flux et `http2`. Découpage validé le 2026-11-01 ; cadrage et décisions le 2026-11-02.
 **Cadrage :** `docs/specs/saisie-mobile/E23-cadrage.md`. Née le 2026-11-01 des maquettes
 mobiles. Dépend de E21 (le journal des deux camps). **Ordre décidé le 2026-11-01 :
 E21, E23, puis E22** — le mode « Je saisis tout » en profite déjà : la lecture
