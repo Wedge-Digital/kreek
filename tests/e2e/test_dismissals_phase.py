@@ -38,7 +38,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
-from htmx_helpers import cliquer_quand_cable, cliquer_quand_cable_locator
+from htmx_helpers import attendre_le_repos, cliquer_quand_cable, muter
 from team_phase_helpers import traverser_erreurs_couteuses
 from match_report_helpers import (
     create_draft,
@@ -187,51 +187,20 @@ def _recruter(space_id: str, team_id: str, ligne: str, version: int) -> None:
 #
 # Carte 662. Chaque mutation remplace la page **trois fois** : la réponse du POST
 # remplace sa cible, puis `basketChanged` relance un GET de la liste **et** un GET
-# du panier. Attendre le premier signe visible — une ligne de plus au panier —
-# rend la main entre deux remplacements : le bouton suivant est alors peint mais
-# pas encore câblé, ou câblé puis aussitôt remplacé par un frère qui ne l'est pas.
-# Le clic s'y perd sans requête. Une sonde l'a mesuré deux fois sur dix.
-#
-# On attend donc que les rendus attendus soient **tous** arrivés, puis que plus
-# rien ne soit en vol et que tout bouton htmx soit câblé. Ce sont des conditions,
-# pas des durées : elles rendent la main dès qu'elles sont vraies.
+# du panier. Le pourquoi et le comment vivent dans `htmx_helpers.muter`, partagé
+# avec la phase de recrutement (carte 667).
 
-# Compte les rendus terminés de chaque widget. `htmx:afterSettle` est émis sur la
-# cible de l'échange, c'est-à-dire sur le conteneur du widget.
-_COMPTER_LES_RENDUS = """() => {
-    window.__rendus = {main: 0, side: 0};
-    if (window.__rendus_branches) return;
-    window.__rendus_branches = true;
-    document.body.addEventListener('htmx:afterSettle', e => {
-        if (e.target.classList.contains('dis-main')) window.__rendus.main++;
-        if (e.target.classList.contains('dis-side')) window.__rendus.side++;
-    });
-}"""
-
-_RENDUS_ARRIVES = "([main, side]) => window.__rendus.main >= main && window.__rendus.side >= side"
-
-_AU_REPOS = """() => {
-    const widgets = document.querySelectorAll('.dis-main, .dis-side');
-    if (widgets.length !== 2) return false;
-    return [...widgets].every(w =>
-        !w.matches('.htmx-request, .htmx-settling, .htmx-swapping')
-        && !w.querySelector('.htmx-request, .htmx-settling, .htmx-swapping')
-        && [...w.querySelectorAll('[hx-post], [hx-get]')].every(e => e['htmx-internal-data']));
-}"""
+_WIDGETS = ["dis-main", "dis-side"]
 
 
 def _attendre_le_repos(page: Page) -> None:
-    page.wait_for_function(_AU_REPOS, timeout=10000)
+    attendre_le_repos(page, _WIDGETS)
 
 
 def _muter(page: Page, cible, *, main: int, side: int) -> None:
     """Clique une cible câblée, puis attend les `main` rendus de la liste et les
     `side` rendus du panier que la mutation déclenche, et enfin le repos."""
-    _attendre_le_repos(page)
-    page.evaluate(_COMPTER_LES_RENDUS)
-    cliquer_quand_cable_locator(page, cible)
-    page.wait_for_function(_RENDUS_ARRIVES, arg=[main, side], timeout=10000)
-    _attendre_le_repos(page)
+    muter(page, cible, {"dis-main": main, "dis-side": side})
 
 
 def _ouvrir_renvois(page: Page, space_id: str, team_id: str) -> None:

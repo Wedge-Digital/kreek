@@ -21,24 +21,28 @@ renvois, où plus aucun des autres scénarios n'aurait de sens. Tout ce qui a
 besoin de la phase de recrutement la précède ; la lecture du grand livre la
 suit.
 
-Le panier n'est pas remis à zéro entre les scénarios 5 et 8 : ce qu'ils y
-déposent est précisément ce que 8 valide et ce que 10 relit. Un panier
-d'un joueur et de trois relances éprouve mieux la validation en lot qu'un achat
-isolé.
+Jusqu'à la validation, chaque scénario part d'un **panier vide** (fixture
+`panier_vide`) et y dépose lui-même ce qu'il éprouve : un achat perdu ne fait
+plus tomber les scénarios suivants (carte 667). Le 8 remplit donc son propre
+panier — un joueur et trois relances, qui éprouvent mieux la validation en lot
+qu'un achat isolé — et seul le 10 lit ce que la validation a produit.
 
 Prérequis : serveur kreek lancé en dev (BYPASS_AUTH=true) et base seedée
 (`make seed_e2e`), comme toute la suite.
 """
 
+import json
 import re
 import time
 
 import pytest
 import requests
 from playwright.sync_api import Page, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
+from htmx_helpers import attendre_le_repos, cliquer_quand_cable, muter
 from match_report_helpers import play_match
 
 # Roster des Granitiers — l'équipe principale. Ces montants viennent de
@@ -119,12 +123,19 @@ def _joueurs(team_id: str) -> list[str]:
     )
 
 
+# Les deux conteneurs de la page : le catalogue et le panier. Une mutation les
+# remplace trois fois en tout — sa réponse, puis les deux GET relancés par
+# `basketChanged` — et `muter` attend qu'ils aient tous eu lieu (carte 667).
+_WIDGETS = ["rec-main", "rec-side"]
+
+
 def _ouvrir_recrutement(page: Page, space_id: str, team_id: str) -> None:
     """Passe par la page, pas par le widget : c'est l'assemblage `hx-trigger=load`
     des deux colonnes qu'on veut voir fonctionner."""
     page.goto(f"{BASE_URL}/app/{space_id}/teams/{team_id}/recruitment", wait_until="load")
     expect(page.locator(".rec-catalog")).to_be_visible()
     expect(page.locator(".rec-cart")).to_be_visible()
+    attendre_le_repos(page, _WIDGETS)
 
 
 def _ligne_poste(page: Page, nom: str):
@@ -137,11 +148,66 @@ def _reste_apres_achats(page: Page) -> int:
 
 
 def _acheter(page: Page, nom_ligne: str) -> None:
-    """Clique et attend que le catalogue soit revenu — le bouton est remplacé
-    par le swap, donc l'attente ne peut pas porter sur lui."""
+    """Achète une ligne et rend la main quand ses **trois** rendus sont arrivés :
+    le catalogue par la réponse du POST, puis le catalogue et le panier par
+    `basketChanged`.
+
+    Ce helper cliquait nu et n'attendait que le premier signe visible : l'achat
+    suivant tombait dans la fenêtre où le bouton n'est pas câblé, et s'y perdait
+    sans requête (carte 667).
+    """
     avant = page.locator(".rec-cart .purse-row").count()
-    _ligne_poste(page, nom_ligne).locator(".act-btn").click()
-    expect(page.locator(".rec-cart .purse-row")).not_to_have_count(avant, timeout=10000)
+    muter(page, _ligne_poste(page, nom_ligne).locator(".act-btn"), {"rec-main": 2, "rec-side": 1})
+    expect(page.locator(".rec-cart .purse-row")).to_have_count(avant + 1)
+
+
+def _retirer_depuis_le_panier(page: Page) -> None:
+    """Retire la première ligne du panier, et dit **pourquoi** si rien ne part.
+
+    Deux causes donnent le même symptôme — la ligne reste — et ne se réparent
+    pas pareil : un clic perdu n'émet aucune requête, une version périmée en
+    émet une que le serveur refuse avec l'avis « modifié ailleurs ».
+    """
+    avant = page.locator(".rec-cart .purse-row").count()
+    try:
+        with page.expect_response(
+            lambda r: r.request.method == "POST" and "/remove" in r.url, timeout=10000
+        ) as reponse:
+            muter(page, page.locator(".rec-cart .cart-remove"), {"rec-main": 1, "rec-side": 2})
+    except PlaywrightTimeoutError as exc:
+        raise AssertionError(f"le retrait n'a émis aucune requête : clic perdu ({exc})") from None
+    assert "modifié ailleurs" not in reponse.value.text(), (
+        "le retrait a été refusé : version périmée"
+    )
+    expect(page.locator(".rec-cart .purse-row")).to_have_count(avant - 1)
+
+
+# ── Un panier vide au début de chaque scénario ────────────────────────────────
+
+_RETRAIT_DU_PANIER = re.compile(r"""hx-post="([^"]*/remove)"\s*hx-vals='([^']*)'""")
+
+
+def _vider_le_panier(space_id: str, team_id: str) -> None:
+    """Retire, par les routes de l'application, tout ce que le panier contient.
+
+    Le panier vit côté serveur et l'équipe est commune au module : sans cela, un
+    achat perdu dans un scénario fait échouer les suivants, sur un message qui
+    accuse ces derniers (carte 667).
+    """
+    panier = f"{BASE_URL}/app/{space_id}/teams/{team_id}/widgets/recruitment-cart"
+    for _ in range(20):
+        resp = requests.get(panier, headers={"HX-Request": "true"}, timeout=20)
+        assert resp.status_code == 200, f"panier : {resp.status_code}"
+        retrait = _RETRAIT_DU_PANIER.search(resp.text)
+        if not retrait:
+            return
+        url, valeurs = retrait.groups()
+        resp = requests.post(
+            f"{BASE_URL}{url}", data=json.loads(valeurs),
+            headers={"HX-Request": "true"}, timeout=20,
+        )
+        assert resp.status_code == 200, f"retrait : {resp.status_code}"
+    raise AssertionError("le panier ne se vide pas")
 
 
 # ── Fixture : deux équipes amenées en phase de recrutement ────────────────────
@@ -173,6 +239,12 @@ def recrutement_ctx(browser, space_id):
         _attendre_phase(team_id, "Recruitment")
 
     return {"granit": granit, "lanterne": lanterne, "space_id": space_id}
+
+
+@pytest.fixture
+def panier_vide(recrutement_ctx):
+    _vider_le_panier(recrutement_ctx["space_id"], recrutement_ctx["granit"])
+    return recrutement_ctx
 
 
 # ── 1 · La bannière ouvre la page, le catalogue est peuplé ────────────────────
@@ -219,7 +291,8 @@ def test_01_banniere_ouvre_le_catalogue(page: Page, recrutement_ctx):
 # ── 2 · Ajouter un joueur : ligne au panier, reste ↓, quota +1 ────────────────
 
 
-def test_02_ajouter_un_joueur(page: Page, recrutement_ctx):
+def test_02_ajouter_un_joueur(page: Page, panier_vide):
+    recrutement_ctx = panier_vide
     space_id, team_id = recrutement_ctx["space_id"], recrutement_ctx["granit"]
     _ouvrir_recrutement(page, space_id, team_id)
 
@@ -245,15 +318,18 @@ def test_02_ajouter_un_joueur(page: Page, recrutement_ctx):
 # ── 3 · Retirer la ligne : retour à l'état initial ────────────────────────────
 
 
-def test_03_retirer_la_ligne(page: Page, recrutement_ctx):
+def test_03_retirer_la_ligne(page: Page, panier_vide):
+    recrutement_ctx = panier_vide
     space_id, team_id = recrutement_ctx["space_id"], recrutement_ctx["granit"]
     _ouvrir_recrutement(page, space_id, team_id)
 
     caisse = _tresorerie(team_id)
+    # La ligne à retirer est posée ici, plutôt qu'héritée du scénario 2.
+    _acheter(page, "Piétaille des Carrières")
     expect(page.locator(".rec-cart .cart-remove")).to_have_count(1)
-    page.locator(".rec-cart .cart-remove").first.click()
+    _retirer_depuis_le_panier(page)
 
-    expect(page.locator(".rec-cart .purse-empty")).to_be_visible(timeout=10000)
+    expect(page.locator(".rec-cart .purse-empty")).to_be_visible()
     assert _reste_apres_achats(page) == caisse
     expect(_ligne_poste(page, "Piétaille des Carrières").locator(".pending")).to_have_count(0)
 
@@ -261,7 +337,8 @@ def test_03_retirer_la_ligne(page: Page, recrutement_ctx):
 # ── 9 · Le panier survit à un changement de page ──────────────────────────────
 
 
-def test_09_le_panier_survit_a_la_navigation(page: Page, recrutement_ctx):
+def test_09_le_panier_survit_a_la_navigation(page: Page, panier_vide):
+    recrutement_ctx = panier_vide
     """Le test qui distingue un panier serveur d'un panier client.
 
     La navigation est réelle — fiche d'équipe, puis retour. Un `reload()` ne
@@ -279,15 +356,15 @@ def test_09_le_panier_survit_a_la_navigation(page: Page, recrutement_ctx):
     expect(page.locator(".rec-cart .purse-row").first).to_contain_text("Piétaille des Carrières")
     assert _reste_apres_achats(page) == reste_avant, "le panier a perdu sa ligne en changeant de page"
 
-    # Remis à zéro pour la suite : les scénarios suivants comptent leurs lignes.
-    page.locator(".rec-cart .cart-remove").first.click()
-    expect(page.locator(".rec-cart .purse-empty")).to_be_visible(timeout=10000)
+    _retirer_depuis_le_panier(page)
+    expect(page.locator(".rec-cart .purse-empty")).to_be_visible()
 
 
 # ── 11 · Mobile 390px : panier replié, dépliable, « × » atteignable ───────────
 
 
-def test_11_panier_repliable_en_mobile(page: Page, recrutement_ctx):
+def test_11_panier_repliable_en_mobile(page: Page, panier_vide):
+    recrutement_ctx = panier_vide
     """Le viewport est posé **avant** la navigation : le repliement est un
     `x-data` Alpine dont l'`init()` lit `window.innerWidth` au montage. Un
     redimensionnement après coup ne le rejouerait pas, et le test observerait
@@ -318,15 +395,14 @@ def test_11_panier_repliable_en_mobile(page: Page, recrutement_ctx):
         page.locator(".rec-cart .cart-head").click()
         expect(actions).to_have_class(re.compile(r"\bis-open\b"))
 
-        retirer = page.locator(".rec-cart .cart-remove").first
-        expect(retirer).to_be_visible()
-        retirer.click()
+        expect(page.locator(".rec-cart .cart-remove").first).to_be_visible()
+        _retirer_depuis_le_panier(page)
 
         # Le panier se **replie** après la mutation : le swap remonte le
         # `x-data`, dont l'`init()` relit `innerWidth` et retrouve false. La
         # ligne a bien disparu, mais la vérifier à la visibilité testerait le
         # repliement au lieu du retrait.
-        expect(page.locator(".rec-cart .cart-remove")).to_have_count(0, timeout=10000)
+        expect(page.locator(".rec-cart .cart-remove")).to_have_count(0)
         expect(page.locator(".rec-cart .purse-empty")).to_have_count(1)
     finally:
         page.set_viewport_size({"width": 1280, "height": 900})
@@ -335,9 +411,10 @@ def test_11_panier_repliable_en_mobile(page: Page, recrutement_ctx):
 # ── 5 · Quota de poste atteint ────────────────────────────────────────────────
 
 
-def test_05_quota_de_poste_atteint(page: Page, recrutement_ctx):
+def test_05_quota_de_poste_atteint(page: Page, panier_vide):
+    recrutement_ctx = panier_vide
     """Le Colosse de Granit est plafonné à 1 : un seul achat suffit à fermer sa
-    ligne. Il reste au panier — c'est lui que le scénario 8 validera."""
+    ligne."""
     space_id, team_id = recrutement_ctx["space_id"], recrutement_ctx["granit"]
     _ouvrir_recrutement(page, space_id, team_id)
 
@@ -365,13 +442,15 @@ def test_07_relance_au_double_du_prix_de_base(page: Page, recrutement_ctx):
 # ── 4 · Trésorerie insuffisante, et rien n'est débité ─────────────────────────
 
 
-def test_04_tresorerie_insuffisante_ne_debite_rien(page: Page, recrutement_ctx):
+def test_04_tresorerie_insuffisante_ne_debite_rien(page: Page, panier_vide):
+    recrutement_ctx = panier_vide
     """On assèche le panier par des achats réels plutôt qu'en appauvrissant
     l'équipe en base : le blocage vient alors de l'application, pas d'un état
     fabriqué.
 
-    Le Colosse du scénario 5 est déjà au panier ; trois relances suffisent à
-    passer sous le prix d'une Piétaille.
+    Un Colosse et trois relances suffisent à passer sous le prix d'une
+    Piétaille. Le scénario les achète lui-même : il ne dépend plus du Colosse
+    laissé par le 5.
     """
     space_id, team_id = recrutement_ctx["space_id"], recrutement_ctx["granit"]
     _ouvrir_recrutement(page, space_id, team_id)
@@ -379,6 +458,7 @@ def test_04_tresorerie_insuffisante_ne_debite_rien(page: Page, recrutement_ctx):
     caisse = _tresorerie(team_id)
     lignes_avant = _lignes_grand_livre(team_id)
 
+    _acheter(page, "Colosse de Granit")
     for _ in range(3):
         _acheter(page, "Relance")
 
@@ -425,7 +505,8 @@ def test_06_roster_sans_apothicaire(page: Page, recrutement_ctx):
 # ── 8 · Valider : débit du total, joueurs créés, passage en renvois ───────────
 
 
-def test_08_valider_debite_et_cree_les_joueurs(page: Page, recrutement_ctx):
+def test_08_valider_debite_et_cree_les_joueurs(page: Page, panier_vide):
+    recrutement_ctx = panier_vide
     """La validation est terminale : elle clôt la phase de recrutement.
 
     Elle couvre aussi la traversée `teams → app event → players` (carte 265) —
@@ -439,9 +520,13 @@ def test_08_valider_debite_et_cree_les_joueurs(page: Page, recrutement_ctx):
     maillots_avant = {l.split("|")[0] for l in _joueurs(team_id)}
     total = COLOSSE_KPO + 3 * RELANCE_KPO
 
-    cta = page.locator(".rec-cart .cta-primary")
-    expect(cta).to_have_text("Valider 4 achats →")
-    cta.click()
+    # Le panier de la validation, posé ici plutôt qu'hérité des scénarios 4 et 5.
+    _acheter(page, "Colosse de Granit")
+    for _ in range(3):
+        _acheter(page, "Relance")
+
+    expect(page.locator(".rec-cart .cta-primary")).to_have_text("Valider 4 achats →")
+    cliquer_quand_cable(page, ".rec-cart .cta-primary")
 
     _attendre_phase(team_id, "Dismissals")
     assert _tresorerie(team_id) == caisse_avant - total, "le débit ne vaut pas le total du panier"

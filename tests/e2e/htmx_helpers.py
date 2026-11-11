@@ -85,3 +85,65 @@ def cliquer_quand_cable_locator(page: Page, cible, timeout: int = 10000) -> None
     """
     attendre_cablage_locator(page, cible, timeout)
     cible.first.click()
+
+
+# ── Attendre que des widgets soient au repos ──────────────────────────────────
+#
+# Cartes 662 et 667. Sur une page à widgets, une mutation remplace la page
+# **plusieurs fois** : la réponse du POST remplace sa cible, puis l'événement
+# qu'elle émet (`basketChanged` sur les phases de recrutement et de renvois)
+# relance un GET de **chaque** widget. Attendre le premier signe visible — une
+# ligne de plus au panier — rend la main entre deux remplacements : le bouton
+# suivant est alors peint mais pas encore câblé, ou câblé puis aussitôt remplacé
+# par un frère qui ne l'est pas. Le clic s'y perd sans requête. Une sonde l'a
+# mesuré deux fois sur dix sur la phase de renvois.
+#
+# On attend donc que les rendus attendus soient **tous** arrivés, puis que plus
+# rien ne soit en vol et que tout élément htmx soit câblé. Ce sont des
+# conditions, pas des durées : elles rendent la main dès qu'elles sont vraies.
+
+# Compte les rendus terminés de chaque conteneur. `htmx:afterSettle` est émis
+# sur la cible de l'échange, c'est-à-dire sur le conteneur du widget.
+_COMPTER_LES_RENDUS = """(classes) => {
+    window.__rendus = Object.fromEntries(classes.map(c => [c, 0]));
+    window.__rendus_classes = classes;
+    if (window.__rendus_branches) return;
+    window.__rendus_branches = true;
+    document.body.addEventListener('htmx:afterSettle', e => {
+        for (const c of window.__rendus_classes) {
+            if (e.target.classList.contains(c)) window.__rendus[c]++;
+        }
+    });
+}"""
+
+_RENDUS_ARRIVES = (
+    "(attendus) => Object.entries(attendus).every(([c, n]) => window.__rendus[c] >= n)"
+)
+
+_AU_REPOS = """(classes) => {
+    const widgets = classes.map(c => document.querySelector('.' + c));
+    if (widgets.some(w => !w)) return false;
+    return widgets.every(w =>
+        !w.matches('.htmx-request, .htmx-settling, .htmx-swapping')
+        && !w.querySelector('.htmx-request, .htmx-settling, .htmx-swapping')
+        && [...w.querySelectorAll('[hx-post], [hx-get]')].every(e => e['htmx-internal-data']));
+}"""
+
+
+def attendre_le_repos(page: Page, conteneurs: list[str], timeout: int = 10000) -> None:
+    """Rend la main quand aucun des conteneurs (désignés par leur classe CSS)
+    n'a de requête ni d'échange en cours, et que tout élément htmx qu'ils
+    portent est câblé."""
+    page.wait_for_function(_AU_REPOS, arg=conteneurs, timeout=timeout)
+
+
+def muter(page: Page, cible, rendus: dict[str, int], timeout: int = 10000) -> None:
+    """Clique une cible câblée, attend les rendus que la mutation déclenche —
+    `{"dis-main": 2, "dis-side": 1}` : deux rendus de la liste, un du panier —,
+    puis le repos de ces conteneurs."""
+    conteneurs = list(rendus)
+    attendre_le_repos(page, conteneurs, timeout)
+    page.evaluate(_COMPTER_LES_RENDUS, conteneurs)
+    cliquer_quand_cable_locator(page, cible, timeout)
+    page.wait_for_function(_RENDUS_ARRIVES, arg=rendus, timeout=timeout)
+    attendre_le_repos(page, conteneurs, timeout)
