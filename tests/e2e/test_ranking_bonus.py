@@ -33,6 +33,7 @@ from competition_lifecycle import (
     BYPASS_AUTH_COACH_NAME,
     FAKE_LOGO_URL,
     build_and_submit_team,
+    publish_competition,
     sync_and_generate_schedule,
 )
 from db_helpers import query_db
@@ -89,9 +90,10 @@ def _create_competition_with_aggressive_bonus(page: Page, competition_create_url
     page.click("button[onclick='submitInvitations()']")
     page.wait_for_selector(".recap-row", timeout=10000)
 
-    # Phase 5 : publication.
-    page.click(".btn-cta")
-    page.wait_for_timeout(1000)
+    # Phase 5 : publication — l'aide partagée attend la saison finalisée et la
+    # redirection, là où un clic nu suivi d'une seconde d'attente pariait sur
+    # les deux (carte 649).
+    publish_competition(page, competition_create_url, competition_id, season_id)
 
     return {"competition_id": competition_id, "season_id": season_id, "name": competition_name}
 

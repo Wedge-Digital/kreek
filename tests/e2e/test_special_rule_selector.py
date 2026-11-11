@@ -85,10 +85,14 @@ def _select_roster(page: Page, uid: str, name: str) -> None:
     `rosterSelected from:body` ne le reçoivent que si htmx les a câblés, et un
     événement déclenché plus tôt se perd exactement comme un clic.
 
-    **Elle ne suffit pas.** Ce test reste instable — environ un échec sur six,
-    contre un sur deux avant —, et toujours au même endroit : le tableau des
-    joueurs n'arrive jamais. La cause du reste n'est pas établie ; ne pas
-    supposer que ce garde-fou l'a fermée.
+    Le tableau des joueurs qui n'arrivait parfois jamais avait une autre cause,
+    dans le produit (carte 649) : l'événement tombait pendant que la requête
+    `load` du tableau était encore en vol. htmx mettait la requête
+    `rosterSelected` en file, la rejouait plus tard, et `hx-vals` y lisait
+    `window.event` — qui n'était plus le choix du roster. Le tableau partait
+    sans roster. Le gabarit fixe désormais le roster sur `htmx:configRequest` ;
+    `test_player_table_keeps_roster_when_request_is_queued` provoque cette
+    file à coup sûr.
     """
     attendre_cablage(page, "#player-table-container")
     page.evaluate(
@@ -171,3 +175,50 @@ def test_finalize_blocked_when_choice_roster_has_no_special_rule(
     # rien pour un clic déjà perdu.
     error = page.locator("#submit-errors")
     expect(error).to_contain_text("règle spéciale")
+
+# ── Carte 649 : la requête `rosterSelected` mise en file ──────────────────────
+#
+# Le défaut ne se montrait que sur une machine chargée : la requête `load` du
+# tableau devait être encore en vol quand le roster était choisi. Ce test ne
+# parie pas sur la charge — il **retient** la requête `load` le temps de
+# constater que la suivante est en file, puis la relâche.
+
+_IS_QUEUED = "e => (e['htmx-internal-data']?.queuedRequests?.length ?? 0) > 0"
+
+
+def _hold_first_empty_load(held: list):
+    """Retient la première requête du tableau sans roster — celle du `load`."""
+
+    def handler(route):
+        if not held and route.request.url.endswith("roster_uid="):
+            held.append(route)
+            return
+        route.continue_()
+
+    return handler
+
+
+def _is_player_table_request(request) -> bool:
+    return "/widgets/player-table" in request.url
+
+
+def test_player_table_keeps_roster_when_request_is_queued(
+    page: Page, space_id, competition_create_url
+):
+    competition_name = _create_minimal_competition(page, competition_create_url)
+    team_id = _create_draft_team(page, space_id, competition_name)
+    held = []
+    page.route("**/widgets/player-table*", _hold_first_empty_load(held))
+    page.goto(f"{BASE_URL}/app/{space_id}/team/{team_id}/build", wait_until="load")
+
+    _select_roster(page, "DEMO_LANTERNE", "Lanterniers")
+    # `queuedRequests` est interne à htmx, comme `htmx-internal-data` dont
+    # `htmx_helpers` dépend déjà : si htmx le renomme, l'attente expire.
+    container = page.locator("#player-table-container").element_handle()
+    page.wait_for_function(_IS_QUEUED, arg=container, timeout=10000)
+    assert held, "la requête `load` du tableau n'a pas été retenue"
+
+    with page.expect_request(_is_player_table_request) as replayed:
+        held[0].continue_()
+    assert replayed.value.url.endswith("roster_uid=DEMO_LANTERNE"), replayed.value.url
+    expect(page.locator("#player-table-container .tbl-btn").first).to_be_visible()

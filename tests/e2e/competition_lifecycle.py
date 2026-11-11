@@ -180,15 +180,41 @@ def create_full_competition(
         return brouillon
 
     # ── Phase 5 : publication ─────────────────────────────────────────────
-    # `cliquer_quand_cable` et non `click` : c'est **ce bouton** que `CLAUDE.md`
-    # cite en exemple du piège — peint et cliquable quelques dizaines de
-    # millisecondes avant qu'htmx ne l'ait câblé, un clic s'y perd sans requête,
-    # sans erreur de console, sans rien. La postcondition ci-dessous le
-    # constatait ; l'attente le supprime.
-    cliquer_quand_cable(page, ".btn-cta")
-    _attendre_finalisation(season_id)
+    publish_competition(page, competition_create_url, competition_id, season_id)
 
     return {"competition_id": competition_id, "season_id": season_id, "name": competition_name}
+
+
+def publish_competition(
+    page: Page, competition_create_url: str, competition_id: str, season_id: str
+) -> None:
+    """Étape 5 du magicien : publie la compétition, et ne rend la main qu'une
+    fois le navigateur arrivé sur sa fiche.
+
+    `cliquer_quand_cable` et non `click` : c'est **ce bouton** que `CLAUDE.md`
+    cite en exemple du piège — peint et cliquable quelques dizaines de
+    millisecondes avant qu'htmx ne l'ait câblé, un clic s'y perd sans requête,
+    sans erreur de console, sans rien.
+
+    Deux attentes, parce qu'il y a deux faits (carte 649) :
+
+    - la saison finalisée **en base** — attendue d'abord : si la publication
+      échoue, le serveur ne redirige pas, et c'est ce message-là qui dit la
+      cause ;
+    - la redirection **dans le navigateur**. Le serveur répond par un
+      `HX-Redirect` vers la fiche de la compétition, que le navigateur suit
+      *après* la réponse. Rendre la main avant, c'est laisser le `page.goto`
+      suivant se faire interrompre par cette redirection : `ERR_ABORTED`.
+
+    L'attente porte sur l'URL exacte de la destination, et non sur l'absence de
+    `/validation` : le magicien navigue en `pushState`, et seule la fiche
+    prouve que la redirection a eu lieu."""
+    destination = (
+        competition_create_url.removesuffix("/create") + f"/{competition_id}/{season_id}"
+    )
+    cliquer_quand_cable(page, ".btn-cta")
+    _attendre_finalisation(season_id)
+    page.wait_for_url(destination, timeout=10000)
 
 
 def joueurs_recrutes(team_id: str) -> int:
