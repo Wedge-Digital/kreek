@@ -1637,6 +1637,24 @@ Toute fonctionnalité livrée doit être couverte par :
 
 Le test unitaire vérifie la logique ; le test E2E vérifie que le rendu HTML/HTMX/Alpine.js produit fonctionne réellement (le bug du widget coach-search et celui des pickers de tiers en phase 2 n'auraient été détectés par aucun test unitaire — uniquement par un test E2E piloté en navigateur).
 
+**Chaque fonction nouvelle a son test**, pas seulement la fonctionnalité :
+
+- **unitaire** dès qu'elle porte une règle ou une correspondance, même petite
+  — un choix de page, un statut HTTP par erreur, un repli quand un port ne
+  sait pas ;
+- **e2e** quand elle ne fait que de la plomberie HTTP ou de ports — un handler
+  qui enchaîne des appels eux-mêmes testés.
+
+Une fonction qu'on ne peut pas tester unitairement **parce qu'elle reçoit tout
+le contexte** reçoit à la place les ports qu'elle lit (`&dyn ITeamDataPort`,
+`AccesRapportDeps`…) : c'est alors une doublure de test qui les fournit.
+
+Le compte rendu d'une carte **liste les fonctions ajoutées et le test qui
+couvre chacune**. C'est ce qui a manqué à la 655 : les règles de décision
+étaient testées, mais l'aiguillage du mode A après une annulation, le 204 sans
+valeurs d'équipe et le lien de l'admin ne l'étaient par rien — vingt-cinq tests
+unitaires et un e2e ajoutés à la relecture.
+
 Voir `tests/e2e/README.md` pour l'exécution (`make e2e`, nécessite le serveur dev lancé).
 
 ---
