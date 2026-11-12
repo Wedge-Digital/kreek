@@ -561,3 +561,97 @@ impl ICompetitionDataPort for PlainCompetition {
         Err(CreationAppariementError::Indisponible("doublure".into()))
     }
 }
+
+/// Des équipes dont on choisit le coach et le nom, une à une (carte 655) :
+/// ce qu'une page lit des équipes du match, et rien d'autre. Une équipe
+/// absente n'a ni coach ni nom ; `coach_unreadable` fait échouer la lecture du
+/// coach, comme une base indisponible.
+#[derive(Default)]
+pub struct NamedTeams {
+    coaches: Vec<(String, String)>,
+    names: Vec<(String, String)>,
+    coach_unreadable: bool,
+}
+
+impl NamedTeams {
+    pub fn coached(mut self, team_id: &str, coach_id: &str) -> Self {
+        self.coaches.push((team_id.into(), coach_id.into()));
+        self
+    }
+    pub fn named(mut self, team_id: &str, name: &str) -> Self {
+        self.names.push((team_id.into(), name.into()));
+        self
+    }
+    pub fn coach_unreadable(mut self) -> Self {
+        self.coach_unreadable = true;
+        self
+    }
+    fn coach_of(&self, team_id: &str) -> Option<String> {
+        let found = self.coaches.iter().find(|(t, _)| t == team_id);
+        found.map(|(_, c)| c.clone())
+    }
+}
+
+#[async_trait]
+impl ITeamDataPort for NamedTeams {
+    async fn is_team_ready_to_play(&self, _: &str) -> Result<bool, String> {
+        Ok(true)
+    }
+    async fn is_team_in_player_improvement(&self, _: &str) -> Result<bool, String> {
+        Ok(true)
+    }
+    async fn is_coach_of_team(&self, team_id: &str, coach_id: &str) -> Result<bool, String> {
+        Ok(self.coach_of(team_id).as_deref() == Some(coach_id))
+    }
+    async fn find_team_coach(&self, team_id: &str) -> Result<Option<String>, String> {
+        if self.coach_unreadable {
+            return Err("base indisponible".into());
+        }
+        Ok(self.coach_of(team_id))
+    }
+    async fn find_team_info(&self, team_id: &str) -> Option<TeamInfoDto> {
+        let (_, name) = self.names.iter().find(|(t, _)| t == team_id)?;
+        Some(TeamInfoDto {
+            team_name: name.clone(),
+            coach_name: String::new(),
+            roster_name: String::new(),
+            roster_id: String::new(),
+            logo_url: None,
+            dedicated_fans: 0,
+        })
+    }
+    async fn find_team_value(&self, _: &str) -> Option<u32> {
+        None
+    }
+    async fn find_team_treasury(&self, _: &str) -> Option<u32> {
+        None
+    }
+    async fn find_journeyman_position(&self, _: &str) -> Option<JourneymanPositionDto> {
+        None
+    }
+    async fn find_roster_positions(&self, _: &str) -> Vec<RosterPositionDto> {
+        vec![]
+    }
+    async fn find_team_season(&self, _: &str) -> Option<String> {
+        None
+    }
+}
+
+/// Des coachs dont on choisit le nom ; un coach absent n'en a pas.
+#[derive(Default)]
+pub struct NamedCoaches(Vec<(String, String)>);
+
+impl NamedCoaches {
+    pub fn named(mut self, coach_id: &str, name: &str) -> Self {
+        self.0.push((coach_id.into(), name.into()));
+        self
+    }
+}
+
+#[async_trait]
+impl crate::app::match_report::ports::ICoachDataPort for NamedCoaches {
+    async fn find_coach_name(&self, coach_id: &str) -> Option<String> {
+        let found = self.0.iter().find(|(c, _)| c == coach_id);
+        found.map(|(_, n)| n.clone())
+    }
+}

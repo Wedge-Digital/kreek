@@ -150,20 +150,22 @@ def ensure_team_entry_inducements(space_id, mr_id):
     coach lance son jet — DevCoach le domicile, le membre simple l'extérieur —,
     puis les coups de pouce sont passés, le favori d'abord.
 
-    Chaque jet mène aux coups de pouce de son équipe. On ne sait pas d'avance
-    laquelle est le favori : une page refusée — l'outsider avant le favori —
-    est retentée une fois que l'autre est passée."""
+    Chaque jet mène aux coups de pouce de son équipe, que **son coach** passe :
+    la page est sous `garde_camp` (carte 655). On ne sait pas d'avance laquelle
+    est le favori : une page refusée — l'outsider avant le favori — est
+    retentée une fois que l'autre est passée."""
     pages = []
     for side, roll, headers in (("home", 2, None), ("away", 3, PROFIL_SIMPLE)):
         resp = record_team_fan_factor(space_id, mr_id, side, roll, headers)
         assert resp.status_code in (302, 303), f"fan factor {side}: {resp.status_code}"
-        pages.append(resp.headers.get("Location", ""))
-    pending = [page for page in pages if "/inducements/" in page]
+        pages.append((resp.headers.get("Location", ""), headers or {}))
+    pending = [(page, headers) for page, headers in pages if "/inducements/" in page]
     for _ in range(2):
         pending = [
-            page for page in pending
-            if requests.post(f"{BASE_URL}{page}", data={"selection": ""}, allow_redirects=False).status_code
-            not in (302, 303)
+            (page, headers) for page, headers in pending
+            if requests.post(
+                f"{BASE_URL}{page}", data={"selection": ""}, headers=headers, allow_redirects=False
+            ).status_code not in (302, 303)
         ]
     assert not pending, f"coups de pouce non passés : {pending}"
 

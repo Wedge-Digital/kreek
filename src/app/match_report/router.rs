@@ -25,6 +25,7 @@ use crate::app::match_report::io::web::widgets::action_log_widget::get_action_lo
 use crate::app::match_report::io::web::widgets::action_panel_widget::{
     get_action_panel_step3, get_action_panel_step4,
 };
+use crate::app::match_report::io::web::widgets::inducements_wait_widget::get_inducements_wait;
 use crate::app::match_report::io::web::widgets::live_score_widget::get_live_score;
 use crate::app::match_report::io::web::widgets::mercenary_selector_widget::get_mercenary_selector;
 use crate::app::match_report::io::web::widgets::opponent_fan_factor_widget::get_opponent_fan_factor;
@@ -99,15 +100,30 @@ where
 
 /// Les routes dont le chemin désigne un camp — `side`, ou un `team_id` du
 /// match —, gardées par `garde_camp` (carte 652, R3 de E22) : en « Chacun son
-/// équipe », chaque coach n'y écrit que dans le sien. **Vide à la carte 652** :
+/// équipe », chaque coach n'y écrit que dans le sien. Né vide à la carte 652,
 /// les cartes 654 à 659 y rangent leurs routes, en les retirant de
-/// `routes_de_saisie()`.
+/// `routes_de_saisie()`. En « Je saisis tout », `can_write_side` y rend la
+/// règle de `can_write_report` : rien n'y change.
 fn routes_de_camp() -> Router<AppState> {
     Router::new()
         // L'avant-match d'un camp, en « Chacun son équipe » (carte 654).
         .route(
             path::MATCH_REPORT_STEP2_SIDE,
             get(get_team_pre_match).post(post_team_pre_match),
+        )
+        // Les coups de pouce d'une équipe, ses mercenaires et l'attente de
+        // l'autre équipe (carte 655) : chacun n'achète que pour la sienne.
+        .route(
+            path::MATCH_REPORT_INDUCEMENTS,
+            get(get_inducements).post(post_inducements),
+        )
+        .route(
+            path::MATCH_REPORT_MERCENARY_SELECTOR,
+            get(get_mercenary_selector),
+        )
+        .route(
+            path::MATCH_REPORT_INDUCEMENTS_WAIT,
+            get(get_inducements_wait),
         )
 }
 
@@ -164,16 +180,8 @@ fn routes_de_saisie() -> Router<AppState> {
             get(get_pre_match).post(post_pre_match),
         )
         .route(
-            path::MATCH_REPORT_INDUCEMENTS,
-            get(get_inducements).post(post_inducements),
-        )
-        .route(
             path::MATCH_REPORT_CANCEL_INDUCEMENTS,
             post(post_cancel_inducements),
-        )
-        .route(
-            path::MATCH_REPORT_MERCENARY_SELECTOR,
-            get(get_mercenary_selector),
         )
         .route(path::MATCH_REPORT_STEP3, get(get_step3))
         .route(path::MATCH_REPORT_STEP4, get(get_step4))
@@ -233,6 +241,17 @@ mod tests {
     fn an_empty_group_gets_no_route_layer() {
         let routes = garder_si_non_vide(Router::<()>::new(), from_fn(temoin));
         assert!(!routes.has_routes());
+    }
+
+    /// Les quatre groupes se fusionnent sans chemin en conflit : axum panique
+    /// au démarrage sinon (carte 655, qui a déplacé les coups de pouce).
+    #[test]
+    fn the_four_groups_merge_without_conflict() {
+        let routes = routes_ouvertes()
+            .merge(routes_de_suivi())
+            .merge(routes_de_saisie())
+            .merge(routes_de_camp());
+        assert!(routes.has_routes());
     }
 
     #[tokio::test]

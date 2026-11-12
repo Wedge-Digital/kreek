@@ -13,6 +13,11 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/step2/{side}/fan-factor";
     pub const MATCH_REPORT_INDUCEMENTS: &str =
         "/app/{space_id}/match-report/{match_report_id}/inducements/{team_id}";
+    /// L'attente de l'autre équipe, en « Chacun son équipe » (carte 655) : un
+    /// widget rechargé sur le signal du match, qui rouvre la page quand vient
+    /// le tour de l'équipe.
+    pub const MATCH_REPORT_INDUCEMENTS_WAIT: &str =
+        "/app/{space_id}/match-report/{match_report_id}/inducements/{team_id}/wait";
     /// Hors de `/inducements/…` : `/inducements/cancel` chevaucherait
     /// `/inducements/{team_id}` (carte 626).
     pub const MATCH_REPORT_CANCEL_INDUCEMENTS: &str =
@@ -134,6 +139,14 @@ impl Routes {
 
     pub fn inducements(&self, space_id: &str, match_report_id: &str, team_id: &str) -> String {
         path::MATCH_REPORT_INDUCEMENTS
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{team_id}", team_id)
+    }
+
+    /// L'attente de l'autre équipe (carte 655).
+    pub fn inducements_wait(&self, space_id: &str, match_report_id: &str, team_id: &str) -> String {
+        path::MATCH_REPORT_INDUCEMENTS_WAIT
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
             .replace("{team_id}", team_id)

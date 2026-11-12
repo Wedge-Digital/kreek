@@ -82,6 +82,11 @@ CLASSE_ATTENDUE = {
     "rapport-selection": ".match-report-step1",
     "rapport-mode": ".entry-mode-card",
     "rapport-prematch": ".match-report-pre-match",
+    # « Chacun son équipe » (cartes 654 et 655) : le bloc de l'adversaire et le
+    # conteneur de l'attente ne se rendent qu'en mode B.
+    "rapport-prematch-camp": ".mr-opponent-fan-factor",
+    "rapport-inducements-attente": ".mr-inducements-wait",
+    "widget-inducements-attente": ".inducements-wait",
     "rapport-live": ".match-report-live",
     "rapport-actions": ".match-report-actions",
     "rapport-mvp": ".match-report-mvp",
@@ -173,6 +178,21 @@ def collecter() -> tuple[dict[str, str], list[str]]:
     equipe_prematch = _un(
         f"SELECT home_team_id FROM match_report_proj WHERE match_report_id = '{rapport_prematch}'"
     ) if rapport_prematch else None
+    # « Chacun son équipe » (cartes 654 et 655) : un rapport en avant-match dont
+    # aucune équipe n'a validé ses coups de pouce, et son outsider — la plus
+    # faible valeur figée au premier jet, l'extérieur à égalité. Sa page est
+    # alors l'attente du favori.
+    rapport_b, outsider_b = ((_un(
+        f"SELECT p.match_report_id || '|' || CASE "
+        f"WHEN (e.payload->>'away_team_value')::int > (e.payload->>'home_team_value')::int "
+        f"THEN p.home_team_id ELSE p.away_team_id END "
+        f"FROM match_report_proj p JOIN match_report_event_store e "
+        f"ON e.match_report_id = p.match_report_id AND e.event_type = 'TeamValuesRecorded' "
+        f"WHERE p.space_id = '{espace}' AND p.phase = 'PreMatch' AND p.entry_mode = 'TeamEntry' "
+        f"AND NOT EXISTS (SELECT 1 FROM match_report_event_store i "
+        f"WHERE i.match_report_id = p.match_report_id AND i.event_type = 'InducementsRecorded') "
+        f"LIMIT 1"
+    ) or "|").split("|") + [""])[:2]
 
     a = f"{BASE}/app/{espace}"
     candidates: dict[str, str | None] = {
@@ -236,6 +256,11 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         "rapport-selection":     f"{a}/match-report/new",
         "rapport-mode":          f"{a}/match-report/{rapport_brouillon}" if rapport_brouillon else None,
         "rapport-prematch":      f"{a}/match-report/{rapport_prematch}/step2" if rapport_prematch else None,
+        "rapport-prematch-camp": f"{a}/match-report/{rapport_b}/step2/home" if rapport_b else None,
+        "rapport-inducements-attente": (f"{a}/match-report/{rapport_b}/inducements/{outsider_b}"
+                                        if rapport_b else None),
+        "widget-inducements-attente": (f"{a}/match-report/{rapport_b}/inducements/{outsider_b}/wait"
+                                       if rapport_b else None),
         "rapport-live":          f"{a}/match-report/{rapport_prematch}/live" if rapport_prematch else None,
         "rapport-actions":       f"{a}/match-report/{rapport_prematch}/step3" if rapport_prematch else None,
         "rapport-mvp":           f"{a}/match-report/{rapport_prematch}/mvp/home" if rapport_prematch else None,

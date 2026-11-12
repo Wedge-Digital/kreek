@@ -2,6 +2,11 @@
 {% import "match_report/steps-indicator.html" as steps %}
 
 {% block content %}
+{% if team_entry %}
+{# « Chacun son équipe » (carte 655) : la page se déclare au canal temps réel,
+   comme l'avant-match d'un camp. #}
+<div class="realtime-presence" data-space="{{ space_id }}" data-match="{{ match_report_id }}" data-activity="write" hidden></div>
+{% endif %}
 
 <div class="mr-container match-report-inducements"
      x-data="{
@@ -166,10 +171,18 @@
       </div>
 
       <div class="mr-cart-actions">
+        {% if team_entry %}
+        {# « Chacun son équipe » (carte 655) : un seul geste, panier vide compris —
+           c'est lui qui dit à l'autre coach que vous avez fini. #}
+        <button type="submit" name="intent" value="validate" class="btn-primary-sm" :disabled="overBudget">
+          J'ai fini mes achats &#8594;
+        </button>
+        {% else %}
         <button type="submit" name="intent" value="pass" class="btn-outline-sm">Passer</button>
         <button type="submit" name="intent" value="validate" class="btn-primary-sm" :disabled="overBudget">
           Valider les achats &#8594;
         </button>
+        {% endif %}
       </div>
 
     </div>

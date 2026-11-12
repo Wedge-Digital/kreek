@@ -1,7 +1,12 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::match_report::domain::value_objects::EntryMode;
 use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::match_report::use_cases::cancel_inducements_use_case::{
-    self, CancelInducementsCommand, CancelInducementsError,
+    self, CancelInducementsCommand, CancelInducementsError, CancelInducementsOutcome,
+};
+use crate::app::match_report::use_cases::match_report_access_service::{
+    camp_du_coach, CampDuCoach,
 };
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -39,19 +44,44 @@ pub async fn post_cancel_inducements(
     )
     .await;
     match result {
-        Ok(outcome) => redirect_to_topdog(
-            &space_id,
-            &match_report_id,
-            &outcome.topdog_team_id.to_string(),
-        ),
+        Ok(outcome) => {
+            let team_data = state.match_report.team_data.as_ref();
+            let team = resume_team_for(team_data, &user.id.to_string(), &outcome).await;
+            redirect_to_team(&space_id, &match_report_id, &team)
+        }
         Err(e) => error_response(&match_report_id, e),
     }
 }
 
-fn redirect_to_topdog(space_id: &str, match_report_id: &str, topdog: &str) -> Response {
+/// L'équipe dont la page reprend après l'annulation : celle du favori, sauf en
+/// « Chacun son équipe » où chaque coach reprend chez lui (carte 655) — la
+/// page du favori serait refusée à l'outsider par `garde_camp`.
+async fn resume_team_for(
+    team_data: &dyn ITeamDataPort,
+    user_id: &str,
+    outcome: &CancelInducementsOutcome,
+) -> String {
+    if outcome.entry_mode != EntryMode::TeamEntry {
+        return outcome.topdog_team_id.to_string();
+    }
+    let camp = camp_du_coach(team_data, &outcome.scope, user_id).await;
+    resume_team(outcome, camp)
+}
+
+/// Le coach d'un seul camp reprend sur sa page ; l'admin et le coach des deux
+/// équipes, chez le favori, qui achète d'abord.
+fn resume_team(outcome: &CancelInducementsOutcome, camp: CampDuCoach) -> String {
+    match camp {
+        CampDuCoach::Domicile => outcome.scope.home_team_id.clone(),
+        CampDuCoach::Visiteur => outcome.scope.away_team_id.clone(),
+        CampDuCoach::LesDeux | CampDuCoach::Aucun => outcome.topdog_team_id.to_string(),
+    }
+}
+
+fn redirect_to_team(space_id: &str, match_report_id: &str, team_id: &str) -> Response {
     let url = AppRoutes::default()
         .match_report
-        .inducements(space_id, match_report_id, topdog);
+        .inducements(space_id, match_report_id, team_id);
     Response::builder()
         .header("HX-Redirect", url)
         .body(axum::body::Body::empty())
@@ -150,8 +180,65 @@ mod tests {
 
     #[test]
     fn l_annulation_renvoie_chez_le_favori() {
-        let response = redirect_to_topdog("SP", "MR", "TD");
+        let response = redirect_to_team("SP", "MR", "TD");
         let location = response.headers().get("HX-Redirect").unwrap();
         assert_eq!(location, "/app/SP/match-report/MR/inducements/TD");
+    }
+
+    fn outcome() -> CancelInducementsOutcome {
+        use crate::app::match_report::use_cases::match_report_access_service::PorteeRapport;
+        use crate::app::shared_kernel::bloodbowl::team::TeamId;
+        let away = TeamId::new();
+        CancelInducementsOutcome {
+            topdog_team_id: away,
+            entry_mode: EntryMode::TeamEntry,
+            scope: PorteeRapport {
+                competition_id: "C".into(),
+                home_team_id: "HOME".into(),
+                away_team_id: away.to_string(),
+            },
+        }
+    }
+
+    /// Carte 655 : en « Chacun son équipe », chacun reprend sur sa page ;
+    /// l'admin, chez le favori.
+    #[test]
+    fn en_mode_b_chacun_reprend_chez_lui() {
+        let outcome = outcome();
+        let away = outcome.scope.away_team_id.clone();
+        assert_eq!(resume_team(&outcome, CampDuCoach::Domicile), "HOME");
+        assert_eq!(resume_team(&outcome, CampDuCoach::Visiteur), away);
+        assert_eq!(resume_team(&outcome, CampDuCoach::Aucun), away);
+        assert_eq!(resume_team(&outcome, CampDuCoach::LesDeux), away);
+    }
+
+    use crate::app::match_report::use_cases::test_doubles::NamedTeams;
+
+    /// Le domicile coaché par « C-HOME » ; le favori est l'extérieur.
+    fn coached_home() -> NamedTeams {
+        NamedTeams::default().coached("HOME", "C-HOME")
+    }
+
+    /// Carte 655 : en mode B, le camp se lit sur le port, et le coach du
+    /// domicile reprend sur sa page — pas chez le favori.
+    #[tokio::test]
+    async fn en_mode_b_le_camp_vient_du_port() {
+        let outcome = outcome();
+        let away = outcome.scope.away_team_id.clone();
+        let teams = coached_home();
+        assert_eq!(resume_team_for(&teams, "C-HOME", &outcome).await, "HOME");
+        assert_eq!(resume_team_for(&teams, "ADMIN", &outcome).await, away);
+    }
+
+    /// Décision 6 : en « Je saisis tout », tout le monde reprend chez le favori,
+    /// même le coach du domicile.
+    #[tokio::test]
+    async fn en_mode_a_tout_le_monde_reprend_chez_le_favori() {
+        let mut outcome = outcome();
+        outcome.entry_mode = EntryMode::SoloEntry;
+        let topdog = outcome.topdog_team_id.to_string();
+        let teams = coached_home();
+        assert_eq!(resume_team_for(&teams, "C-HOME", &outcome).await, topdog);
+        assert_eq!(resume_team_for(&teams, "ADMIN", &outcome).await, topdog);
     }
 }

@@ -1,5 +1,6 @@
 pub mod action_log_widget;
 pub mod action_panel_widget;
+pub mod inducements_wait_widget;
 pub mod live_score_widget;
 pub mod mercenary_selector_widget;
 pub mod opponent_fan_factor_widget;

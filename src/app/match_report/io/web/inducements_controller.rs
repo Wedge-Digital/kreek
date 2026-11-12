@@ -1,16 +1,21 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::domain::user::User;
 use crate::app::match_report::context::MatchReportContext;
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::{
     InducementsTurn, MatchReportPreMatch,
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::{RosterPositionUid, TeamValue};
+use crate::app::match_report::domain::value_objects::{EntryMode, RosterPositionUid, TeamValue};
+use crate::app::match_report::io::web::pre_match_controller::SwitchSideVm;
 use crate::app::match_report::io::web::view_models::{team_initials, RecapSideVm};
 use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::match_report::use_cases::inducements_recap_service::{
     self, InducementsRecap, RecapPorts,
+};
+use crate::app::match_report::use_cases::match_report_access_service::{
+    est_administrateur, AccesRapportDeps,
 };
 use crate::app::match_report::use_cases::record_inducements_use_case::RecordInducementsError;
 use crate::app::match_report::use_cases::record_inducements_use_case::{
@@ -46,6 +51,9 @@ pub struct InducementsTemplate {
     pub inducement_selector_url: String,
     pub mercenary_selector_url: String,
     pub form_action: String,
+    /// « Chacun son équipe » (carte 655) : un seul bouton, « J'ai fini mes
+    /// achats », panier vide compris, et la présence déclarée.
+    pub team_entry: bool,
 }
 
 impl IntoResponse for InducementsTemplate {
@@ -60,7 +68,8 @@ impl IntoResponse for InducementsTemplate {
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 /// `GET /inducements/{team_id}` : la page de choix de l'équipe dont c'est le
-/// tour, une redirection vers elle (R7, R9), ou — les deux ayant validé — le
+/// tour, une redirection vers elle (R7, R9) — en « Chacun son équipe »,
+/// l'attente de l'autre équipe (carte 655) —, ou, les deux ayant validé, le
 /// récapitulatif des deux camps, quel que soit `team_id` (R6, carte 628).
 pub async fn get_inducements(
     auth_session: AuthSession,
@@ -77,7 +86,7 @@ pub async fn get_inducements(
     let page = PageRequest {
         space_id: &space_id,
         mr_id: &mr_id,
-        viewer: user.id,
+        user: &user,
         routes: AppRoutes::default(),
     };
     match render_page(&page, &team_id, &state.match_report).await {
@@ -89,7 +98,7 @@ pub async fn get_inducements(
 struct PageRequest<'a> {
     space_id: &'a str,
     mr_id: &'a MatchReportId,
-    viewer: CoachId,
+    user: &'a User,
     routes: AppRoutes,
 }
 
@@ -102,13 +111,53 @@ async fn render_page(
     let can_cancel = state.can_cancel_inducements();
     let mut pm = into_pre_match(state)?;
     fill_team_values(&mut pm, ctx.team_data.as_ref()).await;
-    let mr_id = page.mr_id.to_string();
-    redirect_unless_turn_of(&pm, team_id, &page.routes, page.space_id, &mr_id)?;
-    if pm.inducements_turn() == InducementsTurn::BothRecorded {
-        return Ok(recap_page(page, &pm, can_cancel, ctx).await.into_response());
+    Ok(match view_for(&pm, team_id) {
+        InducementsView::RedirectTo(turn) => redirect_to_team(page, turn),
+        InducementsView::Recap => recap_page(page, &pm, can_cancel, ctx).await.into_response(),
+        InducementsView::Wait(waited) => wait_page(page, &pm, team_id, waited, &access_deps(ctx))
+            .await
+            .into_response(),
+        InducementsView::Purchase => build_vm(&pm, team_id, page.space_id, ctx, &page.routes)
+            .await?
+            .into_response(),
+    })
+}
+
+/// Ce que montre la page d'une équipe (cartes 627, 628 et 655). Le domaine dit
+/// à qui c'est le tour ; le contrôleur n'en fait qu'un écran.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum InducementsView<'a> {
+    /// C'est le tour de l'équipe : son formulaire d'achat.
+    Purchase,
+    /// Les deux ont validé : le récapitulatif (R6).
+    Recap,
+    /// « Chacun son équipe » : l'équipe attend l'autre, sur sa propre page —
+    /// l'outsider le favori (R5 de E22), le favori qui a fini l'outsider.
+    Wait(&'a TeamId),
+    /// « Je saisis tout » : la page de l'équipe dont c'est le tour (R7, R9).
+    RedirectTo(&'a TeamId),
+}
+
+pub(crate) fn view_for<'a>(pm: &'a MatchReportPreMatch, team_id: &TeamId) -> InducementsView<'a> {
+    match pm.inducements_turn() {
+        InducementsTurn::BothRecorded => InducementsView::Recap,
+        InducementsTurn::Team(turn) if turn == team_id => InducementsView::Purchase,
+        InducementsTurn::Team(turn) if pm.entry_mode == EntryMode::TeamEntry => {
+            InducementsView::Wait(turn)
+        }
+        InducementsTurn::Team(turn) => InducementsView::RedirectTo(turn),
     }
-    let tpl = build_vm(&pm, team_id, page.space_id, ctx, &page.routes).await?;
-    Ok(tpl.into_response())
+}
+
+/// `303` vers la page de l'équipe dont c'est le tour (carte 627) : l'outsider
+/// attend le favori (R9), l'équipe qui a validé seule renvoie à l'autre (R7).
+fn redirect_to_team(page: &PageRequest<'_>, turn: &TeamId) -> Response {
+    let url = page.routes.match_report.inducements(
+        page.space_id,
+        &page.mr_id.to_string(),
+        &turn.to_string(),
+    );
+    Redirect::to(&url).into_response()
 }
 
 async fn build_vm(
@@ -161,11 +210,12 @@ async fn build_vm(
         inducement_selector_url: selector_url,
         mercenary_selector_url: mercenary_url,
         form_action,
+        team_entry: pm.entry_mode == EntryMode::TeamEntry,
     })
 }
 
 /// Un `ReadyToPublish` reconverti n'a pas de valeurs d'équipe : on les relit.
-async fn fill_team_values(pm: &mut MatchReportPreMatch, team_data: &dyn ITeamDataPort) {
+pub(crate) async fn fill_team_values(pm: &mut MatchReportPreMatch, team_data: &dyn ITeamDataPort) {
     if pm.home_team_value.is_some() && pm.away_team_value.is_some() {
         return;
     }
@@ -177,28 +227,6 @@ async fn fill_team_values(pm: &mut MatchReportPreMatch, team_data: &dyn ITeamDat
     );
     pm.home_team_value = home_raw.and_then(|v| TeamValue::try_new(v).ok());
     pm.away_team_value = away_raw.and_then(|v| TeamValue::try_new(v).ok());
-}
-
-/// `303` vers la page de l'équipe dont c'est le tour (carte 627) : l'outsider
-/// attend le favori (R9), l'équipe qui a validé seule renvoie à l'autre (R7).
-/// Quand les deux ont validé, aucune redirection : chaque adresse sert le
-/// récapitulatif (R6, carte 628). Le domaine dit qui choisit ; le contrôleur
-/// n'en fait qu'une adresse.
-fn redirect_unless_turn_of(
-    pm: &MatchReportPreMatch,
-    team_id: &TeamId,
-    routes: &AppRoutes,
-    space_id: &str,
-    match_report_id: &str,
-) -> Result<(), Response> {
-    let turn = match pm.inducements_turn() {
-        InducementsTurn::Team(turn) if turn != team_id => turn,
-        InducementsTurn::Team(_) | InducementsTurn::BothRecorded => return Ok(()),
-    };
-    let url = routes
-        .match_report
-        .inducements(space_id, match_report_id, &turn.to_string());
-    Err(Redirect::to(&url).into_response())
 }
 
 async fn load_state(
@@ -217,6 +245,85 @@ fn into_pre_match(state: MatchReportState) -> Result<MatchReportPreMatch, Respon
         MatchReportState::ReadyToPublish(rtp) => Ok(rtp.into_pre_match()),
         _ => Err(StatusCode::CONFLICT.into_response()),
     }
+}
+
+// ── Attente de l'autre équipe (carte 655) ─────────────────────────────────────
+
+/// La page d'une équipe qui attend l'autre, en « Chacun son équipe ». Son
+/// contenu est un widget, rechargé sur le signal du match, qui rouvre la page
+/// quand vient le tour de l'équipe.
+#[derive(Template)]
+#[template(path = "inducements-wait.html")]
+pub struct InducementsWaitTemplate {
+    pub app_routes: AppRoutes,
+    pub space_id: String,
+    pub match_report_id: String,
+    pub wait_url: String,
+    pub pre_match_url: String,
+    /// L'admin écrit les deux camps (§ 12.6 de E22) : il peut passer à
+    /// l'équipe attendue.
+    pub switch: Option<SwitchSideVm>,
+}
+
+impl IntoResponse for InducementsWaitTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(e) => {
+                tracing::error!("inducements-wait.html: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
+}
+
+fn access_deps(ctx: &MatchReportContext) -> AccesRapportDeps<'_> {
+    AccesRapportDeps {
+        admin_access: ctx.admin_access.as_ref(),
+        team_data: ctx.team_data.as_ref(),
+    }
+}
+
+async fn wait_page(
+    page: &PageRequest<'_>,
+    pm: &MatchReportPreMatch,
+    team_id: &TeamId,
+    waited: &TeamId,
+    deps: &AccesRapportDeps<'_>,
+) -> InducementsWaitTemplate {
+    let mr_id = page.mr_id.to_string();
+    let routes = &page.routes.match_report;
+    InducementsWaitTemplate {
+        app_routes: page.routes,
+        space_id: page.space_id.to_string(),
+        match_report_id: mr_id.clone(),
+        wait_url: routes.inducements_wait(page.space_id, &mr_id, &team_id.to_string()),
+        pre_match_url: routes.step2(page.space_id, &mr_id),
+        switch: admin_switch(page, pm, waited, deps).await,
+    }
+}
+
+/// Le lien vers la page de l'équipe attendue, pour l'admin seul.
+async fn admin_switch(
+    page: &PageRequest<'_>,
+    pm: &MatchReportPreMatch,
+    waited: &TeamId,
+    deps: &AccesRapportDeps<'_>,
+) -> Option<SwitchSideVm> {
+    let competition_id = pm.competition_id.to_string();
+    if !est_administrateur(deps, page.user, page.space_id, &competition_id).await {
+        return None;
+    }
+    let waited = waited.to_string();
+    let info = deps.team_data.find_team_info(&waited).await?;
+    let mr_id = page.mr_id.to_string();
+    Some(SwitchSideVm {
+        url: page
+            .routes
+            .match_report
+            .inducements(page.space_id, &mr_id, &waited),
+        team_name: info.team_name,
+    })
 }
 
 // ── Récapitulatif (carte 628) ─────────────────────────────────────────────────
@@ -255,7 +362,7 @@ async fn recap_page(
         coach_data: ctx.coach_data.as_ref(),
         catalog: ctx.reference_catalog.as_ref(),
     };
-    let recap = inducements_recap_service::build(pm, page.viewer, &ports).await;
+    let recap = inducements_recap_service::build(pm, page.user.id, &ports).await;
     recap_template(page, recap, can_cancel)
 }
 
@@ -347,22 +454,50 @@ pub async fn post_inducements(
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let (mr_id, team_id_vo) = match parse_path_ids(&match_report_id, &team_id) {
-        Ok(ids) => ids,
+    let cmd = match build_command(&match_report_id, &team_id, &form, user.id) {
+        Ok(cmd) => cmd,
         Err(r) => return r,
     };
-    let (purchases, mercenary_purchases) = match resolve_purchases_from_form(&form) {
-        Ok(v) => v,
-        Err(r) => return r,
+    let ids = PostIds {
+        space_id: &space_id,
+        match_report_id: &match_report_id,
+        team_id: &team_id,
     };
-    let cmd = RecordInducementsCommand {
+    match execute_command(cmd, &state).await {
+        Ok(outcome) => outcome_response(&ids, outcome),
+        Err(e) => record_error_response(&ids, e),
+    }
+}
+
+/// Les identifiants du chemin d'un `POST`, tels que la réponse les reprend.
+struct PostIds<'a> {
+    space_id: &'a str,
+    match_report_id: &'a str,
+    team_id: &'a str,
+}
+
+fn build_command(
+    match_report_id: &str,
+    team_id: &str,
+    form: &InducementsForm,
+    recorded_by: CoachId,
+) -> Result<RecordInducementsCommand, Response> {
+    let (mr_id, team_id_vo) = parse_path_ids(match_report_id, team_id)?;
+    let (purchases, mercenary_purchases) = resolve_purchases_from_form(form)?;
+    Ok(RecordInducementsCommand {
         match_report_id: mr_id,
         team_id: team_id_vo,
         purchases,
         mercenary_purchases,
-        recorded_by: user.id,
-    };
-    match record_inducements_use_case::execute(
+        recorded_by,
+    })
+}
+
+async fn execute_command(
+    cmd: RecordInducementsCommand,
+    state: &AppState,
+) -> Result<RecordInducementsOutcome, RecordInducementsError> {
+    record_inducements_use_case::execute(
         cmd,
         state.match_report.match_report_repo.as_ref(),
         state.match_report.team_data.as_ref(),
@@ -371,47 +506,52 @@ pub async fn post_inducements(
         &state.match_report.event_bus,
     )
     .await
-    {
-        Ok(RecordInducementsOutcome::RedirectToInducements { next_team_id }) => {
-            let url = AppRoutes::default().match_report.inducements(
-                &space_id,
-                &match_report_id,
-                &next_team_id,
-            );
-            Redirect::to(&url).into_response()
-        }
+}
+
+/// Où mène une validation : la page de l'outsider en « Je saisis tout », la
+/// page de l'équipe elle-même sinon — récapitulatif (R6), ou attente de
+/// l'outsider en « Chacun son équipe » (carte 655).
+fn outcome_response(ids: &PostIds<'_>, outcome: RecordInducementsOutcome) -> Response {
+    let next_team_id = match &outcome {
+        RecordInducementsOutcome::RedirectToInducements { next_team_id } => next_team_id.as_str(),
         // Décision 4 (carte 628) : la seconde validation mène au récapitulatif,
         // que sert la page des coups de pouce elle-même (R6).
-        Ok(RecordInducementsOutcome::RedirectToRecap) => {
-            let url = AppRoutes::default().match_report.inducements(
-                &space_id,
-                &match_report_id,
-                &team_id,
+        RecordInducementsOutcome::RedirectToRecap | RecordInducementsOutcome::AwaitOpponent => {
+            ids.team_id
+        }
+    };
+    let url = AppRoutes::default().match_report.inducements(
+        ids.space_id,
+        ids.match_report_id,
+        next_team_id,
+    );
+    Redirect::to(&url).into_response()
+}
+
+fn record_error_response(ids: &PostIds<'_>, e: RecordInducementsError) -> Response {
+    match e {
+        RecordInducementsError::NotFound => StatusCode::NOT_FOUND.into_response(),
+        RecordInducementsError::NotInPreMatchPhase => StatusCode::CONFLICT.into_response(),
+        RecordInducementsError::Conflict => conflict_response(),
+        e => refusal_response(ids, e),
+    }
+}
+
+fn refusal_response(ids: &PostIds<'_>, e: RecordInducementsError) -> Response {
+    match refus_d_achat(&e) {
+        Some((statut, message)) => {
+            tracing::warn!(
+                match_report_id = %ids.match_report_id,
+                team_id = %ids.team_id,
+                erreur = ?e,
+                "post_inducements refusé"
             );
-            Redirect::to(&url).into_response()
+            (statut, message).into_response()
         }
-        Err(record_inducements_use_case::RecordInducementsError::NotFound) => {
-            StatusCode::NOT_FOUND.into_response()
+        None => {
+            tracing::error!("post_inducements: {e:?}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
-        Err(record_inducements_use_case::RecordInducementsError::NotInPreMatchPhase) => {
-            StatusCode::CONFLICT.into_response()
-        }
-        Err(record_inducements_use_case::RecordInducementsError::Conflict) => conflict_response(),
-        Err(e) => match refus_d_achat(&e) {
-            Some((statut, message)) => {
-                tracing::warn!(
-                    match_report_id = %match_report_id,
-                    team_id = %team_id,
-                    erreur = ?e,
-                    "post_inducements refusé"
-                );
-                (statut, message).into_response()
-            }
-            None => {
-                tracing::error!("post_inducements: {e:?}");
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
-            }
-        },
     }
 }
 
@@ -573,22 +713,16 @@ mod tests {
         assert_eq!(message, "Le favori choisit ses coups de pouce en premier.");
     }
 
-    fn redirect_target(pm: &MatchReportPreMatch, team_id: &TeamId) -> Option<String> {
-        redirect_unless_turn_of(pm, team_id, &AppRoutes::default(), "SP", "MR")
-            .err()
-            .map(|r| {
-                assert_eq!(r.status(), StatusCode::SEE_OTHER);
-                r.headers()["location"].to_str().unwrap().to_string()
-            })
-    }
-
-    /// R9 : l'outsider dont le favori n'a pas validé est renvoyé chez lui.
+    /// R9 : en « Je saisis tout », l'outsider dont le favori n'a pas validé
+    /// est renvoyé chez lui.
     #[test]
     fn l_outsider_est_renvoye_vers_le_favori() {
         let pm = pre_match();
-        let target = redirect_target(&pm, &pm.away_team_id).expect("une redirection");
-        assert!(target.ends_with(&pm.home_team_id.to_string()), "{target}");
-        assert_eq!(redirect_target(&pm, &pm.home_team_id), None);
+        assert_eq!(
+            view_for(&pm, &pm.away_team_id),
+            InducementsView::RedirectTo(&pm.home_team_id)
+        );
+        assert_eq!(view_for(&pm, &pm.home_team_id), InducementsView::Purchase);
     }
 
     /// R7 : le favori qui a validé est renvoyé vers l'outsider.
@@ -596,21 +730,133 @@ mod tests {
     fn le_favori_qui_a_valide_est_renvoye_vers_l_outsider() {
         let mut pm = pre_match();
         pm.home_inducements = Some(vec![]);
-        let target = redirect_target(&pm, &pm.home_team_id).expect("une redirection");
-        assert!(target.ends_with(&pm.away_team_id.to_string()), "{target}");
-        assert_eq!(redirect_target(&pm, &pm.away_team_id), None);
+        assert_eq!(
+            view_for(&pm, &pm.home_team_id),
+            InducementsView::RedirectTo(&pm.away_team_id)
+        );
+        assert_eq!(view_for(&pm, &pm.away_team_id), InducementsView::Purchase);
     }
 
     /// R6 (carte 628) : les deux ont validé, chaque adresse sert le
-    /// récapitulatif — plus aucune redirection.
+    /// récapitulatif — plus aucune redirection, dans les deux modes.
     #[test]
     fn les_deux_ayant_valide_aucune_redirection() {
         let mut pm = pre_match();
         pm.home_inducements = Some(vec![]);
         pm.away_inducements = Some(vec![]);
-        assert_eq!(redirect_target(&pm, &pm.home_team_id), None);
-        assert_eq!(redirect_target(&pm, &pm.away_team_id), None);
-        assert_eq!(pm.inducements_turn(), InducementsTurn::BothRecorded);
+        assert_eq!(view_for(&pm, &pm.home_team_id), InducementsView::Recap);
+        assert_eq!(view_for(&pm, &pm.away_team_id), InducementsView::Recap);
+        pm.entry_mode = EntryMode::TeamEntry;
+        assert_eq!(view_for(&pm, &pm.away_team_id), InducementsView::Recap);
+    }
+
+    /// Carte 655 : en « Chacun son équipe », l'outsider attend le favori sur
+    /// sa propre page, puis achète quand le favori a fini.
+    #[test]
+    fn en_mode_b_l_outsider_attend_le_favori_chez_lui() {
+        let mut pm = pre_match();
+        pm.entry_mode = EntryMode::TeamEntry;
+        assert_eq!(
+            view_for(&pm, &pm.away_team_id),
+            InducementsView::Wait(&pm.home_team_id)
+        );
+        assert_eq!(view_for(&pm, &pm.home_team_id), InducementsView::Purchase);
+        pm.home_inducements = Some(vec![]);
+        assert_eq!(view_for(&pm, &pm.away_team_id), InducementsView::Purchase);
+    }
+
+    /// Carte 655, décision 1 : le favori qui a fini attend l'outsider chez lui.
+    #[test]
+    fn en_mode_b_le_favori_qui_a_fini_attend_l_outsider() {
+        let mut pm = pre_match();
+        pm.entry_mode = EntryMode::TeamEntry;
+        pm.home_inducements = Some(vec![]);
+        assert_eq!(
+            view_for(&pm, &pm.home_team_id),
+            InducementsView::Wait(&pm.away_team_id)
+        );
+    }
+
+    fn purchase_page(team_entry: bool) -> String {
+        InducementsTemplate {
+            app_routes: AppRoutes::default(),
+            space_id: "SP".into(),
+            match_report_id: "MR".into(),
+            team_id: "TM".into(),
+            team_name: "Nains de Fer".into(),
+            team_initials: "NF".into(),
+            order_label: "TopDog — achète en premier".into(),
+            budget: 100,
+            inducement_selector_url: "/selector".into(),
+            mercenary_selector_url: "/mercenaires".into(),
+            form_action: "/inducements/TM".into(),
+            team_entry,
+        }
+        .render()
+        .unwrap()
+    }
+
+    /// Carte 655 : en « Chacun son équipe », un seul bouton, « J'ai fini mes
+    /// achats », et la présence déclarée ; « Je saisis tout » ne change pas.
+    #[test]
+    fn en_mode_b_un_seul_bouton_j_ai_fini_mes_achats() {
+        let team_entry = purchase_page(true);
+        assert!(
+            team_entry.contains("J&#x27;ai fini mes achats")
+                || team_entry.contains("J'ai fini mes achats"),
+            "{team_entry}"
+        );
+        assert!(!team_entry.contains(r#"value="pass""#), "{team_entry}");
+        assert!(
+            team_entry.contains(r#"class="realtime-presence""#),
+            "{team_entry}"
+        );
+        let solo = purchase_page(false);
+        assert!(solo.contains(r#"value="pass""#), "{solo}");
+        assert!(solo.contains("Valider les achats"), "{solo}");
+        assert!(!solo.contains("fini mes achats"), "{solo}");
+        assert!(!solo.contains(r#"class="realtime-presence""#), "{solo}");
+    }
+
+    fn wait_page_html(switch: Option<SwitchSideVm>) -> String {
+        InducementsWaitTemplate {
+            app_routes: AppRoutes::default(),
+            space_id: "SP".into(),
+            match_report_id: "MR".into(),
+            wait_url: "/app/SP/match-report/MR/inducements/TM/wait".into(),
+            pre_match_url: "/app/SP/match-report/MR/step2".into(),
+            switch,
+        }
+        .render()
+        .unwrap()
+    }
+
+    /// La page d'attente déclare sa présence et recharge son widget sur le
+    /// signal du match ; seul l'admin peut passer à l'équipe attendue.
+    #[test]
+    fn la_page_d_attente_ecoute_le_match() {
+        let html = wait_page_html(None);
+        assert!(html.contains(r#"data-activity="write""#), "{html}");
+        assert!(html.contains("/inducements/TM/wait"), "{html}");
+        assert!(html.contains("matchChanged[detail.id=="), "{html}");
+        assert!(!html.contains("Saisir pour"), "{html}");
+        let admin = wait_page_html(Some(SwitchSideVm {
+            url: "/app/SP/match-report/MR/inducements/TD".into(),
+            team_name: "Nains de Fer".into(),
+        }));
+        assert!(admin.contains("Saisir pour Nains de Fer"), "{admin}");
+    }
+
+    fn viewer() -> User {
+        use crate::app::shared_kernel::identity::coach_name::CoachName;
+        use crate::app::shared_kernel::identity::email::Email;
+        User::new(
+            CoachId::new(),
+            CoachName::try_new("Testeur".to_string()).unwrap(),
+            None,
+            Email::try_new("testeur@example.com".to_string()).unwrap(),
+            String::new(),
+        )
     }
 
     fn recap_side(name: &str, is_topdog: bool) -> RecapSide {
@@ -627,10 +873,11 @@ mod tests {
 
     fn rendered_recap(can_cancel: bool) -> String {
         let mr_id = MatchReportId::new();
+        let user = viewer();
         let page = PageRequest {
             space_id: "SP",
             mr_id: &mr_id,
-            viewer: CoachId::new(),
+            user: &user,
             routes: AppRoutes::default(),
         };
         let recap = InducementsRecap {
@@ -656,5 +903,262 @@ mod tests {
         assert!(!without.contains("Annuler les coups de pouce"));
         assert!(!without.contains("/cancel-inducements"));
         assert!(without.contains("/live"));
+    }
+
+    // ── Fonctions de la carte 655 ────────────────────────────────────────────
+
+    use crate::app::match_report::use_cases::test_doubles::{NamedTeams, ReadyTeams};
+    use crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess;
+    use crate::app::shared_kernel::identity::ids::SpaceId;
+
+    fn page_of<'a>(user: &'a User, space_id: &'a str, mr_id: &'a MatchReportId) -> PageRequest<'a> {
+        PageRequest {
+            space_id,
+            mr_id,
+            user,
+            routes: AppRoutes::default(),
+        }
+    }
+
+    /// L'admin d'espace du `space_id` donné, et une équipe attendue nommée.
+    struct AdminCase {
+        user: User,
+        space_id: String,
+        mr_id: MatchReportId,
+        pm: MatchReportPreMatch,
+        admin: FakeAdminAccess,
+        teams: NamedTeams,
+    }
+
+    fn admin_case() -> AdminCase {
+        let user = viewer();
+        let space = SpaceId::new();
+        let pm = pre_match();
+        let teams = NamedTeams::default().named(&pm.away_team_id.to_string(), "Rats");
+        AdminCase {
+            admin: FakeAdminAccess::new().space_admin(&user.id, &space),
+            space_id: space.to_string(),
+            mr_id: MatchReportId::new(),
+            user,
+            pm,
+            teams,
+        }
+    }
+
+    async fn switch_of(case: &AdminCase, admin: &FakeAdminAccess) -> Option<SwitchSideVm> {
+        let page = page_of(&case.user, &case.space_id, &case.mr_id);
+        let deps = AccesRapportDeps {
+            admin_access: admin,
+            team_data: &case.teams,
+        };
+        admin_switch(&page, &case.pm, &case.pm.away_team_id, &deps).await
+    }
+
+    /// Décision 2 : l'admin peut passer à l'équipe attendue.
+    #[tokio::test]
+    async fn l_admin_peut_saisir_pour_l_equipe_attendue() {
+        let case = admin_case();
+        let switch = switch_of(&case, &case.admin)
+            .await
+            .expect("l'admin a son lien");
+        assert_eq!(switch.team_name, "Rats");
+        assert_eq!(
+            switch.url,
+            format!(
+                "/app/{}/match-report/{}/inducements/{}",
+                case.space_id, case.mr_id, case.pm.away_team_id
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn un_coach_qui_n_est_pas_admin_n_a_pas_le_lien() {
+        let case = admin_case();
+        assert!(switch_of(&case, &FakeAdminAccess::new()).await.is_none());
+    }
+
+    /// Une équipe que le port ne connaît pas : pas de lien sans nom.
+    #[tokio::test]
+    async fn une_equipe_inconnue_ne_donne_pas_de_lien() {
+        let mut case = admin_case();
+        case.teams = NamedTeams::default();
+        assert!(switch_of(&case, &case.admin).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn la_page_d_attente_charge_le_widget_de_son_equipe() {
+        let case = admin_case();
+        let page = page_of(&case.user, &case.space_id, &case.mr_id);
+        let none = FakeAdminAccess::new();
+        let deps = AccesRapportDeps {
+            admin_access: &none,
+            team_data: &case.teams,
+        };
+        let home = &case.pm.home_team_id;
+        let vm = wait_page(&page, &case.pm, home, &case.pm.away_team_id, &deps).await;
+        let base = format!("/app/{}/match-report/{}", case.space_id, case.mr_id);
+        assert_eq!(vm.wait_url, format!("{base}/inducements/{home}/wait"));
+        assert_eq!(vm.pre_match_url, format!("{base}/step2"));
+        assert!(vm.switch.is_none());
+    }
+
+    #[test]
+    fn la_route_d_attente_porte_l_equipe() {
+        let url = AppRoutes::default()
+            .match_report
+            .inducements_wait("SP", "MR", "TM");
+        assert_eq!(url, "/app/SP/match-report/MR/inducements/TM/wait");
+    }
+
+    #[test]
+    fn le_tour_d_une_autre_equipe_redirige_vers_sa_page() {
+        let user = viewer();
+        let mr_id = MatchReportId::new();
+        let turn = TeamId::new();
+        let response = redirect_to_team(&page_of(&user, "SP", &mr_id), &turn);
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(
+            response.headers()["location"],
+            format!("/app/SP/match-report/{mr_id}/inducements/{turn}").as_str()
+        );
+    }
+
+    fn location_after(outcome: RecordInducementsOutcome) -> String {
+        let ids = PostIds {
+            space_id: "SP",
+            match_report_id: "MR",
+            team_id: "MINE",
+        };
+        let response = outcome_response(&ids, outcome);
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        response.headers()["location"].to_str().unwrap().to_string()
+    }
+
+    /// Mode A : le favori va chez l'outsider ; la seconde validation et le
+    /// favori du mode B restent sur leur page (récapitulatif ou attente).
+    #[test]
+    fn chaque_issue_mene_a_la_bonne_page() {
+        let base = "/app/SP/match-report/MR/inducements";
+        let next = RecordInducementsOutcome::RedirectToInducements {
+            next_team_id: "OTHER".into(),
+        };
+        assert_eq!(location_after(next), format!("{base}/OTHER"));
+        assert_eq!(
+            location_after(RecordInducementsOutcome::RedirectToRecap),
+            format!("{base}/MINE")
+        );
+        assert_eq!(
+            location_after(RecordInducementsOutcome::AwaitOpponent),
+            format!("{base}/MINE")
+        );
+    }
+
+    fn status_of(e: RecordInducementsError) -> StatusCode {
+        let ids = PostIds {
+            space_id: "SP",
+            match_report_id: "MR",
+            team_id: "TM",
+        };
+        record_error_response(&ids, e).status()
+    }
+
+    #[test]
+    fn chaque_erreur_a_son_statut() {
+        assert_eq!(
+            status_of(RecordInducementsError::NotFound),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            status_of(RecordInducementsError::NotInPreMatchPhase),
+            StatusCode::CONFLICT
+        );
+        let refus =
+            RecordInducementsError::Domain(DomainError::UnknownInducement { uid: "X".into() });
+        assert_eq!(status_of(refus), StatusCode::UNPROCESSABLE_ENTITY);
+        let panne = RecordInducementsError::Repository("base".into());
+        assert_eq!(status_of(panne), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    /// La course perdue recharge la page, comme partout ailleurs (carte 653).
+    #[test]
+    fn un_conflit_d_ecriture_recharge_la_page() {
+        let ids = PostIds {
+            space_id: "SP",
+            match_report_id: "MR",
+            team_id: "TM",
+        };
+        let response = record_error_response(&ids, RecordInducementsError::Conflict);
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+        assert!(response.headers().contains_key("HX-Refresh"));
+    }
+
+    fn form(intent: &str, selection: &str) -> InducementsForm {
+        InducementsForm {
+            intent: intent.into(),
+            selection: selection.into(),
+            mercenaries: "[]".into(),
+        }
+    }
+
+    #[test]
+    fn la_commande_reprend_le_panier_et_l_auteur() {
+        let (mr_id, team) = (MatchReportId::new(), TeamId::new());
+        let author = CoachId::new();
+        let selection = r#"[{"uid":"BRIBES","qty":2}]"#;
+        let cmd = build_command(
+            &mr_id.to_string(),
+            &team.to_string(),
+            &form("validate", selection),
+            author,
+        )
+        .unwrap_or_else(|_| panic!("commande valide"));
+        assert_eq!(cmd.team_id, team);
+        assert_eq!(cmd.recorded_by, author);
+        assert_eq!(cmd.purchases.len(), 1);
+        assert_eq!(cmd.purchases[0].qty, 2);
+    }
+
+    /// « Passer » (mode A) ignore le panier : une liste vide, comme « J'ai fini »
+    /// panier vide en mode B.
+    #[test]
+    fn passer_vide_le_panier() {
+        let (mr_id, team) = (MatchReportId::new(), TeamId::new());
+        let selection = r#"[{"uid":"BRIBES","qty":2}]"#;
+        let cmd = build_command(
+            &mr_id.to_string(),
+            &team.to_string(),
+            &form("pass", selection),
+            CoachId::new(),
+        )
+        .unwrap_or_else(|_| panic!("commande valide"));
+        assert!(cmd.purchases.is_empty());
+    }
+
+    #[test]
+    fn un_identifiant_illisible_rend_400() {
+        let team = TeamId::new().to_string();
+        let refused = build_command("pas-un-id", &team, &form("validate", "[]"), CoachId::new());
+        match refused {
+            Err(response) => assert_eq!(response.status(), StatusCode::BAD_REQUEST),
+            Ok(_) => panic!("un identifiant illisible doit être refusé"),
+        }
+    }
+
+    /// Les valeurs déjà portées ne sont pas relues ; celles qui manquent le sont,
+    /// et une équipe que le port ignore reste sans valeur — rien n'est inventé.
+    #[tokio::test]
+    async fn les_valeurs_d_equipe_ne_sont_relues_que_si_elles_manquent() {
+        let mut pm = pre_match();
+        pm.home_team_value = Some(TeamValue::try_new(900).unwrap());
+        fill_team_values(&mut pm, &ReadyTeams).await;
+        assert_eq!(pm.home_team_value, Some(TeamValue::try_new(900).unwrap()));
+
+        pm.away_team_value = None;
+        fill_team_values(&mut pm, &ReadyTeams).await;
+        assert_eq!(pm.away_team_value, Some(TeamValue::try_new(1000).unwrap()));
+
+        pm.away_team_value = None;
+        fill_team_values(&mut pm, &NamedTeams::default()).await;
+        assert_eq!(pm.away_team_value, None);
     }
 }

@@ -5,6 +5,8 @@ use crate::app::match_report::domain::match_report_repository_port::{
     IMatchReportRepository, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::value_objects::EntryMode;
+use crate::app::match_report::use_cases::match_report_access_service::PorteeRapport;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::CoachId;
@@ -17,10 +19,14 @@ pub struct CancelInducementsCommand {
     pub cancelled_by: CoachId,
 }
 
-/// Où reprendre : le favori achète d'abord (R5).
+/// Où reprendre : le favori achète d'abord (R5). En « Chacun son équipe »,
+/// chacun reprend sur la page de son équipe (carte 655) : le mode et les deux
+/// équipes du match le permettent au contrôleur.
 #[derive(Debug)]
 pub struct CancelInducementsOutcome {
     pub topdog_team_id: TeamId,
+    pub entry_mode: EntryMode,
+    pub scope: PorteeRapport,
 }
 
 #[derive(Debug)]
@@ -65,9 +71,19 @@ pub async fn execute(
         .cancel_inducements(cmd.cancelled_by)
         .map_err(CancelInducementsError::Domain)?;
     persist_and_emit(repo, bus, &mr_id, events, pm.version).await?;
-    Ok(CancelInducementsOutcome {
-        topdog_team_id: updated.topdog_team_id().clone(),
-    })
+    Ok(outcome_of(&updated))
+}
+
+fn outcome_of(pm: &MatchReportPreMatch) -> CancelInducementsOutcome {
+    CancelInducementsOutcome {
+        topdog_team_id: pm.topdog_team_id().clone(),
+        entry_mode: pm.entry_mode,
+        scope: PorteeRapport {
+            competition_id: pm.competition_id.to_string(),
+            home_team_id: pm.home_team_id.to_string(),
+            away_team_id: pm.away_team_id.to_string(),
+        },
+    }
 }
 
 /// Un `PreMatch` seulement : un `ReadyToPublish` n'est **pas** converti par
@@ -218,5 +234,30 @@ mod tests {
             "{resultat:?}"
         );
         assert!(repo.appended().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod outcome_tests {
+    use super::*;
+    use crate::app::match_report::domain::value_objects::EntryMode;
+    use crate::app::match_report::domain::value_objects::TeamValue;
+    use crate::app::match_report::use_cases::test_doubles::pre_match;
+
+    /// Carte 655 : l'issue porte le mode et la portée du match — c'est sur eux
+    /// que le contrôleur décide où chaque coach reprend.
+    #[test]
+    fn l_issue_porte_le_favori_le_mode_et_la_portee() {
+        let mut pm = pre_match();
+        pm.entry_mode = EntryMode::TeamEntry;
+        pm.away_team_value = Some(TeamValue::try_new(1200).unwrap());
+
+        let outcome = outcome_of(&pm);
+
+        assert_eq!(outcome.topdog_team_id, pm.away_team_id);
+        assert_eq!(outcome.entry_mode, EntryMode::TeamEntry);
+        assert_eq!(outcome.scope.competition_id, pm.competition_id.to_string());
+        assert_eq!(outcome.scope.home_team_id, pm.home_team_id.to_string());
+        assert_eq!(outcome.scope.away_team_id, pm.away_team_id.to_string());
     }
 }

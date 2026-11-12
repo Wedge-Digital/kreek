@@ -1,0 +1,57 @@
+{# L'attente de l'autre équipe, en « Chacun son équipe » (carte 655) : rechargée
+   sur le signal du match, en lecture seule. #}
+<div class="inducements-wait" hx-disinherit="*">
+  <div class="inducements-wait-notice">
+    <div class="inducements-wait-title">
+      {% if !waited_has_rolled %}
+      {{ waited_label }} n'a pas encore lancé son fan factor
+      {% else %}
+      {% if waited_coach.is_some() %}{{ waited_label }} achète ses coups de pouce{% else %}{{ waited_team_name }} : coups de pouce en cours{% endif %}
+      {% endif %}
+    </div>
+    <div class="inducements-wait-text">
+      {% if own_is_done %}
+      Vos coups de pouce sont validés. Le récapitulatif des deux équipes s'ouvrira de lui-même dès que ceux de {{ waited_team_name }} le seront.
+      {% else %}
+      Votre budget — différence de VE, dépenses de {{ waited_team_name }} et trésorerie — dépend de ses achats : vous achèterez dès qu'ils seront validés. Cette page s'ouvrira d'elle-même.
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="inducements-wait-card">
+    <div class="inducements-wait-card-title">Votre avant-match</div>
+    <div class="inducements-wait-row">
+      {% if let Some(ff) = own_fan_factor %}
+      <span class="inducements-wait-status inducements-wait-status--done">&#10003;</span>
+      <span>Fan factor</span>
+      <span class="inducements-wait-detail">{{ ff.dedicated_fans }} + {{ ff.roll }} = {{ ff.total }}</span>
+      {% else %}
+      <span class="inducements-wait-status">&#8230;</span>
+      <span>Fan factor</span>
+      <span class="inducements-wait-detail">à lancer</span>
+      {% endif %}
+    </div>
+    <div class="inducements-wait-row">
+      {% if waited_has_rolled %}
+      <span class="inducements-wait-status"><span class="inducements-wait-live-dot"></span>en cours</span>
+      {% else %}
+      <span class="inducements-wait-status">&#8230;</span>
+      {% endif %}
+      <span>Coups de pouce de {{ waited_team_name }}</span>
+      {% if let Some(coach) = waited_coach %}
+      <span class="inducements-wait-detail">{{ coach }}</span>
+      {% endif %}
+    </div>
+    <div class="inducements-wait-row">
+      {% if own_is_done %}
+      <span class="inducements-wait-status inducements-wait-status--done">&#10003;</span>
+      <span>Vos coups de pouce</span>
+      <span class="inducements-wait-detail">validés</span>
+      {% else %}
+      <span class="inducements-wait-status">&#8230;</span>
+      <span>Vos coups de pouce</span>
+      <span class="inducements-wait-detail">après {{ waited_label }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>

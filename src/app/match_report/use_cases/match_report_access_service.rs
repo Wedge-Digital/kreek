@@ -33,6 +33,7 @@ impl<'a> AccesRapportDeps<'a> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct PorteeRapport {
     pub competition_id: String,
     pub home_team_id: String,

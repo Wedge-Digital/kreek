@@ -1,0 +1,42 @@
+/* L'attente de l'autre équipe, en « Chacun son équipe » (carte 655) : qui est
+   attendu, puis l'avant-match du coach replié sur trois lignes (maquette B1b,
+   app-mobile-duo-wait.html). */
+.inducements-wait {
+  display: flex; flex-direction: column; gap: var(--p2);
+}
+.inducements-wait .inducements-wait-notice {
+  display: flex; flex-direction: column; gap: 4px; padding: var(--p1);
+  background: var(--white); border-left: 4px solid var(--main-blue); border-radius: 12px;
+}
+.inducements-wait .inducements-wait-title {
+  font-weight: 700; font-size: var(--text-small); color: var(--dark-1);
+}
+.inducements-wait .inducements-wait-text {
+  font-size: var(--text-tiny); color: var(--dark-2);
+}
+.inducements-wait .inducements-wait-card {
+  display: flex; flex-direction: column; gap: var(--p1);
+  padding: var(--p2); background: var(--white); border-radius: 12px;
+}
+.inducements-wait .inducements-wait-card-title {
+  font-weight: 700; font-size: var(--text-small); color: var(--dark-1);
+}
+.inducements-wait .inducements-wait-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: var(--text-tiny); color: var(--dark-1);
+}
+.inducements-wait .inducements-wait-detail {
+  margin-left: auto; color: var(--dark-2);
+}
+.inducements-wait .inducements-wait-status {
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  border-radius: 20px; padding: 3px 10px;
+  background: rgba(0,48,73,0.10); color: var(--main-blue);
+}
+.inducements-wait .inducements-wait-status--done {
+  background: rgba(98,149,132,0.15); color: var(--green);
+}
+.inducements-wait .inducements-wait-live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--orange);
+  display: inline-block; margin-right: 4px; vertical-align: 1px;
+}

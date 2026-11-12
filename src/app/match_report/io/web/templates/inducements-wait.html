@@ -1,0 +1,35 @@
+{% extends "app-layout.html" %}
+{% import "match_report/steps-indicator.html" as steps %}
+
+{% block content %}
+{# L'attente de l'autre équipe, en « Chacun son équipe » (carte 655) : la page
+   se déclare au canal temps réel, et son widget se recharge sur le signal du
+   match. Quand vient le tour de l'équipe, il rouvre la page sur ses achats. #}
+<div class="realtime-presence" data-space="{{ space_id }}" data-match="{{ match_report_id }}" data-activity="write" hidden></div>
+
+<div class="mr-container match-report-inducements">
+
+  <div class="mr-header">
+    <div class="mr-header-icon">&#128722;</div>
+    <div class="mr-header-title">Coups de pouce</div>
+    <div class="mr-header-sub">Achetez des inducements pour rééquilibrer le match</div>
+  </div>
+
+  {% call steps::indicator(1) %}{% endcall %}
+
+  <div class="mr-inducements-wait"
+       hx-get="{{ wait_url }}"
+       hx-trigger="load, matchChanged[detail.id=='{{ match_report_id }}'] from:body, realtimeResync from:body"
+       hx-target="this"
+       hx-swap="innerHTML">
+  </div>
+
+  <div class="mr-actions">
+    <a href="{{ pre_match_url }}" class="btn-outline-sm">&#8592; Avant-match</a>
+    {% if let Some(sw) = switch %}
+    <a href="{{ sw.url }}" class="btn-outline-sm">Saisir pour {{ sw.team_name }}</a>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

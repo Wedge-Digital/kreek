@@ -532,6 +532,13 @@
 "test_match_report_team_pre_match" = ["match_report", "players", "competitions", "teams",
                                       "auth", "spaces", "references", "team_creation"]
 
+# Le favori a fini ses achats (carte 655, épic E22) : l'outsider attend, puis
+# sa page s'ouvre au signal du match. La fixture traverse la construction de
+# compétition ; l'attente nomme le coach par `teams` et `auth`, et la page
+# d'achat charge les sélecteurs de `references`.
+"test_match_report_team_inducements" = ["match_report", "players", "competitions", "teams",
+                                        "auth", "spaces", "references", "team_creation"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni

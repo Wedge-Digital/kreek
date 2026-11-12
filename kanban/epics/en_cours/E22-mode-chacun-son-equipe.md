@@ -1,6 +1,6 @@
 # E22 — Le mode « Chacun son équipe »
 
-**État :** `en_cours` — 10 cartes, 652 à 661 ; 3 faites (652, 653, 654). Découpage validé le 2026-11-01 ;
+**État :** `en_cours` — 10 cartes, 652 à 661 ; 4 faites (652 à 655). Découpage validé le 2026-11-01 ;
 cadrage et décisions le 2026-11-11.
 **Cadrage :** `docs/specs/saisie-mobile/E22-cadrage.md`. Née le 2026-11-01 des
 maquettes mobiles. Dépend de E19 (camp du coach courant), E20 (annulation des

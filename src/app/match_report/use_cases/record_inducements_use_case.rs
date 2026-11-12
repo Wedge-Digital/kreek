@@ -5,7 +5,7 @@ use crate::app::match_report::domain::match_report_repository_port::{
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
-    AllowedInducementSpec, IsStarPlayer, RosterPositionUid, TeamValue,
+    AllowedInducementSpec, EntryMode, IsStarPlayer, RosterPositionUid, TeamValue,
 };
 use crate::app::match_report::ports::{
     ICompetitionDataPort, IPlayerDataPort, ITeamDataPort, PositionCountDto, RosterPositionDto,
@@ -86,6 +86,10 @@ pub enum RecordInducementsOutcome {
     /// La seconde validation mène au récapitulatif des deux camps (carte
     /// 628, décision 4), servi par la page des coups de pouce elle-même (R6).
     RedirectToRecap,
+    /// En « Chacun son équipe », le favori qui a fini ses achats attend
+    /// l'outsider sur sa propre page (carte 655) : celle de l'outsider ne lui
+    /// est pas ouverte.
+    AwaitOpponent,
 }
 
 #[derive(Debug)]
@@ -546,7 +550,11 @@ fn collect_opponent_star_uids(pm: &MatchReportPreMatch, team_id: &TeamId) -> Vec
 }
 
 fn route_outcome(pm: &MatchReportPreMatch, team_id: &TeamId) -> RecordInducementsOutcome {
-    if pm.topdog_team_id() == team_id {
+    let is_topdog = pm.topdog_team_id() == team_id;
+    if is_topdog && pm.entry_mode == EntryMode::TeamEntry {
+        return RecordInducementsOutcome::AwaitOpponent;
+    }
+    if is_topdog {
         RecordInducementsOutcome::RedirectToInducements {
             next_team_id: pm.underdog_team_id().to_string(),
         }
@@ -664,6 +672,21 @@ mod tests {
     #[test]
     fn route_outcome_sends_underdog_to_recap() {
         let pm = make_pm(1000, 900);
+        assert!(matches!(
+            route_outcome(&pm, pm.underdog_team_id()),
+            RecordInducementsOutcome::RedirectToRecap
+        ));
+    }
+
+    /// Carte 655 : en « Chacun son équipe », le favori reste chez lui.
+    #[test]
+    fn route_outcome_keeps_the_team_entry_topdog_on_its_own_page() {
+        let mut pm = make_pm(1000, 900);
+        pm.entry_mode = EntryMode::TeamEntry;
+        assert!(matches!(
+            route_outcome(&pm, pm.topdog_team_id()),
+            RecordInducementsOutcome::AwaitOpponent
+        ));
         assert!(matches!(
             route_outcome(&pm, pm.underdog_team_id()),
             RecordInducementsOutcome::RedirectToRecap
