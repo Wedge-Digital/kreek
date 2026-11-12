@@ -30,6 +30,9 @@
 #      `tests/e2e/e2e_lock.py`. Refus immédiat, pas d'attente.
 set -euo pipefail
 
+# Un arrêt par `set -e` est muet ; celui-ci dit au moins où il a eu lieu.
+trap 'echo "reset_e2e_db : arrêt ligne $LINENO (code $?)" >&2' ERR
+
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RACINE"
 
@@ -41,7 +44,11 @@ if [ "${KREEK_E2E_LOCK_HELD:-}" != "exclusive" ]; then
   exec python3 tests/e2e/e2e_lock.py exclusive -- "$0" "$@"
 fi
 
+# Un fichier absent n'est pas une erreur : la CI n'a pas de `.env.dev`. Sans ce
+# test, `grep` y rend 2, `pipefail` le propage et `set -e` arrête le script
+# sans un mot — c'est ce qui a fait échouer la CI après la carte 641.
 lire_url() {
+  [ -f "$1" ] || return 0
   grep -E '^DATABASE__URL=' "$1" 2>/dev/null | head -1 | cut -d= -f2- | tr -d "\"'"
 }
 
