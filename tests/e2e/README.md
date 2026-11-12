@@ -18,8 +18,11 @@ rendu HTML/HTMX/Alpine réellement produit dans un navigateur.
 - `.env.e2e` porte la base `kreek_e2e`, `SERVER__PORT=3211` et
   `BYPASS_AUTH=true`. Le serveur e2e sert le **jeu de démonstration**
   (`assets/references.example`) : rosters Granitiers, Zéphyriens et Lanterniers.
-- La base e2e contient le seed de la suite : `make init_e2e_db` la remet à zéro
-  et la peuple, `make seed_e2e` peuple sans rien effacer. Le seed crée un space
+- La base e2e contient le seed de la suite. **`make e2e` la vide et la
+  reseede avant chaque suite complète** (`make reset_e2e_db`, carte 641), sous
+  le serveur vivant et sans le redémarrer. `uv run pytest fichier.py` lancé seul
+  ne vide rien. `make init_e2e_db` détruit et recrée la base (recours pour un
+  schéma cassé), `make seed_e2e` peuple sans rien effacer. Le seed crée un space
   « Espace E2E », le coach `DevCoach` (celui que `BYPASS_AUTH` connecte, repéré
   par son nom) et onze autres coachs. Entièrement synthétique et idempotent.
 - `uv` installé.
@@ -39,7 +42,16 @@ cd tests/e2e
 uv run pytest -v
 ```
 
-Ou depuis la racine : `make e2e`.
+Ou depuis la racine : `make e2e`, qui part d'une base remise à zéro.
+
+### Le verrou de la base e2e
+
+Tous les worktrees partagent la base e2e et son serveur. Chaque session pytest
+tient un verrou **partagé** sur la base (`tests/e2e/e2e_lock.py`, fichier
+`/tmp/kreek-e2e-<hôte>-<port>-<base>.lock`) ; la remise à zéro le demande en
+**exclusif** et refuse aussitôt s'il est pris : « une autre suite e2e utilise
+la base ». Plusieurs sessions pytest tournent ensemble sans se gêner ; une
+session qui démarre pendant une remise à zéro l'attend.
 
 ## Configuration
 

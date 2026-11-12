@@ -35,7 +35,9 @@ Les tests e2e ne démarrent pas le serveur (cf. `tests/e2e/README.md`) :
 - serveur de la suite lancé : `make e2e-server` — port 3211, base `kreek_e2e`,
   jeu de démonstration et `BYPASS_AUTH=true`, à côté du serveur de travail
   (port 3210) ;
-- base e2e seedée : `make init_e2e_db` (remise à zéro) ou `make seed_e2e`.
+- base e2e seedée : `make e2e` la vide et la reseede lui-même avant la suite
+  complète (carte 641) ; une sélection lancée par `uv run pytest` ne vide rien
+  — `make reset_e2e_db` si on veut partir d'une base propre.
 
 Ne jamais démarrer ni redémarrer ce serveur soi-même (règle 8 du CLAUDE.md).
 Vérifier qu'il répond, sinon demander à l'utilisateur de le lancer.

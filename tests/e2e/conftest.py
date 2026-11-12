@@ -26,8 +26,42 @@ _SPACE_ENTRY_RE = re.compile(
 )
 
 
+# Une remise à zéro dure quelques secondes ; une compilation que le seed attend
+# peut en prendre davantage. Au-delà, c'est qu'elle est bloquée.
+_ATTENTE_REMISE_A_ZERO_S = 300
+
+
 @pytest.fixture(scope="session", autouse=True)
-def _server_is_running():
+def _e2e_database_shared_lock():
+    """Verrou partagé sur la base e2e, tenu toute la session (carte 641).
+
+    `make e2e` vide la base avant chaque suite complète, et tous les worktrees
+    partagent cette base. Ce verrou empêche de la vider sous une session en
+    cours : la remise à zéro le demande en exclusif, et refuse s'il est pris.
+
+    Une fixture de session plutôt qu'une prise au chargement de `conftest.py` :
+    la collecte seule (`pytest --collect-only`) ne touche pas la base et n'a pas
+    à bloquer une remise à zéro, et le relâchement en fin de session se lit
+    ici, à côté de la prise. Les autres fixtures de session en dépendent par
+    `_server_is_running`, la première à interroger le serveur.
+    """
+    import os
+
+    from e2e_lock import acquire_shared, lock_path
+
+    fd = acquire_shared(_ATTENTE_REMISE_A_ZERO_S)
+    if fd is None:
+        pytest.exit(
+            f"La base e2e est en cours de remise à zéro depuis plus de "
+            f"{_ATTENTE_REMISE_A_ZERO_S} s (verrou {lock_path()}).",
+            returncode=2,
+        )
+    yield
+    os.close(fd)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _server_is_running(_e2e_database_shared_lock):
     try:
         urllib.request.urlopen(BASE_URL, timeout=2)
     except urllib.error.URLError as exc:

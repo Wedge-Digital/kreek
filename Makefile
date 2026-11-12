@@ -40,7 +40,7 @@ PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
 .PHONY: dev dev-demo e2e-server test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db lint check-arch coverage analyze help
+        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 #
@@ -117,7 +117,12 @@ e2e-server: ## Serveur de la suite e2e — port 3211, base kreek_e2e, à côté 
 test: reset_test_db ## Lance les tests (utilise .env.test)
 	DATABASE_URL="$(TEST_DB_URL)" cargo test
 
-e2e: ## Lance les tests E2E Playwright (nécessite `make e2e-server`, port 3211)
+# Chaque suite complète part d'une base vidée et reseedée (carte 641) : sur une
+# base qui accumulait les passages, la suite était passée de 8 à 22 minutes.
+# Sous le serveur vivant, sans le redémarrer — cf. `scripts/reset_e2e_db.sh`.
+# Tourne aussi en CI, sur une base déjà neuve : c'est ce qui éprouve ce chemin
+# à chaque push. `uv run pytest fichier.py` seul ne vide rien.
+e2e: reset_e2e_db ## Lance les tests E2E Playwright sur une base remise à zéro (nécessite `make e2e-server`, port 3211)
 	cd tests/e2e && uv run pytest -v
 
 # Filtre LOCAL de productivité : n'exécute que les tests e2e susceptibles
@@ -256,8 +261,15 @@ seed_accounts: ## Seed les comptes dev (scripts/seed_accounts.json)
 seed_e2e: ## Seed synthétique de la base e2e (space + 12 coachs, idempotent)
 	EXEC_PROFILE=e2e cargo run -- seed-e2e
 
-# Remet la base e2e à zéro puis la peuple. Le binaire applique les migrations
-# au démarrage, `seed_e2e` compris.
+# Vide la base e2e (toutes les tables sauf les registres de migrations) et la
+# reseede, sous le serveur e2e vivant. Refuse si une session pytest tient la
+# base. Préalable de `make e2e`.
+reset_e2e_db: ## Vide et reseede la base e2e, serveur e2e vivant (cf. carte 641)
+	@./scripts/reset_e2e_db.sh
+
+# Détruit et recrée la base e2e, puis la peuple. Le binaire applique les
+# migrations au démarrage, `seed_e2e` compris. Recours pour un schéma cassé ;
+# le nettoyage courant, c'est `reset_e2e_db`.
 init_e2e_db: ## Remet la base e2e (kreek_e2e) à zéro et la peuple
 	$(call refuser_si_distant,$(E2E_DB_URL))
 	DATABASE_URL="$(E2E_DB_URL)" sqlx database reset -y -f
