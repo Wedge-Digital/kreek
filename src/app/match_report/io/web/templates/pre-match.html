@@ -2,6 +2,11 @@
 {% import "match_report/steps-indicator.html" as steps %}
 
 {% block content %}
+{% if let Some(te) = team_entry %}
+{# « Chacun son équipe » (carte 654) : l'avant-match d'un camp se déclare au
+   canal temps réel, pour recevoir le jet de l'adversaire. #}
+<div class="realtime-presence" data-space="{{ space_id }}" data-match="{{ match_report_id }}" data-activity="write" hidden></div>
+{% endif %}
 
 <div class="mr-container match-report-step1 match-report-pre-match"
      x-data="{
@@ -15,21 +20,28 @@
        // « NaN » à la place du total.
        get homeTotal() { return this.home && this.homeRoll !== '' ? this.home.dedicated_fans + parseInt(this.homeRoll) : '-'; },
        get awayTotal() { return this.away && this.awayRoll !== '' ? this.away.dedicated_fans + parseInt(this.awayRoll) : '-'; },
+       // Les valeurs figées au premier fan factor de « Chacun son équipe »
+       // (R4, carte 654), lues dans l'agrégat ; sinon celles du moment.
+       frozen: {% if let Some(v) = frozen_values %}{ home: {{ v.home }}, away: {{ v.away }} }{% else %}null{% endif %},
+       tv(side) {
+         if (this.frozen) return this.frozen[side];
+         return this[side] ? this[side].ctv : null;
+       },
        get tvDiff() {
          if (!this.home || !this.away) return 0;
-         return Math.abs(this.home.ctv - this.away.ctv);
+         return Math.abs(this.tv('home') - this.tv('away'));
        },
        get richerTeamName() {
-         if (!this.home || !this.away || this.home.ctv === this.away.ctv) return null;
-         return this.home.ctv > this.away.ctv ? this.home.team_name : this.away.team_name;
+         if (!this.home || !this.away || this.tv('home') === this.tv('away')) return null;
+         return this.tv('home') > this.tv('away') ? this.home.team_name : this.away.team_name;
        },
        get poorerTeam() {
          if (!this.home || !this.away) return null;
-         return this.home.ctv < this.away.ctv ? this.home : this.away;
+         return this.tv('home') < this.tv('away') ? this.home : this.away;
        },
        get richerTeam() {
          if (!this.home || !this.away) return null;
-         return this.home.ctv >= this.away.ctv ? this.home : this.away;
+         return this.tv('home') >= this.tv('away') ? this.home : this.away;
        },
        // La valeur, telle quelle. La version d'origine voulait une espace de
        // milliers et **recomposait** le nombre depuis les milliers et les
@@ -97,6 +109,46 @@
     <div class="mr-card">
       <div class="mr-card-title">&#127922; Fan Factor</div>
 
+      {% if let Some(te) = team_entry %}
+      {# Son jet en saisie, celui de l'adversaire en lecture seule (carte 654). #}
+      <div class="mr-fan-section">
+        <div class="mr-fan-row">
+          <span class="mr-fan-team">{{ te.own_team_name }}</span>
+          <span class="mr-fan-dedicated">
+            Fans :&#32;<span x-text="{{ te.side }} ? {{ te.side }}.dedicated_fans : '…'"></span>
+          </span>
+          <span class="mr-fan-plus">+</span>
+          <div class="mr-fan-dice">
+            {% if let Some(roll) = te.own_roll %}
+            <span class="mr-fan-dice-value">{{ roll }}</span>
+            {% else %}
+            <input type="number" class="mr-fan-dice-input"
+                   name="fan_roll" min="1" max="3"
+                   x-model="{{ te.side }}Roll" required>
+            {% endif %}
+            <span class="mr-fan-dice-label">D3</span>
+          </div>
+          <span class="mr-fan-equals">=</span>
+          {% if let Some(total) = te.own_total %}
+          <span class="mr-fan-total">{{ total }}</span>
+          {% else %}
+          <span class="mr-fan-total" x-text="{{ te.side }}Total"></span>
+          {% endif %}
+        </div>
+        <div class="mr-opponent-fan-factor"
+             hx-get="{{ te.opponent_url }}"
+             hx-trigger="load, matchChanged[detail.id=='{{ match_report_id }}'] from:body, realtimeResync from:body"
+             hx-target="this"
+             hx-swap="innerHTML">
+        </div>
+      </div>
+      {% if te.own_roll.is_some() %}
+      <div class="mr-fan-recorded">
+        <span>&#9989;</span>
+        <span>Votre fan factor est enregistré.</span>
+      </div>
+      {% endif %}
+      {% else %}
       {% if fan_factor_already_recorded %}
       <div class="mr-fan-recorded">
         <span>&#9989;</span>
@@ -137,6 +189,7 @@
           <span class="mr-fan-total" x-text="awayTotal"></span>
         </div>
       </div>
+      {% endif %}
     </div>
 
     <!-- Journaliers -->
@@ -207,11 +260,11 @@
       <div class="mr-tv-section">
         <div class="mr-tv-row">
           <span class="mr-tv-team">{{ home_team_name }}</span>
-          <span class="mr-tv-value" x-text="formatKpo(home ? home.ctv : null)"></span>
+          <span class="mr-tv-value" x-text="formatKpo(tv('home'))"></span>
         </div>
         <div class="mr-tv-row">
           <span class="mr-tv-team">{{ away_team_name }}</span>
-          <span class="mr-tv-value" x-text="formatKpo(away ? away.ctv : null)"></span>
+          <span class="mr-tv-value" x-text="formatKpo(tv('away'))"></span>
         </div>
         <template x-if="home && away && tvDiff === 0">
           <div class="mr-tv-diff mr-tv-diff--equal">
@@ -270,7 +323,18 @@
     <div class="mr-actions">
       <a href="{{ app_routes.match_report.edit_match_report(space_id.as_str(), match_report_id.as_str()) }}"
          class="btn-outline-sm">&#8592; Retour</a>
+      {% if let Some(te) = team_entry %}
+      {% if let Some(sw) = te.switch %}
+      <a href="{{ sw.url }}" class="btn-outline-sm">Saisir pour {{ sw.team_name }}</a>
+      {% endif %}
+      {% if let Some(url) = te.next_url %}
+      <a href="{{ url }}" class="btn-primary-sm">Continuer &#8594;</a>
+      {% else %}
       <button type="submit" class="btn-primary-sm">Enregistrer et continuer &#8594;</button>
+      {% endif %}
+      {% else %}
+      <button type="submit" class="btn-primary-sm">Enregistrer et continuer &#8594;</button>
+      {% endif %}
     </div>
 
   </form>

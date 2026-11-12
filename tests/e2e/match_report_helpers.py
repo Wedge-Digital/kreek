@@ -128,6 +128,46 @@ def ensure_inducements(space_id, mr_id, via=None):
         location = resp.headers.get("Location", "")
 
 
+# Le membre simple de la suite : coach de la deuxième équipe que monte
+# `build_full_competition`, DevCoach tenant la première.
+PROFIL_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
+
+
+def record_team_fan_factor(space_id, mr_id, side, roll, headers=None):
+    """Le jet d'un camp, en « Chacun son équipe » (carte 654) : `POST
+    /step2/{side}`, le camp dans la route. Rend la réponse, non suivie."""
+    return requests.post(
+        f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2/{side}",
+        data={"fan_roll": str(roll)},
+        headers=headers or {},
+        allow_redirects=False,
+        timeout=30,
+    )
+
+
+def ensure_team_entry_inducements(space_id, mr_id):
+    """`ensure_inducements` en « Chacun son équipe » (carte 654) : chaque
+    coach lance son jet — DevCoach le domicile, le membre simple l'extérieur —,
+    puis les coups de pouce sont passés, le favori d'abord.
+
+    Chaque jet mène aux coups de pouce de son équipe. On ne sait pas d'avance
+    laquelle est le favori : une page refusée — l'outsider avant le favori —
+    est retentée une fois que l'autre est passée."""
+    pages = []
+    for side, roll, headers in (("home", 2, None), ("away", 3, PROFIL_SIMPLE)):
+        resp = record_team_fan_factor(space_id, mr_id, side, roll, headers)
+        assert resp.status_code in (302, 303), f"fan factor {side}: {resp.status_code}"
+        pages.append(resp.headers.get("Location", ""))
+    pending = [page for page in pages if "/inducements/" in page]
+    for _ in range(2):
+        pending = [
+            page for page in pending
+            if requests.post(f"{BASE_URL}{page}", data={"selection": ""}, allow_redirects=False).status_code
+            not in (302, 303)
+        ]
+    assert not pending, f"coups de pouce non passés : {pending}"
+
+
 def start_match(space_id, ctx, round_id, home, away, via=None) -> str:
     """Un rapport démarré, coups de pouce passés — ramené de
     `test_realtime_direct.py` (carte 647). `via` : qui le démarre — par

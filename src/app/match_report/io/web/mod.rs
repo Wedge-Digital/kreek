@@ -11,6 +11,7 @@ pub mod pre_match_controller;
 pub mod recap_controller;
 pub mod record_action_controller;
 pub mod step5_controller;
+pub mod team_pre_match_controller;
 #[cfg(test)]
 pub mod tests;
 pub mod view_models;

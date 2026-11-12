@@ -1,13 +1,14 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::{
-    first_side_without_mvp, MatchReportPreMatch,
+    first_side_without_mvp, MatchReportPreMatch, TeamFanFactor,
 };
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::mvp_draw::DrawnMvp;
 use crate::app::match_report::domain::value_objects::{
-    D3Roll, DedicatedFans, EntryMode, FanFactorMod, InducementPurchase, InducementSpending,
-    MatchAction, MatchGain, MatchReportOrigin, TeamSide, TempPlayer, TempPlayerKind,
+    D3Roll, DedicatedFans, EntryMode, FanFactorAuthors, FanFactorMod, InducementPurchase,
+    InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TeamSide, TempPlayer,
+    TempPlayerKind,
 };
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -41,6 +42,9 @@ pub struct MatchReportReadyToPublish {
     /// l'avant-match et gardé au rejeu.
     pub home_inducements_recorded_by: Option<CoachId>,
     pub away_inducements_recorded_by: Option<CoachId>,
+    /// Qui a lancé le fan factor de chaque camp, en « Chacun son équipe »
+    /// (carte 654). Vide en « Je saisis tout ».
+    pub fan_factor_recorded_by: FanFactorAuthors,
     /// Ce que les coups de pouce coûtent à chaque trésorerie. Figé ici, parce
     /// que l'écart de valeur d'équipe qui sert à le calculer ne survit pas au
     /// pré-match.
@@ -75,6 +79,30 @@ pub struct MatchReportReadyToPublish {
 }
 
 impl MatchReportReadyToPublish {
+    /// Le rejeu d'un `TeamFanFactorRecorded` (carte 654), comme celui de
+    /// `FanFactorRecorded` : le jet et les fans du seul camp.
+    pub(crate) fn apply_team_fan_factor(
+        mut self,
+        fan_factor: TeamFanFactor,
+        recorded_by: CoachId,
+    ) -> Self {
+        match fan_factor.side {
+            TeamSide::Home => {
+                self.home_fan_roll = Some(fan_factor.roll);
+                self.home_dedicated_fans = fan_factor.dedicated_fans;
+            }
+            TeamSide::Away => {
+                self.away_fan_roll = Some(fan_factor.roll);
+                self.away_dedicated_fans = fan_factor.dedicated_fans;
+            }
+        }
+        self.fan_factor_recorded_by = self
+            .fan_factor_recorded_by
+            .with(fan_factor.side, recorded_by);
+        self.version += 1;
+        self
+    }
+
     /// Annule un rapport intégralement saisi mais non publié : ni classement ni
     /// trésorerie n'en sont sortis, et le verrou de saisie des deux équipes est
     /// à défaire.
@@ -143,6 +171,7 @@ impl MatchReportReadyToPublish {
             away_inducements: pm.away_inducements.clone(),
             home_inducements_recorded_by: pm.home_inducements_recorded_by,
             away_inducements_recorded_by: pm.away_inducements_recorded_by,
+            fan_factor_recorded_by: pm.fan_factor_recorded_by,
             home_inducement_spending: InducementSpending::new(
                 pm.treasury_spending_for(&pm.home_team_id),
             ),
@@ -194,6 +223,7 @@ impl MatchReportReadyToPublish {
             away_inducements: self.away_inducements,
             home_inducements_recorded_by: self.home_inducements_recorded_by,
             away_inducements_recorded_by: self.away_inducements_recorded_by,
+            fan_factor_recorded_by: self.fan_factor_recorded_by,
             star_engagements: self.star_engagements,
             home_temp_players: self.home_temp_players,
             away_temp_players: self.away_temp_players,
@@ -296,6 +326,7 @@ mod tests {
             away_inducements: None,
             home_inducements_recorded_by: None,
             away_inducements_recorded_by: None,
+            fan_factor_recorded_by: Default::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],

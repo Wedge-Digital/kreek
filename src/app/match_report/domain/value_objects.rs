@@ -2,6 +2,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -317,6 +318,44 @@ impl TurnNumber {
 pub enum TeamSide {
     Home,
     Away,
+}
+
+impl TeamSide {
+    /// Le camp d'en face.
+    pub fn opposite(self) -> Self {
+        match self {
+            Self::Home => Self::Away,
+            Self::Away => Self::Home,
+        }
+    }
+}
+
+/// Qui a lancé le fan factor de chaque camp (carte 654). Posé par
+/// `TeamFanFactorRecorded` seul : en « Je saisis tout », un même coach lance
+/// les deux jets, et rien n'en est retenu.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FanFactorAuthors {
+    pub home: Option<CoachId>,
+    pub away: Option<CoachId>,
+}
+
+impl FanFactorAuthors {
+    /// L'auteur du jet de ce camp, s'il est connu.
+    pub fn of(&self, side: TeamSide) -> Option<CoachId> {
+        match side {
+            TeamSide::Home => self.home,
+            TeamSide::Away => self.away,
+        }
+    }
+
+    /// Le même registre, l'auteur de ce camp posé.
+    pub fn with(mut self, side: TeamSide, author: CoachId) -> Self {
+        match side {
+            TeamSide::Home => self.home = Some(author),
+            TeamSide::Away => self.away = Some(author),
+        }
+        self
+    }
 }
 
 /// Verdict sur la possibilité de corriger un rapport déjà publié.

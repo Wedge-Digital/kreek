@@ -8,11 +8,14 @@
 //! camp — une action s'ajoute, un MVP ou des coups de pouce déjà saisis sont
 //! refusés. C'est la liste blanche de la décision du 2026-11-11 (cadrage E22,
 //! § 12.2) : `record_action`, `delete_action`, `record_mvp`, `draw_mvp`,
-//! `record_inducements`, `init_temp_players`.
+//! `record_inducements`, `init_temp_players`, et depuis la carte 654
+//! `record_team_fan_factor` — le fan factor d'un seul camp, dont le domaine
+//! refuse un second jet.
 //!
-//! Le fan factor et l'après-match n'y entrent pas tant qu'ils écrivent les
-//! deux camps d'un coup : leur domaine écrase sans refuser, et un réessai y
-//! serait un « dernier qui écrit gagne » silencieux (cartes 654 et 658).
+//! Le fan factor des deux camps (« Je saisis tout ») et l'après-match n'y
+//! entrent pas tant qu'ils écrivent les deux camps d'un coup : leur domaine
+//! écrase sans refuser, et un réessai y serait un « dernier qui écrit gagne »
+//! silencieux (carte 658 pour l'après-match).
 //!
 //! Un seul réessai : deux conflits de suite disent que l'état change sous la
 //! main, et l'utilisateur doit le voir — 409 et rechargement, comme en E21.

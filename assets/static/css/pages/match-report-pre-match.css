@@ -84,3 +84,10 @@
   background: rgba(98,149,132,0.08); border: 1px solid rgba(98,149,132,0.2);
   font-size: var(--text-tiny); color: #3d6b5e;
 }
+
+/* ── « Chacun son équipe » (carte 654) ──────────────────────────────────── */
+.match-report-pre-match .mr-fan-dice-value,
+.match-report-pre-match.mr-fan-dice-value {
+  width: 44px; text-align: center;
+  font-size: var(--text-small); font-weight: 700; color: var(--dark-1);
+}

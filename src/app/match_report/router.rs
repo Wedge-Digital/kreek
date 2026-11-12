@@ -18,12 +18,16 @@ use crate::app::match_report::io::web::record_action_controller::{
     delete_action, post_action_step3, post_action_step4,
 };
 use crate::app::match_report::io::web::step5_controller::{get_step5, post_step5};
+use crate::app::match_report::io::web::team_pre_match_controller::{
+    get_team_pre_match, post_team_pre_match,
+};
 use crate::app::match_report::io::web::widgets::action_log_widget::get_action_log;
 use crate::app::match_report::io::web::widgets::action_panel_widget::{
     get_action_panel_step3, get_action_panel_step4,
 };
 use crate::app::match_report::io::web::widgets::live_score_widget::get_live_score;
 use crate::app::match_report::io::web::widgets::mercenary_selector_widget::get_mercenary_selector;
+use crate::app::match_report::io::web::widgets::opponent_fan_factor_widget::get_opponent_fan_factor;
 use crate::app::match_report::io::web::widgets::print_inducements_widget::{
     get_print_inducements, get_print_inducements_with,
 };
@@ -100,6 +104,11 @@ where
 /// `routes_de_saisie()`.
 fn routes_de_camp() -> Router<AppState> {
     Router::new()
+        // L'avant-match d'un camp, en « Chacun son équipe » (carte 654).
+        .route(
+            path::MATCH_REPORT_STEP2_SIDE,
+            get(get_team_pre_match).post(post_team_pre_match),
+        )
 }
 
 fn routes_ouvertes() -> Router<AppState> {
@@ -136,6 +145,12 @@ fn routes_de_suivi() -> Router<AppState> {
         .route(path::MATCH_REPORT_ACTION_LOG, get(get_action_log))
         // Le score du direct (carte 646) : un widget, rechargé sur le signal.
         .route(path::MATCH_REPORT_LIVE_SCORE, get(get_live_score))
+        // Le fan factor de l'adversaire, en « Chacun son équipe » (carte 654) :
+        // un widget en lecture seule, rechargé sur le signal.
+        .route(
+            path::MATCH_REPORT_STEP2_FAN_FACTOR,
+            get(get_opponent_fan_factor),
+        )
 }
 
 fn routes_de_saisie() -> Router<AppState> {

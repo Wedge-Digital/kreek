@@ -1,0 +1,15 @@
+{# Le fan factor de l'adversaire, en « Chacun son équipe » (carte 654) :
+   rechargé sur le signal du match, en lecture seule. #}
+<div class="opponent-fan-factor" hx-disinherit="*">
+  {% if let Some(r) = recorded %}
+  <div class="opponent-fan-factor-row">
+    <span class="opponent-fan-factor-status opponent-fan-factor-status--done">&#10003;</span>
+    <span class="opponent-fan-factor-text"><b>{{ team_name }}</b> · {{ r.dedicated_fans }} + {{ r.roll }} = {{ r.total }}{% if let Some(name) = r.recorded_by %}, lancé par {{ name }}{% endif %}</span>
+  </div>
+  {% else %}
+  <div class="opponent-fan-factor-row opponent-fan-factor-row--wait">
+    <span class="opponent-fan-factor-status">&#8230;</span>
+    <span class="opponent-fan-factor-text"><b>{{ team_name }}</b> · en attente de son jet</span>
+  </div>
+  {% endif %}
+</div>

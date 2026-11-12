@@ -1,3 +1,4 @@
+use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::{
     IMatchReportRepository, RepositoryError,
@@ -5,6 +6,7 @@ use crate::app::match_report::domain::match_report_repository_port::{
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, TeamValue};
 use crate::app::match_report::ports::{ICompetitionDataPort, ITeamDataPort};
+use crate::app::match_report::use_cases::conflict_retry::ConflictAware;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 
@@ -20,9 +22,9 @@ pub struct RecordFanFactorCommand {
 
 #[derive(Debug)]
 pub enum RecordFanFactorOutcome {
-    RedirectToInducements {
-        topdog_team_id: String,
-    },
+    /// La page de coups de pouce de cette équipe : le favori en « Je saisis
+    /// tout », l'équipe du coach en « Chacun son équipe » (carte 654).
+    RedirectToInducements { team_id: String },
     /// Pas de coups de pouce : le coup d'envoi, au match en direct (carte 636).
     RedirectToLiveMatch,
 }
@@ -32,14 +34,23 @@ pub enum RecordFanFactorError {
     NotFound,
     NotInPreMatchPhase,
     TeamValueUnavailable(String),
+    /// Le domaine refuse : en « Chacun son équipe », les deux jets d'un coup
+    /// écraseraient celui de l'autre coach (carte 654).
+    Domain(DomainError),
     /// Une autre écriture est passée entre le chargement et l'append (carte 623).
     Conflict,
     Repository(String),
 }
 
+impl ConflictAware for RecordFanFactorError {
+    fn is_conflict(&self) -> bool {
+        matches!(self, Self::Conflict)
+    }
+}
+
 impl RecordFanFactorError {
     /// `ConcurrentWrite` garde son sens au lieu de se fondre dans `Repository`.
-    fn from_repository(e: RepositoryError) -> Self {
+    pub(crate) fn from_repository(e: RepositoryError) -> Self {
         match e {
             RepositoryError::ConcurrentWrite => Self::Conflict,
             other => Self::Repository(other.to_string()),
@@ -82,7 +93,7 @@ async fn fetch_dedicated_fans(
     (home, away)
 }
 
-async fn load_pre_match(
+pub(crate) async fn load_pre_match(
     repo: &dyn IMatchReportRepository,
     mr_id: &str,
 ) -> Result<MatchReportPreMatch, RecordFanFactorError> {
@@ -109,19 +120,21 @@ async fn build_events(
     ),
     RecordFanFactorError,
 > {
-    let (updated_ff, ff_event) = pm.record_fan_factor(
-        cmd.home_fan_roll,
-        cmd.away_fan_roll,
-        cmd.home_dedicated_fans,
-        cmd.away_dedicated_fans,
-        cmd.recorded_by.clone(),
-    );
+    let (updated_ff, ff_event) = pm
+        .record_fan_factor(
+            cmd.home_fan_roll,
+            cmd.away_fan_roll,
+            cmd.home_dedicated_fans,
+            cmd.away_dedicated_fans,
+            cmd.recorded_by.clone(),
+        )
+        .map_err(RecordFanFactorError::Domain)?;
     let (home_tv, away_tv) = fetch_team_values(&updated_ff, team_data).await?;
     let (updated_tv, tv_event) = updated_ff.record_team_values(home_tv, away_tv, cmd.recorded_by);
     Ok((updated_tv, vec![ff_event, tv_event]))
 }
 
-async fn fetch_team_values(
+pub(crate) async fn fetch_team_values(
     pm: &MatchReportPreMatch,
     team_data: &dyn ITeamDataPort,
 ) -> Result<(TeamValue, TeamValue), RecordFanFactorError> {
@@ -146,8 +159,19 @@ async fn determine_outcome(
     competition_data: &dyn ICompetitionDataPort,
 ) -> Result<RecordFanFactorOutcome, RecordFanFactorError> {
     let topdog_id = pm.topdog_team_id().to_string();
+    Ok(next_step(pm, topdog_id, team_data, competition_data).await)
+}
+
+/// La suite du fan factor : les coups de pouce de `team_id` si le palier en
+/// a, sinon le match. Partagée avec le fan factor d'un camp (carte 654).
+pub(crate) async fn next_step(
+    pm: &MatchReportPreMatch,
+    team_id: String,
+    team_data: &dyn ITeamDataPort,
+    competition_data: &dyn ICompetitionDataPort,
+) -> RecordFanFactorOutcome {
     let roster_id = team_data
-        .find_team_info(&topdog_id)
+        .find_team_info(&team_id)
         .await
         .map(|info| info.roster_id)
         .unwrap_or_default();
@@ -159,11 +183,9 @@ async fn determine_outcome(
         .map(|r| !r.allowed_inducements.is_empty() || !r.allowed_star_players.is_empty())
         .unwrap_or(false);
     if has_inducements {
-        Ok(RecordFanFactorOutcome::RedirectToInducements {
-            topdog_team_id: topdog_id,
-        })
+        RecordFanFactorOutcome::RedirectToInducements { team_id }
     } else {
-        Ok(RecordFanFactorOutcome::RedirectToLiveMatch)
+        RecordFanFactorOutcome::RedirectToLiveMatch
     }
 }
 

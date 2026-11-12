@@ -315,6 +315,22 @@ pub async fn camp_du_coach(
     }
 }
 
+/// Le camp où arrive un utilisateur sur l'avant-match de « Chacun son
+/// équipe » (carte 654, § 12.6 de E22) : le visiteur sur le sien, tout autre
+/// — coach du domicile, admin sans équipe dans le match — au domicile. L'admin
+/// choisit ensuite l'autre camp s'il le veut ; la garde de camp reste juge.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn arrival_side(
+    team_data: &dyn ITeamDataPort,
+    scope: &PorteeRapport,
+    user_id: &str,
+) -> TeamSide {
+    match camp_du_coach(team_data, scope, user_id).await {
+        CampDuCoach::Visiteur => TeamSide::Away,
+        CampDuCoach::Domicile | CampDuCoach::LesDeux | CampDuCoach::Aucun => TeamSide::Home,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -409,6 +425,31 @@ mod tests {
             camp(vec![DOMICILE, VISITEUR], Some(DOMICILE)).await,
             CampDuCoach::Visiteur
         );
+    }
+
+    async fn arrival(coached: Vec<&'static str>) -> TeamSide {
+        arrival_side(
+            &FakeTeamData {
+                coached,
+                failing: None,
+            },
+            &scope(),
+            "coach",
+        )
+        .await
+    }
+
+    /// Carte 654 : chaque coach arrive sur son camp.
+    #[tokio::test]
+    async fn each_coach_arrives_on_his_own_side() {
+        assert_eq!(arrival(vec![DOMICILE]).await, TeamSide::Home);
+        assert_eq!(arrival(vec![VISITEUR]).await, TeamSide::Away);
+    }
+
+    /// L'admin sans équipe dans le match arrive au domicile ; il choisira.
+    #[tokio::test]
+    async fn an_admin_without_a_team_arrives_home() {
+        assert_eq!(arrival(vec![]).await, TeamSide::Home);
     }
 }
 

@@ -58,7 +58,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E19 — Saisie du compte rendu : droits et robustesse](done/E19-saisie-du-compte-rendu-droits-et-robustesse.md) | `done` · 5/5 | 5 |
 | [E20 — Coups de pouce : le panier et l'annulation](done/E20-coups-de-pouce-panier-et-annulation.md) | `done` · 5/5 | 5 |
 | [E21 — Le mode de saisie et l'après-match en séquence](done/E21-mode-de-saisie-et-apres-match-en-sequence.md) | `done` · 9/9 | 9 |
-| [E22 — Le mode « Chacun son équipe »](en_cours/E22-mode-chacun-son-equipe.md) | `en_cours` · 2/10 | 10 |
+| [E22 — Le mode « Chacun son équipe »](en_cours/E22-mode-chacun-son-equipe.md) | `en_cours` · 3/10 | 10 |
 | [E23 — Le temps réel : connexions, présence et notifications](done/E23-temps-reel-connexions-et-notifications.md) | `done` · 6/6 | 6 |
 | [E24 — La navigation mobile](to_be_refined/E24-navigation-mobile.md) | `to_be_refined` | 3 |
 | [E25 — Retrouver ses matchs](to_be_refined/E25-retrouver-ses-matchs.md) | `to_be_refined` | 4 |

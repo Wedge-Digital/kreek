@@ -196,6 +196,13 @@ pub(super) async fn aiguiller(
         MatchReportDomainEvent::InducementsCancelled { cancelled_by } => {
             entry_facts::publish_inducements_cancelled(&to, cancelled_by).await
         }
+        // Le fan factor d'un camp (carte 654) : il sort pour que la page de
+        // l'autre coach le voie arriver.
+        MatchReportDomainEvent::TeamFanFactorRecorded {
+            team_side,
+            recorded_by,
+            ..
+        } => entry_facts::publish_fan_factor_recorded(&to, team_side, recorded_by).await,
         // Ce qui ne sort pas du BC, nommé un à un et sans joker (carte 631) :
         // un événement ajouté casse la compilation ici, et son auteur tranche
         // — il sort, ou il rejoint cette liste.
@@ -907,6 +914,7 @@ mod unpublished_events_tests {
             away_inducements: None,
             home_inducements_recorded_by: None,
             away_inducements_recorded_by: None,
+            fan_factor_recorded_by: Default::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],

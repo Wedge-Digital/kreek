@@ -525,6 +525,13 @@
 "test_match_report_concurrent_writes" = ["match_report", "players", "competitions", "teams",
                                          "auth", "spaces", "references", "team_creation"]
 
+# L'avant-match de son camp (carte 654, épic E22) : chaque coach son fan
+# factor, celui de l'autre arrive par le signal du match. La fixture traverse
+# la construction de compétition ; le widget nomme l'équipe par `teams` et le
+# lanceur par `auth`.
+"test_match_report_team_pre_match" = ["match_report", "players", "competitions", "teams",
+                                      "auth", "spaces", "references", "team_creation"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni

@@ -28,7 +28,7 @@ import requests
 
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import query_db
-from match_report_helpers import create_draft, ensure_inducements, first_player_id
+from match_report_helpers import create_draft, ensure_team_entry_inducements, first_player_id
 
 PROFIL_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
 PAIRES = 10
@@ -36,14 +36,15 @@ PAIRES = 10
 
 @pytest.fixture(scope="module")
 def match_en_mode_b(browser, space_id):
-    """Un match en « Chacun son équipe », fan factor saisi et coups de pouce
-    passés : les deux camps peuvent saisir leurs actions."""
+    """Un match en « Chacun son équipe », chaque camp son fan factor (carte
+    654) et coups de pouce passés : les deux camps peuvent saisir leurs
+    actions."""
     ctx = build_full_competition(browser, space_id, num_teams=2, num_rounds=1)
     domicile, exterieur = ctx["team_ids"][0], ctx["team_ids"][1]
     mr_id = create_draft(
         space_id, ctx, ctx["round_ids"][0], domicile, exterieur, entry_mode="TeamEntry"
     )
-    ensure_inducements(space_id, mr_id)
+    ensure_team_entry_inducements(space_id, mr_id)
     return {"space_id": space_id, "mr_id": mr_id}
 
 

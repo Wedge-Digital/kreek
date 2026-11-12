@@ -71,6 +71,16 @@ pub enum DomainError {
     /// 638, décision du 2026-11-02). La règle vaut à la saisie, jamais au
     /// rejeu.
     MvpMissing(TeamSide),
+    /// Le camp a déjà lancé son fan factor (carte 654) : un second jet est
+    /// refusé, ce qui rend sûr le réessai sur conflit de la carte 653. La
+    /// correction d'un jet en « Chacun son équipe » n'est pas couverte.
+    FanFactorAlreadyRecorded(TeamSide),
+    /// Un fan factor d'un camp dans un rapport qui n'est pas en « Chacun son
+    /// équipe » (carte 654).
+    NotTeamEntry,
+    /// Les deux jets d'un coup dans un rapport en « Chacun son équipe » : ils
+    /// écraseraient celui de l'autre coach (carte 654).
+    TeamEntryFanFactorBySide,
 }
 
 impl fmt::Display for DomainError {
@@ -119,6 +129,17 @@ impl fmt::Display for DomainError {
             Self::MvpMissing(TeamSide::Away) => {
                 write!(f, "L'équipe visiteuse n'a pas encore son MVP.")
             }
+            Self::FanFactorAlreadyRecorded(_) => {
+                write!(f, "Le fan factor de cette équipe est déjà enregistré.")
+            }
+            Self::NotTeamEntry => write!(
+                f,
+                "Ce fan factor se saisit par camp, en « Chacun son équipe » seulement."
+            ),
+            Self::TeamEntryFanFactorBySide => write!(
+                f,
+                "En « Chacun son équipe », chaque coach saisit le fan factor de son équipe."
+            ),
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),
             Self::BudgetExceeded { spent, budget } => {

@@ -212,3 +212,18 @@ fn a_deleted_action_makes_no_toast() {
     };
     assert_eq!(notice_of(&event), None);
 }
+
+/// Le fan factor d'un camp ne fait que le signal (§ 12.7 de E22, carte 654).
+#[test]
+fn a_team_fan_factor_makes_no_toast() {
+    let event = MatchReportAppEvent::MatchFanFactorRecorded {
+        event_id: EventId::new(),
+        match_report_id: MATCH.into(),
+        space_id: SPACE.into(),
+        home_team_id: HOME.into(),
+        away_team_id: AWAY.into(),
+        team_side: TeamSidePayload::Home,
+        recorded_by: AUTHOR.into(),
+    };
+    assert_eq!(notice_of(&event), None);
+}

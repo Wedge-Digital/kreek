@@ -137,6 +137,7 @@ const FEUILLES_APP: &[&str] = &[
     "widgets/move-pairing.css",
     "widgets/my-teams-widget.css",
     "widgets/notification-settings.css",
+    "widgets/opponent-fan-factor.css",
     "widgets/pd-right.css",
     "widgets/players-widget.css",
     "widgets/presence-widget.css",

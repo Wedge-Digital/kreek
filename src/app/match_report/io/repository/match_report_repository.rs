@@ -117,6 +117,9 @@ impl MatchReportRepository {
                 .map_err(RepositoryError::Database)?;
             }
             MatchReportDomainEvent::FanFactorRecorded { .. } => {}
+            // Le fan factor d'un camp n'écrit rien, comme celui des deux camps : le
+            // `TeamValuesRecorded` qui suit le premier porte les colonnes (carte 654).
+            MatchReportDomainEvent::TeamFanFactorRecorded { .. } => {}
             MatchReportDomainEvent::TeamValuesRecorded {
                 home_team_value,
                 away_team_value,

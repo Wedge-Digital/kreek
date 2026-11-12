@@ -19,6 +19,7 @@ pub mod record_fan_factor_use_case;
 pub mod record_inducements_use_case;
 pub mod record_mvp_use_case;
 pub mod record_post_match_use_case;
+pub mod record_team_fan_factor_use_case;
 #[cfg(test)]
 pub mod test_doubles;
 pub mod unpublish_match_report_use_case;

@@ -111,13 +111,18 @@ def test_commencer_demarre_en_je_saisis_tout(page: Page, space_id, competition):
 
 def test_chacun_son_equipe_ouvre_l_avant_match_aux_deux_coachs(chacun_son_equipe):
     """En « Je saisis tout », l'autre coach serait renvoyé au direct (303) ;
-    en « Chacun son équipe », il entre dans l'avant-match comme le démarreur."""
+    en « Chacun son équipe », il entre dans l'avant-match comme le démarreur
+    — chacun dans celui de son camp (carte 654) : `/step2` le mène à
+    `/step2/{side}`."""
     phase, mode, _ = entry_mode_of(chacun_son_equipe["adverses"])
     assert (phase, mode) == ("PreMatch", "TeamEntry")
 
-    for qui in ({}, PROFIL_SIMPLE):
+    for qui, camp in (({}, "home"), (PROFIL_SIMPLE, "away")):
         reponse = _get(chacun_son_equipe, "adverses", "/step2", headers=qui)
-        assert reponse.status_code == 200, f"{qui} : obtenu {reponse.status_code}"
+        assert reponse.status_code == 303, f"{qui} : obtenu {reponse.status_code}"
+        assert reponse.headers["Location"].endswith(f"/step2/{camp}")
+        page = _get(chacun_son_equipe, "adverses", f"/step2/{camp}", headers=qui)
+        assert page.status_code == 200, f"{qui} : obtenu {page.status_code}"
 
     arrivee = _get(chacun_son_equipe, "adverses", "", headers=PROFIL_SIMPLE)
     assert arrivee.status_code == 303, f"obtenu {arrivee.status_code}"

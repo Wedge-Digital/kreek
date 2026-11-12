@@ -3,6 +3,14 @@ pub mod path {
     pub const MATCH_REPORT_EDIT: &str = "/app/{space_id}/match-report/{match_report_id}";
     pub const MATCH_REPORT_FROM_PAIRING: &str = "/app/{space_id}/match-report/pairing/{pairing_id}";
     pub const MATCH_REPORT_STEP2: &str = "/app/{space_id}/match-report/{match_report_id}/step2";
+    /// L'avant-match d'un camp, `home` ou `away`, en « Chacun son équipe »
+    /// (carte 654) : gardé par `garde_camp`.
+    pub const MATCH_REPORT_STEP2_SIDE: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step2/{side}";
+    /// Le fan factor d'un camp, en lecture seule : le bloc de l'adversaire,
+    /// rechargé sur le signal du match (carte 654).
+    pub const MATCH_REPORT_STEP2_FAN_FACTOR: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step2/{side}/fan-factor";
     pub const MATCH_REPORT_INDUCEMENTS: &str =
         "/app/{space_id}/match-report/{match_report_id}/inducements/{team_id}";
     /// Hors de `/inducements/…` : `/inducements/cancel` chevaucherait
@@ -106,6 +114,22 @@ impl Routes {
         path::MATCH_REPORT_STEP2
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
+    }
+
+    /// `side` vaut `home` ou `away`.
+    pub fn step2_side(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
+        path::MATCH_REPORT_STEP2_SIDE
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{side}", side)
+    }
+
+    /// `side` vaut `home` ou `away`.
+    pub fn step2_fan_factor(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
+        path::MATCH_REPORT_STEP2_FAN_FACTOR
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{side}", side)
     }
 
     pub fn inducements(&self, space_id: &str, match_report_id: &str, team_id: &str) -> String {

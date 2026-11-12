@@ -4,8 +4,8 @@ use crate::app::match_report::domain::match_report_ready_to_publish::MatchReport
 use crate::app::match_report::domain::mvp_draw::DrawnMvp;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{
-    CorrectionEligibility, D3Roll, DedicatedFans, EntryMode, FanFactorMod, InducementPurchase,
-    InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
+    CorrectionEligibility, D3Roll, DedicatedFans, EntryMode, FanFactorAuthors, FanFactorMod,
+    InducementPurchase, InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -37,6 +37,9 @@ pub struct MatchReportPublished {
     /// Gardés pour qu'un rapport dépublié retrouve son « par … » (carte 628).
     pub home_inducements_recorded_by: Option<CoachId>,
     pub away_inducements_recorded_by: Option<CoachId>,
+    /// Qui a lancé le fan factor de chaque camp, en « Chacun son équipe »
+    /// (carte 654). Vide en « Je saisis tout ».
+    pub fan_factor_recorded_by: FanFactorAuthors,
     /// Figés au pré-match : l'écart de valeur d'équipe qui les détermine n'est
     /// plus connu à ce stade.
     pub home_inducement_spending: InducementSpending,
@@ -117,6 +120,7 @@ impl MatchReportPublished {
             away_inducements: self.away_inducements.clone(),
             home_inducements_recorded_by: self.home_inducements_recorded_by,
             away_inducements_recorded_by: self.away_inducements_recorded_by,
+            fan_factor_recorded_by: self.fan_factor_recorded_by,
             home_inducement_spending: self.home_inducement_spending,
             away_inducement_spending: self.away_inducement_spending,
             star_engagements: self.star_engagements.clone(),
@@ -166,6 +170,7 @@ impl MatchReportPublished {
             away_inducements: rtp.away_inducements.clone(),
             home_inducements_recorded_by: rtp.home_inducements_recorded_by,
             away_inducements_recorded_by: rtp.away_inducements_recorded_by,
+            fan_factor_recorded_by: rtp.fan_factor_recorded_by,
             home_inducement_spending: rtp.home_inducement_spending,
             away_inducement_spending: rtp.away_inducement_spending,
             star_engagements: rtp.star_engagements.clone(),
@@ -220,6 +225,7 @@ mod unpublish_tests {
             away_inducements: None,
             home_inducements_recorded_by: None,
             away_inducements_recorded_by: None,
+            fan_factor_recorded_by: Default::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],

@@ -96,7 +96,9 @@ pub fn notice_of(event: &MatchReportAppEvent) -> Option<MatchNotice> {
         | E::JourneymenWithdrawn { .. }
         | E::MatchReportPublished(_)
         | E::MatchReportUnpublished(_)
-        | E::MatchReportRoundReassigned { .. } => None,
+        | E::MatchReportRoundReassigned { .. }
+        // Le fan factor d'un camp : un signal, pas de toast (§ 12.7 de E22).
+        | E::MatchFanFactorRecorded { .. } => None,
     }
 }
 

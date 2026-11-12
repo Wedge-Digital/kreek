@@ -283,6 +283,7 @@ mod tests {
             away_inducements: None,
             home_inducements_recorded_by: None,
             away_inducements_recorded_by: None,
+            fan_factor_recorded_by: Default::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],

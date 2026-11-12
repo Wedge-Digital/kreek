@@ -168,6 +168,29 @@ pub(super) async fn publish_inducements_cancelled(to: &Target<'_>, cancelled_by:
     publier(app_event_bus, event.to_enveloppe());
 }
 
+/// Le fan factor d'un camp, en « Chacun son équipe » (carte 654) : un signal,
+/// sans jet ni nom — la page qui le reçoit relit l'agrégat.
+pub(super) async fn publish_fan_factor_recorded(
+    to: &Target<'_>,
+    team_side: TeamSide,
+    recorded_by: CoachId,
+) {
+    let (match_report_id, app_event_bus, ports) = (to.match_report_id, to.app_event_bus, to.ports);
+    let Some(scope) = match_scope(ports.repo.as_ref(), match_report_id).await else {
+        return;
+    };
+    let event = MatchReportAppEvent::MatchFanFactorRecorded {
+        event_id: EventId::new(),
+        match_report_id: match_report_id.to_string(),
+        space_id: scope.space_id,
+        home_team_id: scope.home_team_id,
+        away_team_id: scope.away_team_id,
+        team_side: side_payload(team_side),
+        recorded_by: recorded_by.to_string(),
+    };
+    publier(app_event_bus, event.to_enveloppe());
+}
+
 /// Les lignes nommées par le service du récapitulatif : libellés et vedettes
 /// au catalogue, mercenaires par leur poste. Une sélection vide reste vide.
 async fn selection_items(
@@ -593,6 +616,50 @@ mod tests {
             event,
             Some(MatchReportAppEvent::MatchInducementsRecorded { items, .. }) if items.is_empty()
         ));
+    }
+
+    /// Le fan factor d'un camp sort en signal : le camp et l'auteur, sans jet
+    /// (carte 654).
+    #[tokio::test]
+    async fn a_team_fan_factor_leaves_as_a_signal() {
+        let m = Match::new();
+        let author = CoachId::new();
+        let rolled = MatchReportDomainEvent::TeamFanFactorRecorded {
+            team_side: TeamSide::Away,
+            fan_roll: crate::app::match_report::domain::value_objects::D3Roll::try_new(2).unwrap(),
+            dedicated_fans: Default::default(),
+            recorded_by: author,
+        };
+        let event = m.published(rolled, m.scoped()).await;
+        let Some(MatchReportAppEvent::MatchFanFactorRecorded {
+            match_report_id,
+            space_id,
+            team_side,
+            recorded_by,
+            ..
+        }) = event
+        else {
+            panic!("MatchFanFactorRecorded attendu : {event:?}");
+        };
+        assert_eq!((match_report_id.as_str(), space_id.as_str()), ("MR", SPACE));
+        assert_eq!(team_side, TeamSidePayload::Away);
+        assert_eq!(recorded_by, author.to_string());
+    }
+
+    /// Le fan factor des deux camps, celui de « Je saisis tout », ne sort
+    /// toujours pas (décision 6 de la carte 654).
+    #[tokio::test]
+    async fn a_solo_entry_fan_factor_still_stays_inside() {
+        let m = Match::new();
+        let roll = crate::app::match_report::domain::value_objects::D3Roll::try_new(1).unwrap();
+        let both = MatchReportDomainEvent::FanFactorRecorded {
+            home_fan_roll: roll,
+            away_fan_roll: roll,
+            home_dedicated_fans: Default::default(),
+            away_dedicated_fans: Default::default(),
+            recorded_by: CoachId::new(),
+        };
+        assert!(m.published(both, m.scoped()).await.is_none());
     }
 
     #[tokio::test]

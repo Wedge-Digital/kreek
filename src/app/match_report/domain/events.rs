@@ -55,6 +55,18 @@ pub enum MatchReportDomainEvent {
         away_dedicated_fans: DedicatedFans,
         recorded_by: CoachId,
     },
+    /// Le fan factor d'**un** camp, en « Chacun son équipe » (carte 654,
+    /// épic E22) : chaque coach lance son jet. `FanFactorRecorded`, qui porte
+    /// les deux jets, reste celui de « Je saisis tout ».
+    ///
+    /// Le premier des deux est appendé avec `TeamValuesRecorded`, dans le même
+    /// `append_many` : les valeurs d'équipe se figent là (R4).
+    TeamFanFactorRecorded {
+        team_side: TeamSide,
+        fan_roll: D3Roll,
+        dedicated_fans: DedicatedFans,
+        recorded_by: CoachId,
+    },
     MatchReportCancelled {
         reason: String,
         /// Équipes du rapport annulé. Le BC `teams` en a besoin pour libérer le
@@ -215,6 +227,7 @@ impl MatchReportDomainEvent {
             Self::SelectionConfirmed { .. } => "SelectionConfirmed",
             Self::EntryModeChosen { .. } => "EntryModeChosen",
             Self::FanFactorRecorded { .. } => "FanFactorRecorded",
+            Self::TeamFanFactorRecorded { .. } => "TeamFanFactorRecorded",
             Self::MatchReportCancelled { .. } => "MatchReportCancelled",
             Self::TeamValuesRecorded { .. } => "TeamValuesRecorded",
             Self::InducementsRecorded { .. } => "InducementsRecorded",

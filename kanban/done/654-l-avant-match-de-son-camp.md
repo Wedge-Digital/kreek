@@ -53,8 +53,9 @@
 
 `domain/events.rs`, `domain/match_report_pre_match.rs`,
 `domain/match_report_state.rs`, `use_cases/record_fan_factor_use_case.rs`,
-`io/web/pre_match_controller.rs`, `io/web/templates/pre-match.html`, un widget
-« avant-match adverse », `io/app_events/app_event_publisher.rs`,
+`io/web/pre_match_controller.rs`, `io/web/team_pre_match_controller.rs`,
+`io/web/templates/pre-match.html`, le widget « avant-match adverse »
+(`io/web/widgets/opponent_fan_factor_widget.rs`), `io/app_events/app_event_publisher.rs`,
 `io/repository/match_report_repository.rs`,
 `src/app/shared_kernel/app_events/match_report_app_events.rs`,
 `src/web/realtime/toast.rs` ; `tests/impact-map.toml`.
@@ -76,6 +77,50 @@
 - **E2E** : deux contextes ; chacun son jet ; le jet du domicile apparaît chez
   le visiteur sans rechargement ; un POST de `step2` par le visiteur ne touche
   pas le jet du domicile.
+
+## Réalisation — précisions et écarts (2026-11-12)
+
+Six décisions prises avec l'utilisateur avant le code :
+
+1. **Le camp est dans la route** : `GET/POST /step2/{side}`, rangée dans
+   `routes_de_camp()` et donc gardée par `garde_camp` — 403 sur un POST dans le
+   camp de l'autre. En mode B, `GET /step2` redirige (303) vers
+   `/step2/{side}` du camp de l'utilisateur (`arrival_side`). Le formulaire ne
+   porte que `fan_roll`.
+2. **Un second jet du même camp est refusé** (`FanFactorAlreadyRecorded`, 422).
+   La correction d'un jet n'est pas couverte (cf. « Points ouverts »).
+3. **L'admin** (§ 12.6) arrive sur le camp qu'il coache, au domicile s'il
+   n'en coache aucun ; un lien « Saisir pour <autre équipe> » lui ouvre l'autre.
+4. **Les valeurs d'équipe figées s'affichent depuis l'agrégat**
+   (`FrozenTeamValuesVm`), plus depuis la projection de `teams`, dès qu'elles
+   sont enregistrées.
+5. **La présence** (`data-activity="write"`) n'est déclarée qu'en mode B.
+6. **Le mode A n'émet rien de nouveau** : `FanFactorRecorded` ne sort toujours
+   pas du BC.
+
+Ce que la carte ne disait pas :
+
+- `record_fan_factor` (les deux jets) est **refusé par le domaine en mode B**
+  (`TeamEntryFanFactorBySide`), et `record_team_fan_factor` en mode A
+  (`NotTeamEntry`) : un `POST /step2` aux deux jets dans un match en mode B
+  rend 422 sans rien écrire.
+- Le widget de l'adversaire a sa route, `GET /step2/{side}/fan-factor`, dans
+  `routes_de_suivi()` (lecture, `garde_suivi`) ; il rend 204 hors d'un rapport
+  en cours.
+- Un jet lancé ne se ressaisit plus : la page montre le jet, son total, et un
+  lien « Continuer » vers la suite.
+- `RecordFanFactorOutcome::RedirectToInducements` porte `team_id` (au lieu de
+  `topdog_team_id`) : le favori en mode A, l'équipe du coach en mode B.
+- Les e2e qui démarraient un match en mode B passaient le fan factor par les
+  deux jets d'un coup : `match_report_helpers.ensure_team_entry_inducements`
+  les remplace par un jet par camp (`test_match_report_concurrent_writes`), et
+  `test_match_report_entry_mode` suit la redirection de `/step2`.
+
+## Points ouverts
+
+- **Correction d'un jet** en « Chacun son équipe » : un second jet du même
+  camp est refusé, et rien ne permet aujourd'hui de corriger un jet mal saisi.
+  Hors de cette carte.
 
 ## Conséquences sur les données de production
 

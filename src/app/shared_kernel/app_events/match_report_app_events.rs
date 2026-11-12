@@ -142,6 +142,18 @@ pub enum MatchReportAppEvent {
         cancelled_by: String,
         cancelled_by_name: Option<String>,
     },
+    /// Un camp a lancé son fan factor, en « Chacun son équipe » (carte 654).
+    /// Un signal sans toast (décision 7 de E22) : la page de l'autre coach
+    /// recharge le bloc de l'adversaire.
+    MatchFanFactorRecorded {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        team_side: TeamSidePayload,
+        recorded_by: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
@@ -279,6 +291,7 @@ impl MatchReportAppEvent {
     pub const MATCH_ACTION_DELETED: &'static str = "MatchActionDeleted";
     pub const MATCH_INDUCEMENTS_RECORDED: &'static str = "MatchInducementsRecorded";
     pub const MATCH_INDUCEMENTS_CANCELLED: &'static str = "MatchInducementsCancelled";
+    pub const MATCH_FAN_FACTOR_RECORDED: &'static str = "MatchFanFactorRecorded";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -293,6 +306,7 @@ impl MatchReportAppEvent {
             Self::MatchActionDeleted { .. } => Self::MATCH_ACTION_DELETED,
             Self::MatchInducementsRecorded { .. } => Self::MATCH_INDUCEMENTS_RECORDED,
             Self::MatchInducementsCancelled { .. } => Self::MATCH_INDUCEMENTS_CANCELLED,
+            Self::MatchFanFactorRecorded { .. } => Self::MATCH_FAN_FACTOR_RECORDED,
         }
     }
 
@@ -328,6 +342,9 @@ impl MatchReportAppEvent {
                 match_report_id, ..
             }
             | Self::MatchInducementsCancelled {
+                match_report_id, ..
+            }
+            | Self::MatchFanFactorRecorded {
                 match_report_id, ..
             } => match_report_id,
         }

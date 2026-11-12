@@ -1,0 +1,20 @@
+/* Le fan factor de l'adversaire, en « Chacun son équipe » (carte 654) :
+   une ligne en lecture seule sous le jet du coach (maquette B1). */
+.opponent-fan-factor .opponent-fan-factor-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px var(--p1); border-radius: 8px;
+  background: var(--dark-6);
+  font-size: var(--text-tiny); color: var(--dark-1);
+}
+.opponent-fan-factor .opponent-fan-factor-row--wait {
+  background: transparent; border: 1px dashed var(--dark-4); color: var(--dark-2);
+}
+.opponent-fan-factor .opponent-fan-factor-status {
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  border-radius: 20px; padding: 3px 10px;
+  background: rgba(0,48,73,0.10); color: var(--main-blue);
+}
+.opponent-fan-factor .opponent-fan-factor-status--done {
+  background: rgba(98,149,132,0.15); color: var(--green);
+}
+.opponent-fan-factor .opponent-fan-factor-text b { color: var(--dark-1); }

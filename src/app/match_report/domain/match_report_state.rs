@@ -1,7 +1,9 @@
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
-use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_pre_match::{
+    MatchReportPreMatch, TeamFanFactor,
+};
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::mvp_draw::{DesignatedPlayer, DrawnMvp};
@@ -134,6 +136,24 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 updated.version += 1;
                 MatchReportState::PreMatch(updated)
             }
+            // Le fan factor d'un camp, en « Chacun son équipe » (carte 654) :
+            // à côté de `FanFactorRecorded`, qui reste intact.
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::TeamFanFactorRecorded {
+                    team_side,
+                    fan_roll,
+                    dedicated_fans,
+                    recorded_by,
+                },
+            ) => MatchReportState::PreMatch(pm.apply_team_fan_factor(
+                TeamFanFactor {
+                    side: *team_side,
+                    roll: *fan_roll,
+                    dedicated_fans: *dedicated_fans,
+                },
+                *recorded_by,
+            )),
             (
                 Some(MatchReportState::PreMatch(pm)),
                 MatchReportDomainEvent::TeamValuesRecorded {
@@ -346,6 +366,22 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                 updated.version += 1;
                 MatchReportState::ReadyToPublish(updated)
             }
+            (
+                Some(MatchReportState::ReadyToPublish(rtp)),
+                MatchReportDomainEvent::TeamFanFactorRecorded {
+                    team_side,
+                    fan_roll,
+                    dedicated_fans,
+                    recorded_by,
+                },
+            ) => MatchReportState::ReadyToPublish(rtp.apply_team_fan_factor(
+                TeamFanFactor {
+                    side: *team_side,
+                    roll: *fan_roll,
+                    dedicated_fans: *dedicated_fans,
+                },
+                *recorded_by,
+            )),
             (
                 Some(MatchReportState::ReadyToPublish(rtp)),
                 MatchReportDomainEvent::TeamValuesRecorded { .. },
@@ -1058,13 +1094,15 @@ mod tests {
     #[test]
     fn record_fan_factor_emet_evenement() {
         let pm = make_pre_match();
-        let (_, event) = pm.record_fan_factor(
-            D3Roll::try_new(2).unwrap(),
-            D3Roll::try_new(1).unwrap(),
-            DedicatedFans::default(),
-            DedicatedFans::default(),
-            CoachId::new(),
-        );
+        let (_, event) = pm
+            .record_fan_factor(
+                D3Roll::try_new(2).unwrap(),
+                D3Roll::try_new(1).unwrap(),
+                DedicatedFans::default(),
+                DedicatedFans::default(),
+                CoachId::new(),
+            )
+            .unwrap();
         assert!(matches!(
             event,
             MatchReportDomainEvent::FanFactorRecorded { .. }
@@ -1074,13 +1112,15 @@ mod tests {
     #[test]
     fn record_fan_factor_met_a_jour_les_champs() {
         let pm = make_pre_match();
-        let (updated, _) = pm.record_fan_factor(
-            D3Roll::try_new(3).unwrap(),
-            D3Roll::try_new(1).unwrap(),
-            DedicatedFans::default(),
-            DedicatedFans::default(),
-            CoachId::new(),
-        );
+        let (updated, _) = pm
+            .record_fan_factor(
+                D3Roll::try_new(3).unwrap(),
+                D3Roll::try_new(1).unwrap(),
+                DedicatedFans::default(),
+                DedicatedFans::default(),
+                CoachId::new(),
+            )
+            .unwrap();
         assert_eq!(updated.home_fan_roll, Some(D3Roll::try_new(3).unwrap()));
         assert_eq!(updated.away_fan_roll, Some(D3Roll::try_new(1).unwrap()));
         assert_eq!(updated.version, pm.version + 1);
@@ -1892,5 +1932,215 @@ mod tests {
             panic!("attendu Published");
         };
         assert!(published.home_actions.is_empty() && published.away_actions.is_empty());
+    }
+
+    // ── fan factor d'un camp, « Chacun son équipe » (carte 654) ───────────
+
+    fn tv(value: u32) -> crate::app::match_report::domain::value_objects::TeamValue {
+        crate::app::match_report::domain::value_objects::TeamValue::try_new(value).unwrap()
+    }
+
+    fn roll(value: u8) -> D3Roll {
+        D3Roll::try_new(value).unwrap()
+    }
+
+    fn fan_factor(
+        side: crate::app::match_report::domain::value_objects::TeamSide,
+        value: u8,
+    ) -> TeamFanFactor {
+        TeamFanFactor {
+            side,
+            roll: roll(value),
+            dedicated_fans: DedicatedFans::try_new(1).unwrap(),
+        }
+    }
+
+    /// Un rapport démarré, dans le mode demandé.
+    fn started_in(mode: EntryMode) -> (Vec<MatchReportDomainEvent>, MatchReportPreMatch) {
+        let (draft, confirmer) = draft_by_competition();
+        let events = vec![
+            created_event_of(&draft),
+            MatchReportDomainEvent::SelectionConfirmed {
+                confirmed_by: confirmer,
+            },
+            MatchReportDomainEvent::EntryModeChosen {
+                mode,
+                started_by: confirmer,
+            },
+        ];
+        let MatchReportState::PreMatch(pm) = rehydrate(events.clone()).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        (events, pm)
+    }
+
+    /// Les deux jets d'un rapport en « Chacun son équipe », le domicile
+    /// d'abord : rend les événements de chacun.
+    fn both_sides_rolled() -> (
+        Vec<MatchReportDomainEvent>,
+        Vec<MatchReportDomainEvent>,
+        MatchReportPreMatch,
+    ) {
+        use crate::app::match_report::domain::value_objects::TeamSide;
+        let (_, pm) = started_in(EntryMode::TeamEntry);
+        let (home_coach, away_coach) = (CoachId::new(), CoachId::new());
+        let (after_home, first) = pm
+            .record_team_fan_factor(
+                fan_factor(TeamSide::Home, 2),
+                home_coach,
+                Some((tv(1150), tv(1000))),
+            )
+            .unwrap();
+        let (after_away, second) = after_home
+            .record_team_fan_factor(
+                fan_factor(TeamSide::Away, 3),
+                away_coach,
+                Some((tv(900), tv(900))),
+            )
+            .unwrap();
+        (first, second, after_away)
+    }
+
+    /// R4 : le premier jet fige les valeurs des deux équipes, dans le même
+    /// append.
+    #[test]
+    fn the_first_team_fan_factor_freezes_both_team_values() {
+        let (first, _, _) = both_sides_rolled();
+        assert!(matches!(
+            first.as_slice(),
+            [
+                MatchReportDomainEvent::TeamFanFactorRecorded { .. },
+                MatchReportDomainEvent::TeamValuesRecorded { .. }
+            ]
+        ));
+    }
+
+    /// R4 : le second jet ne relit rien — les valeurs qu'on lui passerait
+    /// sont ignorées.
+    #[test]
+    fn the_second_team_fan_factor_does_not_record_team_values() {
+        let (_, second, pm) = both_sides_rolled();
+        assert!(matches!(
+            second.as_slice(),
+            [MatchReportDomainEvent::TeamFanFactorRecorded { .. }]
+        ));
+        assert_eq!(pm.home_team_value, Some(tv(1150)));
+        assert_eq!(pm.away_team_value, Some(tv(1000)));
+    }
+
+    /// Le premier jet sans valeurs d'équipe à figer est refusé : l'agrégat
+    /// les attend.
+    #[test]
+    fn the_first_team_fan_factor_requires_team_values() {
+        use crate::app::match_report::domain::value_objects::TeamSide;
+        let (_, pm) = started_in(EntryMode::TeamEntry);
+        let refused =
+            pm.record_team_fan_factor(fan_factor(TeamSide::Away, 1), CoachId::new(), None);
+        assert_eq!(refused.unwrap_err(), DomainError::TeamValuesNotRecorded);
+    }
+
+    /// Un second jet du même camp est refusé : c'est ce qui rend sûr le
+    /// réessai sur conflit (carte 653).
+    #[test]
+    fn a_second_roll_of_the_same_side_is_refused() {
+        use crate::app::match_report::domain::value_objects::TeamSide;
+        let (_, _, pm) = both_sides_rolled();
+        let refused =
+            pm.record_team_fan_factor(fan_factor(TeamSide::Home, 1), CoachId::new(), None);
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::FanFactorAlreadyRecorded(TeamSide::Home)
+        );
+    }
+
+    #[test]
+    fn a_team_fan_factor_is_refused_in_solo_entry() {
+        use crate::app::match_report::domain::value_objects::TeamSide;
+        let (_, pm) = started_in(EntryMode::SoloEntry);
+        let refused = pm.record_team_fan_factor(
+            fan_factor(TeamSide::Home, 1),
+            CoachId::new(),
+            Some((tv(1000), tv(1000))),
+        );
+        assert_eq!(refused.unwrap_err(), DomainError::NotTeamEntry);
+    }
+
+    /// Les deux jets d'un coup écraseraient celui de l'autre coach.
+    #[test]
+    fn both_rolls_at_once_are_refused_in_team_entry() {
+        let (_, pm) = started_in(EntryMode::TeamEntry);
+        let fans = DedicatedFans::default();
+        let refused = pm.record_fan_factor(roll(1), roll(2), fans, fans, CoachId::new());
+        assert_eq!(refused.unwrap_err(), DomainError::TeamEntryFanFactorBySide);
+    }
+
+    /// Le rejeu d'un flux en « Chacun son équipe » : un jet par camp, une
+    /// seule `TeamValuesRecorded`, et le même agrégat que la décision.
+    #[test]
+    fn a_team_entry_stream_replays_one_roll_per_side() {
+        use crate::app::match_report::domain::value_objects::TeamSide;
+        let (events, _) = started_in(EntryMode::TeamEntry);
+        let (first, second, decided) = both_sides_rolled();
+        let stream: Vec<_> = events.into_iter().chain(first).chain(second).collect();
+        let values = stream
+            .iter()
+            .filter(|e| matches!(e, MatchReportDomainEvent::TeamValuesRecorded { .. }))
+            .count();
+        assert_eq!(values, 1);
+        let MatchReportState::PreMatch(pm) = rehydrate(stream).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(pm.fan_roll_of(TeamSide::Home), Some(roll(2)));
+        assert_eq!(pm.fan_roll_of(TeamSide::Away), Some(roll(3)));
+        assert_eq!(pm.fan_factor_of(TeamSide::Away), Some(4));
+        assert_eq!(pm.fan_factor_recorded_by, decided.fan_factor_recorded_by);
+        assert_eq!(pm.home_team_value, Some(tv(1150)));
+        assert_eq!(pm.version, decided.version);
+    }
+
+    /// Le rejeu d'un flux « Je saisis tout » est inchangé : `FanFactorRecorded`
+    /// pose les deux jets, et personne n'est noté comme lanceur d'un camp.
+    #[test]
+    fn a_solo_entry_stream_still_replays_both_rolls_at_once() {
+        let (events, pm) = started_in(EntryMode::SoloEntry);
+        let fans = DedicatedFans::default();
+        let (_, ff) = pm
+            .record_fan_factor(roll(1), roll(3), fans, fans, CoachId::new())
+            .unwrap();
+        let stream: Vec<_> = events.into_iter().chain([ff]).collect();
+        let MatchReportState::PreMatch(pm) = rehydrate(stream).unwrap() else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(
+            (pm.home_fan_roll, pm.away_fan_roll),
+            (Some(roll(1)), Some(roll(3)))
+        );
+        assert_eq!(pm.fan_factor_recorded_by, Default::default());
+    }
+
+    /// Le fan factor d'un camp se rejoue aussi après l'après-match, comme
+    /// `FanFactorRecorded`.
+    #[test]
+    fn a_team_fan_factor_replays_in_ready_to_publish() {
+        use crate::app::match_report::domain::value_objects::TeamSide;
+        let (events, _) = started_in(EntryMode::TeamEntry);
+        let coach = CoachId::new();
+        let stream: Vec<_> = events
+            .into_iter()
+            .chain([
+                post_match_event(coach),
+                MatchReportDomainEvent::TeamFanFactorRecorded {
+                    team_side: TeamSide::Away,
+                    fan_roll: roll(2),
+                    dedicated_fans: DedicatedFans::default(),
+                    recorded_by: coach,
+                },
+            ])
+            .collect();
+        let MatchReportState::ReadyToPublish(rtp) = rehydrate(stream).unwrap() else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(rtp.away_fan_roll, Some(roll(2)));
+        assert_eq!(rtp.fan_factor_recorded_by.of(TeamSide::Away), Some(coach));
     }
 }

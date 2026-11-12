@@ -7,9 +7,10 @@ use crate::app::match_report::domain::underdog;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
-    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, EntryMode, FanFactorMod,
-    InducementMaxQty, InducementPurchase, InducementQty, MatchAction, MatchActionType, MatchGain,
-    MatchReportOrigin, PurchaseKind, TeamSide, TeamValue, TempPlayer, TempPlayerKind,
+    ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, EntryMode,
+    FanFactorAuthors, FanFactorMod, InducementMaxQty, InducementPurchase, InducementQty,
+    MatchAction, MatchActionType, MatchGain, MatchReportOrigin, PurchaseKind, TeamSide, TeamValue,
+    TempPlayer, TempPlayerKind,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -58,6 +59,9 @@ pub struct MatchReportPreMatch {
     /// `InducementsCancelled`. Le récapitulatif en tire son « par … ».
     pub home_inducements_recorded_by: Option<CoachId>,
     pub away_inducements_recorded_by: Option<CoachId>,
+    /// Qui a lancé le fan factor de chaque camp, en « Chacun son équipe »
+    /// (carte 654). Vide en « Je saisis tout ».
+    pub fan_factor_recorded_by: FanFactorAuthors,
     pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
@@ -75,6 +79,26 @@ pub struct MatchReportPreMatch {
 pub enum InducementsTurn<'a> {
     Team(&'a TeamId),
     BothRecorded,
+}
+
+/// Le fan factor d'un camp (carte 654) : son jet et ses fans dévoués.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TeamFanFactor {
+    pub side: TeamSide,
+    pub roll: D3Roll,
+    pub dedicated_fans: DedicatedFans,
+}
+
+fn team_fan_factor_event(
+    fan_factor: TeamFanFactor,
+    recorded_by: CoachId,
+) -> MatchReportDomainEvent {
+    MatchReportDomainEvent::TeamFanFactorRecorded {
+        team_side: fan_factor.side,
+        fan_roll: fan_factor.roll,
+        dedicated_fans: fan_factor.dedicated_fans,
+        recorded_by,
+    }
 }
 
 impl MatchReportPreMatch {
@@ -100,6 +124,8 @@ impl MatchReportPreMatch {
         }
     }
 
+    /// Les deux jets d'un coup, en « Je saisis tout ». Refusé en « Chacun son
+    /// équipe » : il écraserait le jet de l'autre coach (carte 654).
     pub fn record_fan_factor(
         &self,
         home_fan_roll: D3Roll,
@@ -107,7 +133,10 @@ impl MatchReportPreMatch {
         home_dedicated_fans: DedicatedFans,
         away_dedicated_fans: DedicatedFans,
         recorded_by: CoachId,
-    ) -> (Self, MatchReportDomainEvent) {
+    ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        if self.entry_mode == EntryMode::TeamEntry {
+            return Err(DomainError::TeamEntryFanFactorBySide);
+        }
         let event = MatchReportDomainEvent::FanFactorRecorded {
             home_fan_roll,
             away_fan_roll,
@@ -121,7 +150,102 @@ impl MatchReportPreMatch {
         updated.home_dedicated_fans = home_dedicated_fans;
         updated.away_dedicated_fans = away_dedicated_fans;
         updated.version += 1;
-        (updated, event)
+        Ok((updated, event))
+    }
+
+    /// L'équipe de ce camp.
+    pub fn team_id_of(&self, side: TeamSide) -> &TeamId {
+        match side {
+            TeamSide::Home => &self.home_team_id,
+            TeamSide::Away => &self.away_team_id,
+        }
+    }
+
+    /// Le jet de ce camp, s'il est lancé.
+    pub fn fan_roll_of(&self, side: TeamSide) -> Option<D3Roll> {
+        match side {
+            TeamSide::Home => self.home_fan_roll,
+            TeamSide::Away => self.away_fan_roll,
+        }
+    }
+
+    /// Les fans dévoués de ce camp, tels que son fan factor les a retenus.
+    pub fn dedicated_fans_of(&self, side: TeamSide) -> DedicatedFans {
+        match side {
+            TeamSide::Home => self.home_dedicated_fans,
+            TeamSide::Away => self.away_dedicated_fans,
+        }
+    }
+
+    /// Le fan factor de ce camp : ses fans dévoués plus son jet, `None` tant
+    /// que le jet n'est pas lancé.
+    pub fn fan_factor_of(&self, side: TeamSide) -> Option<u32> {
+        let roll = self.fan_roll_of(side)?;
+        Some(self.dedicated_fans_of(side).into_inner() + u32::from(roll.value()))
+    }
+
+    /// Les valeurs d'équipe restent-elles à enregistrer ? En « Chacun son
+    /// équipe », elles se figent au premier fan factor (R4 de E22) : le second
+    /// ne les relit pas.
+    pub fn awaits_team_values(&self) -> bool {
+        self.home_team_value.is_none() || self.away_team_value.is_none()
+    }
+
+    /// Le fan factor d'**un** camp, en « Chacun son équipe » (carte 654).
+    ///
+    /// Le premier des deux fige les valeurs d'équipe des deux camps :
+    /// `team_values` est alors exigé, et `TeamValuesRecorded` suit le fan
+    /// factor dans le même append. Le second les ignore. Un second jet du même
+    /// camp est refusé.
+    pub fn record_team_fan_factor(
+        &self,
+        fan_factor: TeamFanFactor,
+        recorded_by: CoachId,
+        team_values: Option<(TeamValue, TeamValue)>,
+    ) -> Result<(Self, Vec<MatchReportDomainEvent>), DomainError> {
+        self.check_team_fan_factor(fan_factor.side)?;
+        let mut updated = self.clone().apply_team_fan_factor(fan_factor, recorded_by);
+        let mut events = vec![team_fan_factor_event(fan_factor, recorded_by)];
+        if self.awaits_team_values() {
+            let (home, away) = team_values.ok_or(DomainError::TeamValuesNotRecorded)?;
+            let (frozen, tv_event) = updated.record_team_values(home, away, recorded_by);
+            updated = frozen;
+            events.push(tv_event);
+        }
+        Ok((updated, events))
+    }
+
+    fn check_team_fan_factor(&self, side: TeamSide) -> Result<(), DomainError> {
+        if self.entry_mode != EntryMode::TeamEntry {
+            return Err(DomainError::NotTeamEntry);
+        }
+        if self.fan_roll_of(side).is_some() {
+            return Err(DomainError::FanFactorAlreadyRecorded(side));
+        }
+        Ok(())
+    }
+
+    /// Pose le jet et les fans du seul camp — à la saisie comme au rejeu.
+    pub(crate) fn apply_team_fan_factor(
+        mut self,
+        fan_factor: TeamFanFactor,
+        recorded_by: CoachId,
+    ) -> Self {
+        match fan_factor.side {
+            TeamSide::Home => {
+                self.home_fan_roll = Some(fan_factor.roll);
+                self.home_dedicated_fans = fan_factor.dedicated_fans;
+            }
+            TeamSide::Away => {
+                self.away_fan_roll = Some(fan_factor.roll);
+                self.away_dedicated_fans = fan_factor.dedicated_fans;
+            }
+        }
+        self.fan_factor_recorded_by = self
+            .fan_factor_recorded_by
+            .with(fan_factor.side, recorded_by);
+        self.version += 1;
+        self
     }
 
     pub fn record_team_values(
@@ -763,6 +887,7 @@ impl MatchReportPreMatch {
             away_inducements: None,
             home_inducements_recorded_by: None,
             away_inducements_recorded_by: None,
+            fan_factor_recorded_by: Default::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
@@ -1036,6 +1161,7 @@ mod tests {
             away_inducements: None,
             home_inducements_recorded_by: None,
             away_inducements_recorded_by: None,
+            fan_factor_recorded_by: Default::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
