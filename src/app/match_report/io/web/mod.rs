@@ -3,6 +3,7 @@ pub mod builders;
 pub mod cancel_inducements_controller;
 pub mod garde_saisie;
 pub mod inducements_controller;
+pub mod kick_off_redirect;
 pub mod live_match_controller;
 pub mod match_selection_controller;
 pub mod mvp_draw_controller;

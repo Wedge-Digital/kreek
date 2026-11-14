@@ -575,6 +575,28 @@ impl MatchReportPreMatch {
         (updated, event)
     }
 
+    /// Le coup d'envoi (carte 656, § 12.3 de E22). En « Je saisis tout », le
+    /// match est toujours commencé. En « Chacun son équipe », il commence quand
+    /// les deux fans factors sont lancés et que chaque équipe à qui son tier
+    /// offre des coups de pouce les a validés.
+    ///
+    /// `offered_inducements` vient du tier, que l'agrégat ne connaît pas : une
+    /// équipe sans coups de pouce saute leur écran, et n'émet jamais
+    /// `InducementsRecorded` (carte 620).
+    pub fn has_kicked_off(&self, offered_inducements: &[TeamId]) -> bool {
+        if self.entry_mode != EntryMode::TeamEntry {
+            return true;
+        }
+        TeamSide::BOTH
+            .iter()
+            .all(|side| self.fan_roll_of(*side).is_some())
+            && offered_inducements
+                .iter()
+                .all(|team_id| self.has_recorded_inducements(team_id))
+    }
+
+    /// Une action ne s'écrit qu'après le coup d'envoi (carte 656). La règle
+    /// vaut à la saisie, jamais au rejeu : `rehydrate` ne passe pas par ici.
     pub fn record_action(
         &self,
         team_side: TeamSide,
@@ -585,8 +607,12 @@ impl MatchReportPreMatch {
         player_position: String,
         action_id: ActionId,
         recorded_by: CoachId,
+        offered_inducements: &[TeamId],
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
         check_match_action(&action)?;
+        if !self.has_kicked_off(offered_inducements) {
+            return Err(DomainError::MatchNotStarted);
+        }
         let entry = MatchAction {
             id: action_id,
             turn,
@@ -719,15 +745,21 @@ impl MatchReportPreMatch {
     }
 
     /// Un MVP tiré au sort ne se supprime pas, même en correction (carte 638).
+    /// Une action ne s'efface que dans un camp où l'auteur écrit (carte 656,
+    /// R6 de E22) : `writable_sides` vient du droit d'écrire par camp.
     pub fn delete_action(
         &self,
         action_id: &ActionId,
         deleted_by: CoachId,
+        writable_sides: &[TeamSide],
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
         if self.drawn_mvp(action_id).is_some() {
             return Err(DomainError::DrawnMvpIsFinal);
         }
         let team_side = self.side_of_action(action_id)?;
+        if !writable_sides.contains(&team_side) {
+            return Err(DomainError::ActionOutsideSide(team_side));
+        }
         let event = MatchReportDomainEvent::ActionDeleted {
             action_id: action_id.clone(),
             team_side,
@@ -1570,6 +1602,7 @@ mod tests {
             "Blitzeur".to_string(),
             ActionId("act-01".to_string()),
             CoachId::new(),
+            &[],
         )
         .expect("action de test valide")
     }
@@ -1670,7 +1703,7 @@ mod tests {
     fn supprimer_le_mvp_permet_d_en_designer_un_autre() {
         let (pm, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "m1").unwrap();
         let (pm, _) = pm
-            .delete_action(&ActionId("m1".into()), CoachId::new())
+            .delete_action(&ActionId("m1".into()), CoachId::new(), &TeamSide::BOTH)
             .unwrap();
         assert!(mvp(&pm, TeamSide::Home, "m2").is_ok());
     }
@@ -1778,7 +1811,7 @@ mod tests {
     fn un_mvp_tire_ne_se_supprime_pas() {
         let (pm, _) = draw(&make_pm(1000, 1000), six_designes(), 5).unwrap();
         assert_eq!(
-            pm.delete_action(&ActionId("tire".into()), CoachId::new())
+            pm.delete_action(&ActionId("tire".into()), CoachId::new(), &TeamSide::BOTH)
                 .unwrap_err(),
             DomainError::DrawnMvpIsFinal
         );
@@ -1789,7 +1822,7 @@ mod tests {
     fn un_mvp_saisi_a_la_main_se_supprime_encore() {
         let (pm, _) = mvp(&make_pm(1000, 1000), TeamSide::Home, "m1").unwrap();
         assert!(pm
-            .delete_action(&ActionId("m1".into()), CoachId::new())
+            .delete_action(&ActionId("m1".into()), CoachId::new(), &TeamSide::BOTH)
             .is_ok());
     }
 
@@ -1859,7 +1892,11 @@ mod tests {
         let ready = close(&with_both_mvps(make_pm(1000, 1000))).unwrap();
         let (pm, _) = ready
             .into_pre_match()
-            .delete_action(&ActionId("mvp-away".into()), CoachId::new())
+            .delete_action(
+                &ActionId("mvp-away".into()),
+                CoachId::new(),
+                &TeamSide::BOTH,
+            )
             .unwrap();
         let (home, away, bonuses, home_mod, away_mod) = gains();
         let ready_again = MatchReportReadyToPublish::from_pre_match(
@@ -1891,6 +1928,7 @@ mod tests {
             String::new(),
             ActionId("a1".into()),
             CoachId::new(),
+            &[],
         );
         assert_eq!(r.unwrap_err(), DomainError::MvpOutsideMvpStep);
     }
@@ -1900,7 +1938,9 @@ mod tests {
         let pm = make_pm(1000, 1000);
         let (pm2, _) = make_action(&pm, TeamSide::Home);
         let action_id = pm2.home_actions[0].id.clone();
-        let (pm3, event) = pm2.delete_action(&action_id, CoachId::new()).unwrap();
+        let (pm3, event) = pm2
+            .delete_action(&action_id, CoachId::new(), &TeamSide::BOTH)
+            .unwrap();
         assert!(pm3.home_actions.is_empty());
         assert!(matches!(
             event,
@@ -1911,8 +1951,82 @@ mod tests {
     #[test]
     fn delete_action_fails_when_not_found() {
         let pm = make_pm(1000, 1000);
-        let result = pm.delete_action(&ActionId("missing".to_string()), CoachId::new());
+        let result = pm.delete_action(
+            &ActionId("missing".to_string()),
+            CoachId::new(),
+            &TeamSide::BOTH,
+        );
         assert!(matches!(result, Err(DomainError::ActionNotFound(_))));
+    }
+
+    // ── Carte 656 — les actions de son camp ──────────────────────────────────
+
+    fn touchdown_on(
+        pm: &MatchReportPreMatch,
+        offered: &[TeamId],
+    ) -> Result<(MatchReportPreMatch, MatchReportDomainEvent), DomainError> {
+        pm.record_action(
+            TeamSide::Home,
+            TurnNumber::try_new(2).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Touchdown,
+            "A".into(),
+            String::new(),
+            ActionId("td".into()),
+            CoachId::new(),
+            offered,
+        )
+    }
+
+    fn team_entry_rolled() -> MatchReportPreMatch {
+        let mut pm = make_pm(1000, 1100);
+        pm.entry_mode = EntryMode::TeamEntry;
+        pm.home_fan_roll = Some(D3Roll::try_new(1).unwrap());
+        pm.away_fan_roll = Some(D3Roll::try_new(3).unwrap());
+        pm
+    }
+
+    #[test]
+    fn en_chacun_son_equipe_une_action_attend_les_deux_fans_factors() {
+        let mut pm = team_entry_rolled();
+        pm.away_fan_roll = None;
+        assert_eq!(
+            touchdown_on(&pm, &[]).unwrap_err(),
+            DomainError::MatchNotStarted
+        );
+    }
+
+    #[test]
+    fn en_chacun_son_equipe_une_action_attend_les_coups_de_pouce_offerts() {
+        let pm = team_entry_rolled();
+        let offered = [pm.home_team_id.clone()];
+        assert_eq!(
+            touchdown_on(&pm, &offered).unwrap_err(),
+            DomainError::MatchNotStarted
+        );
+        let mut pm = pm;
+        pm.home_inducements = Some(vec![]);
+        assert!(touchdown_on(&pm, &offered).is_ok());
+    }
+
+    #[test]
+    fn en_je_saisis_tout_une_action_n_attend_rien() {
+        let pm = make_pm(1000, 1000);
+        assert!(touchdown_on(&pm, &[pm.home_team_id.clone()]).is_ok());
+    }
+
+    #[test]
+    fn une_action_de_l_autre_camp_ne_s_efface_pas() {
+        let (pm, _) = make_action(&make_pm(1000, 1000), TeamSide::Away);
+        let action_id = pm.away_actions[0].id.clone();
+        let refus = pm.delete_action(&action_id, CoachId::new(), &[TeamSide::Home]);
+        assert_eq!(
+            refus.unwrap_err(),
+            DomainError::ActionOutsideSide(TeamSide::Away)
+        );
+        assert!(pm
+            .delete_action(&action_id, CoachId::new(), &[TeamSide::Away])
+            .is_ok());
     }
 
     #[test]
@@ -2102,6 +2216,7 @@ mod tests {
             "B".into(),
             ActionId("h1".into()),
             CoachId::new(),
+            &[],
         )
     }
 
@@ -2179,6 +2294,7 @@ mod tests {
                 "B".into(),
                 ActionId("x".into()),
                 CoachId::new(),
+                &[],
             );
             assert!(r.is_ok(), "{action:?} doit rester enregistrable");
         }
@@ -2244,6 +2360,7 @@ mod tests {
             "B".into(),
             ActionId(format!("td-{}", rand_id())),
             CoachId::new(),
+            &[],
         )
         .expect("action de test valide")
         .0
@@ -2259,6 +2376,7 @@ mod tests {
             "B".into(),
             ActionId(format!("so-{}", rand_id())),
             CoachId::new(),
+            &[],
         )
         .expect("action de test valide")
         .0
@@ -2278,6 +2396,7 @@ mod tests {
             "B".into(),
             ActionId(format!("bl-{}", rand_id())),
             CoachId::new(),
+            &[],
         )
         .expect("action de test valide")
         .0
@@ -2542,7 +2661,7 @@ mod tests {
     fn annuler_est_permis_apres_la_suppression_de_l_action() {
         let (pm, _) = make_action(&validated_both_sides(), TeamSide::Home);
         let (pm, _) = pm
-            .delete_action(&ActionId("act-01".into()), CoachId::new())
+            .delete_action(&ActionId("act-01".into()), CoachId::new(), &TeamSide::BOTH)
             .unwrap();
         assert!(pm.cancel_inducements(CoachId::new()).is_ok());
     }
@@ -2757,7 +2876,7 @@ mod tests {
         let (pm, _) = make_action(&pm, TeamSide::Home);
         assert!(!pm.can_cancel_inducements());
         let (pm, _) = pm
-            .delete_action(&ActionId("act-01".into()), CoachId::new())
+            .delete_action(&ActionId("act-01".into()), CoachId::new(), &TeamSide::BOTH)
             .unwrap();
         assert!(pm.can_cancel_inducements());
     }

@@ -1,12 +1,18 @@
 use crate::app::auth::auth_backend::AuthSession;
+use crate::app::auth::domain::user::User;
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, HatredKeyword, InjuryType, MatchActionType, SequelStat, TeamSide,
     TempPlayerId, TurnNumber,
 };
+use crate::app::match_report::io::web::widgets::action_log_widget::{load_entry, load_scope};
 use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::use_cases::delete_action_use_case::{
     self, DeleteActionCommand, DeleteActionError,
+};
+use crate::app::match_report::use_cases::kick_off_service::KickOffPorts;
+use crate::app::match_report::use_cases::match_report_access_service::{
+    sides_writable_by, AccesRapportDeps,
 };
 use crate::app::match_report::use_cases::record_action_use_case::{
     self, RecordActionCommand, RecordActionError,
@@ -106,6 +112,7 @@ async fn post_action(
         state.match_report.match_report_repo.as_ref(),
         state.match_report.player_data.as_ref(),
         state.match_report.keyword_catalog.as_ref(),
+        &KickOffPorts::from_context(&state.match_report),
         &state.match_report.event_bus,
     )
     .await
@@ -144,12 +151,17 @@ fn refus_client(e: &RecordActionError) -> Option<&'static str> {
     match e {
         RecordActionError::UnknownKeyword(_) => Some(HAINE_REFUSEE),
         RecordActionError::Domain(DomainError::HatredNotAllowedForInjury) => Some(HAINE_INTERDITE),
+        // Carte 656 : la page renvoie déjà à l'avant-match avant le coup
+        // d'envoi ; une requête qui passe outre reçoit le motif.
+        RecordActionError::Domain(DomainError::MatchNotStarted) => Some(MATCH_NON_COMMENCE),
         _ => None,
     }
 }
 
 const HAINE_REFUSEE: &str = "Ce mot-clef ne peut pas être haï.";
 const HAINE_INTERDITE: &str = "Cette blessure ne permet pas de désigner une Haine.";
+const MATCH_NON_COMMENCE: &str =
+    "Le match n'a pas commencé : les deux avant-matchs et les coups de pouce doivent être enregistrés.";
 
 /// Traduit les deux champs du formulaire en un mot-clef, ou dit pourquoi non.
 ///
@@ -176,7 +188,6 @@ pub async fn delete_action(
     Path((space_id, mr_id, action_id)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
-    let _ = space_id;
     let user = match auth_session.user {
         Some(u) => u,
         None => return StatusCode::UNAUTHORIZED.into_response(),
@@ -185,10 +196,15 @@ pub async fn delete_action(
         Ok(id) => id,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
+    let writable_sides = match writable_sides(&state, &user, &space_id, &mr_id).await {
+        Ok(sides) => sides,
+        Err(status) => return status.into_response(),
+    };
     let cmd = DeleteActionCommand {
         match_report_id: mr_id_vo,
         action_id: ActionId(action_id),
         deleted_by: user.id,
+        writable_sides,
     };
     let repo = state.match_report.match_report_repo.as_ref();
     match delete_action_use_case::execute(cmd, repo, &state.match_report.event_bus).await {
@@ -202,11 +218,30 @@ pub async fn delete_action(
         Err(DeleteActionError::Domain(err @ DomainError::DrawnMvpIsFinal)) => {
             (StatusCode::UNPROCESSABLE_ENTITY, err.to_string()).into_response()
         }
+        // Carte 656 : le ✕ n'est rendu que sur les lignes de ses camps ; une
+        // requête forgée sur l'autre camp est refusée.
+        Err(DeleteActionError::Domain(err @ DomainError::ActionOutsideSide(_))) => {
+            (StatusCode::FORBIDDEN, err.to_string()).into_response()
+        }
         Err(e) => {
             tracing::error!("delete_action: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+/// Les camps où l'utilisateur écrit dans ce compte rendu (carte 656), lus
+/// comme le journal les lit pour son ✕.
+async fn writable_sides(
+    state: &AppState,
+    user: &User,
+    space_id: &str,
+    mr_id: &str,
+) -> Result<Vec<TeamSide>, StatusCode> {
+    let scope = load_scope(state, mr_id).await?;
+    let entry = load_entry(state, mr_id).await?;
+    let deps = AccesRapportDeps::from_state(state);
+    Ok(sides_writable_by(&deps, user, space_id, &scope, &entry).await)
 }
 
 /// Partagée avec l'étape MVP (`mvp_step_controller`, carte 637).

@@ -321,6 +321,9 @@ pub enum TeamSide {
 }
 
 impl TeamSide {
+    /// Les deux camps, domicile puis visiteur.
+    pub const BOTH: [Self; 2] = [Self::Home, Self::Away];
+
     /// Le camp d'en face.
     pub fn opposite(self) -> Self {
         match self {

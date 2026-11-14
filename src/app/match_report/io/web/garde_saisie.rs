@@ -201,25 +201,68 @@ pub async fn garde_camp(
     request: Request,
     next: Next,
 ) -> Response {
+    garder_le_camp(&state, auth_session, request, next, None).await
+}
+
+/// `garde_camp` pour les routes `step3*`, que leur nom désigne au domicile sans
+/// `side` dans le chemin (carte 656).
+pub async fn garde_camp_domicile(
+    State(state): State<AppState>,
+    auth_session: AuthSession,
+    request: Request,
+    next: Next,
+) -> Response {
+    garder_le_camp(&state, auth_session, request, next, Some(TeamSide::Home)).await
+}
+
+/// `garde_camp` pour les routes `step4*`, celles du visiteur (carte 656).
+pub async fn garde_camp_visiteur(
+    State(state): State<AppState>,
+    auth_session: AuthSession,
+    request: Request,
+    next: Next,
+) -> Response {
+    garder_le_camp(&state, auth_session, request, next, Some(TeamSide::Away)).await
+}
+
+/// Le corps commun des trois gardes : `camp_fixe` vient du nom de la route,
+/// sinon le camp se lit dans le chemin.
+async fn garder_le_camp(
+    state: &AppState,
+    auth_session: AuthSession,
+    request: Request,
+    next: Next,
+    camp_fixe: Option<TeamSide>,
+) -> Response {
     let (mut parts, corps) = request.into_parts();
     let params = path_params(&mut parts).await;
-    let wants_page = veut_une_page(&parts.method, &parts.headers);
+    let demande = DemandeDeCamp {
+        params: &params,
+        wants_page: veut_une_page(&parts.method, &parts.headers),
+        camp_fixe,
+    };
     let user = auth_session.user.as_ref();
-    if let Err(refus) = autoriser_camp(&state, user, &params, wants_page).await {
+    if let Err(refus) = autoriser_camp(state, user, &demande).await {
         return refus;
     }
     next.run(Request::from_parts(parts, corps)).await
 }
 
+/// Ce que la garde lit de la requête.
+struct DemandeDeCamp<'a> {
+    params: &'a HashMap<String, String>,
+    wants_page: bool,
+    camp_fixe: Option<TeamSide>,
+}
+
 async fn autoriser_camp(
     state: &AppState,
     user: Option<&User>,
-    params: &HashMap<String, String>,
-    wants_page: bool,
+    demande: &DemandeDeCamp<'_>,
 ) -> Result<(), Response> {
-    let rapport = autoriser_suivi(state, user, params).await?;
+    let rapport = autoriser_suivi(state, user, demande.params).await?;
     let entry = charger_entree(state, rapport.match_report_id).await?;
-    let side = camp_de_la_route(params, &rapport.portee)?;
+    let side = camp_demande(demande, &rapport.portee)?;
     let deps = AccesRapportDeps::from_state(state);
     let RapportSuivi {
         user,
@@ -230,7 +273,19 @@ async fn autoriser_camp(
     if can_write_side(&deps, user, space_id, portee, &entry, side).await {
         return Ok(());
     }
-    Err(refuser_le_camp(space_id, match_report_id, wants_page))
+    Err(refuser_le_camp(
+        space_id,
+        match_report_id,
+        demande.wants_page,
+    ))
+}
+
+/// Le camp fixé par le nom de la route, sinon celui de son chemin.
+fn camp_demande(demande: &DemandeDeCamp<'_>, portee: &PorteeRapport) -> Result<TeamSide, Response> {
+    match demande.camp_fixe {
+        Some(side) => Ok(side),
+        None => camp_de_la_route(demande.params, portee),
+    }
 }
 
 /// Le camp que désigne la route : son paramètre `side`, sinon son `team_id`
@@ -527,6 +582,33 @@ mod tests {
     #[test]
     fn a_route_without_side_is_refused() {
         assert_eq!(camp(&[]), Err(StatusCode::BAD_REQUEST));
+    }
+
+    fn camp_fixe(side: TeamSide, pairs: &[(&str, &str)]) -> Result<TeamSide, StatusCode> {
+        let params = params(pairs);
+        let demande = DemandeDeCamp {
+            params: &params,
+            wants_page: false,
+            camp_fixe: Some(side),
+        };
+        camp_demande(&demande, &portee()).map_err(|r| r.status())
+    }
+
+    /// Carte 656 : `step3*` et `step4*` ne portent pas le camp dans leur
+    /// chemin, c'est leur garde qui le fixe.
+    #[test]
+    fn a_fixed_side_needs_no_path_parameter() {
+        assert_eq!(camp_fixe(TeamSide::Home, &[]), Ok(TeamSide::Home));
+        assert_eq!(camp_fixe(TeamSide::Away, &[]), Ok(TeamSide::Away));
+    }
+
+    /// Le nom de la route l'emporte : un paramètre ne déplace pas le camp.
+    #[test]
+    fn a_fixed_side_ignores_the_path() {
+        assert_eq!(
+            camp_fixe(TeamSide::Home, &[("team_id", AWAY)]),
+            Ok(TeamSide::Home)
+        );
     }
 
     #[test]

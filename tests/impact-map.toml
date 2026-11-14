@@ -539,6 +539,13 @@
 "test_match_report_team_inducements" = ["match_report", "players", "competitions", "teams",
                                         "auth", "spaces", "references", "team_creation"]
 
+# Les actions de son camp (carte 656, épic E22) : chacun son bouton au direct,
+# le ✕ sur ses seules lignes, le coup d'envoi après les deux avant-matchs. Les
+# joueurs viennent de `players`, les noms d'équipes de `teams`, l'auteur de
+# `auth`.
+"test_match_report_team_actions" = ["match_report", "players", "competitions", "teams",
+                                    "auth", "spaces", "references", "team_creation"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni

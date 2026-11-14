@@ -55,20 +55,29 @@ pub async fn is_authorized(
     is_coach_of_either_team(deps, scope, &user.id.to_string()).await
 }
 
-/// Peut retirer une action du journal — ce qui décide du ✕ (carte 635).
+/// Les camps où l'utilisateur écrit — ce qui décide du ✕ de chaque ligne du
+/// journal et de la suppression (cartes 635 et 656).
 ///
-/// La règle de l'écriture, `can_write_report` (carte 634) : un ✕ visible doit
-/// mener à une suppression acceptée, et la suppression passe par la garde de
-/// saisie. C'est ici, et nulle part dans le gabarit, que la règle se décide.
+/// La règle de l'écriture par camp, `can_write_side` : un ✕ visible doit mener
+/// à une suppression acceptée, et le domaine refuse d'effacer hors de ces
+/// camps. En « Je saisis tout », les deux camps ou aucun, comme avant. C'est
+/// ici, et nulle part dans le gabarit, que la règle se décide.
 // arch:no-instrument — service de lecture : une question de droit, aucune intention métier
-pub async fn can_delete_actions(
+pub async fn sides_writable_by(
     deps: &AccesRapportDeps<'_>,
     user: &User,
     space_id: &str,
     scope: &PorteeRapport,
     entry: &EntryScope,
-) -> bool {
-    can_write_report(deps, user, space_id, scope, entry).await
+) -> Vec<TeamSide> {
+    let (home, away) = tokio::join!(
+        can_write_side(deps, user, space_id, scope, entry, TeamSide::Home),
+        can_write_side(deps, user, space_id, scope, entry, TeamSide::Away),
+    );
+    [(TeamSide::Home, home), (TeamSide::Away, away)]
+        .into_iter()
+        .filter_map(|(side, writes)| writes.then_some(side))
+        .collect()
 }
 
 /// Le mode de saisie d'un rapport et son démarreur (carte 631), lus sur la

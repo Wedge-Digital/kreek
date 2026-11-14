@@ -11,6 +11,7 @@ use crate::app::match_report::domain::value_objects::{
 use crate::app::match_report::ports::{IKeywordCatalogPort, IPlayerDataPort};
 use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle, ConflictAware};
 use crate::app::match_report::use_cases::event_emission::emit_all;
+use crate::app::match_report::use_cases::kick_off_service::{offered_inducements, KickOffPorts};
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::common::services::event_bus::event_bus::EventBus;
@@ -98,6 +99,7 @@ pub async fn execute(
     repo: &dyn IMatchReportRepository,
     player_data: &dyn IPlayerDataPort,
     keywords: &dyn IKeywordCatalogPort,
+    kick_off: &KickOffPorts<'_>,
     bus: &EventBus,
 ) -> Result<RecordActionOutcome, RecordActionError> {
     // Le catalogue n'est consulté que si une Haine est déclarée, et le refus
@@ -109,6 +111,7 @@ pub async fn execute(
         cmd: &cmd,
         action: &action,
         action_id: &action_id,
+        kick_off,
     };
     // Carte 653 : une course perdue contre l'autre camp se rejoue une fois.
     let first = record_once(&recording, repo, player_data, bus).await;
@@ -138,6 +141,9 @@ struct Recording<'a> {
     cmd: &'a RecordActionCommand,
     action: &'a MatchActionType,
     action_id: &'a ActionId,
+    /// D'où se lisent les coups de pouce offerts, que le coup d'envoi attend
+    /// en « Chacun son équipe » (carte 656).
+    kick_off: &'a KickOffPorts<'a>,
 }
 
 /// Un essai : relire l'agrégat, le laisser décider, appender à la version lue.
@@ -151,9 +157,11 @@ async fn record_once(
         cmd,
         action,
         action_id,
+        kick_off,
     } = recording;
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pre_match(repo, &mr_id).await?;
+    let offered = offered_inducements(&pm, kick_off).await;
     let (display_name, position) =
         resolve_player_info(&cmd.player, cmd.team_side, &pm, player_data).await?;
     // Le refus vient du domaine — le use case ne fait que le porter.
@@ -167,6 +175,7 @@ async fn record_once(
             position,
             (*action_id).clone(),
             cmd.recorded_by.clone(),
+            &offered,
         )
         .map_err(RecordActionError::Domain)?;
     persist_and_emit(repo, bus, &mr_id, &event, pm.version).await
@@ -253,6 +262,7 @@ mod tests {
     use crate::app::match_report::domain::value_objects::{
         DedicatedFans, MatchReportOrigin, TeamValue, TempPlayer, TempPlayerKind,
     };
+    use crate::app::match_report::use_cases::test_doubles::plain_kick_off;
     use crate::app::shared_kernel::bloodbowl::ids::{
         CompetitionId, MatchReportId, RoundId, SeasonId,
     };
@@ -514,6 +524,7 @@ mod tests {
             &DepotIntouchable,
             &JoueurAbsent,
             &CatalogueEspion::new(),
+            &plain_kick_off(),
             &crate::common::services::event_bus::event_bus::new_bus(),
         )
         .await;
@@ -553,7 +564,7 @@ mod tests {
 mod conflict_tests {
     use super::*;
     use crate::app::match_report::use_cases::test_doubles::{
-        pre_match, KnownPlayers, RecordingRepository, ScriptedRepository,
+        plain_kick_off, pre_match, KnownPlayers, RecordingRepository, ScriptedRepository,
     };
     use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
     use crate::common::services::event_bus::event_bus::new_bus;
@@ -596,7 +607,15 @@ mod conflict_tests {
         let repo = ScriptedRepository::reading(two_reads()).refusing(2);
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
-        let resultat = execute(touchdown(), &repo, &KnownPlayers, &NoKeywords, &bus).await;
+        let resultat = execute(
+            touchdown(),
+            &repo,
+            &KnownPlayers,
+            &NoKeywords,
+            &plain_kick_off(),
+            &bus,
+        )
+        .await;
         assert!(
             matches!(resultat, Err(RecordActionError::Conflict)),
             "{:?}",
@@ -614,9 +633,16 @@ mod conflict_tests {
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
 
-        let outcome = execute(touchdown(), &repo, &KnownPlayers, &NoKeywords, &bus)
-            .await
-            .expect("le réessai passe");
+        let outcome = execute(
+            touchdown(),
+            &repo,
+            &KnownPlayers,
+            &NoKeywords,
+            &plain_kick_off(),
+            &bus,
+        )
+        .await
+        .expect("le réessai passe");
 
         let appended = repo.appended();
         let [MatchReportDomainEvent::ActionRecorded { action_id, .. }] = appended.as_slice() else {
@@ -641,9 +667,16 @@ mod conflict_tests {
         let bus = new_bus();
         let mut subscriber = bus.subscribe();
 
-        execute(touchdown(), &repo, &KnownPlayers, &NoKeywords, &bus)
-            .await
-            .expect("action saisie");
+        execute(
+            touchdown(),
+            &repo,
+            &KnownPlayers,
+            &NoKeywords,
+            &plain_kick_off(),
+            &bus,
+        )
+        .await
+        .expect("action saisie");
 
         assert_eq!(repo.appended().len(), 1);
         assert_eq!(subscriber.try_recv().unwrap().event_type, "ActionRecorded");

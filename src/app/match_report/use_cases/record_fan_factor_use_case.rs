@@ -170,23 +170,34 @@ pub(crate) async fn next_step(
     team_data: &dyn ITeamDataPort,
     competition_data: &dyn ICompetitionDataPort,
 ) -> RecordFanFactorOutcome {
+    if offers_inducements(pm, &team_id, team_data, competition_data).await {
+        RecordFanFactorOutcome::RedirectToInducements { team_id }
+    } else {
+        RecordFanFactorOutcome::RedirectToLiveMatch
+    }
+}
+
+/// Le tier de cette équipe lui offre-t-il des coups de pouce ? Partagée avec
+/// le coup d'envoi de « Chacun son équipe » (carte 656) : une équipe à qui il
+/// n'en offre pas saute leur écran, et n'a rien à valider.
+pub(crate) async fn offers_inducements(
+    pm: &MatchReportPreMatch,
+    team_id: &str,
+    team_data: &dyn ITeamDataPort,
+    competition_data: &dyn ICompetitionDataPort,
+) -> bool {
     let roster_id = team_data
-        .find_team_info(&team_id)
+        .find_team_info(team_id)
         .await
         .map(|info| info.roster_id)
         .unwrap_or_default();
     let tier_rules = competition_data
         .find_tier_rules_for_roster(&pm.season_id.to_string(), &roster_id)
         .await;
-    let has_inducements = tier_rules
+    tier_rules
         .as_ref()
         .map(|r| !r.allowed_inducements.is_empty() || !r.allowed_star_players.is_empty())
-        .unwrap_or(false);
-    if has_inducements {
-        RecordFanFactorOutcome::RedirectToInducements { team_id }
-    } else {
-        RecordFanFactorOutcome::RedirectToLiveMatch
-    }
+        .unwrap_or(false)
 }
 
 #[cfg(test)]

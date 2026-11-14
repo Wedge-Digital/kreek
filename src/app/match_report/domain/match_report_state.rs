@@ -1897,7 +1897,7 @@ mod tests {
             .expect("tirage rejoué");
         assert_eq!(drawn.designated.len(), 6);
         assert_eq!(
-            pm.delete_action(&ActionId("tire".into()), coach_id)
+            pm.delete_action(&ActionId("tire".into()), coach_id, &TeamSide::BOTH)
                 .unwrap_err(),
             DomainError::DrawnMvpIsFinal
         );
@@ -1915,9 +1915,9 @@ mod tests {
         let MatchReportState::ReadyToPublish(rtp) = rehydrate(events).unwrap() else {
             panic!("attendu ReadyToPublish");
         };
-        let refus = rtp
-            .into_pre_match()
-            .delete_action(&ActionId("tire".into()), coach_id);
+        let refus =
+            rtp.into_pre_match()
+                .delete_action(&ActionId("tire".into()), coach_id, &TeamSide::BOTH);
         assert_eq!(refus.unwrap_err(), DomainError::DrawnMvpIsFinal);
     }
 

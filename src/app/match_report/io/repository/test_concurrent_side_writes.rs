@@ -20,7 +20,7 @@ use crate::app::match_report::ports::{IKeywordCatalogPort, KeywordDto};
 use crate::app::match_report::use_cases::record_action_use_case::{
     self, RecordActionCommand, RecordActionError,
 };
-use crate::app::match_report::use_cases::test_doubles::KnownPlayers;
+use crate::app::match_report::use_cases::test_doubles::{plain_kick_off, KnownPlayers};
 use crate::app::shared_kernel::bloodbowl::ids::{
     CompetitionId, MatchReportId, PlayerId, RoundId, SeasonId,
 };
@@ -218,6 +218,7 @@ async fn two_sides_writing_at_the_same_version_both_land(pool: PgPool) {
         &repo,
         &KnownPlayers,
         &NoKeywords,
+        &plain_kick_off(),
         &new_bus(),
     )
     .await
@@ -252,6 +253,7 @@ async fn two_lost_races_in_a_row_return_the_conflict(pool: PgPool) {
         &repo,
         &KnownPlayers,
         &NoKeywords,
+        &plain_kick_off(),
         &new_bus(),
     )
     .await;

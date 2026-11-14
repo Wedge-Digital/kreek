@@ -9,6 +9,7 @@ pub mod hate_keywords_service;
 pub mod inducements_print_service;
 pub mod inducements_recap_service;
 pub mod init_temp_players_use_case;
+pub mod kick_off_service;
 pub mod match_report_access_service;
 pub mod match_sheet_service;
 pub mod print_models;

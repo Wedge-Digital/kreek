@@ -4,7 +4,7 @@ use crate::app::match_report::domain::match_report_repository_port::{
     IMatchReportRepository, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::ActionId;
+use crate::app::match_report::domain::value_objects::{ActionId, TeamSide};
 use crate::app::match_report::use_cases::conflict_retry::{lost_the_race, settle, ConflictAware};
 use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -16,6 +16,9 @@ pub struct DeleteActionCommand {
     pub match_report_id: MatchReportId,
     pub action_id: ActionId,
     pub deleted_by: CoachId,
+    /// Les camps où l'auteur écrit (carte 656) : le domaine refuse d'effacer
+    /// une action d'un autre camp.
+    pub writable_sides: Vec<TeamSide>,
 }
 
 #[derive(Debug)]
@@ -70,7 +73,7 @@ async fn delete_once(
     let mr_id = cmd.match_report_id.to_string();
     let pm = load_pre_match(repo, &mr_id).await?;
     let (_, event) = pm
-        .delete_action(&cmd.action_id, cmd.deleted_by.clone())
+        .delete_action(&cmd.action_id, cmd.deleted_by.clone(), &cmd.writable_sides)
         .map_err(DeleteActionError::Domain)?;
     repo.append(&mr_id, &event, pm.version)
         .await
@@ -155,6 +158,7 @@ mod tests {
                 String::new(),
                 action_id.clone(),
                 CoachId::new(),
+                &[],
             )
             .expect("action de test valide");
         (updated, action_id)
@@ -163,14 +167,14 @@ mod tests {
     #[test]
     fn delete_action_domain_ok_for_existing_action() {
         let (pm, action_id) = make_pm_with_action();
-        let result = pm.delete_action(&action_id, CoachId::new());
+        let result = pm.delete_action(&action_id, CoachId::new(), &TeamSide::BOTH);
         assert!(result.is_ok());
     }
 
     #[test]
     fn delete_action_domain_err_for_unknown_action() {
         let (pm, _) = make_pm_with_action();
-        let result = pm.delete_action(&ActionId("UNKNOWN".into()), CoachId::new());
+        let result = pm.delete_action(&ActionId("UNKNOWN".into()), CoachId::new(), &TeamSide::BOTH);
         assert!(matches!(result, Err(DomainError::ActionNotFound(_))));
     }
 }
@@ -198,6 +202,7 @@ mod conflict_tests {
                 String::new(),
                 action_id.clone(),
                 CoachId::new(),
+                &[],
             )
             .expect("action de test valide");
         MatchReportState::PreMatch(pm)
@@ -208,6 +213,7 @@ mod conflict_tests {
             match_report_id: MatchReportId::new(),
             action_id,
             deleted_by: CoachId::new(),
+            writable_sides: TeamSide::BOTH.to_vec(),
         }
     }
 

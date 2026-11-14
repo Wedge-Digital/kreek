@@ -81,6 +81,13 @@ pub enum DomainError {
     /// Les deux jets d'un coup dans un rapport en « Chacun son équipe » : ils
     /// écraseraient celui de l'autre coach (carte 654).
     TeamEntryFanFactorBySide,
+    /// Une action avant le coup d'envoi, en « Chacun son équipe » (carte 656,
+    /// § 12.3 de E22) : les deux fans factors et les coups de pouce offerts ne
+    /// sont pas tous enregistrés. La règle vaut à la saisie, jamais au rejeu.
+    MatchNotStarted,
+    /// Une action effacée hors des camps où l'auteur écrit (carte 656, R6 de
+    /// E22). Porte le camp de l'action.
+    ActionOutsideSide(TeamSide),
 }
 
 impl fmt::Display for DomainError {
@@ -140,6 +147,13 @@ impl fmt::Display for DomainError {
                 f,
                 "En « Chacun son équipe », chaque coach saisit le fan factor de son équipe."
             ),
+            Self::MatchNotStarted => write!(
+                f,
+                "Le match n'a pas commencé : les deux avant-matchs et les coups de pouce doivent être enregistrés."
+            ),
+            Self::ActionOutsideSide(_) => {
+                write!(f, "Cette action appartient à l'autre équipe.")
+            }
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),
             Self::BudgetExceeded { spent, budget } => {

@@ -1,5 +1,6 @@
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::TeamSide;
+use crate::app::match_report::io::web::kick_off_redirect::kick_off_redirect;
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
@@ -70,15 +71,16 @@ async fn get_step(space_id: String, mr_id: String, side: TeamSide, state: AppSta
         Ok(s) => s,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let (home_id, away_id) = match state_opt {
-        Some(MatchReportState::PreMatch(pm)) => {
-            (pm.home_team_id.to_string(), pm.away_team_id.to_string())
-        }
-        Some(MatchReportState::ReadyToPublish(rtp)) => {
-            (rtp.home_team_id.to_string(), rtp.away_team_id.to_string())
-        }
+    let pm = match state_opt {
+        Some(MatchReportState::PreMatch(pm)) => pm,
+        Some(MatchReportState::ReadyToPublish(rtp)) => rtp.into_pre_match(),
         Some(_) | None => return StatusCode::NOT_FOUND.into_response(),
     };
+    // Carte 656 : en « Chacun son équipe », pas d'action avant le coup d'envoi.
+    if let Some(detour) = kick_off_redirect(&state, (&space_id, &mr_id), &pm, side).await {
+        return detour;
+    }
+    let (home_id, away_id) = (pm.home_team_id.to_string(), pm.away_team_id.to_string());
 
     let routes = AppRoutes::default();
     let team_id = match side {

@@ -4,7 +4,7 @@ use crate::app::match_report::domain::match_report_repository_port::MatchActionR
 use crate::app::match_report::domain::value_objects::{MatchActionType, TeamSide};
 use crate::app::match_report::ports::{ICoachDataPort, IKeywordCatalogPort};
 use crate::app::match_report::use_cases::match_report_access_service::{
-    can_delete_actions, load_entry_scope, AccesRapportDeps, EntryScope, PorteeRapport,
+    load_entry_scope, sides_writable_by, AccesRapportDeps, EntryScope, PorteeRapport,
 };
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
@@ -45,8 +45,9 @@ pub struct ActionLogContext<'a> {
     pub away_team_name: String,
     /// Les noms des auteurs autres que l'utilisateur courant.
     pub recorder_names: HashMap<String, String>,
-    /// Le droit vient du service d'accès, jamais du gabarit.
-    pub can_delete: bool,
+    /// Les camps où l'utilisateur écrit (carte 656) : le droit vient du
+    /// service d'accès, jamais du gabarit.
+    pub writable_sides: Vec<TeamSide>,
     pub keyword_catalog: &'a dyn IKeywordCatalogPort,
 }
 
@@ -83,10 +84,12 @@ fn recorded_by_label(recorded_by: Option<&str>, ctx: &ActionLogContext<'_>) -> O
     ctx.recorder_names.get(id).cloned()
 }
 
-/// Pas de ✕ pour qui ne peut pas écrire, ni pour un MVP tiré au sort : le
-/// domaine refuse sa suppression (carte 638), la projection du tirage le dit.
+/// Pas de ✕ hors des camps où l'utilisateur écrit (carte 656), ni pour un MVP
+/// tiré au sort : le domaine refuse les deux suppressions (carte 638), la
+/// projection du tirage dit le second.
 fn delete_url(row: &MatchActionRow, ctx: &ActionLogContext<'_>) -> Option<String> {
-    (ctx.can_delete && row.draw_size.is_none()).then(|| {
+    let writes_side = ctx.writable_sides.contains(&row.team_side);
+    (writes_side && row.draw_size.is_none()).then(|| {
         AppRoutes::default().match_report.delete_action(
             ctx.space_id,
             ctx.match_report_id,
@@ -153,14 +156,14 @@ async fn log_context<'a>(
 ) -> ActionLogContext<'a> {
     let current_user_id = user.id.to_string();
     let deps = AccesRapportDeps::from_state(state);
-    let ((home_team_name, away_team_name), recorder_names, can_delete) = tokio::join!(
+    let ((home_team_name, away_team_name), recorder_names, writable_sides) = tokio::join!(
         team_names(state, scope),
         recorder_names(
             state.match_report.coach_data.as_ref(),
             rows,
             &current_user_id
         ),
-        can_delete_actions(&deps, user, space_id, scope, entry),
+        sides_writable_by(&deps, user, space_id, scope, entry),
     );
     ActionLogContext {
         space_id,
@@ -169,7 +172,7 @@ async fn log_context<'a>(
         home_team_name,
         away_team_name,
         recorder_names,
-        can_delete,
+        writable_sides,
         keyword_catalog: state.match_report.keyword_catalog.as_ref(),
     }
 }
@@ -350,7 +353,7 @@ mod tests {
         }
     }
 
-    fn ctx(can_delete: bool) -> ActionLogContext<'static> {
+    fn ctx(writable_sides: &[TeamSide]) -> ActionLogContext<'static> {
         ActionLogContext {
             space_id: "espace",
             match_report_id: "rapport",
@@ -358,35 +361,36 @@ mod tests {
             home_team_name: "Nains de Fer".to_string(),
             away_team_name: "London Rats".to_string(),
             recorder_names: HashMap::from([(YANN.to_string(), "Yann".to_string())]),
-            can_delete,
+            writable_sides: writable_sides.to_vec(),
             keyword_catalog: &NoKeywords,
         }
     }
 
     #[test]
     fn the_current_user_is_named_you() {
-        let vm = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx(true));
+        let vm = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx(&TeamSide::BOTH));
         assert_eq!(vm.recorded_by.as_deref(), Some("vous"));
     }
 
     #[test]
     fn the_other_coach_is_named() {
-        let vm = ActionRowVm::from_row(row(TeamSide::Away, Some(YANN)), &ctx(true));
+        let vm = ActionRowVm::from_row(row(TeamSide::Away, Some(YANN)), &ctx(&TeamSide::BOTH));
         assert_eq!(vm.recorded_by.as_deref(), Some("Yann"));
     }
 
     /// Un auteur absent ou inconnu du port ne reçoit pas de nom inventé.
     #[test]
     fn an_unknown_author_stays_unnamed() {
-        let none = ActionRowVm::from_row(row(TeamSide::Home, None), &ctx(true));
-        let stranger = ActionRowVm::from_row(row(TeamSide::Home, Some("autre")), &ctx(true));
+        let none = ActionRowVm::from_row(row(TeamSide::Home, None), &ctx(&TeamSide::BOTH));
+        let stranger =
+            ActionRowVm::from_row(row(TeamSide::Home, Some("autre")), &ctx(&TeamSide::BOTH));
         assert_eq!((none.recorded_by, stranger.recorded_by), (None, None));
     }
 
     #[test]
     fn each_line_names_its_side_and_team() {
-        let home = ActionRowVm::from_row(row(TeamSide::Home, None), &ctx(true));
-        let away = ActionRowVm::from_row(row(TeamSide::Away, None), &ctx(true));
+        let home = ActionRowVm::from_row(row(TeamSide::Home, None), &ctx(&TeamSide::BOTH));
+        let away = ActionRowVm::from_row(row(TeamSide::Away, None), &ctx(&TeamSide::BOTH));
         assert_eq!(
             (home.side_class, home.team_name.as_str()),
             ("home", "Nains de Fer")
@@ -399,16 +403,27 @@ mod tests {
 
     #[test]
     fn no_cross_for_who_cannot_delete() {
-        let vm = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx(false));
+        let vm = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx(&[]));
         assert_eq!(vm.delete_url, None);
     }
 
     #[test]
     fn a_cross_for_who_can_delete() {
-        let vm = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx(true));
+        let vm = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx(&TeamSide::BOTH));
         assert!(vm
             .delete_url
             .is_some_and(|url| url.ends_with("/actions/action")));
+    }
+
+    /// Carte 656 : en « Chacun son équipe », le ✕ sur les lignes de son camp
+    /// seul.
+    #[test]
+    fn a_cross_only_on_the_lines_of_a_writable_side() {
+        let ctx = ctx(&[TeamSide::Home]);
+        let home = ActionRowVm::from_row(row(TeamSide::Home, Some(ME)), &ctx);
+        let away = ActionRowVm::from_row(row(TeamSide::Away, Some(YANN)), &ctx);
+        assert!(home.delete_url.is_some());
+        assert_eq!(away.delete_url, None);
     }
 
     /// Le gabarit, et non seulement le VM : sans droit, aucun bouton ✕ rendu.
@@ -416,7 +431,7 @@ mod tests {
     fn the_rendered_log_has_no_cross_without_the_right() {
         let actions = vec![ActionRowVm::from_row(
             row(TeamSide::Away, Some(YANN)),
-            &ctx(false),
+            &ctx(&[]),
         )];
         let html = ActionLogTemplate { actions }.render().unwrap();
         assert!(html.contains("London Rats · saisi par Yann"));
@@ -429,7 +444,7 @@ mod tests {
         let mut drawn = row(TeamSide::Home, Some(ME));
         drawn.action_json = serde_json::to_value(MatchActionType::Mvp).unwrap();
         drawn.draw_size = Some(6);
-        let vm = ActionRowVm::from_row(drawn, &ctx(true));
+        let vm = ActionRowVm::from_row(drawn, &ctx(&TeamSide::BOTH));
         assert_eq!(vm.delete_url, None);
         let html = ActionLogTemplate { actions: vec![vm] }.render().unwrap();
         assert!(html.contains("tiré parmi 6 désignés"), "{html}");

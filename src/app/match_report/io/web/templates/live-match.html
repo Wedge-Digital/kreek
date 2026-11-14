@@ -47,7 +47,22 @@
     </div>
   </div>
 
-  {% if write.is_none() %}
+  {% if team_entry %}
+  {# « Chacun son équipe » (carte 656) : les deux coachs écrivent, et chacun
+     voit qui d'autre est sur le match. #}
+  <div class="live-notice">
+    <div class="live-presence"
+         hx-get="{{ presence_widget_url }}"
+         hx-trigger="load, presenceChanged[detail.id=='{{ match_report_id }}'] from:body, realtimeResync from:body"
+         hx-target="this"
+         hx-swap="innerHTML">
+    </div>
+    <div class="live-notice-title">
+      <span class="live-dot"></span>
+      Chacun saisit les actions de son &eacute;quipe
+    </div>
+  </div>
+  {% else if write.is_none() %}
   <div class="live-notice">
     {# Qui d'autre est sur le match en ce moment (carte 644) — au-dessus du
        titre, qui dit le mode et reste vrai quand l'onglet du saisisseur est
@@ -80,6 +95,10 @@
 
   {% if let Some(w) = write %}
   <div class="live-actions">
+    {% if let Some(own) = w.own_step.as_ref() %}
+    {# « Chacun son équipe » (carte 656) : son équipe seule, sans choix. #}
+    <a class="btn btn-primary-blue btn-md live-new-action-toggle" href="{{ own.url }}">&#65291; Action des {{ own.team_name }}</a>
+    {% else %}
     {# Le choix de l'équipe, dans la page et sans script : un <details>
        natif, qui s'ouvre et se referme au clic. #}
     <details class="live-new-action">
@@ -106,6 +125,7 @@
         </a>
       </div>
     </details>
+    {% endif %}
     <a class="btn btn-outline btn-sm live-end-match" href="{{ w.mvp_url }}">Fin du match &#8594; MVP</a>
   </div>
   {% endif %}

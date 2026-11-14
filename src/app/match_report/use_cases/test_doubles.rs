@@ -655,3 +655,13 @@ impl crate::app::match_report::ports::ICoachDataPort for NamedCoaches {
         found.map(|(_, n)| n.clone())
     }
 }
+
+/// Les ports du coup d'envoi (carte 656) sur des doublures sans coups de
+/// pouce : en « Je saisis tout », ils ne sont même pas interrogés.
+pub fn plain_kick_off(
+) -> crate::app::match_report::use_cases::kick_off_service::KickOffPorts<'static> {
+    crate::app::match_report::use_cases::kick_off_service::KickOffPorts {
+        team_data: &ReadyTeams,
+        competition_data: &PlainCompetition,
+    }
+}

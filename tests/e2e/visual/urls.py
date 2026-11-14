@@ -157,7 +157,12 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         return _un(f"SELECT match_report_id FROM match_report_proj "
                    f"WHERE space_id = '{espace}' AND phase = '{phase}' LIMIT 1")
 
-    rapport_prematch = rapport_en("PreMatch")
+    # « Je saisis tout » : en « Chacun son équipe », `/step3` renvoie à
+    # l'avant-match tant que le match n'a pas commencé (carte 656), et la
+    # capture montrerait une autre page.
+    rapport_prematch = _un(f"SELECT match_report_id FROM match_report_proj "
+                           f"WHERE space_id = '{espace}' AND phase = 'PreMatch' "
+                           f"AND entry_mode = 'SoloEntry' LIMIT 1")
     rapport_publie = rapport_en("Published")
     # Un rapport prêt dont chaque camp a son MVP : sans, l'étape 5 renvoie à
     # l'étape MVP (carte 638), et la capture montrerait une autre page.

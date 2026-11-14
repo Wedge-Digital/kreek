@@ -1,6 +1,8 @@
 use crate::app::match_report::io::web::actions_step_controller::{get_step3, get_step4};
 use crate::app::match_report::io::web::cancel_inducements_controller::post_cancel_inducements;
-use crate::app::match_report::io::web::garde_saisie::{garde_camp, garde_saisie, garde_suivi};
+use crate::app::match_report::io::web::garde_saisie::{
+    garde_camp, garde_camp_domicile, garde_camp_visiteur, garde_saisie, garde_suivi,
+};
 use crate::app::match_report::io::web::inducements_controller::{
     get_inducements, post_inducements,
 };
@@ -55,7 +57,9 @@ use std::convert::Infallible;
 use tower::{Layer, Service};
 
 /// Quatre groupes, et les frontières entre eux sont des décisions (cartes 622,
-/// 634 et 652). Le quatrième, `routes_de_camp()`, est décrit avec sa fonction.
+/// 634 et 652). Le quatrième, `routes_de_camp()`, est décrit avec sa fonction,
+/// comme ses deux variantes à camp fixe, `routes_du_domicile()` et
+/// `routes_du_visiteur()` (carte 656).
 ///
 /// `routes_de_saisie()` porte l'écriture d'un compte rendu et les écrans qui
 /// la préparent : `garde_saisie` y est posée **une fois** — admins, et en « Je
@@ -74,11 +78,15 @@ use tower::{Layer, Service};
 pub fn router(state: AppState) -> Router<AppState> {
     let suivi = from_fn_with_state(state.clone(), garde_suivi);
     let saisie = from_fn_with_state(state.clone(), garde_saisie);
-    let camp = from_fn_with_state(state, garde_camp);
+    let camp = from_fn_with_state(state.clone(), garde_camp);
+    let domicile = from_fn_with_state(state.clone(), garde_camp_domicile);
+    let visiteur = from_fn_with_state(state, garde_camp_visiteur);
     routes_ouvertes()
         .merge(routes_de_suivi().route_layer(suivi))
         .merge(routes_de_saisie().route_layer(saisie))
         .merge(garder_si_non_vide(routes_de_camp(), camp))
+        .merge(routes_du_domicile().route_layer(domicile))
+        .merge(routes_du_visiteur().route_layer(visiteur))
 }
 
 /// `route_layer` sur un routeur sans route **panique** (axum 0.8) : le groupe
@@ -183,8 +191,6 @@ fn routes_de_saisie() -> Router<AppState> {
             path::MATCH_REPORT_CANCEL_INDUCEMENTS,
             post(post_cancel_inducements),
         )
-        .route(path::MATCH_REPORT_STEP3, get(get_step3))
-        .route(path::MATCH_REPORT_STEP4, get(get_step4))
         // L'étape MVP d'un camp (carte 637).
         .route(
             path::MATCH_REPORT_MVP,
@@ -193,33 +199,49 @@ fn routes_de_saisie() -> Router<AppState> {
         // Le tirage au sort du MVP (carte 638).
         .route(path::MATCH_REPORT_MVP_DRAW, post(post_mvp_draw))
         .route(path::MATCH_REPORT_STEP5, get(get_step5).post(post_step5))
+        // Le camp de l'action se lit dans l'agrégat, pas dans le chemin : c'est
+        // le domaine qui refuse d'effacer hors de ses camps (carte 656).
+        .route(path::MATCH_REPORT_ACTION, delete(delete_action))
+}
+
+/// La saisie des actions du domicile (carte 656) : `step3*` ne porte ni `side`
+/// ni `team_id`, c'est son nom qui désigne le camp. `garde_camp_domicile` y
+/// applique `can_write_side` comme `garde_camp` le fait sur `routes_de_camp()`.
+fn routes_du_domicile() -> Router<AppState> {
+    Router::new()
+        .route(path::MATCH_REPORT_STEP3, get(get_step3))
         .route(
             path::MATCH_REPORT_STEP3_TURN_SELECTOR,
             get(get_turn_selector_step3),
-        )
-        .route(
-            path::MATCH_REPORT_STEP4_TURN_SELECTOR,
-            get(get_turn_selector_step4),
         )
         .route(
             path::MATCH_REPORT_STEP3_TEMP_PLAYERS,
             get(get_temp_players_step3),
         )
         .route(
-            path::MATCH_REPORT_STEP4_TEMP_PLAYERS,
-            get(get_temp_players_step4),
-        )
-        .route(
             path::MATCH_REPORT_STEP3_ACTION_PANEL,
             get(get_action_panel_step3),
+        )
+        .route(path::MATCH_REPORT_STEP3_ACTIONS, post(post_action_step3))
+}
+
+/// La saisie des actions du visiteur, `step4*` (carte 656).
+fn routes_du_visiteur() -> Router<AppState> {
+    Router::new()
+        .route(path::MATCH_REPORT_STEP4, get(get_step4))
+        .route(
+            path::MATCH_REPORT_STEP4_TURN_SELECTOR,
+            get(get_turn_selector_step4),
+        )
+        .route(
+            path::MATCH_REPORT_STEP4_TEMP_PLAYERS,
+            get(get_temp_players_step4),
         )
         .route(
             path::MATCH_REPORT_STEP4_ACTION_PANEL,
             get(get_action_panel_step4),
         )
-        .route(path::MATCH_REPORT_STEP3_ACTIONS, post(post_action_step3))
         .route(path::MATCH_REPORT_STEP4_ACTIONS, post(post_action_step4))
-        .route(path::MATCH_REPORT_ACTION, delete(delete_action))
 }
 
 #[cfg(test)]

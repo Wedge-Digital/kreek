@@ -6,17 +6,24 @@
 //! camp (`step3` ou `step4`).
 //!
 //! L'autre coach ouvre le même écran, **sans aucun bouton d'écriture** : la
-//! route vit dans `routes_de_suivi()`, et c'est `can_write_report` — jamais le
-//! gabarit — qui décide de ce qui s'affiche.
+//! route vit dans `routes_de_suivi()`, et c'est le droit d'écrire par camp —
+//! jamais le gabarit — qui décide de ce qui s'affiche.
+//!
+//! En « Chacun son équipe » (carte 656), chaque coach n'a qu'un bouton, celui
+//! de son équipe, et la fin du match mène à son MVP ; l'admin garde le choix
+//! d'équipe. Avant le coup d'envoi, le coach est renvoyé à son avant-match.
 
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::auth::domain::user::User;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::value_objects::{EntryMode, TeamSide};
+use crate::app::match_report::io::web::kick_off_redirect::kick_off_redirect;
+use crate::app::match_report::io::web::mvp_step_controller::side_slug;
 use crate::app::match_report::io::web::widgets::action_log_widget::{load_entry, load_scope};
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::match_report_access_service::{
-    can_write_report, AccesRapportDeps, EntryScope,
+    sides_writable_by, AccesRapportDeps, EntryScope,
 };
 use crate::app::routes::AppRoutes;
 use crate::state::AppState;
@@ -46,13 +53,27 @@ impl LiveTeamVm {
 pub struct LiveWriteVm {
     pub home_step_url: String,
     pub away_step_url: String,
+    /// En « Chacun son équipe », la saisie de **son** camp, sans choix
+    /// d'équipe (carte 656) ; `None` pour qui écrit les deux camps.
+    pub own_step: Option<OwnStepVm>,
     pub mvp_url: String,
+}
+
+/// Le bouton unique d'un coach en « Chacun son équipe ».
+pub struct OwnStepVm {
+    pub url: String,
+    pub team_name: String,
 }
 
 /// Ce que l'utilisateur a le droit de faire sur ce match, établi par le
 /// service d'accès.
 pub struct LiveAccess {
     pub can_write: bool,
+    /// Le camp d'un coach en « Chacun son équipe » ; `None` pour l'admin,
+    /// qui écrit les deux, et en « Je saisis tout ».
+    pub own_side: Option<TeamSide>,
+    /// « Chacun son équipe » : la présence s'affiche à tous (carte 656).
+    pub team_entry: bool,
     /// Le nom du démarreur, montré à qui suit ; `None` s'il est inconnu.
     pub starter_name: Option<String>,
 }
@@ -69,6 +90,7 @@ pub struct LiveMatchTemplate {
     pub action_log_url: String,
     /// `None` pour qui suit : aucun bouton d'écriture n'est rendu.
     pub write: Option<LiveWriteVm>,
+    pub team_entry: bool,
     pub starter_name: Option<String>,
     /// Le marqueur de présence (carte 644) : le layout déclare ce match.
     pub space_id: String,
@@ -119,8 +141,14 @@ async fn render_live(
     ids: &LiveIds<'_>,
 ) -> Result<LiveMatchTemplate, Response> {
     let pm = load_match(state, ids).await?;
-    let (home, away) = load_teams(state, &pm).await;
     let access = load_access(state, user, ids).await?;
+    if let Some(side) = access.own_side {
+        let page = (ids.space_id, ids.mr_id);
+        if let Some(detour) = kick_off_redirect(state, page, &pm, side).await {
+            return Err(detour);
+        }
+    }
+    let (home, away) = load_teams(state, &pm).await;
     let teams = (LiveTeamVm::from_info(&home), LiveTeamVm::from_info(&away));
     Ok(build_template(ids, teams, access))
 }
@@ -171,7 +199,8 @@ async fn load_teams(state: &AppState, pm: &MatchReportPreMatch) -> (TeamInfoDto,
     (home.unwrap_or_default(), away.unwrap_or_default())
 }
 
-/// Le droit d'écrire, et, pour qui suit seulement, le nom du démarreur.
+/// Le droit d'écrire par camp, et, pour qui suit seulement, le nom du
+/// démarreur.
 async fn load_access(
     state: &AppState,
     user: &User,
@@ -184,15 +213,27 @@ async fn load_access(
         .await
         .map_err(|s| s.into_response())?;
     let deps = AccesRapportDeps::from_state(state);
-    let can_write = can_write_report(&deps, user, ids.space_id, &scope, &entry).await;
-    let starter_name = match can_write {
-        true => None,
-        false => starter_name(state, &entry).await,
+    let sides = sides_writable_by(&deps, user, ids.space_id, &scope, &entry).await;
+    let team_entry = EntryMode::from_written(&entry.entry_mode) == Some(EntryMode::TeamEntry);
+    let starter_name = match sides.is_empty() && !team_entry {
+        true => starter_name(state, &entry).await,
+        false => None,
     };
-    Ok(LiveAccess {
-        can_write,
+    Ok(access_from(&sides, team_entry, starter_name))
+}
+
+/// Un seul camp en « Chacun son équipe » : c'est le sien.
+fn access_from(sides: &[TeamSide], team_entry: bool, starter_name: Option<String>) -> LiveAccess {
+    let own_side = match (team_entry, sides) {
+        (true, [side]) => Some(*side),
+        _ => None,
+    };
+    LiveAccess {
+        can_write: !sides.is_empty(),
+        own_side,
+        team_entry,
         starter_name,
-    })
+    }
 }
 
 async fn starter_name(state: &AppState, entry: &EntryScope) -> Option<String> {
@@ -210,7 +251,10 @@ pub fn build_template(
     LiveMatchTemplate {
         live_score_url: routes.match_report.live_score(ids.space_id, ids.mr_id),
         action_log_url: routes.match_report.action_log(ids.space_id, ids.mr_id),
-        write: access.can_write.then(|| write_vm(ids)),
+        write: access
+            .can_write
+            .then(|| write_vm(ids, access.own_side, (&home, &away))),
+        team_entry: access.team_entry,
         starter_name: access.starter_name,
         space_id: ids.space_id.to_string(),
         match_report_id: ids.mr_id.to_string(),
@@ -221,12 +265,30 @@ pub fn build_template(
     }
 }
 
-fn write_vm(ids: &LiveIds<'_>) -> LiveWriteVm {
+fn write_vm(
+    ids: &LiveIds<'_>,
+    own_side: Option<TeamSide>,
+    (home, away): (&LiveTeamVm, &LiveTeamVm),
+) -> LiveWriteVm {
     let routes = AppRoutes::default().match_report;
+    let home_step_url = routes.step3(ids.space_id, ids.mr_id);
+    let away_step_url = routes.step4(ids.space_id, ids.mr_id);
+    let own_step = own_side.map(|side| match side {
+        TeamSide::Home => OwnStepVm {
+            url: home_step_url.clone(),
+            team_name: home.name.clone(),
+        },
+        TeamSide::Away => OwnStepVm {
+            url: away_step_url.clone(),
+            team_name: away.name.clone(),
+        },
+    });
+    let mvp_side = side_slug(own_side.unwrap_or(TeamSide::Home));
     LiveWriteVm {
-        home_step_url: routes.step3(ids.space_id, ids.mr_id),
-        away_step_url: routes.step4(ids.space_id, ids.mr_id),
-        mvp_url: routes.mvp(ids.space_id, ids.mr_id, "home"),
+        mvp_url: routes.mvp(ids.space_id, ids.mr_id, mvp_side),
+        home_step_url,
+        away_step_url,
+        own_step,
     }
 }
 
@@ -258,9 +320,49 @@ mod tests {
     fn template(can_write: bool, starter_name: Option<&str>) -> LiveMatchTemplate {
         let access = LiveAccess {
             can_write,
+            own_side: None,
+            team_entry: false,
             starter_name: starter_name.map(str::to_string),
         };
         build_template(&IDS, (team("Nains de Fer"), team("London Rats")), access)
+    }
+
+    /// « Chacun son équipe » : un coach du camp `sides`, ou l'admin.
+    fn team_entry_template(sides: &[TeamSide]) -> LiveMatchTemplate {
+        let access = access_from(sides, true, None);
+        build_template(&IDS, (team("Nains de Fer"), team("London Rats")), access)
+    }
+
+    #[test]
+    fn a_team_entry_coach_gets_only_his_side_and_his_mvp() {
+        let page = team_entry_template(&[TeamSide::Away]);
+        let write = page.write.as_ref().expect("les gestes d'écriture");
+        let own = write.own_step.as_ref().expect("son camp");
+        assert!(own.url.ends_with("/rapport/step4"));
+        assert_eq!(own.team_name, "London Rats");
+        assert!(write.mvp_url.ends_with("/rapport/mvp/away"));
+        let html = page.render().unwrap();
+        assert!(html.contains("Action des London Rats"), "{html}");
+        assert!(!html.contains("live-team-pick"));
+        assert!(!html.contains("/step3"));
+    }
+
+    /// § 12.6 de E22 : l'admin écrit les deux camps, il garde le choix.
+    #[test]
+    fn the_admin_keeps_the_team_choice_in_team_entry() {
+        let page = team_entry_template(&TeamSide::BOTH);
+        assert!(page.write.as_ref().unwrap().own_step.is_none());
+        assert!(page.render().unwrap().contains("live-team-pick"));
+    }
+
+    /// Les deux coachs voient qui est sur le match, sans le bandeau « X
+    /// saisit tout le match ».
+    #[test]
+    fn both_team_entry_coaches_see_the_presence() {
+        let html = team_entry_template(&[TeamSide::Home]).render().unwrap();
+        assert!(html.contains("live-presence"));
+        assert!(html.contains("Chacun saisit les actions de son"), "{html}");
+        assert!(!html.contains("saisit tout le match"));
     }
 
     #[test]
