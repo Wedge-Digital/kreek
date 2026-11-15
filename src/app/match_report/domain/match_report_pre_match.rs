@@ -744,6 +744,15 @@ impl MatchReportPreMatch {
         first_side_without_mvp(&self.home_actions, &self.away_actions)
     }
 
+    /// L'étape MVP du visiteur attend celle du domicile en « Je saisis tout »
+    /// (carte 638). En « Chacun son équipe », chaque coach désigne le MVP de son
+    /// équipe sans attendre l'autre (carte 657, R6 de E22).
+    pub fn awaits_home_mvp(&self, side: TeamSide) -> bool {
+        self.entry_mode != EntryMode::TeamEntry
+            && side == TeamSide::Away
+            && self.first_side_without_mvp() == Some(TeamSide::Home)
+    }
+
     /// Un MVP tiré au sort ne se supprime pas, même en correction (carte 638).
     /// Une action ne s'efface que dans un camp où l'auteur écrit (carte 656,
     /// R6 de E22) : `writable_sides` vient du droit d'écrire par camp.
@@ -1671,6 +1680,23 @@ mod tests {
         };
         assert_eq!(turn.value(), 16);
         assert!(matches!(action, MatchActionType::Mvp));
+    }
+
+    #[test]
+    fn en_je_saisis_tout_le_visiteur_attend_le_mvp_du_domicile() {
+        let pm = make_pm(1000, 1000);
+        assert!(pm.awaits_home_mvp(TeamSide::Away));
+        assert!(!pm.awaits_home_mvp(TeamSide::Home));
+        let (pm, _) = mvp(&pm, TeamSide::Home, "m1").unwrap();
+        assert!(!pm.awaits_home_mvp(TeamSide::Away));
+    }
+
+    /// Carte 657 : chacun son MVP, sans attendre l'autre.
+    #[test]
+    fn en_chacun_son_equipe_le_visiteur_n_attend_pas() {
+        let mut pm = make_pm(1000, 1000);
+        pm.entry_mode = EntryMode::TeamEntry;
+        assert!(!pm.awaits_home_mvp(TeamSide::Away));
     }
 
     #[test]

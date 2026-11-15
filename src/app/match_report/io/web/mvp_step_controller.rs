@@ -9,7 +9,7 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::mvp_draw::{DrawnMvp, DRAW_SIZE};
-use crate::app::match_report::domain::value_objects::{MatchAction, TeamSide};
+use crate::app::match_report::domain::value_objects::{EntryMode, MatchAction, TeamSide};
 use crate::app::match_report::io::web::record_action_controller::build_player;
 use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::TeamInfoDto;
@@ -74,6 +74,9 @@ pub struct MvpStepTemplate {
     pub draw_url: String,
     pub draw_size: usize,
     pub nav: MvpNavVm,
+    /// « Chacun son équipe » (carte 657) : l'état de l'adversaire, un widget
+    /// rechargé sur le signal du match. `None` en « Je saisis tout ».
+    pub opponent_url: Option<String>,
 }
 
 impl IntoResponse for MvpStepTemplate {
@@ -100,6 +103,23 @@ struct PageIds<'a> {
     mr_id: &'a str,
 }
 
+/// L'enchaînement de l'étape : domicile puis visiteur en « Je saisis tout »,
+/// chacun son camp en « Chacun son équipe » (carte 657).
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum MvpFlow {
+    OneWriter,
+    EachTeam,
+}
+
+impl MvpFlow {
+    fn of(pm: &MatchReportPreMatch) -> Self {
+        match pm.entry_mode {
+            EntryMode::TeamEntry => Self::EachTeam,
+            EntryMode::SoloEntry => Self::OneWriter,
+        }
+    }
+}
+
 pub async fn get_mvp_step(
     Path((space_id, mr_id, side)): Path<(String, String, String)>,
     State(state): State<AppState>,
@@ -122,11 +142,10 @@ pub async fn get_mvp_step(
     build_template(&ids, side, &pm, &teams).into_response()
 }
 
-/// Le visiteur attend que le domicile ait son MVP (carte 638) : le domaine
-/// dit quel camp en manque, la page renvoie à son étape.
+/// Le visiteur attend que le domicile ait son MVP en « Je saisis tout »
+/// (carte 638) : le domaine dit s'il attend, la page renvoie à son étape.
 fn home_mvp_first(ids: &PageIds<'_>, side: TeamSide, pm: &MatchReportPreMatch) -> Option<Response> {
-    let home_missing = pm.first_side_without_mvp() == Some(TeamSide::Home);
-    (side == TeamSide::Away && home_missing).then(|| {
+    pm.awaits_home_mvp(side).then(|| {
         let url = AppRoutes::default()
             .match_report
             .mvp(ids.space_id, ids.mr_id, "home");
@@ -158,7 +177,11 @@ pub async fn post_mvp_step(
     let Some(cmd) = build_command(&mr_id, &side, &form, user.id) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
-    let next_url = next_url(&space_id, &mr_id, cmd.team_side);
+    let flow = match load_pre_match(&state, &mr_id).await {
+        Ok(pm) => MvpFlow::of(&pm),
+        Err(status) => return status.into_response(),
+    };
+    let next_url = next_url(&space_id, &mr_id, cmd.team_side, flow);
     let repo = state.match_report.match_report_repo.as_ref();
     let (players, bus) = (
         &state.match_report.player_data,
@@ -225,11 +248,14 @@ fn build_template(
         TeamSide::Home => (home, pm.home_team_id.to_string()),
         TeamSide::Away => (away, pm.away_team_id.to_string()),
     };
+    let flow = MvpFlow::of(pm);
     MvpStepTemplate {
         is_home: side == TeamSide::Home,
         team: team_vm(team_info),
         mvps: mvp_rows(ids, pm, side),
-        home_recap: home_recap(side, pm, &home.team_name),
+        home_recap: (flow == MvpFlow::OneWriter)
+            .then(|| home_recap(side, pm, &home.team_name))
+            .flatten(),
         player_selector_url: routes.players.match_player_selector(ids.space_id, &team_id),
         temp_player_selector_url: temp_players_url(ids, side),
         post_url: routes
@@ -239,7 +265,8 @@ fn build_template(
             .match_report
             .mvp_draw(ids.space_id, ids.mr_id, side_slug(side)),
         draw_size: DRAW_SIZE,
-        nav: nav_for(ids, side, &away.team_name),
+        nav: nav_for(ids, side, &away.team_name, flow),
+        opponent_url: opponent_url(ids, side, flow),
         app_routes: routes,
         space_id: ids.space_id.to_string(),
         match_report_id: ids.mr_id.to_string(),
@@ -283,7 +310,7 @@ fn mvp_row(ids: &PageIds<'_>, action: &MatchAction, drawn: Option<&DrawnMvp>) ->
 }
 
 /// « A, B, C et D » : la liste des désignés, telle que l'écran la lit.
-fn names_sentence(names: &[&str]) -> String {
+pub(crate) fn names_sentence(names: &[&str]) -> String {
     match names.split_last() {
         None => String::new(),
         Some((last, [])) => last.to_string(),
@@ -312,17 +339,33 @@ fn temp_players_url(ids: &PageIds<'_>, side: TeamSide) -> String {
     }
 }
 
+/// Le MVP de l'autre camp, en « Chacun son équipe » seulement.
+fn opponent_url(ids: &PageIds<'_>, side: TeamSide, flow: MvpFlow) -> Option<String> {
+    let other = side_slug(side.opposite());
+    (flow == MvpFlow::EachTeam).then(|| {
+        AppRoutes::default()
+            .match_report
+            .mvp_opponent(ids.space_id, ids.mr_id, other)
+    })
+}
+
 /// Domicile : retour au match en direct (carte 636), suite au visiteur. Visiteur : retour au
-/// domicile, suite aux gains et fans.
-fn nav_for(ids: &PageIds<'_>, side: TeamSide, away_name: &str) -> MvpNavVm {
+/// domicile, suite aux gains et fans. En « Chacun son équipe », chaque camp
+/// revient au match et passe aux gains et fans (carte 657).
+fn nav_for(ids: &PageIds<'_>, side: TeamSide, away_name: &str, flow: MvpFlow) -> MvpNavVm {
     let routes = AppRoutes::default().match_report;
-    let (back_url, back_label, next_label) = match side {
-        TeamSide::Home => (
+    let (back_url, back_label, next_label) = match (flow, side) {
+        (MvpFlow::EachTeam, _) => (
+            routes.live(ids.space_id, ids.mr_id),
+            "Match".to_string(),
+            "Gains et fans".to_string(),
+        ),
+        (MvpFlow::OneWriter, TeamSide::Home) => (
             routes.live(ids.space_id, ids.mr_id),
             "Match".to_string(),
             format!("MVP : {away_name}"),
         ),
-        TeamSide::Away => (
+        (MvpFlow::OneWriter, TeamSide::Away) => (
             routes.mvp(ids.space_id, ids.mr_id, "home"),
             "MVP domicile".to_string(),
             "Gains et fans".to_string(),
@@ -331,16 +374,16 @@ fn nav_for(ids: &PageIds<'_>, side: TeamSide, away_name: &str) -> MvpNavVm {
     MvpNavVm {
         back_url,
         back_label,
-        next_url: next_url(ids.space_id, ids.mr_id, side),
+        next_url: next_url(ids.space_id, ids.mr_id, side, flow),
         next_label,
     }
 }
 
-fn next_url(space_id: &str, mr_id: &str, side: TeamSide) -> String {
+fn next_url(space_id: &str, mr_id: &str, side: TeamSide, flow: MvpFlow) -> String {
     let routes = AppRoutes::default().match_report;
-    match side {
-        TeamSide::Home => routes.mvp(space_id, mr_id, "away"),
-        TeamSide::Away => routes.step5(space_id, mr_id),
+    match (flow, side) {
+        (MvpFlow::OneWriter, TeamSide::Home) => routes.mvp(space_id, mr_id, "away"),
+        _ => routes.step5(space_id, mr_id),
     }
 }
 
@@ -390,8 +433,42 @@ mod tests {
     #[test]
     fn le_domicile_mene_au_visiteur_puis_aux_gains() {
         let (space, mr) = ("S", "M");
-        assert!(next_url(space, mr, TeamSide::Home).ends_with("/M/mvp/away"));
-        assert!(next_url(space, mr, TeamSide::Away).ends_with("/M/step5"));
+        let flow = MvpFlow::OneWriter;
+        assert!(next_url(space, mr, TeamSide::Home, flow).ends_with("/M/mvp/away"));
+        assert!(next_url(space, mr, TeamSide::Away, flow).ends_with("/M/step5"));
+    }
+
+    /// Carte 657 : en « Chacun son équipe », chaque camp passe aux gains.
+    #[test]
+    fn chacun_son_equipe_mene_chaque_camp_aux_gains() {
+        let flow = MvpFlow::EachTeam;
+        assert!(next_url("S", "M", TeamSide::Home, flow).ends_with("/M/step5"));
+        assert!(next_url("S", "M", TeamSide::Away, flow).ends_with("/M/step5"));
+    }
+
+    #[test]
+    fn chacun_son_equipe_revient_au_match() {
+        let ids = PageIds {
+            space_id: "S",
+            mr_id: "M",
+        };
+        for side in TeamSide::BOTH {
+            let nav = nav_for(&ids, side, "Rats", MvpFlow::EachTeam);
+            assert!(nav.back_url.ends_with("/M/live"), "{}", nav.back_url);
+            assert_eq!(nav.next_label, "Gains et fans");
+        }
+    }
+
+    /// L'état de l'adversaire : l'autre camp, en « Chacun son équipe » seul.
+    #[test]
+    fn l_adversaire_ne_se_montre_qu_en_chacun_son_equipe() {
+        let ids = PageIds {
+            space_id: "S",
+            mr_id: "M",
+        };
+        let url = opponent_url(&ids, TeamSide::Away, MvpFlow::EachTeam).unwrap();
+        assert!(url.ends_with("/M/mvp/home/opponent"), "{url}");
+        assert_eq!(opponent_url(&ids, TeamSide::Away, MvpFlow::OneWriter), None);
     }
 
     #[test]
@@ -400,10 +477,11 @@ mod tests {
             space_id: "S",
             mr_id: "M",
         };
-        assert!(nav_for(&ids, TeamSide::Away, "Rats")
+        let flow = MvpFlow::OneWriter;
+        assert!(nav_for(&ids, TeamSide::Away, "Rats", flow)
             .back_url
             .ends_with("/M/mvp/home"));
-        assert!(nav_for(&ids, TeamSide::Home, "Rats")
+        assert!(nav_for(&ids, TeamSide::Home, "Rats", flow)
             .back_url
             .ends_with("/M/live"));
     }

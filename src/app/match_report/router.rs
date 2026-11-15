@@ -31,6 +31,7 @@ use crate::app::match_report::io::web::widgets::inducements_wait_widget::get_ind
 use crate::app::match_report::io::web::widgets::live_score_widget::get_live_score;
 use crate::app::match_report::io::web::widgets::mercenary_selector_widget::get_mercenary_selector;
 use crate::app::match_report::io::web::widgets::opponent_fan_factor_widget::get_opponent_fan_factor;
+use crate::app::match_report::io::web::widgets::opponent_mvp_widget::get_opponent_mvp;
 use crate::app::match_report::io::web::widgets::print_inducements_widget::{
     get_print_inducements, get_print_inducements_with,
 };
@@ -133,6 +134,13 @@ fn routes_de_camp() -> Router<AppState> {
             path::MATCH_REPORT_INDUCEMENTS_WAIT,
             get(get_inducements_wait),
         )
+        // L'étape MVP d'un camp (carte 637) et son tirage au sort (carte
+        // 638) : chacun désigne le MVP de son équipe (carte 657).
+        .route(
+            path::MATCH_REPORT_MVP,
+            get(get_mvp_step).post(post_mvp_step),
+        )
+        .route(path::MATCH_REPORT_MVP_DRAW, post(post_mvp_draw))
 }
 
 fn routes_ouvertes() -> Router<AppState> {
@@ -175,6 +183,8 @@ fn routes_de_suivi() -> Router<AppState> {
             path::MATCH_REPORT_STEP2_FAN_FACTOR,
             get(get_opponent_fan_factor),
         )
+        // Le MVP de l'adversaire, en « Chacun son équipe » (carte 657).
+        .route(path::MATCH_REPORT_MVP_OPPONENT, get(get_opponent_mvp))
 }
 
 fn routes_de_saisie() -> Router<AppState> {
@@ -191,13 +201,6 @@ fn routes_de_saisie() -> Router<AppState> {
             path::MATCH_REPORT_CANCEL_INDUCEMENTS,
             post(post_cancel_inducements),
         )
-        // L'étape MVP d'un camp (carte 637).
-        .route(
-            path::MATCH_REPORT_MVP,
-            get(get_mvp_step).post(post_mvp_step),
-        )
-        // Le tirage au sort du MVP (carte 638).
-        .route(path::MATCH_REPORT_MVP_DRAW, post(post_mvp_draw))
         .route(path::MATCH_REPORT_STEP5, get(get_step5).post(post_step5))
         // Le camp de l'action se lit dans l'agrégat, pas dans le chemin : c'est
         // le domaine qui refuse d'effacer hors de ses camps (carte 656).

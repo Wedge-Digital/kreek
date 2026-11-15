@@ -36,6 +36,10 @@ pub mod path {
     /// Le tirage au sort du MVP d'un camp parmi six désignés (carte 638).
     pub const MATCH_REPORT_MVP_DRAW: &str =
         "/app/{space_id}/match-report/{match_report_id}/mvp/{side}/draw";
+    /// Le MVP d'un camp, en lecture seule : l'état de l'adversaire sur
+    /// l'étape MVP, rechargé sur le signal du match (carte 657).
+    pub const MATCH_REPORT_MVP_OPPONENT: &str =
+        "/app/{space_id}/match-report/{match_report_id}/mvp/{side}/opponent";
     pub const MATCH_REPORT_STEP3_TURN_SELECTOR: &str =
         "/app/{space_id}/match-report/{match_report_id}/step3/turn-selector";
     pub const MATCH_REPORT_STEP4_TURN_SELECTOR: &str =
@@ -203,6 +207,14 @@ impl Routes {
     /// `side` vaut `home` ou `away`.
     pub fn mvp_draw(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
         path::MATCH_REPORT_MVP_DRAW
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{side}", side)
+    }
+
+    /// `side` vaut `home` ou `away` : le camp dont on lit le MVP.
+    pub fn mvp_opponent(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
+        path::MATCH_REPORT_MVP_OPPONENT
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
             .replace("{side}", side)

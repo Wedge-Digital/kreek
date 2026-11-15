@@ -74,7 +74,7 @@
     <div>
       <div class="mr-banner-name">{{ team.name }}</div>
       <div class="mr-banner-label">
-        {% if is_home %}&Eacute;quipe &agrave; domicile &middot; MVP 1 / 2{% else %}&Eacute;quipe visiteur &middot; MVP 2 / 2{% endif %}
+        {% if opponent_url.is_some() %}Votre &eacute;quipe{% else if is_home %}&Eacute;quipe &agrave; domicile &middot; MVP 1 / 2{% else %}&Eacute;quipe visiteur &middot; MVP 2 / 2{% endif %}
       </div>
     </div>
   </div>
@@ -132,6 +132,17 @@
     </div>
     {% endif %}
   </div>
+
+  {% if let Some(url) = opponent_url %}
+  {# « Chacun son équipe » (carte 657) : où en est l'adversaire, rechargé sur
+     le signal du match — ses MVP partent comme des actions. #}
+  <div class="mvp-opponent"
+       hx-get="{{ url }}"
+       hx-trigger="load, matchChanged[detail.id=='{{ match_report_id }}'] from:body, realtimeResync from:body"
+       hx-target="this"
+       hx-swap="innerHTML">
+  </div>
+  {% endif %}
 
   {% if mvps.is_empty() %}
   {# Tirage : les désignés partent au serveur, qui tire et montre le résultat

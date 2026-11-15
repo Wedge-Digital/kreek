@@ -1,0 +1,15 @@
+{# Le MVP de l'adversaire, en « Chacun son équipe » (carte 657) : rechargé
+   sur le signal du match, en lecture seule. #}
+<div class="opponent-mvp" hx-disinherit="*">
+  {% if let Some(m) = mvp %}
+  <div class="opponent-mvp-row">
+    <span class="opponent-mvp-status opponent-mvp-status--done">&#10003;</span>
+    <span class="opponent-mvp-text"><b>{{ team_name }}</b> · MVP : {{ m.player_name }}{% if let Some(among) = m.drawn_among %}, tiré au sort parmi {{ among }}{% endif %}</span>
+  </div>
+  {% else %}
+  <div class="opponent-mvp-row opponent-mvp-row--wait">
+    <span class="opponent-mvp-status">en cours</span>
+    <span class="opponent-mvp-text"><b>{{ team_name }}</b> · choisit son MVP</span>
+  </div>
+  {% endif %}
+</div>

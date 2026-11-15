@@ -1,0 +1,20 @@
+/* Le MVP de l'adversaire, en « Chacun son équipe » (carte 657) : une ligne
+   en lecture seule sous le MVP du coach (maquette B3). */
+.opponent-mvp .opponent-mvp-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px var(--p1); border-radius: 8px;
+  background: var(--dark-6);
+  font-size: var(--text-tiny); color: var(--dark-1);
+}
+.opponent-mvp .opponent-mvp-row--wait {
+  background: transparent; border: 1px dashed var(--dark-4); color: var(--dark-2);
+}
+.opponent-mvp .opponent-mvp-status {
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  border-radius: 20px; padding: 3px 10px;
+  background: rgba(0,48,73,0.10); color: var(--main-blue);
+}
+.opponent-mvp .opponent-mvp-status--done {
+  background: rgba(98,149,132,0.15); color: var(--green);
+}
+.opponent-mvp .opponent-mvp-text b { color: var(--dark-1); }

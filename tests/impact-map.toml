@@ -546,6 +546,11 @@
 "test_match_report_team_actions" = ["match_report", "players", "competitions", "teams",
                                     "auth", "spaces", "references", "team_creation"]
 
+# Le MVP de son camp (carte 657, épic E22) : chacun tire le sien sans attendre
+# l'autre, et voit l'état de l'adversaire. Les désignés viennent de `players`.
+"test_match_report_team_mvp" = ["match_report", "players", "competitions", "teams",
+                                "auth", "spaces", "references", "team_creation"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni
