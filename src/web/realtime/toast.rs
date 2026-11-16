@@ -98,7 +98,9 @@ pub fn notice_of(event: &MatchReportAppEvent) -> Option<MatchNotice> {
         | E::MatchReportUnpublished(_)
         | E::MatchReportRoundReassigned { .. }
         // Le fan factor d'un camp : un signal, pas de toast (§ 12.7 de E22).
-        | E::MatchFanFactorRecorded { .. } => None,
+        | E::MatchFanFactorRecorded { .. }
+        // L'après-match d'un camp non plus (carte 658).
+        | E::MatchPostMatchRecorded { .. } => None,
     }
 }
 

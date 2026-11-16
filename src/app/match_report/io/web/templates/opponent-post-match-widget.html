@@ -1,0 +1,15 @@
+{# L'après-match de l'adversaire, en « Chacun son équipe » (carte 658) :
+   rechargé sur le signal du match, en lecture seule. #}
+<div class="opponent-post-match" hx-disinherit="*">
+  {% if let Some(p) = recorded %}
+  <div class="opponent-post-match-row">
+    <span class="opponent-post-match-status opponent-post-match-status--done">&#10003;</span>
+    <span class="opponent-post-match-text"><b>{{ team_name }}</b> · {{ p.gain_kpo }} kPo{% if let Some(bonus) = p.bonus_kpo %} + {{ bonus }} kPo de bonus{% endif %}, fans {{ p.fan_mod }}{% if let Some(name) = p.recorded_by %}, saisis par {{ name }}{% endif %}</span>
+  </div>
+  {% else %}
+  <div class="opponent-post-match-row opponent-post-match-row--wait">
+    <span class="opponent-post-match-status">&#8230;</span>
+    <span class="opponent-post-match-text"><b>{{ team_name }}</b> · en attente de son après-match</span>
+  </div>
+  {% endif %}
+</div>

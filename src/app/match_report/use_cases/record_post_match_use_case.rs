@@ -8,8 +8,10 @@ use crate::app::match_report::domain::match_report_repository_port::{
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
+use crate::app::match_report::use_cases::event_emission::emit_all;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
+use crate::common::services::event_bus::event_bus::EventBus;
 
 #[derive(Debug)]
 pub struct RecordPostMatchCommand {
@@ -50,10 +52,13 @@ impl RecordPostMatchError {
     }
 }
 
+/// L'après-match est émis une fois appendé (cadrage E22, § 3) : il ne sort
+/// pas du BC, mais aucun événement appendé ne reste muet sur le bus.
 #[tracing::instrument(skip_all, fields(cmd = ?cmd))]
 pub async fn execute(
     cmd: RecordPostMatchCommand,
     repo: &dyn IMatchReportRepository,
+    bus: &EventBus,
 ) -> Result<RecordPostMatchOutcome, RecordPostMatchError> {
     let mr_id = cmd.match_report_id.to_string();
     let state = repo
@@ -66,6 +71,7 @@ pub async fn execute(
     repo.append(&mr_id, &event, updated_version - 1)
         .await
         .map_err(RecordPostMatchError::from_repository)?;
+    emit_all(bus, &mr_id, std::slice::from_ref(&event));
     Ok(RecordPostMatchOutcome::Success)
 }
 
@@ -126,6 +132,7 @@ mod tests {
     use crate::app::match_report::use_cases::test_doubles::{
         pre_match, pre_match_with_mvps, ConflictingRepository, RecordingRepository,
     };
+    use crate::common::services::event_bus::event_bus::new_bus;
 
     fn command() -> RecordPostMatchCommand {
         RecordPostMatchCommand {
@@ -145,7 +152,7 @@ mod tests {
     async fn un_conflit_d_ecriture_est_relaye() {
         let repo =
             ConflictingRepository::holding(MatchReportState::PreMatch(pre_match_with_mvps()));
-        let resultat = execute(command(), &repo).await;
+        let resultat = execute(command(), &repo, &new_bus()).await;
         assert!(matches!(resultat, Err(RecordPostMatchError::Conflict)));
     }
 
@@ -153,7 +160,7 @@ mod tests {
     #[tokio::test]
     async fn un_camp_sans_mvp_est_refuse_sans_ecriture() {
         let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match()));
-        let resultat = execute(command(), &repo).await;
+        let resultat = execute(command(), &repo, &new_bus()).await;
         assert!(
             matches!(
                 resultat,
@@ -170,7 +177,7 @@ mod tests {
     #[tokio::test]
     async fn avec_ses_deux_mvp_l_apres_match_se_clot() {
         let repo = RecordingRepository::holding(MatchReportState::PreMatch(pre_match_with_mvps()));
-        assert!(execute(command(), &repo).await.is_ok());
+        assert!(execute(command(), &repo, &new_bus()).await.is_ok());
         assert_eq!(repo.appended().len(), 1);
     }
 }

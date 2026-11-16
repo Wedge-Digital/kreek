@@ -1,9 +1,12 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
-use crate::app::match_report::domain::value_objects::{FanFactorMod, MatchGain};
+use crate::app::match_report::domain::value_objects::{EntryMode, FanFactorMod, MatchGain};
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
 use crate::app::match_report::io::web::mvp_step_controller::side_slug;
 use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::use_cases::match_report_access_service::{
+    arrival_side, PorteeRapport,
+};
 use crate::app::match_report::use_cases::record_post_match_use_case;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -74,7 +77,7 @@ pub async fn get_step5(
     Path((space_id, match_report_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let Some(_user) = auth_session.user else {
+    let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
 
@@ -92,6 +95,21 @@ pub async fn get_step5(
         }
     };
 
+    // « Chacun son équipe » : chacun son après-match (carte 658).
+    if let Some(scope) = team_entry_scope(&mr_state) {
+        let side = arrival_side(
+            state.match_report.team_data.as_ref(),
+            &scope,
+            &user.id.to_string(),
+        )
+        .await;
+        let url = AppRoutes::default().match_report.step5_side(
+            &space_id,
+            &match_report_id,
+            side_slug(side),
+        );
+        return Redirect::to(&url).into_response();
+    }
     if let Some(redirect) = mvp_step_first(&mr_state, &space_id, &match_report_id) {
         return redirect;
     }
@@ -146,6 +164,32 @@ pub async fn get_step5(
         false,
     )
     .into_response()
+}
+
+/// La portée d'un rapport en « Chacun son équipe », en cours ou prêt à
+/// publier : `/step5` mène alors à l'après-match du camp de l'utilisateur, et
+/// l'admin arrive au domicile, comme à `/step2` (carte 658).
+fn team_entry_scope(state: &MatchReportState) -> Option<PorteeRapport> {
+    let (mode, competition, home, away) = match state {
+        MatchReportState::PreMatch(pm) => (
+            pm.entry_mode,
+            &pm.competition_id,
+            &pm.home_team_id,
+            &pm.away_team_id,
+        ),
+        MatchReportState::ReadyToPublish(r) => (
+            r.entry_mode,
+            &r.competition_id,
+            &r.home_team_id,
+            &r.away_team_id,
+        ),
+        _ => return None,
+    };
+    (mode == EntryMode::TeamEntry).then(|| PorteeRapport {
+        competition_id: competition.to_string(),
+        home_team_id: home.to_string(),
+        away_team_id: away.to_string(),
+    })
 }
 
 /// Un camp sans MVP ne passe pas aux gains (carte 638) : le domaine le dit,
@@ -368,9 +412,11 @@ pub async fn post_step5(
         recorded_by: user.id,
     };
 
-    match record_post_match_use_case::execute(cmd, state.match_report.match_report_repo.as_ref())
-        .await
-    {
+    let (repo, bus) = (
+        state.match_report.match_report_repo.as_ref(),
+        &state.match_report.event_bus,
+    );
+    match record_post_match_use_case::execute(cmd, repo, bus).await {
         Ok(record_post_match_use_case::RecordPostMatchOutcome::Success) => {
             let url = AppRoutes::default()
                 .match_report
@@ -392,5 +438,24 @@ pub async fn post_step5(
             tracing::error!("post_step5: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::pre_match;
+
+    /// Carte 658 : seul un rapport en « Chacun son équipe » est aiguillé vers
+    /// l'après-match d'un camp, avec sa portée.
+    #[test]
+    fn only_a_team_entry_report_goes_to_a_side() {
+        let solo = pre_match();
+        assert!(team_entry_scope(&MatchReportState::PreMatch(solo)).is_none());
+        let mut team_entry = pre_match();
+        team_entry.entry_mode = EntryMode::TeamEntry;
+        let home = team_entry.home_team_id.to_string();
+        let scope = team_entry_scope(&MatchReportState::PreMatch(team_entry)).unwrap();
+        assert_eq!(scope.home_team_id, home);
     }
 }

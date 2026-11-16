@@ -203,6 +203,13 @@ pub(super) async fn aiguiller(
             recorded_by,
             ..
         } => entry_facts::publish_fan_factor_recorded(&to, team_side, recorded_by).await,
+        // L'après-match d'un camp (carte 658) : il sort pour que la page de
+        // l'autre coach le voie arriver.
+        MatchReportDomainEvent::TeamPostMatchRecorded {
+            team_side,
+            recorded_by,
+            ..
+        } => entry_facts::publish_post_match_recorded(&to, team_side, recorded_by).await,
         // Ce qui ne sort pas du BC, nommé un à un et sans joker (carte 631) :
         // un événement ajouté casse la compilation ici, et son auteur tranche
         // — il sort, ou il rejoint cette liste.
@@ -216,7 +223,10 @@ pub(super) async fn aiguiller(
         // 638) ; sa notification est celle de l'`ActionRecorded` appendé avec
         // lui (carte 643, décision 10).
         | MatchReportDomainEvent::MvpDrawn { .. }
-        | MatchReportDomainEvent::PostMatchRecorded { .. } => {}
+        | MatchReportDomainEvent::PostMatchRecorded { .. }
+        // Le passage en `ReadyToPublish` (carte 658) : le signal est celui du
+        // `TeamPostMatchRecorded` appendé avec lui.
+        | MatchReportDomainEvent::PostMatchClosed => {}
     }
 }
 
@@ -931,6 +941,8 @@ mod unpublished_events_tests {
             summary_title: None,
             summary_body: None,
             was_published_before: true,
+            summary_paragraphs: Default::default(),
+            post_match_recorded_by: Default::default(),
         }
     }
 

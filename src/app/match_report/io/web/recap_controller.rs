@@ -3,6 +3,7 @@ use crate::app::auth::domain::user::User;
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
+use crate::app::match_report::domain::team_post_match::SummaryParagraphs;
 use crate::app::match_report::domain::value_objects::MatchAction;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
@@ -12,7 +13,7 @@ use crate::app::match_report::io::web::builders::{
     TeamBannerVm,
 };
 use crate::app::match_report::io::web::view_models::{
-    GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm,
+    GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm, SummaryParagraphVm,
 };
 use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::ITeamDataPort;
@@ -54,6 +55,8 @@ pub struct RecapTemplate {
     pub home_banner: TeamBannerVm,
     pub away_banner: TeamBannerVm,
     pub result: MatchResultVm,
+    /// Le paragraphe de chaque camp, en « Chacun son équipe » (carte 658).
+    pub summary_paragraphs: Vec<SummaryParagraphVm>,
     pub gains_fan: GainsFanVm,
     pub timeline_halves: Vec<HalfTimelineVm>,
     pub mvps: Vec<MvpRowVm>,
@@ -102,6 +105,7 @@ struct RecapSource<'a> {
     away_fan_mod: i8,
     summary_title: Option<String>,
     summary_body: Option<String>,
+    summary_paragraphs: SummaryParagraphs,
     was_published_before: bool,
 }
 
@@ -125,6 +129,7 @@ impl<'a> RecapSource<'a> {
             away_fan_mod: rtp.away_fan_mod.into_inner(),
             summary_title: rtp.summary_title.clone(),
             summary_body: rtp.summary_body.clone(),
+            summary_paragraphs: rtp.summary_paragraphs.clone(),
             was_published_before: rtp.was_published_before,
         }
     }
@@ -148,6 +153,7 @@ impl<'a> RecapSource<'a> {
             away_fan_mod: p.away_fan_mod.into_inner(),
             summary_title: p.summary_title.clone(),
             summary_body: p.summary_body.clone(),
+            summary_paragraphs: p.summary_paragraphs.clone(),
             // Sans objet sur un rapport publié : le bandeau ne concerne que
             // l'état corrigeable.
             was_published_before: false,
@@ -352,6 +358,10 @@ async fn build_recap_template(
             &source.season_id,
         ),
         home_team_detail_url: routes.teams.team_detail(space_id, &source.home_team_id),
+        summary_paragraphs: SummaryParagraphVm::all_from_domain(
+            &source.summary_paragraphs,
+            (&home_team_name, &away_team_name),
+        ),
         result,
     }
 }
@@ -875,6 +885,8 @@ mod published_by_tests {
             summary_title: Some("Titre".to_string()),
             summary_body: Some("Corps".to_string()),
             was_published_before: false,
+            summary_paragraphs: Default::default(),
+            post_match_recorded_by: Default::default(),
         }
     }
 

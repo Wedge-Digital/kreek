@@ -384,6 +384,8 @@ mod tests {
             summary_body: None,
             published_by: CoachId::new(),
             published_at: chrono::Utc::now(),
+            summary_paragraphs: Default::default(),
+            post_match_recorded_by: Default::default(),
         })
     }
 

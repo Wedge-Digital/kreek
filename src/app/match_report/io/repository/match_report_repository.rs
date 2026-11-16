@@ -297,7 +297,11 @@ impl MatchReportRepository {
                 .await
                 .map_err(RepositoryError::Database)?;
             }
-            MatchReportDomainEvent::PostMatchRecorded { .. } => {
+            // L'après-match d'un camp n'écrit rien : la phase change au
+            // `PostMatchClosed` appendé avec le second (carte 658, § 12.8).
+            MatchReportDomainEvent::TeamPostMatchRecorded { .. } => {}
+            MatchReportDomainEvent::PostMatchRecorded { .. }
+            | MatchReportDomainEvent::PostMatchClosed => {
                 sqlx::query(
                     "UPDATE match_report_proj
                      SET phase = 'ReadyToPublish', version = $2, updated_at = now()

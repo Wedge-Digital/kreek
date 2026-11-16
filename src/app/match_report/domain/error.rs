@@ -75,8 +75,8 @@ pub enum DomainError {
     /// refusé, ce qui rend sûr le réessai sur conflit de la carte 653. La
     /// correction d'un jet en « Chacun son équipe » n'est pas couverte.
     FanFactorAlreadyRecorded(TeamSide),
-    /// Un fan factor d'un camp dans un rapport qui n'est pas en « Chacun son
-    /// équipe » (carte 654).
+    /// Un fan factor (carte 654) ou un après-match (carte 658) d'un camp dans
+    /// un rapport qui n'est pas en « Chacun son équipe ».
     NotTeamEntry,
     /// Les deux jets d'un coup dans un rapport en « Chacun son équipe » : ils
     /// écraseraient celui de l'autre coach (carte 654).
@@ -88,6 +88,12 @@ pub enum DomainError {
     /// Une action effacée hors des camps où l'auteur écrit (carte 656, R6 de
     /// E22). Porte le camp de l'action.
     ActionOutsideSide(TeamSide),
+    /// L'après-match des deux camps d'un coup dans un rapport en « Chacun son
+    /// équipe » : il écraserait celui de l'autre coach (carte 658).
+    TeamEntryPostMatchBySide,
+    /// Un titre de résumé envoyé pour le visiteur : le titre est au domicile
+    /// (carte 658, R8 de E22).
+    TitleIsHomeOnly,
 }
 
 impl fmt::Display for DomainError {
@@ -141,7 +147,7 @@ impl fmt::Display for DomainError {
             }
             Self::NotTeamEntry => write!(
                 f,
-                "Ce fan factor se saisit par camp, en « Chacun son équipe » seulement."
+                "Cette saisie se fait par camp, en « Chacun son équipe » seulement."
             ),
             Self::TeamEntryFanFactorBySide => write!(
                 f,
@@ -153,6 +159,13 @@ impl fmt::Display for DomainError {
             ),
             Self::ActionOutsideSide(_) => {
                 write!(f, "Cette action appartient à l'autre équipe.")
+            }
+            Self::TeamEntryPostMatchBySide => write!(
+                f,
+                "En « Chacun son équipe », chaque coach saisit l'après-match de son équipe."
+            ),
+            Self::TitleIsHomeOnly => {
+                write!(f, "Le titre du résumé revient à l'équipe à domicile.")
             }
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),

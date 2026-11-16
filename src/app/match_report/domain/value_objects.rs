@@ -333,17 +333,21 @@ impl TeamSide {
     }
 }
 
-/// Qui a lancé le fan factor de chaque camp (carte 654). Posé par
-/// `TeamFanFactorRecorded` seul : en « Je saisis tout », un même coach lance
-/// les deux jets, et rien n'en est retenu.
+/// Qui a écrit quoi dans chaque camp, en « Chacun son équipe » : le fan
+/// factor (carte 654), l'après-match (carte 658). Posé par les seuls
+/// événements d'un camp : en « Je saisis tout », un même coach écrit les deux
+/// camps, et rien n'en est retenu.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct FanFactorAuthors {
+pub struct SideAuthors {
     pub home: Option<CoachId>,
     pub away: Option<CoachId>,
 }
 
-impl FanFactorAuthors {
-    /// L'auteur du jet de ce camp, s'il est connu.
+/// Qui a lancé le fan factor de chaque camp (carte 654).
+pub type FanFactorAuthors = SideAuthors;
+
+impl SideAuthors {
+    /// L'auteur de ce camp, s'il est connu.
     pub fn of(&self, side: TeamSide) -> Option<CoachId> {
         match side {
             TeamSide::Home => self.home,

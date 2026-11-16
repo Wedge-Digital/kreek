@@ -446,6 +446,7 @@ mod tests {
             away_actions: vec![],
             drawn_mvps: vec![],
             version: 1,
+            team_post_match: Default::default(),
         }
     }
 

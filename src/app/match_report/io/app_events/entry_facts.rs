@@ -191,6 +191,29 @@ pub(super) async fn publish_fan_factor_recorded(
     publier(app_event_bus, event.to_enveloppe());
 }
 
+/// L'après-match d'un camp, en « Chacun son équipe » (carte 658) : un
+/// signal, sans valeurs ni nom — la page qui le reçoit relit l'agrégat.
+pub(super) async fn publish_post_match_recorded(
+    to: &Target<'_>,
+    team_side: TeamSide,
+    recorded_by: CoachId,
+) {
+    let (match_report_id, app_event_bus, ports) = (to.match_report_id, to.app_event_bus, to.ports);
+    let Some(scope) = match_scope(ports.repo.as_ref(), match_report_id).await else {
+        return;
+    };
+    let event = MatchReportAppEvent::MatchPostMatchRecorded {
+        event_id: EventId::new(),
+        match_report_id: match_report_id.to_string(),
+        space_id: scope.space_id,
+        home_team_id: scope.home_team_id,
+        away_team_id: scope.away_team_id,
+        team_side: side_payload(team_side),
+        recorded_by: recorded_by.to_string(),
+    };
+    publier(app_event_bus, event.to_enveloppe());
+}
+
 /// Les lignes nommées par le service du récapitulatif : libellés et vedettes
 /// au catalogue, mercenaires par leur poste. Une sélection vide reste vide.
 async fn selection_items(
@@ -660,6 +683,49 @@ mod tests {
             recorded_by: CoachId::new(),
         };
         assert!(m.published(both, m.scoped()).await.is_none());
+    }
+
+    /// L'après-match d'un camp sort en signal, sans valeurs (carte 658).
+    #[tokio::test]
+    async fn a_team_post_match_leaves_as_a_signal() {
+        use crate::app::match_report::domain::value_objects::{
+            FanFactorMod, MatchGain, NoStallingBonus,
+        };
+        let m = Match::new();
+        let author = CoachId::new();
+        let recorded = MatchReportDomainEvent::TeamPostMatchRecorded {
+            team_side: TeamSide::Home,
+            gain: MatchGain::try_new(40).unwrap(),
+            no_stalling_bonus: NoStallingBonus::new(false),
+            fan_mod: FanFactorMod::try_new(1).unwrap(),
+            summary_title: Some("Titre".into()),
+            summary_paragraph: None,
+            recorded_by: author,
+        };
+        let event = m.published(recorded, m.scoped()).await;
+        let Some(MatchReportAppEvent::MatchPostMatchRecorded {
+            match_report_id,
+            home_team_id,
+            team_side,
+            recorded_by,
+            ..
+        }) = event
+        else {
+            panic!("MatchPostMatchRecorded attendu : {event:?}");
+        };
+        assert_eq!(match_report_id, "MR");
+        assert_eq!(home_team_id, m.home.to_string());
+        assert_eq!(team_side, TeamSidePayload::Home);
+        assert_eq!(recorded_by, author.to_string());
+    }
+
+    /// La fermeture de l'après-match, appendée avec le second camp, ne sort
+    /// pas : le signal de ce camp suffit (§ 12.7 de E22).
+    #[tokio::test]
+    async fn the_post_match_closing_stays_inside() {
+        let m = Match::new();
+        let closed = MatchReportDomainEvent::PostMatchClosed;
+        assert!(m.published(closed, m.scoped()).await.is_none());
     }
 
     #[tokio::test]

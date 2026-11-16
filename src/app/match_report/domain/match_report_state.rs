@@ -7,6 +7,7 @@ use crate::app::match_report::domain::match_report_pre_match::{
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::mvp_draw::{DesignatedPlayer, DrawnMvp};
+use crate::app::match_report::domain::team_post_match::team_post_match_of;
 use crate::app::match_report::domain::value_objects::CorrectionEligibility;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::{ActionId, TeamSide};
@@ -546,6 +547,30 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                     .unpublish(*unpublished_by, CorrectionEligibility::Eligible)
                     .map_err(|_| DomainError::InvalidEventSequence)?;
                 MatchReportState::ReadyToPublish(rtp)
+            }
+            // L'après-match d'un camp, en « Chacun son équipe » (carte 658) :
+            // posé dans l'avant-match, remplacé en correction. Le second camp
+            // est suivi de `PostMatchClosed`, qui fait passer en
+            // `ReadyToPublish`.
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::TeamPostMatchRecorded { .. },
+            ) => {
+                let entry = team_post_match_of(event).ok_or(DomainError::InvalidEventSequence)?;
+                MatchReportState::PreMatch(pm.apply_team_post_match(&entry))
+            }
+            (
+                Some(MatchReportState::ReadyToPublish(rtp)),
+                MatchReportDomainEvent::TeamPostMatchRecorded { .. },
+            ) => {
+                let entry = team_post_match_of(event).ok_or(DomainError::InvalidEventSequence)?;
+                MatchReportState::ReadyToPublish(rtp.apply_team_post_match(&entry))
+            }
+            (Some(MatchReportState::PreMatch(pm)), MatchReportDomainEvent::PostMatchClosed) => {
+                let ready = pm
+                    .close_post_match()
+                    .ok_or(DomainError::InvalidEventSequence)?;
+                MatchReportState::ReadyToPublish(ready)
             }
             // Le changement de journée vaut pour les quatre états vivants
             // (carte 557) : la journée change, le reste de l'état non.
@@ -2142,5 +2167,274 @@ mod tests {
         };
         assert_eq!(rtp.away_fan_roll, Some(roll(2)));
         assert_eq!(rtp.fan_factor_recorded_by.of(TeamSide::Away), Some(coach));
+    }
+
+    // ── Carte 658 — l'après-match de son camp ────────────────────────────────
+
+    use crate::app::match_report::domain::team_post_match::{
+        SidePostMatch, TeamPostMatch, TeamPostMatchOutcome,
+    };
+    use crate::app::match_report::domain::value_objects::{
+        FanFactorMod, MatchGain, NoStallingBonus,
+    };
+
+    fn gain(kpo: u32) -> MatchGain {
+        MatchGain::try_new(kpo).unwrap()
+    }
+
+    fn side_entry(side: TeamSide, kpo: u32, title: Option<&str>) -> TeamPostMatch {
+        TeamPostMatch {
+            side,
+            post_match: SidePostMatch {
+                gain: gain(kpo),
+                no_stalling_bonus: NoStallingBonus::new(side == TeamSide::Away),
+                fan_mod: FanFactorMod::try_new(if side == TeamSide::Home { 1 } else { -1 })
+                    .unwrap(),
+                paragraph: Some(format!("Paragraphe {side:?}")),
+                recorded_by: CoachId::new(),
+            },
+            title: title.map(str::to_string),
+        }
+    }
+
+    /// Un avant-match où les camps nommés ont leur MVP ; rend aussi les
+    /// événements, pour le rejeu.
+    fn with_mvps_of(
+        mut pm: MatchReportPreMatch,
+        sides: &[TeamSide],
+    ) -> (Vec<MatchReportDomainEvent>, MatchReportPreMatch) {
+        use crate::app::match_report::domain::value_objects::ActionPlayer;
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        let mut events = vec![];
+        for side in sides {
+            let (next, ev) = pm
+                .record_mvp(
+                    *side,
+                    ActionPlayer::Regular(PlayerId::new()),
+                    "MVP".into(),
+                    String::new(),
+                    ActionId(format!("mvp-{side:?}")),
+                    CoachId::new(),
+                )
+                .unwrap();
+            events.push(ev);
+            pm = next;
+        }
+        (events, pm)
+    }
+
+    fn team_entry_with_mvps() -> (Vec<MatchReportDomainEvent>, MatchReportPreMatch) {
+        let (started, pm) = started_in(EntryMode::TeamEntry);
+        let (mvps, pm) = with_mvps_of(pm, &TeamSide::BOTH);
+        (started.into_iter().chain(mvps).collect(), pm)
+    }
+
+    fn pending(outcome: TeamPostMatchOutcome) -> MatchReportPreMatch {
+        let TeamPostMatchOutcome::Pending(pm) = outcome else {
+            panic!("attendu Pending");
+        };
+        pm
+    }
+
+    fn closed(outcome: TeamPostMatchOutcome) -> MatchReportReadyToPublish {
+        let TeamPostMatchOutcome::Closed(rtp) = outcome else {
+            panic!("attendu Closed");
+        };
+        rtp
+    }
+
+    /// Les deux camps, le domicile d'abord : rend le flux complet et l'état
+    /// décidé.
+    fn both_post_matches() -> (Vec<MatchReportDomainEvent>, MatchReportReadyToPublish) {
+        let (stream, pm) = team_entry_with_mvps();
+        let (first, home_events) = pm
+            .record_team_post_match(side_entry(TeamSide::Home, 60, Some("Titre")))
+            .unwrap();
+        let (second, away_events) = pending(first)
+            .record_team_post_match(side_entry(TeamSide::Away, 40, None))
+            .unwrap();
+        let stream = stream
+            .into_iter()
+            .chain(home_events)
+            .chain(away_events)
+            .collect();
+        (stream, closed(second))
+    }
+
+    /// R7 : l'après-match d'un camp n'attend que **son** MVP.
+    #[test]
+    fn a_side_post_match_needs_only_its_own_mvp() {
+        let (_, pm) = started_in(EntryMode::TeamEntry);
+        let (_, pm) = with_mvps_of(pm, &[TeamSide::Away]);
+        let (outcome, events) = pm
+            .record_team_post_match(side_entry(TeamSide::Away, 40, None))
+            .unwrap();
+        assert!(matches!(outcome, TeamPostMatchOutcome::Pending(_)));
+        assert_eq!(events.len(), 1);
+        let refused = pm.record_team_post_match(side_entry(TeamSide::Home, 60, None));
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::MvpMissing(TeamSide::Home)
+        );
+    }
+
+    /// R8 : le titre est au domicile.
+    #[test]
+    fn a_title_from_the_away_side_is_refused() {
+        let (_, pm) = team_entry_with_mvps();
+        let refused = pm.record_team_post_match(side_entry(TeamSide::Away, 40, Some("Titre")));
+        assert_eq!(refused.unwrap_err(), DomainError::TitleIsHomeOnly);
+    }
+
+    #[test]
+    fn a_team_post_match_is_refused_in_solo_entry() {
+        let (_, pm) = started_in(EntryMode::SoloEntry);
+        let (_, pm) = with_mvps_of(pm, &TeamSide::BOTH);
+        let refused = pm.record_team_post_match(side_entry(TeamSide::Home, 60, None));
+        assert_eq!(refused.unwrap_err(), DomainError::NotTeamEntry);
+    }
+
+    /// Les deux camps d'un coup écraseraient celui de l'autre coach.
+    #[test]
+    fn the_whole_post_match_is_refused_in_team_entry() {
+        let (_, pm) = team_entry_with_mvps();
+        let refused = pm.record_post_match(
+            gain(60),
+            gain(40),
+            NoStallingBonuses::default(),
+            FanFactorMod::try_new(0).unwrap(),
+            FanFactorMod::try_new(0).unwrap(),
+            None,
+            None,
+            CoachId::new(),
+        );
+        assert_eq!(refused.unwrap_err(), DomainError::TeamEntryPostMatchBySide);
+    }
+
+    /// § 12.8 : le second camp ferme l'après-match dans le même append, et
+    /// chaque camp remplit les champs du mode A.
+    #[test]
+    fn the_second_side_closes_the_post_match() {
+        let (stream, rtp) = both_post_matches();
+        assert!(matches!(
+            &stream[stream.len() - 2..],
+            [
+                MatchReportDomainEvent::TeamPostMatchRecorded { .. },
+                MatchReportDomainEvent::PostMatchClosed
+            ]
+        ));
+        assert_eq!((rtp.home_gain, rtp.away_gain), (gain(60), gain(40)));
+        assert!(rtp.away_no_stalling_bonus.into_inner());
+        assert_eq!(rtp.summary_title.as_deref(), Some("Titre"));
+        assert_eq!(
+            rtp.summary_paragraphs.away.as_deref(),
+            Some("Paragraphe Away")
+        );
+        assert!(rtp.post_match_of(TeamSide::Home).is_some());
+    }
+
+    /// Tant que l'autre n'a pas le sien, un camp remplace son après-match.
+    #[test]
+    fn a_side_may_record_again_before_the_other() {
+        let (_, pm) = team_entry_with_mvps();
+        let (first, _) = pm
+            .record_team_post_match(side_entry(TeamSide::Home, 60, Some("Titre")))
+            .unwrap();
+        let (again, events) = pending(first)
+            .record_team_post_match(side_entry(TeamSide::Home, 80, None))
+            .unwrap();
+        let pm = pending(again);
+        assert_eq!(events.len(), 1);
+        assert_eq!(pm.post_match_of(TeamSide::Home).unwrap().gain, gain(80));
+        assert_eq!(pm.team_post_match.title, None);
+    }
+
+    /// Le rejeu d'un flux « Chacun son équipe » jusqu'à `ReadyToPublish`
+    /// rend l'état décidé.
+    #[test]
+    fn a_team_entry_post_match_stream_replays_to_ready_to_publish() {
+        let (stream, decided) = both_post_matches();
+        let MatchReportState::ReadyToPublish(rtp) = rehydrate(stream).unwrap() else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(rtp.version, decided.version);
+        assert_eq!(
+            (rtp.home_gain, rtp.away_gain),
+            (decided.home_gain, decided.away_gain)
+        );
+        assert_eq!(rtp.summary_paragraphs, decided.summary_paragraphs);
+        assert_eq!(rtp.post_match_recorded_by, decided.post_match_recorded_by);
+        assert_eq!(rtp.summary_title, decided.summary_title);
+    }
+
+    /// `PostMatchClosed` sans les deux camps est un flux invalide.
+    #[test]
+    fn a_post_match_closed_without_both_sides_does_not_replay() {
+        let (stream, _) = team_entry_with_mvps();
+        let stream: Vec<_> = stream
+            .into_iter()
+            .chain([MatchReportDomainEvent::PostMatchClosed])
+            .collect();
+        assert_eq!(
+            rehydrate(stream).unwrap_err(),
+            DomainError::InvalidEventSequence
+        );
+    }
+
+    /// En correction, un camp ne remplace que ses valeurs.
+    #[test]
+    fn a_correction_replaces_only_its_side() {
+        let (stream, rtp) = both_post_matches();
+        let (corrected, event) = rtp
+            .record_team_post_match(side_entry(TeamSide::Away, 25, None))
+            .unwrap();
+        assert_eq!(
+            (corrected.home_gain, corrected.away_gain),
+            (gain(60), gain(25))
+        );
+        assert_eq!(corrected.summary_title.as_deref(), Some("Titre"));
+        let stream: Vec<_> = stream.into_iter().chain([event]).collect();
+        let MatchReportState::ReadyToPublish(replayed) = rehydrate(stream).unwrap() else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(replayed.away_gain, gain(25));
+        assert_eq!(replayed.version, corrected.version);
+    }
+
+    /// Le payload publié se construit des mêmes champs dans les deux modes :
+    /// aux mêmes valeurs, le même rapport publié.
+    #[test]
+    fn the_published_values_are_the_same_in_both_modes() {
+        let (_, team_entry) = both_post_matches();
+        let (_, solo) = started_in(EntryMode::SoloEntry);
+        let (_, solo) = with_mvps_of(solo, &TeamSide::BOTH);
+        let (solo, _) = solo
+            .record_post_match(
+                gain(60),
+                gain(40),
+                NoStallingBonuses {
+                    home: NoStallingBonus::new(false),
+                    away: NoStallingBonus::new(true),
+                },
+                FanFactorMod::try_new(1).unwrap(),
+                FanFactorMod::try_new(-1).unwrap(),
+                Some("Titre".into()),
+                None,
+                CoachId::new(),
+            )
+            .unwrap();
+        let (a, _) = solo.publish(CoachId::new());
+        let (b, _) = team_entry.publish(CoachId::new());
+        assert_eq!((a.home_gain, a.away_gain), (b.home_gain, b.away_gain));
+        assert_eq!(
+            (a.home_no_stalling_bonus, a.away_no_stalling_bonus),
+            (b.home_no_stalling_bonus, b.away_no_stalling_bonus)
+        );
+        assert_eq!(
+            (a.home_fan_mod, a.away_fan_mod),
+            (b.home_fan_mod, b.away_fan_mod)
+        );
+        assert_eq!(a.total_home_gain_kpo(), b.total_home_gain_kpo());
+        assert_eq!(a.summary_title, b.summary_title);
     }
 }

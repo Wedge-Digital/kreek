@@ -3,6 +3,7 @@ use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::mvp_draw::{self, DesignatedPlayer, DrawnMvp};
+use crate::app::match_report::domain::team_post_match::TeamPostMatches;
 use crate::app::match_report::domain::underdog;
 use crate::app::match_report::domain::value_objects::NoStallingBonuses;
 use crate::app::match_report::domain::value_objects::TurnNumber;
@@ -62,6 +63,9 @@ pub struct MatchReportPreMatch {
     /// Qui a lancé le fan factor de chaque camp, en « Chacun son équipe »
     /// (carte 654). Vide en « Je saisis tout ».
     pub fan_factor_recorded_by: FanFactorAuthors,
+    /// L'après-match de chaque camp, en « Chacun son équipe », tant que
+    /// l'autre n'a pas le sien (carte 658). Vide en « Je saisis tout ».
+    pub team_post_match: TeamPostMatches,
     pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
@@ -870,6 +874,10 @@ impl MatchReportPreMatch {
         summary_body: Option<String>,
         recorded_by: CoachId,
     ) -> Result<(MatchReportReadyToPublish, MatchReportDomainEvent), DomainError> {
+        // En « Chacun son équipe », chaque camp a son après-match (carte 658).
+        if self.entry_mode == EntryMode::TeamEntry {
+            return Err(DomainError::TeamEntryPostMatchBySide);
+        }
         // Chaque camp a son MVP avant les gains (carte 638) — à la saisie,
         // jamais au rejeu : `rehydrate` ne passe pas par ici.
         if let Some(side) = self.first_side_without_mvp() {
@@ -929,6 +937,7 @@ impl MatchReportPreMatch {
             home_inducements_recorded_by: None,
             away_inducements_recorded_by: None,
             fan_factor_recorded_by: Default::default(),
+            team_post_match: TeamPostMatches::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
@@ -1210,6 +1219,7 @@ mod tests {
             away_actions: vec![],
             drawn_mvps: vec![],
             version: 1,
+            team_post_match: Default::default(),
         }
     }
 

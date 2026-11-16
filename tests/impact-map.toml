@@ -551,6 +551,12 @@
 "test_match_report_team_mvp" = ["match_report", "players", "competitions", "teams",
                                 "auth", "spaces", "references", "team_creation"]
 
+# Les gains, les fans et le paragraphe de son camp (carte 658, épic E22) :
+# chacun son après-match, celui de l'autre en direct, le récapitulatif à deux.
+# Les noms d'équipes viennent de `teams`, l'auteur de `auth`.
+"test_match_report_team_post_match" = ["match_report", "players", "competitions", "teams",
+                                       "auth", "spaces", "references", "team_creation"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni

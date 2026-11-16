@@ -1,5 +1,6 @@
+use crate::app::match_report::domain::team_post_match::SummaryParagraphs;
 use crate::app::match_report::domain::value_objects::{
-    ActionPlayer, InjuryType, MatchAction, MatchActionType, PurchaseKind,
+    ActionPlayer, InjuryType, MatchAction, MatchActionType, PurchaseKind, TeamSide,
 };
 use crate::app::match_report::use_cases::inducements_recap_service::{
     RecapLine, RecapSide, RecordedBy,
@@ -27,6 +28,30 @@ impl MatchResultVm {
             summary_title,
             summary_body,
         }
+    }
+}
+
+/// Le paragraphe d'un camp, avec le nom de son équipe (carte 658).
+pub struct SummaryParagraphVm {
+    pub team_name: String,
+    pub text: String,
+}
+
+impl SummaryParagraphVm {
+    /// Le domicile puis le visiteur ; un camp sans paragraphe n'a pas de ligne.
+    pub fn all_from_domain(
+        paragraphs: &SummaryParagraphs,
+        (home_name, away_name): (&str, &str),
+    ) -> Vec<Self> {
+        [(TeamSide::Home, home_name), (TeamSide::Away, away_name)]
+            .into_iter()
+            .filter_map(|(side, name)| {
+                paragraphs.of(side).map(|text| Self {
+                    team_name: name.to_string(),
+                    text: text.clone(),
+                })
+            })
+            .collect()
     }
 }
 
@@ -339,6 +364,20 @@ pub fn team_initials(team_name: &str) -> String {
 #[cfg(test)]
 mod recap_tests {
     use super::*;
+
+    /// Carte 658 : un paragraphe par camp, avec son équipe ; un camp sans
+    /// paragraphe n'a pas de ligne.
+    #[test]
+    fn each_side_paragraph_comes_with_its_team() {
+        let paragraphs = SummaryParagraphs {
+            home: None,
+            away: Some("Les Rats ont tenu.".into()),
+        };
+        let rows = SummaryParagraphVm::all_from_domain(&paragraphs, ("Nains", "Rats"));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].team_name, "Rats");
+        assert_eq!(rows[0].text, "Les Rats ont tenu.");
+    }
 
     fn side(recorded_by: Option<RecordedBy>, lines: Vec<RecapLine>) -> RecapSide {
         RecapSide {

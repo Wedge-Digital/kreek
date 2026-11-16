@@ -154,6 +154,18 @@ pub enum MatchReportAppEvent {
         team_side: TeamSidePayload,
         recorded_by: String,
     },
+    /// Un camp a enregistré son après-match, en « Chacun son équipe » (carte
+    /// 658). Un signal sans toast (§ 12.7 de E22) : la page de l'autre coach
+    /// recharge le bloc de l'adversaire.
+    MatchPostMatchRecorded {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        team_side: TeamSidePayload,
+        recorded_by: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
@@ -292,6 +304,7 @@ impl MatchReportAppEvent {
     pub const MATCH_INDUCEMENTS_RECORDED: &'static str = "MatchInducementsRecorded";
     pub const MATCH_INDUCEMENTS_CANCELLED: &'static str = "MatchInducementsCancelled";
     pub const MATCH_FAN_FACTOR_RECORDED: &'static str = "MatchFanFactorRecorded";
+    pub const MATCH_POST_MATCH_RECORDED: &'static str = "MatchPostMatchRecorded";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -307,6 +320,7 @@ impl MatchReportAppEvent {
             Self::MatchInducementsRecorded { .. } => Self::MATCH_INDUCEMENTS_RECORDED,
             Self::MatchInducementsCancelled { .. } => Self::MATCH_INDUCEMENTS_CANCELLED,
             Self::MatchFanFactorRecorded { .. } => Self::MATCH_FAN_FACTOR_RECORDED,
+            Self::MatchPostMatchRecorded { .. } => Self::MATCH_POST_MATCH_RECORDED,
         }
     }
 
@@ -345,6 +359,9 @@ impl MatchReportAppEvent {
                 match_report_id, ..
             }
             | Self::MatchFanFactorRecorded {
+                match_report_id, ..
+            }
+            | Self::MatchPostMatchRecorded {
                 match_report_id, ..
             } => match_report_id,
         }

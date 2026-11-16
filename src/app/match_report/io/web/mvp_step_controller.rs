@@ -383,7 +383,9 @@ fn next_url(space_id: &str, mr_id: &str, side: TeamSide, flow: MvpFlow) -> Strin
     let routes = AppRoutes::default().match_report;
     match (flow, side) {
         (MvpFlow::OneWriter, TeamSide::Home) => routes.mvp(space_id, mr_id, "away"),
-        _ => routes.step5(space_id, mr_id),
+        (MvpFlow::OneWriter, TeamSide::Away) => routes.step5(space_id, mr_id),
+        // L'après-match de son camp (carte 658).
+        (MvpFlow::EachTeam, _) => routes.step5_side(space_id, mr_id, side_slug(side)),
     }
 }
 
@@ -442,8 +444,8 @@ mod tests {
     #[test]
     fn chacun_son_equipe_mene_chaque_camp_aux_gains() {
         let flow = MvpFlow::EachTeam;
-        assert!(next_url("S", "M", TeamSide::Home, flow).ends_with("/M/step5"));
-        assert!(next_url("S", "M", TeamSide::Away, flow).ends_with("/M/step5"));
+        assert!(next_url("S", "M", TeamSide::Home, flow).ends_with("/M/step5/home"));
+        assert!(next_url("S", "M", TeamSide::Away, flow).ends_with("/M/step5/away"));
     }
 
     #[test]

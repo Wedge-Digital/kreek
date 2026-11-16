@@ -12,10 +12,13 @@
 //! `record_team_fan_factor` — le fan factor d'un seul camp, dont le domaine
 //! refuse un second jet.
 //!
-//! Le fan factor des deux camps (« Je saisis tout ») et l'après-match n'y
-//! entrent pas tant qu'ils écrivent les deux camps d'un coup : leur domaine
-//! écrase sans refuser, et un réessai y serait un « dernier qui écrit gagne »
-//! silencieux (carte 658 pour l'après-match).
+//! Depuis la carte 658, `record_team_post_match` y entre **avec une garde** :
+//! le domaine remplace l'après-match d'un camp au lieu de le refuser, donc le
+//! réessai vérifie que son camp n'a pas bougé depuis la première lecture.
+//!
+//! Le fan factor et l'après-match des deux camps (« Je saisis tout ») n'y
+//! entrent pas : leur domaine écrase sans refuser, et un réessai y serait un
+//! « dernier qui écrit gagne » silencieux.
 //!
 //! Un seul réessai : deux conflits de suite disent que l'état change sous la
 //! main, et l'utilisateur doit le voir — 409 et rechargement, comme en E21.

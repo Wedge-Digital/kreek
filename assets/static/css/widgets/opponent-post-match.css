@@ -1,0 +1,20 @@
+/* L'après-match de l'adversaire, en « Chacun son équipe » (carte 658) :
+   une ligne en lecture seule au-dessus du formulaire du coach (maquette B4). */
+.opponent-post-match .opponent-post-match-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px var(--p1); border-radius: 8px;
+  background: var(--dark-6);
+  font-size: var(--text-tiny); color: var(--dark-1);
+}
+.opponent-post-match .opponent-post-match-row--wait {
+  background: transparent; border: 1px dashed var(--dark-4); color: var(--dark-2);
+}
+.opponent-post-match .opponent-post-match-status {
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  border-radius: 20px; padding: 3px 10px;
+  background: rgba(0,48,73,0.10); color: var(--main-blue);
+}
+.opponent-post-match .opponent-post-match-status--done {
+  background: rgba(98,149,132,0.15); color: var(--green);
+}
+.opponent-post-match .opponent-post-match-text b { color: var(--dark-1); }

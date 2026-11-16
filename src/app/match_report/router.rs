@@ -23,6 +23,7 @@ use crate::app::match_report::io::web::step5_controller::{get_step5, post_step5}
 use crate::app::match_report::io::web::team_pre_match_controller::{
     get_team_pre_match, post_team_pre_match,
 };
+use crate::app::match_report::io::web::team_step5_controller::{get_team_step5, post_team_step5};
 use crate::app::match_report::io::web::widgets::action_log_widget::get_action_log;
 use crate::app::match_report::io::web::widgets::action_panel_widget::{
     get_action_panel_step3, get_action_panel_step4,
@@ -32,6 +33,7 @@ use crate::app::match_report::io::web::widgets::live_score_widget::get_live_scor
 use crate::app::match_report::io::web::widgets::mercenary_selector_widget::get_mercenary_selector;
 use crate::app::match_report::io::web::widgets::opponent_fan_factor_widget::get_opponent_fan_factor;
 use crate::app::match_report::io::web::widgets::opponent_mvp_widget::get_opponent_mvp;
+use crate::app::match_report::io::web::widgets::opponent_post_match_widget::get_opponent_post_match;
 use crate::app::match_report::io::web::widgets::print_inducements_widget::{
     get_print_inducements, get_print_inducements_with,
 };
@@ -141,6 +143,11 @@ fn routes_de_camp() -> Router<AppState> {
             get(get_mvp_step).post(post_mvp_step),
         )
         .route(path::MATCH_REPORT_MVP_DRAW, post(post_mvp_draw))
+        // L'après-match d'un camp (carte 658) : gains, fans, paragraphe.
+        .route(
+            path::MATCH_REPORT_STEP5_SIDE,
+            get(get_team_step5).post(post_team_step5),
+        )
 }
 
 fn routes_ouvertes() -> Router<AppState> {
@@ -185,6 +192,11 @@ fn routes_de_suivi() -> Router<AppState> {
         )
         // Le MVP de l'adversaire, en « Chacun son équipe » (carte 657).
         .route(path::MATCH_REPORT_MVP_OPPONENT, get(get_opponent_mvp))
+        // L'après-match de l'adversaire, en « Chacun son équipe » (carte 658).
+        .route(
+            path::MATCH_REPORT_STEP5_OPPONENT,
+            get(get_opponent_post_match),
+        )
 }
 
 fn routes_de_saisie() -> Router<AppState> {

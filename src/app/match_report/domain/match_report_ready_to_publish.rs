@@ -5,10 +5,11 @@ use crate::app::match_report::domain::match_report_pre_match::{
 };
 use crate::app::match_report::domain::match_report_published::MatchReportPublished;
 use crate::app::match_report::domain::mvp_draw::DrawnMvp;
+use crate::app::match_report::domain::team_post_match::SummaryParagraphs;
 use crate::app::match_report::domain::value_objects::{
     D3Roll, DedicatedFans, EntryMode, FanFactorAuthors, FanFactorMod, InducementPurchase,
-    InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TeamSide, TempPlayer,
-    TempPlayerKind,
+    InducementSpending, MatchAction, MatchGain, MatchReportOrigin, SideAuthors, TeamSide,
+    TempPlayer, TempPlayerKind,
 };
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, NoStallingBonuses};
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
@@ -69,6 +70,11 @@ pub struct MatchReportReadyToPublish {
     pub away_fan_mod: FanFactorMod,
     pub summary_title: Option<String>,
     pub summary_body: Option<String>,
+    /// Le paragraphe de chaque camp, en « Chacun son équipe » (carte 658).
+    pub summary_paragraphs: SummaryParagraphs,
+    /// Qui a enregistré l'après-match de chaque camp, en « Chacun son
+    /// équipe » (carte 658). Vide en « Je saisis tout ».
+    pub post_match_recorded_by: SideAuthors,
     /// Vrai quand ce rapport a déjà été publié puis dépublié pour correction.
     ///
     /// N'existe pas sur `MatchReportPreMatch` : `into_pre_match()` est une
@@ -193,6 +199,8 @@ impl MatchReportReadyToPublish {
             away_fan_mod,
             summary_title,
             summary_body,
+            summary_paragraphs: SummaryParagraphs::default(),
+            post_match_recorded_by: SideAuthors::default(),
             // Un rapport qui atteint cet état pour la première fois n'a jamais
             // été publié. Seul `unpublish()` positionne ce drapeau.
             was_published_before: false,
@@ -200,6 +208,7 @@ impl MatchReportReadyToPublish {
     }
 
     pub fn into_pre_match(self) -> MatchReportPreMatch {
+        let team_post_match = self.team_post_matches();
         MatchReportPreMatch {
             id: self.id,
             space_id: self.space_id,
@@ -224,6 +233,7 @@ impl MatchReportReadyToPublish {
             home_inducements_recorded_by: self.home_inducements_recorded_by,
             away_inducements_recorded_by: self.away_inducements_recorded_by,
             fan_factor_recorded_by: self.fan_factor_recorded_by,
+            team_post_match,
             star_engagements: self.star_engagements,
             home_temp_players: self.home_temp_players,
             away_temp_players: self.away_temp_players,
@@ -245,6 +255,10 @@ impl MatchReportReadyToPublish {
         summary_body: Option<String>,
         recorded_by: CoachId,
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        // En « Chacun son équipe », chaque camp corrige le sien (carte 658).
+        if self.entry_mode == EntryMode::TeamEntry {
+            return Err(DomainError::TeamEntryPostMatchBySide);
+        }
         // En correction aussi, chaque camp a son MVP (carte 638).
         if let Some(side) = self.first_side_without_mvp() {
             return Err(DomainError::MvpMissing(side));
@@ -343,6 +357,8 @@ mod tests {
             summary_title,
             summary_body,
             was_published_before: false,
+            summary_paragraphs: Default::default(),
+            post_match_recorded_by: Default::default(),
         }
     }
 

@@ -128,7 +128,11 @@
     <!-- ── Colonne principale ──────────────────────────────── -->
     <div class="ms-main">
 
-      {% if let Some(title) = result.summary_title.as_ref() %}
+      {# Le compte-rendu dès qu'il a un titre, un corps ou un paragraphe : en
+         « Chacun son équipe », le domicile peut ne pas écrire de titre, et le
+         paragraphe du visiteur ne doit pas disparaître pour autant (carte 658).
+         « Publié par » ne dépend donc plus du titre. #}
+      {% if result.summary_title.is_some() || result.summary_body.is_some() || !summary_paragraphs.is_empty() %}
       <div class="ms-card">
         <div class="ms-card-header">
           <span class="ms-card-header-icon">&#128240;</span>
@@ -138,12 +142,19 @@
           {% endif %}
         </div>
         <div class="ms-card-body">
+          {% if let Some(title) = result.summary_title.as_ref() %}
           <div class="ms-article-headline">{{ title }}</div>
+          {% endif %}
           {% if let Some(body) = result.summary_body.as_ref() %}
           <div class="ms-article-body">
             <p class="ms-article-p">{{ body }}</p>
           </div>
           {% endif %}
+          {% for paragraph in summary_paragraphs %}
+          <div class="ms-article-body">
+            <p class="ms-article-p"><strong>{{ paragraph.team_name }}</strong> · {{ paragraph.text }}</p>
+          </div>
+          {% endfor %}
         </div>
       </div>
       {% endif %}

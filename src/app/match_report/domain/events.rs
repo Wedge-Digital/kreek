@@ -196,6 +196,27 @@ pub enum MatchReportDomainEvent {
         summary_body: Option<String>,
         recorded_by: CoachId,
     },
+    /// L'après-match d'un camp, en « Chacun son équipe » (carte 658) : ses
+    /// gains, son bonus, sa modification de fans et son paragraphe. Il remplit
+    /// les champs du mode A **du seul camp**, pour que le payload publié ne
+    /// change pas. `summary_title` n'est posé que par le domicile (R8).
+    ///
+    /// En `PreMatch`, le second camp l'appende avec `PostMatchClosed` ; en
+    /// `ReadyToPublish` (correction), il remplace les valeurs de son camp.
+    TeamPostMatchRecorded {
+        team_side: TeamSide,
+        gain: MatchGain,
+        #[serde(default)]
+        no_stalling_bonus: NoStallingBonus,
+        fan_mod: FanFactorMod,
+        summary_title: Option<String>,
+        summary_paragraph: Option<String>,
+        recorded_by: CoachId,
+    },
+    /// Les deux camps ont leur après-match : le rapport passe en
+    /// `ReadyToPublish` (carte 658, § 12.8 de E22). Toujours appendé avec le
+    /// second `TeamPostMatchRecorded`, dans le même `append_many`.
+    PostMatchClosed,
     MatchReportPublished {
         published_by: CoachId,
         published_at: DateTime<Utc>,
@@ -239,6 +260,8 @@ impl MatchReportDomainEvent {
             Self::ActionDeleted { .. } => "ActionDeleted",
             Self::MvpDrawn { .. } => "MvpDrawn",
             Self::PostMatchRecorded { .. } => "PostMatchRecorded",
+            Self::TeamPostMatchRecorded { .. } => "TeamPostMatchRecorded",
+            Self::PostMatchClosed => "PostMatchClosed",
             Self::MatchReportPublished { .. } => "MatchReportPublished",
             Self::MatchReportUnpublished { .. } => "MatchReportUnpublished",
             Self::RoundReassigned { .. } => "RoundReassigned",

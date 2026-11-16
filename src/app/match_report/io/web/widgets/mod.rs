@@ -5,6 +5,7 @@ pub mod live_score_widget;
 pub mod mercenary_selector_widget;
 pub mod opponent_fan_factor_widget;
 pub mod opponent_mvp_widget;
+pub mod opponent_post_match_widget;
 pub mod print_inducements_widget;
 pub mod print_match_sheet_widget;
 pub mod temp_player_selector_widget;

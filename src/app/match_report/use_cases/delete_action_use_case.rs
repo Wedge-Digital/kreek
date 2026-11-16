@@ -146,6 +146,7 @@ mod tests {
             away_actions: vec![],
             drawn_mvps: vec![],
             version: 1,
+            team_post_match: Default::default(),
         };
         let action_id = ActionId("ACT01".into());
         let (updated, _) = pm

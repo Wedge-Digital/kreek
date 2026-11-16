@@ -2,7 +2,9 @@ use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
 use crate::app::match_report::domain::mvp_draw::DrawnMvp;
+use crate::app::match_report::domain::team_post_match::SummaryParagraphs;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
+use crate::app::match_report::domain::value_objects::SideAuthors;
 use crate::app::match_report::domain::value_objects::{
     CorrectionEligibility, D3Roll, DedicatedFans, EntryMode, FanFactorAuthors, FanFactorMod,
     InducementPurchase, InducementSpending, MatchAction, MatchGain, MatchReportOrigin, TempPlayer,
@@ -61,6 +63,10 @@ pub struct MatchReportPublished {
     pub away_fan_mod: FanFactorMod,
     pub summary_title: Option<String>,
     pub summary_body: Option<String>,
+    /// Le paragraphe et l'auteur de l'après-match de chaque camp, en « Chacun
+    /// son équipe » (carte 658) — gardés pour la correction.
+    pub summary_paragraphs: SummaryParagraphs,
+    pub post_match_recorded_by: SideAuthors,
     pub published_by: CoachId,
     pub published_at: DateTime<Utc>,
 }
@@ -140,6 +146,8 @@ impl MatchReportPublished {
             away_fan_mod: self.away_fan_mod,
             summary_title: self.summary_title.clone(),
             summary_body: self.summary_body.clone(),
+            summary_paragraphs: self.summary_paragraphs.clone(),
+            post_match_recorded_by: self.post_match_recorded_by,
             was_published_before: true,
         }
     }
@@ -188,6 +196,8 @@ impl MatchReportPublished {
             away_fan_mod: rtp.away_fan_mod,
             summary_title: rtp.summary_title.clone(),
             summary_body: rtp.summary_body.clone(),
+            summary_paragraphs: rtp.summary_paragraphs.clone(),
+            post_match_recorded_by: rtp.post_match_recorded_by,
             published_by,
             published_at,
         }
@@ -243,6 +253,8 @@ mod unpublish_tests {
             summary_body: Some("Corps".to_string()),
             published_by: CoachId::new(),
             published_at: Utc::now(),
+            summary_paragraphs: Default::default(),
+            post_match_recorded_by: Default::default(),
         }
     }
 
