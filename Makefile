@@ -40,7 +40,7 @@ PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
 .PHONY: install dev dev-demo e2e-server test test-files e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint fix_lint typecheck check-arch coverage analyze help
+        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint fix_lint typecheck check-arch arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 #
@@ -589,6 +589,10 @@ audit: ## Avis de sécurité des dépendances (cargo audit --deny warnings)
 
 check-arch: ## Vérifications architecturales (axes 2 à 18)
 	@./scripts/check-arch.sh all
+
+# Nom standard attendu par l'usine (frontières entre couches et BCs). Alias de
+# `check-arch` plutôt que copie : un seul script, celui que la CI lance déjà.
+arch: check-arch ## Alias de check-arch (nom standard de l'usine)
 
 # ── Couverture de tests (axe 7) ───────────────────────────────────────────────
 coverage: ## Couverture de tests (nécessite cargo-llvm-cov)
