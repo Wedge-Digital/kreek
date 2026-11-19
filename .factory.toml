@@ -3,7 +3,7 @@
 # de `demo` @ 7b14ad8. Toutes les clés : examples/factory.toml de l'usine.
 # Niveau atteignable d'après l'inventaire : minimal.
 
-name = "kreek"
+name = "kreek-kr"
 base_branch = "demo"
 # Racine du kanban de specs (colonnes 1-backlog … 8-abandonnee). Tickets : le défaut,
 # <specs_dir>/6-prete/**/*.md. La conception par fonctionnalité reste dans docs/specs/.
