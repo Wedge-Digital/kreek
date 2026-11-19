@@ -39,7 +39,7 @@ DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
 PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
-.PHONY: dev dev-demo e2e-server test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: install dev dev-demo e2e-server test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
         load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -75,6 +75,19 @@ help: ## Affiche cette aide
 # que de retomber en silence sur la démonstration : ce silence **est** le défaut
 # qu'elle corrige, et un 500 sur un widget en est un bien mauvais messager.
 ##@ Développement
+# Prépare une copie neuve : dépendances Rust depuis `Cargo.lock` (`--locked`
+# refuse tout verrou à réécrire), `sqlx-cli` (exigé par `reset_test_db`, donc
+# par `make test`) s'il manque, et dépendances Python de la suite e2e depuis
+# `tests/e2e/uv.lock`. Idempotente, sans question.
+#
+# Hors de son ressort : PostgreSQL et le fichier `.env.test` (ou
+# `DATABASE_URL_TEST`), que `make test` attend — cf. CONTRIBUTING.md.
+install: ## Installe les dépendances depuis les fichiers de verrouillage (cargo, sqlx-cli, uv)
+	cargo fetch --locked
+	@command -v sqlx >/dev/null 2>&1 || \
+	  cargo install sqlx-cli --locked --no-default-features --features rustls,postgres
+	cd tests/e2e && uv sync --locked
+
 dev: ## Serveur en watch, vrai catalogue (31 rosters, non versionné)
 	@[ -d assets/references ] || { \
 	    echo ""; \
