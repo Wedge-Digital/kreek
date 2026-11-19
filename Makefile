@@ -40,7 +40,7 @@ PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
 .PHONY: install dev dev-demo e2e-server test test-files e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint check-arch coverage analyze help
+        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint fix_lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 #
@@ -534,6 +534,15 @@ lint: ## Formatage (fmt) + linting (clippy)
 	@WARN_COUNT=$$(cargo clippy 2>&1 | grep -c "^warning:" || true); \
 		echo "  \033[33m⚠\033[0m  $$WARN_COUNT warning(s) de style non-bloquants — \`cargo clippy\` pour le détail"
 	@echo ""
+
+# Corrige la forme de ce que `lint` signale, jamais le sens : retire les imports
+# inutilisés (clippy et le groupe `unused` éteints, seul `unused-imports`
+# rallumé — pas `-A warnings`, qui l'éteindrait aussi), puis reformate avec
+# rustfmt. Les autres erreurs de `lint` (clippy::correctness, motifs
+# inatteignables…) touchent au sens : elles restent à corriger à la main.
+fix_lint: ## Corrige la forme signalée par lint : imports inutilisés + cargo fmt
+	cargo clippy --fix --allow-dirty --allow-staged --tests -- -A clippy::all -A unused -W unused-imports
+	cargo fmt
 
 # ── Vérifications architecturales (axes 2–6) ──────────────────────────────────
 # Audit des dépendances — cible dédiée, branchée sur le job `audit` de la CI.
