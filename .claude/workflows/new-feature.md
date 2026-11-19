@@ -280,17 +280,19 @@ Fichier `<page>/07-integration.md` avec les détails de persistance, événement
 
 ### Processus
 
-À partir de la spec complète de la page, produire un ensemble de **cartes kanban** dans `kanban/ready_to_be_done/` :
+À partir de la spec complète de la page, produire un ensemble de **cartes kanban** dans le répertoire de l'initiative de la fonctionnalité, `specs/<colonne>/<initiative>/` (cf. `specs/README.md`) :
 
 1. Découper l'implémentation en cartes indépendantes et ordonnées
 2. Chaque carte correspond à une unité livrable (compilable, testable, commitable)
-3. Chaque carte contient : objectif, dépendances, conception détaillée, checklist
+3. Chaque carte contient : objectif, dépendances, conception détaillée, checklist. Les dépendances
+   tiennent sur une ligne lisible par l'usine, en tête de carte : `**Dépend de** : <id>, <id>` (l'id
+   d'une carte est son nom de fichier sans `.md`), ou `**Dépend de** : —` s'il n'y en a pas
 4. Les cartes suivent le cycle de vie kanban (cf. CLAUDE.md)
 
 ### Sortie
 
 - Fichier `<page>/08-cards.md` — liste des cartes avec résumé et ordre
-- Cartes kanban créées dans `kanban/ready_to_be_done/`
+- Cartes kanban créées dans `specs/<colonne>/<initiative>/`
 - README mis à jour avec la progression
 
 ### Règles de découpage

@@ -5,10 +5,9 @@
 
 name = "kreek"
 base_branch = "demo"
-# À FAIRE : 331 fichiers Markdown dans `docs/specs`, mais aucun avec un en-tête
-# `id` + `status` : l'usine ne prend que les specs d'un répertoire (non récursif) dont
-# l'en-tête porte `status: approved` (spec/processus-specifications.md, FAC-032).
-# tickets = "docs/specs/**/*.md"
+# Racine du kanban de specs (colonnes 1-backlog … 8-abandonnee). Tickets : le défaut,
+# <specs_dir>/6-prete/**/*.md. La conception par fonctionnalité reste dans docs/specs/.
+specs_dir = "specs"
 
 # Livraison déduite : remote présente, PR. À confirmer.
 delivery = "pull-request"
@@ -52,7 +51,7 @@ worktree_files = [".env.e2e", ".env.test"]   # lus par le Makefile
 
 # -- Contexte des agents ---------------------------------------------------
 # Rien n'est chargé implicitement (setting_sources=[]) : seuls ces fichiers le sont.
-context_files = ["CLAUDE.md", "CONTRIBUTING.md"]
+context_files = ["CLAUDE.md", "CONTRIBUTING.md", "specs/README.md"]
 # À FAIRE : code exemplaire que les agents doivent imiter (choix humain).
 reference_files = []
 
