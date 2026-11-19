@@ -63,3 +63,6 @@ assets/references/
 
 # Les worktrees des agents de Claude Code : des copies de travail, jamais du code à suivre.
 .claude/worktrees/
+
+# Outillage Node de développement (make dup)
+/tools/jscpd/node_modules

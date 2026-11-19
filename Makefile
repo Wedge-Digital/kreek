@@ -40,7 +40,7 @@ PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
 .PHONY: install dev dev-demo e2e-server test test-files e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint fix_lint typecheck check-arch arch coverage analyze help
+        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint fix_lint typecheck check-arch arch dup coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 #
@@ -593,6 +593,32 @@ check-arch: ## Vérifications architecturales (axes 2 à 18)
 # Nom standard attendu par l'usine (frontières entre couches et BCs). Alias de
 # `check-arch` plutôt que copie : un seul script, celui que la CI lance déjà.
 arch: check-arch ## Alias de check-arch (nom standard de l'usine)
+
+# Détection de duplication (jscpd), rapport JSON dans REPORT=…
+#
+# jscpd est un outil Node ; le projet n'en a pas. Il vit donc dans un paquet
+# npm de développement isolé, `tools/jscpd/`, épinglé par son
+# `package-lock.json` et installé à la première demande (`npm ci`), sans
+# toucher au reste du dépôt. Sont analysés le Rust et les gabarits HTML de
+# `src/` et `tests/` (hors `.venv` de la suite e2e). Le code de retour ne dit
+# rien des clones : c'est le rapport qui les compte.
+JSCPD_DIR := tools/jscpd
+JSCPD := $(JSCPD_DIR)/node_modules/.bin/jscpd
+
+$(JSCPD): $(JSCPD_DIR)/package-lock.json
+	npm ci --prefix $(JSCPD_DIR) --no-audit --no-fund
+	@touch $@
+
+dup: $(JSCPD) ## Détection de duplication (jscpd), rapport JSON dans REPORT=…
+	$(if $(REPORT),,$(error REPORT requis (ex. make dup REPORT=dup.json)))
+	@mkdir -p "$(dir $(abspath $(REPORT)))"
+	$(JSCPD) src tests \
+		--format rust,markup \
+		--ignore "**/.venv/**,**/node_modules/**,**/target/**,**/__pycache__/**" \
+		--reporters json \
+		--output "$(dir $(abspath $(REPORT)))" \
+		--report-name "$(basename $(notdir $(REPORT)))"
+	@[ "$(suffix $(REPORT))" = ".json" ] || mv "$(basename $(abspath $(REPORT))).json" "$(abspath $(REPORT))"
 
 # ── Couverture de tests (axe 7) ───────────────────────────────────────────────
 coverage: ## Couverture de tests (nécessite cargo-llvm-cov)

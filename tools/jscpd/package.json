@@ -1,0 +1,8 @@
+{
+  "name": "kreek-dev-tools-jscpd",
+  "private": true,
+  "description": "Outillage de développement : détection de duplication (make dup). Aucun code applicatif.",
+  "devDependencies": {
+    "jscpd": "5.4.3"
+  }
+}
