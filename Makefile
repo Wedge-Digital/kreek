@@ -39,7 +39,7 @@ DEMO_ENV_FILE := .env.$(DEMO_PROFILE)
 PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
-.PHONY: install dev dev-demo e2e-server test e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
+.PHONY: install dev dev-demo e2e-server test test-files e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
         load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
@@ -129,6 +129,19 @@ e2e-server: ## Serveur de la suite e2e — port 3211, base kreek_e2e, à côté 
 ##@ Tests
 test: reset_test_db ## Lance les tests (utilise .env.test)
 	DATABASE_URL="$(TEST_DB_URL)" cargo test
+
+# Les seuls tests Rust des fichiers donnés (src/…/*.rs), via cargo-nextest, avec
+# un rapport JUnit écrit même en cas d'échec — y compris de compilation
+# (cf. scripts/test_files.sh). Sans `reset_test_db` : `#[sqlx::test]` crée ses
+# propres bases à partir de DATABASE_URL. Sans base de test configurée, les
+# macros `query!` compilent depuis le cache `.sqlx/` (SQLX_OFFLINE, comme la CI)
+# et seuls les tests sans base peuvent passer.
+#   make test-files FILES="src/app/x/tests/test_y.rs" REPORT=target/junit.xml
+test-files: ## Lance les tests des fichiers FILES=… et écrit un rapport JUnit dans REPORT=…
+	$(if $(FILES),,$(error FILES requis))
+	$(if $(REPORT),,$(error REPORT requis))
+	@command -v cargo-nextest >/dev/null 2>&1 || cargo install cargo-nextest --locked
+	$(if $(TEST_DB_URL),DATABASE_URL="$(TEST_DB_URL)",SQLX_OFFLINE=true) bash scripts/test_files.sh "$(REPORT)" $(FILES)
 
 # Chaque suite complète part d'une base vidée et reseedée (carte 641) : sur une
 # base qui accumulait les passages, la suite était passée de 8 à 22 minutes.

@@ -1,0 +1,11 @@
+# Profil de `make test-files` : un rapport JUnit, écrit dans
+# target/nextest/files/junit.xml puis copié dans REPORT par
+# scripts/test_files.sh. Le profil `default` (et `cargo test`) n'en est pas
+# affecté.
+[profile.files]
+fail-fast = false
+
+[profile.files.junit]
+path = "junit.xml"
+store-success-output = false
+store-failure-output = true
