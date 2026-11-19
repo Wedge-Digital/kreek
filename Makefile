@@ -40,7 +40,7 @@ PROD_PROFILE  := remote.prod
 PROD_ENV_FILE := .env.$(PROD_PROFILE)
 
 .PHONY: install dev dev-demo e2e-server test test-files e2e test-impacted all_tests audit migrate migration prepare_db reset_db reset_test_db init_db \
-        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint fix_lint check-arch coverage analyze help
+        load_data create_remote_db init_remote_data init_remote_db init_remote_demo_db init_remote_prod_db import_prod_db backup_prod_db load_dump seed_accounts seed_e2e init_e2e_db reset_e2e_db lint fix_lint typecheck check-arch coverage analyze help
 
 # ── Aide ──────────────────────────────────────────────────────────────────────
 #
@@ -543,6 +543,12 @@ lint: ## Formatage (fmt) + linting (clippy)
 fix_lint: ## Corrige la forme signalée par lint : imports inutilisés + cargo fmt
 	cargo clippy --fix --allow-dirty --allow-staged --tests -- -A clippy::all -A unused -W unused-imports
 	cargo fmt
+
+# Typage statique : le compilateur Rust, sans produire de binaire. `--all-targets`
+# couvre aussi les tests, exemples et benchs. SQLX_OFFLINE : les macros `query!`
+# se vérifient contre le cache `.sqlx/` (comme la CI), sans base joignable.
+typecheck: ## Typage statique (cargo check --all-targets, cache sqlx hors ligne)
+	SQLX_OFFLINE=true cargo check --all-targets --locked
 
 # ── Vérifications architecturales (axes 2–6) ──────────────────────────────────
 # Audit des dépendances — cible dédiée, branchée sur le job `audit` de la CI.
