@@ -1,0 +1,87 @@
+# Configuration de la software factory pour kreek.
+# Générée par `factory configure` le 2026-11-19 15:47, à partir de l'audit
+# de `demo` @ 7b14ad8. Toutes les clés : examples/factory.toml de l'usine.
+# Niveau atteignable d'après l'inventaire : minimal.
+
+name = "kreek"
+base_branch = "demo"
+# À FAIRE : 331 fichiers Markdown dans `docs/specs`, mais aucun avec un en-tête
+# `id` + `status` : l'usine ne prend que les specs d'un répertoire (non récursif) dont
+# l'en-tête porte `status: approved` (spec/processus-specifications.md, FAC-032).
+# tickets = "docs/specs/**/*.md"
+
+# Livraison déduite : remote présente, PR. À confirmer.
+delivery = "pull-request"
+
+# -- Portes ----------------------------------------------------------------
+# Porte d'amorçage : prépare chaque worktree neuf avant les agents
+install_command = ["make", "install"]
+# Porte verte
+test_command = ["make", "test"]
+# Porte rouge : rapport JUnit, code de retour ignoré
+red_command = ["make", "test-files", "FILES={files}", "REPORT={report}"]
+# Porte rouge : erreurs du rapport JUnit qui signifient « le code testé n'existe pas encore »,
+# propres au lanceur de tests (examples/factory.toml en donne pour pytest, jest, go…).
+# À FAIRE : red_missing_code_patterns = […] (obligatoire, `run` refuse de démarrer sans)
+# Erreurs refusées en priorité (le test lui-même est cassé), facultatif :
+# red_broken_test_patterns = […]
+# Fichiers de test : le rédacteur de tests ne peut modifier qu'eux
+test_patterns = ["tests/*", "*/test_*"]   # déduit de l'arborescence, à vérifier
+# Qualité des tests : scénarios given/when/then, aucun mock, aucun nom privé
+# À FAIRE : cible `test-quality` absente (recommandée, porte qualité des tests). Voir `factory audit --brief`.
+# Portes qualité : vérifient sans corriger
+quality_gates = [
+    ["make", "lint"],
+    ["make", "typecheck"],
+    ["make", "arch"],
+]
+# Réparation de forme de lint, lancée par l'usine sans agent (exigée avec lint)
+gate_fixes = { "make lint" = ["make", "fix_lint"] }
+# Anti-duplication : rapport jscpd (appliquée avec FAC-025)
+dup_command = ["make", "dup", "REPORT={report}"]
+
+# Aucune photo de départ : lancer `factory audit` pour vérifier que les portes sont vertes.
+
+# -- Environnement de test d'une copie (FAC-039) ---------------------------
+# Fichiers non versionnés copiés depuis ce dépôt dans chaque copie de travail (jamais committés).
+worktree_files = [".env.e2e", ".env.test"]   # lus par le Makefile
+# Lus aussi par le Makefile, non proposés (secrets possibles, les agents y auraient accès) : .env.dev, .env.remote.demo, .env.remote.prod
+# Services démarrés avant les portes et arrêtés après ; FACTORY_SLOT distingue les copies en parallèle.
+# services_command = ["make", "services"]
+# services_stop_command = ["make", "services-stop"]
+
+# -- Contexte des agents ---------------------------------------------------
+# Rien n'est chargé implicitement (setting_sources=[]) : seuls ces fichiers le sont.
+context_files = ["CLAUDE.md", "CONTRIBUTING.md"]
+# À FAIRE : code exemplaire que les agents doivent imiter (choix humain).
+reference_files = []
+
+# -- Périmètre (à décider, non deviné) -------------------------------------
+# Chemins que les agents ne modifient jamais, en plus des défauts de l'usine (specs, Makefile,
+# .factory*, .claude/, configuration de test, CI) : migrations appliquées, contrats publiés,
+# code généré, code embarqué…
+protected_paths = []
+# Contextes proposés d'après l'arborescence (carte d'impact, FAC-026) ; à regrouper par
+# bounded context avant de décommenter. Déclarés, ils rendent la porte `arch` obligatoire :
+# elle doit échouer sur un fichier de code hors de tout contexte ou dans plusieurs.
+# [contexts]
+# _claude_skills = [".claude/skills/**"]   # 1 fichiers
+# assets_rawpages = ["assets/rawpages/**"]   # 2 fichiers
+# assets_static = ["assets/static/**"]   # 5 fichiers
+# scripts = ["scripts/*"]   # 15 fichiers
+# scripts_arch = ["scripts/arch/**"]   # 3 fichiers
+# scripts_impact = ["scripts/impact/**"]   # 2 fichiers
+# racine = ["src/*"]   # 3 fichiers
+# racine = ["src/app/*"]   # 2 fichiers
+# auth = ["src/app/auth/**"]   # 40 fichiers
+# competitions = ["src/app/competitions/**"]   # 127 fichiers
+# match_report = ["src/app/match_report/**"]   # 87 fichiers
+# news = ["src/app/news/**"]   # 25 fichiers
+# players = ["src/app/players/**"]   # 64 fichiers
+# ranking = ["src/app/ranking/**"]   # 38 fichiers
+# references = ["src/app/references/**"]   # 25 fichiers
+# shared_kernel = ["src/app/shared_kernel/**"]   # 40 fichiers
+# spaces = ["src/app/spaces/**"]   # 48 fichiers
+# spp_calculator = ["src/app/spp_calculator/**"]   # 3 fichiers
+# team_creation = ["src/app/team_creation/**"]   # 68 fichiers
+# teams = ["src/app/teams/**"]   # 89 fichiers
