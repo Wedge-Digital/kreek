@@ -21,11 +21,22 @@ test_command = ["make", "test"]
 red_command = ["make", "test-files", "FILES={files}", "REPORT={report}"]
 # Porte rouge : erreurs du rapport JUnit qui signifient « le code testé n'existe pas encore »,
 # propres au lanceur de tests (examples/factory.toml en donne pour pytest, jest, go…).
-# À FAIRE : red_missing_code_patterns = […] (obligatoire, `run` refuse de démarrer sans)
-# Erreurs refusées en priorité (le test lui-même est cassé), facultatif :
-# red_broken_test_patterns = […]
-# Fichiers de test : le rédacteur de tests ne peut modifier qu'eux
-test_patterns = ["tests/*", "*/test_*"]   # déduit de l'arborescence, à vérifier
+# Messages de rustc quand un test appelle du code pas encore écrit (scripts/test_files.sh
+# met la sortie de cargo dans le rapport quand la compilation échoue).
+red_missing_code_patterns = [
+    "cannot find",                          # E0425, E0412, E0422, E0433 : fonction, type, struct absents
+    "unresolved import",                    # E0432
+    "failed to resolve",                    # E0433 : chemin de module absent
+    "no function or associated item named", # E0599 : fonction associée absente
+    "no method named",                      # E0599 : méthode absente
+    "no field",                             # E0609 : champ absent
+]
+# Erreurs refusées en priorité (le test lui-même est cassé) : syntaxe Rust.
+red_broken_test_patterns = ["expected one of", "unclosed delimiter", "unexpected closing delimiter"]
+# Fichiers de test : le rédacteur de tests ne peut modifier qu'eux. Les tests Rust sont
+# co-localisés dans les répertoires `tests/` des modules de src/ (doublures `fake_*` et `mod.rs`
+# compris) ; les e2e Python de tests/ ne passent pas par la porte rouge (`make test-files`).
+test_patterns = ["src/*/tests/*.rs"]
 # Qualité des tests : scénarios given/when/then, aucun mock, aucun nom privé
 # À FAIRE : cible `test-quality` absente (recommandée, porte qualité des tests). Voir `factory audit --brief`.
 # Portes qualité : vérifient sans corriger

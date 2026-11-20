@@ -1,3 +1,9 @@
+---
+id: 15-url-generation-string-replace
+parent: K49
+status: approved
+---
+
 # Génération d'URLs par string replacement
 
 **Priorité : faible**

@@ -1,3 +1,9 @@
+---
+id: 254-draft-team-erreur-json-trompeuse
+parent: K49
+status: approved
+---
+
 # `team_creation` — Un corps de requête invalide accuse la compétition
 
 **Priorité : basse**

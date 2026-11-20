@@ -1,3 +1,9 @@
+---
+id: 659-valider-son-camp
+parent: K22
+status: draft
+---
+
 # Valider son camp
 
 **Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 8 · **Dépend de :** 658  

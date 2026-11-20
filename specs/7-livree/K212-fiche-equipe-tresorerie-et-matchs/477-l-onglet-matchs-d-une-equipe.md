@@ -4,7 +4,7 @@
 **Dépend de** : 476-le-bloc-de-match-devient-un-composant, 434-la-fiche-equipe-accueille-des-onglets
 **Conception :** `docs/specs/matchs-d-une-equipe/README.md`, et
 `docs/specs/fiche-equipe-onglets/README.md` pour le mécanisme d'onglets
-**Remplace :** la carte `match-02-team-matches-tab`
+**Remplace :** la carte `673-team-matches-tab` (ex-`match-02-team-matches-tab`)
 
 ## Objectif
 

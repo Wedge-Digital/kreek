@@ -1,3 +1,9 @@
+---
+id: 661-les-tests-e2e-a-deux-coachs
+parent: K22
+status: draft
+---
+
 # Les tests e2e à deux coachs
 
 **Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 10 · **Dépend de :** 652 à 660  

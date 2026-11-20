@@ -9,4 +9,4 @@ Initiative créée à la migration vers le kanban de la spec factory (2026-11-19
 
 ## Tickets
 
-- `match-02-team-matches-tab` — BC `match_report` — Onglet Matchs de la fiche d'équipe (annulée à la migration)
+- `673-team-matches-tab` (ex-`match-02-team-matches-tab`) — BC `match_report` — Onglet Matchs de la fiche d'équipe (annulée à la migration)

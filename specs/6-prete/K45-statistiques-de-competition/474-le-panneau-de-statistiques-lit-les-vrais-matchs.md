@@ -1,3 +1,9 @@
+---
+id: 474-le-panneau-de-statistiques-lit-les-vrais-matchs
+parent: K45
+status: approved
+---
+
 # Le panneau de statistiques lit les vrais matchs
 
 **Épic :** aucune · **Ordre :** 1 · **Dépend de :** rien

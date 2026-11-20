@@ -1,3 +1,9 @@
+---
+id: 358-fragments-de-rapport-relient-la-feuille-partagee
+parent: K167
+status: approved
+---
+
 # `match_report` — quatre fragments rechargent la feuille partagée
 
 **Priorité : basse** — aucun effet visible, quatre chargements de trop

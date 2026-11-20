@@ -1,3 +1,9 @@
+---
+id: 415-le-plafond-de-participants-n-a-jamais-servi
+parent: K179
+status: approved
+---
+
 # Le plafond de participants n'a jamais servi
 
 **Priorité : moyenne** — un réglage mort qui produit un e-mail incomplet

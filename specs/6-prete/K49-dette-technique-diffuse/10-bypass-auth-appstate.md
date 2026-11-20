@@ -1,3 +1,9 @@
+---
+id: 10-bypass-auth-appstate
+parent: K49
+status: approved
+---
+
 # `bypass_auth` dans `AppState`
 
 **Priorité : moyenne**

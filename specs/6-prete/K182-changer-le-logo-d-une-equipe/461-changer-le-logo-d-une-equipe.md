@@ -1,3 +1,9 @@
+---
+id: 461-changer-le-logo-d-une-equipe
+parent: K182
+status: approved
+---
+
 # Changer le logo d'une équipe
 
 **Priorité : moyenne** — un logo choisi à la création ne se corrige nulle part

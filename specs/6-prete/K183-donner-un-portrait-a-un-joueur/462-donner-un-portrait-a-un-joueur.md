@@ -1,3 +1,9 @@
+---
+id: 462-donner-un-portrait-a-un-joueur
+parent: K183
+status: approved
+---
+
 # Donner un portrait à un joueur
 
 **Priorité : basse** — du confort, aucun défaut réparé

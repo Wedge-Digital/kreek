@@ -1,3 +1,9 @@
+---
+id: 393-un-correctif-js-peut-ne-jamais-atteindre-l-utilisateur
+parent: K175
+status: approved
+---
+
 # Un correctif JS peut ne jamais atteindre l'utilisateur
 
 > **⚠️ Cette carte demande ton attention.** Ce n'est pas une optimisation de

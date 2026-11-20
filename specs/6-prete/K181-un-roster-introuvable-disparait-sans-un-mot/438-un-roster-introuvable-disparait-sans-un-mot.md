@@ -1,3 +1,9 @@
+---
+id: 438-un-roster-introuvable-disparait-sans-un-mot
+parent: K181
+status: approved
+---
+
 # Un roster introuvable disparaît sans un mot
 
 **Priorité : moyenne-haute** — le défaut ne casse rien, il fait chercher des

@@ -1,3 +1,9 @@
+---
+id: 670-entity-sans-eq-concurrente
+parent: K49
+status: approved
+---
+
 # `Entity::eq()` fait concurrence à `PartialEq::eq`
 
 **Priorité : moyenne**

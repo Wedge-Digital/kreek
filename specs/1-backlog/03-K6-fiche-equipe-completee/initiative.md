@@ -7,7 +7,7 @@ origine: kanban/epics/to_be_refined/E06-fiche-equipe-completee.md
 
 # E06 — La fiche d'équipe complétée
 
-> **Rangement.** Les sept cartes livrées (434 à 437, 476 à 478) ont été séparées dans [K212](../../7-livree/K212-fiche-equipe-tresorerie-et-matchs/initiative.md), en `7-livree/`, le 2026-11-19. Reste ici `match-01-vnd-widget`, à raffiner.
+> **Rangement.** Les sept cartes livrées (434 à 437, 476 à 478) ont été séparées dans [K212](../../7-livree/K212-fiche-equipe-tresorerie-et-matchs/initiative.md), en `7-livree/`, le 2026-11-19. Reste ici `672-vnd-widget` (ex-`match-01-vnd-widget`), à raffiner.
 
 **État :** 8 cartes · 0 faite. Deux cartes d'intention ont été **remplacées**
 par des cartes conçues : la 48 par les quatre de la trésorerie (434 à 437,

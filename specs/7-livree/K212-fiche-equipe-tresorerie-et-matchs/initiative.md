@@ -10,7 +10,7 @@ Initiative créée le 2026-11-19, à la reprise de la migration, en séparant le
 livrées de l'initiative [K6](../../specs/1-backlog/03-K6-fiche-equipe-completee/initiative.md) (épic E06), sur décision de
 l'humain : une initiative ne passe en `6-prete/` que si tous ses tickets sont à réaliser, et
 les cartes livrées restent archivées en `7-livree/`. Le contexte, la conception et le critère
-« Terminé quand » sont ceux de K6. Reste dans K6 la carte `match-01-vnd-widget`, à raffiner.
+« Terminé quand » sont ceux de K6. Reste dans K6 la carte `672-vnd-widget` (ex-`match-01-vnd-widget`), à raffiner.
 
 ## Tickets
 

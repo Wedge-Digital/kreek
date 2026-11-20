@@ -1,3 +1,9 @@
+---
+id: 669-le-brouillon-d-equipe-emprunte-une-competition
+parent: K194
+status: approved
+---
+
 # Le brouillon d'équipe emprunte une compétition
 
 **Épic :** aucune — stabilité de la suite e2e · **Trouvée à :** la carte 641

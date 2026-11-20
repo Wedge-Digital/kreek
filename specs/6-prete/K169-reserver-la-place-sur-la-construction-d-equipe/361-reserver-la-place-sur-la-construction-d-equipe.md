@@ -1,3 +1,9 @@
+---
+id: 361-reserver-la-place-sur-la-construction-d-equipe
+parent: K169
+status: approved
+---
+
 # Construction d'équipe — la plus grosse zone non réservée du dépôt
 
 **Priorité : moyenne** — 1 265 px de saut en desktop, 1 841 px en mobile, sur une

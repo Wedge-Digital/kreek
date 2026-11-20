@@ -1,3 +1,9 @@
+---
+id: 651-la-session-ne-glisse-pas
+parent: K191
+status: approved
+---
+
 # La session ne glisse pas : elle expire trente jours après la connexion
 
 **Épic :** aucune · **Dépend de :** 491 (le magasin persistant)  

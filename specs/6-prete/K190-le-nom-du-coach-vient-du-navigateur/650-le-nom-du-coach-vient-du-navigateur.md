@@ -1,3 +1,9 @@
+---
+id: 650-le-nom-du-coach-vient-du-navigateur
+parent: K190
+status: approved
+---
+
 # Le nom du coach d'une équipe vient du navigateur
 
 **Épic :** aucune · **Dépend de :** rien

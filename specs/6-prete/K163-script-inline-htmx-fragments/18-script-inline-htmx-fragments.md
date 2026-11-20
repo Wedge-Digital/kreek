@@ -1,3 +1,9 @@
+---
+id: 18-script-inline-htmx-fragments
+parent: K163
+status: approved
+---
+
 # Scripts inline dans les fragments HTMX
 
 **Priorité : faible**

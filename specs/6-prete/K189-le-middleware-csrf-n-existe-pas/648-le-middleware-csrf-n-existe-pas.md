@@ -1,3 +1,9 @@
+---
+id: 648-le-middleware-csrf-n-existe-pas
+parent: K189
+status: approved
+---
+
 # Le middleware CSRF n'existe pas
 
 **Épic :** aucune · **Dépend de :** rien

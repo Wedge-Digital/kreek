@@ -1,3 +1,9 @@
+---
+id: 660-corriger-un-compte-rendu-a-deux
+parent: K22
+status: draft
+---
+
 # Corriger un compte rendu à deux
 
 **Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 9 · **Dépend de :** 659  

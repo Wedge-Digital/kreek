@@ -1,3 +1,9 @@
+---
+id: 671-initials-une-seule-definition
+parent: K49
+status: approved
+---
+
 # Fonction `initials()` recopiée dans treize fichiers
 
 **Priorité : faible**

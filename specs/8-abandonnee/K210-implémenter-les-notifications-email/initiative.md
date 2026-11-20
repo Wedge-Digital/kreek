@@ -9,4 +9,4 @@ Initiative créée à la migration vers le kanban de la spec factory (2026-11-19
 
 ## Tickets
 
-- `TBD-63-implémenter-les-notifications-email` — Implémenter les notifications e-mail (annulée à la migration)
+- `674-implementer-les-notifications-email` (ex-`TBD-63-implémenter-les-notifications-email`) — Implémenter les notifications e-mail (annulée à la migration)

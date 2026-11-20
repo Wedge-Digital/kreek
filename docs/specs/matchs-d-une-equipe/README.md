@@ -2,7 +2,7 @@
 
 **Gabarit à réemployer :** `competitions/io/web/templates/competition-tab-resultats.html`
 **Onglet inerte :** `teams-team-detail.html:147` — `<div class="tab">Matchs</div>`
-**Carte périmée qu'elle remplace :** `match-02-team-matches-tab` (épic E06)
+**Carte périmée qu'elle remplace :** `673-team-matches-tab` (ex-`match-02-team-matches-tab`) (épic E06)
 
 ## Pourquoi une spec courte
 

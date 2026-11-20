@@ -1,3 +1,9 @@
+---
+id: 328-lien-profond-retrouve-apres-login
+parent: K7
+status: draft
+---
+
 # `auth` — Un lien partagé survit au passage par la page de connexion
 
 **Priorité : moyenne** — rien n'est cassé, mais tout lien envoyé à l'extérieur

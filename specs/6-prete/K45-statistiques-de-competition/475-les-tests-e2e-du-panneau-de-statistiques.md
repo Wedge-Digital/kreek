@@ -1,3 +1,9 @@
+---
+id: 475-les-tests-e2e-du-panneau-de-statistiques
+parent: K45
+status: approved
+---
+
 # Les tests E2E du panneau de statistiques
 
 **Épic :** aucune · **Ordre :** 2 · **Dépend de :** 474  
