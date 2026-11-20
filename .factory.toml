@@ -38,7 +38,7 @@ red_broken_test_patterns = ["expected one of", "unclosed delimiter", "unexpected
 # compris) ; les e2e Python de tests/ ne passent pas par la porte rouge (`make test-files`).
 test_patterns = ["src/*/tests/*.rs"]
 # Qualité des tests : scénarios given/when/then, aucun mock, aucun nom privé
-# À FAIRE : cible `test-quality` absente (recommandée, porte qualité des tests). Voir `factory audit --brief`.
+test_quality_command = ["make", "test-quality", "FILES={files}"]
 # Portes qualité : vérifient sans corriger
 quality_gates = [
     ["make", "lint"],
