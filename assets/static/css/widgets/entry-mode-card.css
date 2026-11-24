@@ -17,7 +17,6 @@
 .entry-mode-card .entry-mode-option:has(.entry-mode-input:focus-visible) {
   outline: 2px solid var(--main-blue); outline-offset: 2px;
 }
-.entry-mode-card .entry-mode-option--soon { cursor: not-allowed; opacity: 0.55; }
 
 .entry-mode-card .entry-mode-input {
   position: absolute; width: 1px; height: 1px; margin: 0;
@@ -39,12 +38,6 @@
 }
 .entry-mode-card .entry-mode-text {
   font-size: var(--text-tiny); color: var(--dark-2); line-height: 1.45;
-}
-.entry-mode-card .entry-mode-soon {
-  margin-left: var(--p05); padding: 1px 8px;
-  border-radius: 10px; background: var(--dark-5);
-  font-family: inherit; font-size: var(--text-tiny); font-weight: 600;
-  color: var(--dark-2); vertical-align: middle;
 }
 .entry-mode-card .entry-mode-note { font-size: var(--text-tiny); color: var(--dark-2); }
 

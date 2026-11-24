@@ -14,7 +14,7 @@ use crate::app::match_report::io::web::mvp_draw_controller::post_mvp_draw;
 use crate::app::match_report::io::web::mvp_step_controller::{get_mvp_step, post_mvp_step};
 use crate::app::match_report::io::web::pre_match_controller::{get_pre_match, post_pre_match};
 use crate::app::match_report::io::web::recap_controller::{
-    get_recap, post_publish, post_unpublish, post_withdraw_validation,
+    get_recap, get_recap_validation, post_publish, post_unpublish, post_withdraw_validation,
 };
 use crate::app::match_report::io::web::record_action_controller::{
     delete_action, post_action_step3, post_action_step4,
@@ -189,6 +189,12 @@ fn routes_ouvertes() -> Router<AppState> {
         .route(
             path::MATCH_REPORT_RECAP_WITHDRAW_VALIDATION,
             post(post_withdraw_validation),
+        )
+        // Le bloc des validations, rechargé en direct (carte 659-C), gardé
+        // comme la lecture du récapitulatif.
+        .route(
+            path::MATCH_REPORT_RECAP_VALIDATION,
+            get(get_recap_validation),
         )
 }
 

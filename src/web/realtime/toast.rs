@@ -7,7 +7,8 @@
 //! # Ce que la décision 7 fait toaster
 //!
 //! Le démarrage, une action (MVP compris), la sélection des coups de pouce
-//! validée — avec sa liste —, leur annulation. Le reste ne fait qu'un signal
+//! validée — avec sa liste —, leur annulation, et la validation d'un camp en
+//! « Chacun son équipe » (carte 659-C). Le reste ne fait qu'un signal
 //! (646), ou rien. L'aiguillage de `notice_of` est **sans joker** : un variant
 //! ajouté à `MatchReportAppEvent` casse la compilation ici, et son auteur
 //! tranche.
@@ -36,11 +37,12 @@ pub const SEE_MATCH: &str = "Voir le match";
 
 /// Les seuls `event_type` qui font un toast : le routeur n'appelle son port
 /// pour rien d'autre, et ne journalise l'échec de lecture que de ceux-là.
-pub const TOAST_EVENT_TYPES: [&str; 4] = [
+pub const TOAST_EVENT_TYPES: [&str; 5] = [
     MatchReportAppEvent::MATCH_REPORT_CONFIRMED,
     MatchReportAppEvent::MATCH_ACTION_RECORDED,
     MatchReportAppEvent::MATCH_INDUCEMENTS_RECORDED,
     MatchReportAppEvent::MATCH_INDUCEMENTS_CANCELLED,
+    MatchReportAppEvent::MATCH_SIDE_VALIDATED,
 ];
 
 /// Un toast prêt à router : à qui il s'adresse (le match), qui l'a causé
@@ -88,6 +90,8 @@ pub fn notice_of(event: &MatchReportAppEvent) -> Option<MatchNotice> {
         E::MatchActionRecorded { .. } => action_notice(event),
         E::MatchInducementsRecorded { .. } => inducements_notice(event),
         E::MatchInducementsCancelled { .. } => cancelled_notice(event),
+        // La validation d'un camp (carte 659-C, § 12.7 de E22).
+        E::MatchSideValidated { .. } => side_validated_notice(event),
         // Le retrait d'une action ne fait qu'un signal (décision 7) ; les
         // autres faits n'en font même pas un ici.
         E::MatchActionDeleted { .. }
@@ -101,8 +105,6 @@ pub fn notice_of(event: &MatchReportAppEvent) -> Option<MatchNotice> {
         | E::MatchFanFactorRecorded { .. }
         // L'après-match d'un camp non plus (carte 658).
         | E::MatchPostMatchRecorded { .. }
-        // La validation d'un camp : son toast vient avec la carte 659-C.
-        | E::MatchSideValidated { .. }
         // Son retrait : un signal, sans toast (carte 659-B, § 12.7 de E22).
         | E::MatchSideValidationWithdrawn { .. } => None,
     }
@@ -218,6 +220,39 @@ fn cancelled_notice(event: &MatchReportAppEvent) -> Option<MatchNotice> {
     };
     let title = format!("Coups de pouce annulés{}", by(cancelled_by_name.as_deref()));
     Some(scope.notice(cancelled_by, title))
+}
+
+fn side_validated_notice(event: &MatchReportAppEvent) -> Option<MatchNotice> {
+    let MatchReportAppEvent::MatchSideValidated {
+        match_report_id,
+        space_id,
+        home_team_id,
+        away_team_id,
+        team_name,
+        validated_by,
+        validated_by_name,
+        ..
+    } = event
+    else {
+        return None;
+    };
+    let scope = MatchScope {
+        match_report_id,
+        space_id,
+        home_team_id,
+        away_team_id,
+    };
+    let title = side_validated_title(team_name.as_deref(), validated_by_name.as_deref());
+    Some(scope.notice(validated_by, title))
+}
+
+/// « Les London Rats sont validés par Morgane » ; sans nom d'équipe, « Équipe
+/// validée par Morgane » — la clause du coach tombe s'il est inconnu.
+fn side_validated_title(team_name: Option<&str>, author: Option<&str>) -> String {
+    match team_name {
+        Some(team) => format!("Les {team} sont validés{}", by(author)),
+        None => format!("Équipe validée{}", by(author)),
+    }
 }
 
 /// « Touchdown : Griff #9 (London Rats) — par Morgane ».

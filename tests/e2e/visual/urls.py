@@ -92,6 +92,10 @@ CLASSE_ATTENDUE = {
     "rapport-mvp": ".match-report-mvp",
     "rapport-step5": ".match-report-step5",
     "rapport-recap": ".ms-page",
+    # « Chacun son équipe » non publié (carte 659-C) : le récapitulatif porte
+    # le bloc des validations rechargé en direct, et ce bloc se sert seul.
+    "rapport-recap-validation": ".ms-validation-live",
+    "widget-recap-validation": ".ms-validation-widget",
     "competition-structure": ".new-competition-phase-3",
     "competition-regles": ".new-competition-phase-2",
     "competition-invitations": ".new-competition-phase-4",
@@ -174,6 +178,11 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         f"AND a.action_json = '\"Mvp\"'::jsonb) = 2 LIMIT 1"
     )
     rapport_brouillon = rapport_en("Draft")
+    # Un rapport « Chacun son équipe » prêt à publier (carte 659-C) : son
+    # récapitulatif porte le bloc des validations.
+    rapport_b_pret = _un(f"SELECT match_report_id FROM match_report_proj "
+                         f"WHERE space_id = '{espace}' AND phase = 'ReadyToPublish' "
+                         f"AND entry_mode = 'TeamEntry' LIMIT 1")
     # Le skill-picker exige un `roster_line_id` : sans lui il rend un 400, et la
     # capture ramenait une page d'erreur qui chargeait pourtant `common.css` —
     # d'où l'utilité du contrôle de feuille attendue.
@@ -271,6 +280,11 @@ def collecter() -> tuple[dict[str, str], list[str]]:
         "rapport-mvp":           f"{a}/match-report/{rapport_prematch}/mvp/home" if rapport_prematch else None,
         "rapport-step5":         f"{a}/match-report/{rapport_pret}/step5" if rapport_pret else None,
         "rapport-recap":         f"{a}/match-report/{rapport_publie}/recap" if rapport_publie else None,
+        "rapport-recap-validation": (f"{a}/match-report/{rapport_b_pret}/recap"
+                                     if rapport_b_pret else None),
+        # Ses règles vivent sous `.ms-page` : capturé seul, il paraît sans style.
+        "widget-recap-validation": (f"{a}/match-report/{rapport_b_pret}/recap/validation"
+                                    if rapport_b_pret else None),
         "rapport-inducements":   (f"{a}/match-report/{rapport_prematch}/inducements/{equipe_prematch}"
                                   if rapport_prematch and equipe_prematch else None),
         "rapport-mercenaires":   (f"{a}/match-report/{rapport_prematch}/step2/{equipe_prematch}/mercenaires"

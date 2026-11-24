@@ -87,6 +87,8 @@ pub struct RecapTemplate {
     pub publish_url: String,
     /// Le retrait d'une validation, en « Chacun son équipe » (carte 659-B).
     pub withdraw_validation_url: String,
+    /// Le bloc des validations, rechargé en direct (carte 659-C).
+    pub validation_widget_url: String,
     pub back_to_step5_url: String,
     pub competition_url: String,
     pub home_team_detail_url: String,
@@ -256,6 +258,162 @@ pub async fn get_recap(
     .into_response()
 }
 
+// ── GET /recap/validation — le bloc des validations en direct ────────────────
+
+/// Le bloc des validations du récapitulatif (carte 659-C) : les mêmes champs
+/// que `RecapTemplate`, dont la page l'inclut au premier chargement.
+#[derive(Template)]
+#[template(path = "recap-validation-widget.html")]
+pub struct RecapValidationWidgetTemplate {
+    pub validation: Option<ValidationPanelVm>,
+    pub can_write: bool,
+    pub publish_url: String,
+    pub withdraw_validation_url: String,
+    pub back_to_step5_url: String,
+}
+
+impl IntoResponse for RecapValidationWidgetTemplate {
+    fn into_response(self) -> Response {
+        match self.render() {
+            Ok(html) => Html(html).into_response(),
+            Err(e) => {
+                tracing::error!("recap-validation-widget.html: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
+}
+
+/// Ce que rend le bloc des validations, selon l'état du rapport.
+enum ValidationWidget<'a> {
+    /// « Chacun son équipe », prêt à publier : le bloc.
+    Panel(RecapSource<'a>),
+    /// Publié : la page entière se recharge, et montre le rapport publié.
+    Refresh,
+    /// « Je saisis tout » : rien à valider camp par camp.
+    Nothing,
+}
+
+/// L'aiguillage du bloc. Les états sans récapitulatif ont été refusés avant,
+/// par `PorteeRapport::from_report_state`, avec les codes du récapitulatif.
+fn validation_widget_of(state: &MatchReportState) -> Result<ValidationWidget<'_>, StatusCode> {
+    match state {
+        MatchReportState::ReadyToPublish(rtp) => {
+            let source = RecapSource::from_rtp(rtp);
+            Ok(match source.validates_by_side {
+                true => ValidationWidget::Panel(source),
+                false => ValidationWidget::Nothing,
+            })
+        }
+        MatchReportState::Published(_) => Ok(ValidationWidget::Refresh),
+        MatchReportState::Draft(_) | MatchReportState::PreMatch(_) => Err(StatusCode::NOT_FOUND),
+        MatchReportState::Cancelled(_) => Err(StatusCode::GONE),
+    }
+}
+
+/// `GET …/recap/validation`, gardé comme le récapitulatif : qui le lit
+/// recharge le bloc des validations — un retrait ou une validation de l'autre
+/// coach y arrive sans toucher au reste de la page (carte 659-C).
+pub async fn get_recap_validation(
+    auth_session: AuthSession,
+    Path((space_id, match_report_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+) -> Response {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let ids = (space_id.as_str(), match_report_id.as_str());
+    match readable_report(&state, &user, ids).await {
+        Ok(mr_state) => validation_widget_response(&state, &user, ids, &mr_state).await,
+        Err(status) => status.into_response(),
+    }
+}
+
+/// La réponse du bloc : le bloc, le rechargement de la page, ou rien.
+async fn validation_widget_response(
+    state: &AppState,
+    user: &User,
+    ids: (&str, &str),
+    mr_state: &MatchReportState,
+) -> Response {
+    match validation_widget_of(mr_state) {
+        Ok(ValidationWidget::Panel(source)) => build_validation_widget(state, user, ids, source)
+            .await
+            .into_response(),
+        Ok(ValidationWidget::Refresh) => refresh(),
+        Ok(ValidationWidget::Nothing) => StatusCode::NO_CONTENT.into_response(),
+        Err(status) => status.into_response(),
+    }
+}
+
+/// Le rapport, si l'utilisateur a le droit de lire son récapitulatif.
+async fn readable_report(
+    state: &AppState,
+    user: &User,
+    (space_id, match_report_id): (&str, &str),
+) -> Result<MatchReportState, StatusCode> {
+    let mr_state = find_report(state, match_report_id).await?;
+    let scope = PorteeRapport::from_report_state(&mr_state)?;
+    let deps = AccesRapportDeps::from_state(state);
+    match is_authorized(&deps, user, space_id, &scope).await {
+        true => Ok(mr_state),
+        false => Err(StatusCode::FORBIDDEN),
+    }
+}
+
+async fn find_report(
+    state: &AppState,
+    match_report_id: &str,
+) -> Result<MatchReportState, StatusCode> {
+    let repo = state.match_report.match_report_repo.as_ref();
+    match repo.find_by_id(match_report_id).await {
+        Ok(Some(mr_state)) => Ok(mr_state),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            tracing::error!("recap validation find_by_id {match_report_id}: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Les noms des deux équipes, domicile puis visiteur ; vides si `teams` ne
+/// les connaît pas, comme au récapitulatif.
+async fn team_names(team_data: &dyn ITeamDataPort, source: &RecapSource<'_>) -> (String, String) {
+    let (home, away) = tokio::join!(
+        team_data.find_team_info(&source.home_team_id),
+        team_data.find_team_info(&source.away_team_id),
+    );
+    (
+        home.unwrap_or_default().team_name,
+        away.unwrap_or_default().team_name,
+    )
+}
+
+/// Le bloc, avec les droits du récapitulatif : les boutons pour qui peut
+/// écrire, les camps qu'il valide selon le service d'accès.
+async fn build_validation_widget(
+    state: &AppState,
+    user: &User,
+    (space_id, match_report_id): (&str, &str),
+    source: RecapSource<'_>,
+) -> RecapValidationWidgetTemplate {
+    let scope = PorteeRapport::from_source(&source);
+    let (can_write, (home, away)) = tokio::join!(
+        write_permission(state, user, space_id, match_report_id, &scope),
+        team_names(state.match_report.team_data.as_ref(), &source),
+    );
+    let names = (home.as_str(), away.as_str());
+    let validation = build_validation_panel(&source, user, space_id, names, state).await;
+    let routes = AppRoutes::default().match_report;
+    RecapValidationWidgetTemplate {
+        validation,
+        can_write: can_write.unwrap_or(false),
+        publish_url: routes.recap_publish(space_id, match_report_id),
+        withdraw_validation_url: routes.recap_withdraw_validation(space_id, match_report_id),
+        back_to_step5_url: routes.step5(space_id, match_report_id),
+    }
+}
+
 // ── Autorisation ──────────────────────────────────────────────────────────────
 
 /// Dépendances du contrôle d'accès : les trois ports réellement consultés,
@@ -387,6 +545,9 @@ async fn build_recap_template(
         withdraw_validation_url: routes
             .match_report
             .recap_withdraw_validation(space_id, match_report_id),
+        validation_widget_url: routes
+            .match_report
+            .recap_validation(space_id, match_report_id),
         back_to_step5_url: routes.match_report.step5(space_id, match_report_id),
         competition_url: routes.competitions.competition_detail(
             space_id,
@@ -1329,5 +1490,111 @@ mod side_validation_tests {
             status(ValidateTeamSideError::Internal("x".into())),
             StatusCode::INTERNAL_SERVER_ERROR
         );
+    }
+}
+
+/// Carte 659-C : le bloc des validations, rechargé en direct.
+#[cfg(test)]
+mod validation_widget_tests {
+    use super::*;
+    use crate::app::match_report::domain::value_objects::{
+        FanFactorMod, MatchGain, NoStallingBonuses,
+    };
+    use crate::app::match_report::io::web::view_models::{SideValidationVm, ValidateButtonVm};
+    use crate::app::match_report::use_cases::test_doubles::pre_match;
+    use crate::app::shared_kernel::identity::ids::CoachId;
+
+    fn ready(mode: EntryMode) -> MatchReportReadyToPublish {
+        let mut pm = pre_match();
+        pm.entry_mode = mode;
+        let gain = MatchGain::try_new(40).unwrap();
+        let fan = FanFactorMod::try_new(0).unwrap();
+        let bonuses = NoStallingBonuses::default();
+        MatchReportReadyToPublish::from_pre_match(&pm, gain, gain, bonuses, fan, fan, None, None)
+    }
+
+    fn kind(state: &MatchReportState) -> Result<&'static str, StatusCode> {
+        validation_widget_of(state).map(|widget| match widget {
+            ValidationWidget::Panel(_) => "panel",
+            ValidationWidget::Refresh => "refresh",
+            ValidationWidget::Nothing => "nothing",
+        })
+    }
+
+    /// Prêt à publier en « Chacun son équipe » : le bloc ; en « Je saisis
+    /// tout », rien.
+    #[test]
+    fn a_ready_team_entry_report_renders_the_panel() {
+        let team = MatchReportState::ReadyToPublish(ready(EntryMode::TeamEntry));
+        assert_eq!(kind(&team), Ok("panel"));
+        let solo = MatchReportState::ReadyToPublish(ready(EntryMode::SoloEntry));
+        assert_eq!(kind(&solo), Ok("nothing"));
+    }
+
+    /// À la publication, la page entière se recharge : le widget le dit par
+    /// `HX-Refresh`.
+    #[test]
+    fn a_published_report_reloads_the_whole_page() {
+        let (published, _) = ready(EntryMode::TeamEntry).publish(CoachId::new());
+        assert_eq!(kind(&MatchReportState::Published(published)), Ok("refresh"));
+        let response = refresh();
+        assert_eq!(response.headers().get("HX-Refresh").unwrap(), "true");
+    }
+
+    #[test]
+    fn a_report_without_recap_is_refused_like_the_recap() {
+        let pm = MatchReportState::PreMatch(pre_match());
+        assert_eq!(kind(&pm), Err(StatusCode::NOT_FOUND));
+    }
+
+    fn panel(validated: bool) -> ValidationPanelVm {
+        ValidationPanelVm {
+            sides: vec![SideValidationVm {
+                team_side: "away",
+                team_name: "London Rats".into(),
+                validated,
+                validated_by: validated.then(|| "Morgane".to_string()),
+                withdraw_label: validated.then_some("Retirer ma validation"),
+            }],
+            buttons: vec![ValidateButtonVm {
+                team_side: "home",
+                label: "Valider les Nains et publier".into(),
+            }],
+        }
+    }
+
+    fn render(validation: ValidationPanelVm, can_write: bool) -> String {
+        RecapValidationWidgetTemplate {
+            validation: Some(validation),
+            can_write,
+            publish_url: "/publish".into(),
+            withdraw_validation_url: "/withdraw".into(),
+            back_to_step5_url: "/step5".into(),
+        }
+        .render()
+        .unwrap()
+    }
+
+    /// Le bloc rendu seul porte les validations et les boutons, comme le
+    /// récapitulatif les rendait.
+    #[test]
+    fn the_widget_shows_validations_and_buttons() {
+        let html = render(panel(true), true);
+        assert!(html.contains(r#"hx-disinherit="*""#), "{html}");
+        assert!(html.contains("par Morgane"), "{html}");
+        assert!(html.contains("Retirer ma validation"), "{html}");
+        assert!(html.contains("Valider les Nains et publier"), "{html}");
+        assert!(html.contains(r#"action="/publish""#), "{html}");
+        let waiting = render(panel(false), true);
+        assert!(waiting.contains("valider"), "{waiting}");
+        assert!(!waiting.contains("Retirer ma validation"), "{waiting}");
+    }
+
+    /// Qui ne peut pas écrire lit les validations, sans bouton.
+    #[test]
+    fn a_reader_gets_no_button() {
+        let html = render(panel(true), false);
+        assert!(html.contains("par Morgane"), "{html}");
+        assert!(!html.contains(r#"action="/publish""#), "{html}");
     }
 }

@@ -228,24 +228,58 @@ fn a_team_post_match_makes_no_toast() {
     assert_eq!(notice_of(&event), None);
 }
 
-/// La validation d'un camp ne fait que le signal à la carte 659-A : son toast
-/// vient avec la 659-C, et `TOAST_EVENT_TYPES` reste à quatre.
-#[test]
-fn a_side_validation_makes_no_toast_yet() {
-    let event = MatchReportAppEvent::MatchSideValidated {
+fn side_validated(team: Option<&str>, author: Option<&str>) -> MatchReportAppEvent {
+    MatchReportAppEvent::MatchSideValidated {
         event_id: EventId::new(),
         match_report_id: MATCH.into(),
         space_id: SPACE.into(),
         home_team_id: HOME.into(),
         away_team_id: AWAY.into(),
-        team_side: TeamSidePayload::Home,
+        team_side: TeamSidePayload::Away,
+        team_name: team.map(String::from),
         validated_by: AUTHOR.into(),
-    };
-    assert_eq!(notice_of(&event), None);
+        validated_by_name: author.map(String::from),
+    }
+}
+
+/// La validation d'un camp fait un toast (carte 659-C, § 12.7 de E22), qui
+/// nomme l'équipe et son coach ; l'auteur en est exclu, comme de tout toast.
+#[test]
+fn a_side_validation_names_the_team_and_its_coach() {
+    let event = side_validated(Some("London Rats"), Some("Morgane"));
+    assert_eq!(title(&event), "Les London Rats sont validés par Morgane");
+    let notice = notice_of(&event).expect("un toast");
+    assert_eq!(notice.author, AUTHOR);
+    assert_eq!(notice.toast.link, Some(match_link(SPACE, MATCH)));
     assert_eq!(event.event_type(), "MatchSideValidated");
-    assert_eq!(event.match_report_id(), MATCH);
-    assert!(!TOAST_EVENT_TYPES.contains(&event.event_type()));
-    assert_eq!(TOAST_EVENT_TYPES.len(), 4);
+    assert!(TOAST_EVENT_TYPES.contains(&event.event_type()));
+    assert_eq!(TOAST_EVENT_TYPES.len(), 5);
+}
+
+/// Un nom inconnu n'est pas inventé : la clause tombe.
+#[test]
+fn a_side_validation_without_names_drops_their_clauses() {
+    assert_eq!(
+        title(&side_validated(Some("London Rats"), None)),
+        "Les London Rats sont validés"
+    );
+    assert_eq!(
+        title(&side_validated(None, Some("Morgane"))),
+        "Équipe validée par Morgane"
+    );
+}
+
+/// Un fait d'avant la carte 659-C, sans les noms, se lit encore.
+#[test]
+fn a_side_validation_without_name_fields_still_reads() {
+    let payload = serde_json::json!({ "MatchSideValidated": {
+        "event_id": EventId::new(),
+        "match_report_id": MATCH, "space_id": SPACE,
+        "home_team_id": HOME, "away_team_id": AWAY,
+        "team_side": "Home", "validated_by": AUTHOR,
+    }});
+    let event: MatchReportAppEvent = serde_json::from_value(payload).unwrap();
+    assert_eq!(title(&event), "Équipe validée");
 }
 
 /// Le retrait d'une validation : un signal, sans toast (carte 659-B).
@@ -264,7 +298,7 @@ fn a_withdrawn_validation_makes_no_toast() {
     assert_eq!(event.event_type(), "MatchSideValidationWithdrawn");
     assert_eq!(event.match_report_id(), MATCH);
     assert!(!TOAST_EVENT_TYPES.contains(&event.event_type()));
-    assert_eq!(TOAST_EVENT_TYPES.len(), 4);
+    assert_eq!(TOAST_EVENT_TYPES.len(), 5);
 }
 
 /// Le fan factor d'un camp ne fait que le signal (§ 12.7 de E22, carte 654).

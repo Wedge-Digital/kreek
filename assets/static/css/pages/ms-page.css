@@ -578,6 +578,14 @@
 .ms-page .ms-validation-withdraw:hover,
 .ms-page.ms-validation-withdraw:hover { background: var(--dark-6); }
 
+/* Le bloc des validations rechargé en direct (carte 659-C) : le conteneur et
+   la racine du widget s'effacent du rendu, la carte et les boutons restent
+   des enfants de la colonne, espacés par son `gap`. */
+.ms-page .ms-validation-live,
+.ms-page.ms-validation-live,
+.ms-page .ms-validation-widget,
+.ms-page.ms-validation-widget { display: contents; }
+
 /* ── CTA ── */
 .ms-page .ms-cta-row,
 .ms-page.ms-cta-row {

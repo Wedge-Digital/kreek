@@ -1,0 +1,50 @@
+{# Le bloc des validations du récapitulatif, en « Chacun son équipe » non
+   publié (cartes 659-A, 659-B, 659-C) : où en est chaque camp, et les
+   boutons « Valider les … », « … et publier », « Retirer ma validation ».
+
+   Rendu dans la page au premier chargement (inclus par recap.html), puis
+   rechargé seul par `GET …/recap/validation` sur le signal du match : la
+   validation de l'autre coach arrive sans recharger la page. #}
+<div class="ms-validation-widget" hx-disinherit="*">
+  {% if let Some(panel) = validation.as_ref() %}
+  <div class="ms-card">
+    <div class="ms-card-header">
+      <span class="ms-card-header-icon">&#9989;</span>
+      <span class="ms-card-header-title">Validation</span>
+    </div>
+    <div class="ms-card-body">
+      {% for side in panel.sides %}
+      <div class="ms-validation-row">
+        <span class="ms-validation-team">{{ side.team_name }}</span>
+        {% if side.validated %}
+        <span class="ms-validation-side">
+          <span class="ms-validation-status ms-validation-status--done">Valid&eacute; &#10003;{% if let Some(name) = side.validated_by.as_ref() %} par {{ name }}{% endif %}</span>
+          {# Carte 659-B : le retrait, pour qui peut le faire. #}
+          {% if let Some(label) = side.withdraw_label %}
+          <form class="ms-validation-withdraw-form" method="post" action="{{ withdraw_validation_url }}">
+            <input type="hidden" name="team_side" value="{{ side.team_side }}">
+            <button type="submit" class="ms-validation-withdraw">{{ label }}</button>
+          </form>
+          {% endif %}
+        </span>
+        {% else %}
+        <span class="ms-validation-status">&Agrave; valider</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if can_write %}
+  <div class="ms-cta-row">
+    <a class="ms-btn-outline" href="{{ back_to_step5_url }}">&#8592; Gains et fans</a>
+    {% for button in panel.buttons %}
+    <form class="ms-cta-form" method="post" action="{{ publish_url }}">
+      <input type="hidden" name="team_side" value="{{ button.team_side }}">
+      <button type="submit" class="ms-btn-primary">{{ button.label }} &#8594;</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+</div>

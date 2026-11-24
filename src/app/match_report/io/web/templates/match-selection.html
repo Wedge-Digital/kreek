@@ -55,7 +55,7 @@
     <!-- Teams selection (widget du BC teams) -->
     <div class="mr-card">
       <div id="teams-container">
-        {% if is_prefilled %}
+        {% if teams_preselected %}
         <div hx-get="{{ team_widget_url }}"
              hx-trigger="load"
              hx-target="#teams-container"

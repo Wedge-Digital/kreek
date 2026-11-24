@@ -560,7 +560,9 @@
 # le récapitulatif « Validé ✓ par … », la seconde validation qui publie. La
 # publication sort vers `ranking`, `players` et `teams` ; le validateur est
 # nommé par `auth`. Carte 659-B — retirer sa validation, corriger, revalider :
-# mêmes BCs.
+# mêmes BCs. Carte 659-C — le récapitulatif en direct : le signal et le toast
+# partent de `src/web/realtime` (déjà `@core`), l'équipe et le coach du toast
+# sont nommés par `teams` et `auth` ; mêmes BCs.
 "test_match_report_team_validation" = ["match_report", "players", "competitions", "teams",
                                        "ranking", "auth", "spaces", "references",
                                        "team_creation", "spp_calculator"]

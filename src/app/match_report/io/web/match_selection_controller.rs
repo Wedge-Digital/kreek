@@ -33,11 +33,19 @@ pub struct MatchSelectionTemplate {
     pub widget_url: String,
     pub team_widget_url: String,
     pub is_prefilled: bool,
+    /// Le widget des équipes se charge avec les équipes déjà choisies : un
+    /// brouillon existant, ou un formulaire réaffiché après un refus (carte
+    /// 659-C). Distinct de `is_prefilled`, qui annonce le calendrier.
+    pub teams_preselected: bool,
     pub error_message: Option<String>,
     pub form_action: String,
     /// La valeur que porte l'option « Je saisis tout » de la carte « Qui
     /// saisit ? » (carte 632) — celle que `read_entry_mode` relit.
     pub solo_entry_value: &'static str,
+    /// La valeur de l'option « Chacun son équipe » (carte 659-C) ; `None` la
+    /// masque. Hors calendrier, les équipes ne sont pas encore connues : elle
+    /// est toujours offerte, et le serveur refuse ce qu'il doit refuser.
+    pub team_entry_value: Option<&'static str>,
 }
 
 impl IntoResponse for MatchSelectionTemplate {
@@ -60,6 +68,10 @@ pub struct MatchModeTemplate {
     pub summary: MatchSummaryVm,
     /// Cf. `MatchSelectionTemplate::solo_entry_value`.
     pub solo_entry_value: &'static str,
+    /// Cf. `MatchSelectionTemplate::team_entry_value` : ici les équipes sont
+    /// connues, l'option est masquée quand `may_choose_entry_mode` la refuse
+    /// (§ 12.9 de E22).
+    pub team_entry_value: Option<&'static str>,
 }
 
 impl IntoResponse for MatchModeTemplate {
@@ -216,9 +228,11 @@ pub async fn new_match_report(
         team_widget_url: build_team_widget_url(&space_id),
         space_id,
         is_prefilled: false,
+        teams_preselected: false,
         error_message: None,
         form_action,
         solo_entry_value: EntryMode::SoloEntry.as_str(),
+        team_entry_value: Some(EntryMode::TeamEntry.as_str()),
     }
     .into_response()
 }
@@ -289,15 +303,37 @@ async fn match_mode_page(
     space_id: &str,
     draft: &MatchReportDraft,
 ) -> Response {
+    let (summary, team_entry_value) = tokio::join!(
+        match_summary(ports, draft),
+        offered_team_entry(ports, draft)
+    );
     MatchModeTemplate {
         app_routes: Default::default(),
         form_action: AppRoutes::default()
             .match_report
             .edit_match_report(space_id, &draft.id.to_string()),
-        summary: match_summary(ports, draft).await,
+        summary,
         solo_entry_value: EntryMode::SoloEntry.as_str(),
+        team_entry_value,
     }
     .into_response()
+}
+
+/// L'option « Chacun son équipe » d'un match aux équipes connues (carte
+/// 659-C) : offerte si `may_choose_entry_mode` l'accepte, masquée sinon —
+/// deux équipes d'un même coach (§ 12.9 de E22).
+async fn offered_team_entry(
+    ports: &EditPagePorts<'_>,
+    draft: &MatchReportDraft,
+) -> Option<&'static str> {
+    let (home, away) = (
+        draft.home_team_id.to_string(),
+        draft.away_team_id.to_string(),
+    );
+    let mode = EntryMode::TeamEntry;
+    may_choose_entry_mode(ports.team_data, &home, &away, mode)
+        .await
+        .then_some(mode.as_str())
 }
 
 fn selection_page(space_id: &str, draft: &MatchReportDraft) -> Response {
@@ -313,11 +349,13 @@ fn selection_page(space_id: &str, draft: &MatchReportDraft) -> Response {
         team_widget_url: build_team_widget_url_prefilled(space_id, &season_id, &home_id, &away_id),
         space_id: space_id.to_string(),
         is_prefilled: true,
+        teams_preselected: true,
         error_message: None,
         form_action: AppRoutes::default()
             .match_report
             .edit_match_report(space_id, &draft.id.to_string()),
         solo_entry_value: EntryMode::SoloEntry.as_str(),
+        team_entry_value: Some(EntryMode::TeamEntry.as_str()),
     }
     .into_response()
 }
@@ -360,8 +398,7 @@ pub struct UpdateMatchSelectionForm {
 /// (décision 2 du cadrage) : les tests et les appels qui postent sans la carte
 /// « Qui saisit ? » démarrent comme avant. Une valeur inconnue est une requête
 /// mal formée — `Err`, que le handler rend en 400. « Chacun son équipe »
-/// (`TeamEntry`, carte 652) est lu, mais l'option reste grisée jusqu'à la
-/// carte 659 : seul un POST direct l'envoie.
+/// (`TeamEntry`, carte 652) est offert depuis la carte 659-C.
 pub(crate) fn read_entry_mode(field: Option<&str>) -> Result<EntryMode, ()> {
     match field {
         None => Ok(EntryMode::SoloEntry),
@@ -369,32 +406,84 @@ pub(crate) fn read_entry_mode(field: Option<&str>) -> Result<EntryMode, ()> {
     }
 }
 
+/// Pourquoi le mode du formulaire est refusé, avant tout effet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ModeRefusal {
+    /// Une valeur inconnue : une requête mal formée, rendue en 400.
+    Unreadable,
+    /// « Chacun son équipe » pour deux équipes d'un même coach (§ 12.9 de
+    /// E22) — ou des coachs illisibles : le contrôle échoue fermé.
+    SameCoach,
+}
+
+/// Le message du refus de « Chacun son équipe », hors calendrier (carte
+/// 659-C) : le formulaire est réaffiché avec lui, au lieu d'un 400 nu.
+pub(crate) const SAME_COACH_MESSAGE: &str =
+    "Les deux équipes ont le même coach : chacun son équipe n'est pas possible.";
+
 /// Le mode du formulaire, et le droit de le choisir pour ces deux équipes :
-/// « Chacun son équipe » exige deux coachs distincts (§ 12.9 de E22). Les
-/// deux refus rendent `None`, que le handler rend en 400 avant tout effet.
+/// « Chacun son équipe » exige deux coachs distincts (§ 12.9 de E22).
 async fn mode_choisi(
     team_data: &dyn ITeamDataPort,
     field: Option<&str>,
     home_team_id: &str,
     away_team_id: &str,
-) -> Option<EntryMode> {
-    let mode = read_entry_mode(field).ok()?;
+) -> Result<EntryMode, ModeRefusal> {
+    let mode = read_entry_mode(field).map_err(|_| ModeRefusal::Unreadable)?;
     if may_choose_entry_mode(team_data, home_team_id, away_team_id, mode).await {
-        return Some(mode);
+        return Ok(mode);
     }
     tracing::info!(
         home_team_id,
         away_team_id,
         "mode « Chacun son équipe » refusé pour ce match"
     );
-    None
+    Err(ModeRefusal::SameCoach)
 }
 
 /// `mode_choisi` sur le formulaire de création : les équipes qu'il envoie.
-async fn mode_du_formulaire(state: &AppState, form: &CreateMatchReportForm) -> Option<EntryMode> {
+async fn mode_du_formulaire(
+    state: &AppState,
+    form: &CreateMatchReportForm,
+) -> Result<EntryMode, ModeRefusal> {
     let team_data = state.match_report.team_data.as_ref();
     let field = form.entry_mode.as_deref();
     mode_choisi(team_data, field, &form.home_team_id, &form.away_team_id).await
+}
+
+/// Le refus du mode, hors calendrier : une valeur inconnue est un 400 ; le
+/// mode B refusé réaffiche le formulaire, ses choix gardés, avec le message
+/// (carte 659-C).
+fn mode_refusal_response(
+    space_id: &str,
+    form: &CreateMatchReportForm,
+    refusal: ModeRefusal,
+) -> Response {
+    match refusal {
+        ModeRefusal::Unreadable => StatusCode::BAD_REQUEST.into_response(),
+        ModeRefusal::SameCoach => kept_form_in_error(space_id, form, SAME_COACH_MESSAGE),
+    }
+}
+
+/// Le formulaire de création réaffiché en erreur, avec la compétition, la
+/// saison, la journée et les deux équipes que le coach avait choisies. Le
+/// mode revient à « Je saisis tout », le seul que ces équipes permettent.
+fn kept_form_in_error(space_id: &str, form: &CreateMatchReportForm, message: &str) -> Response {
+    let (comp, season, round) = (&form.competition_id, &form.season_id, &form.round_id);
+    let (home, away) = (&form.home_team_id, &form.away_team_id);
+    let gabarit = MatchSelectionTemplate {
+        app_routes: Default::default(),
+        widget_url: build_widget_url_prefilled(space_id, comp, season, round),
+        team_widget_url: build_team_widget_url_prefilled(space_id, season, home, away),
+        space_id: space_id.to_string(),
+        is_prefilled: false,
+        teams_preselected: true,
+        error_message: Some(message.to_string()),
+        form_action: AppRoutes::default().match_report.new_match_report(space_id),
+        solo_entry_value: EntryMode::SoloEntry.as_str(),
+        team_entry_value: Some(EntryMode::TeamEntry.as_str()),
+    };
+    (StatusCode::UNPROCESSABLE_ENTITY, gabarit).into_response()
 }
 
 /// `mode_choisi` sur un rapport existant : les équipes du brouillon, lues sur
@@ -409,7 +498,9 @@ async fn mode_du_rapport(
         tracing::warn!("update_match_selection : portée de {match_report_id} illisible");
         return None;
     };
-    mode_choisi(state.match_report.team_data.as_ref(), field, &home, &away).await
+    mode_choisi(state.match_report.team_data.as_ref(), field, &home, &away)
+        .await
+        .ok()
 }
 
 // ── Handlers POST ────────────────────────────────────────────────────────────
@@ -423,9 +514,10 @@ pub async fn create_match_report(
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    // Lu avant tout effet : un mode inconnu ne doit rien programmer.
-    let Some(entry_mode) = mode_du_formulaire(&state, &form).await else {
-        return StatusCode::BAD_REQUEST.into_response();
+    // Lu avant tout effet : un mode inconnu ou refusé ne doit rien programmer.
+    let entry_mode = match mode_du_formulaire(&state, &form).await {
+        Ok(mode) => mode,
+        Err(refusal) => return mode_refusal_response(&space_id, &form, refusal),
     };
     if let Err(refus) = garde_hors_calendrier(&state, &form).await {
         return refus;
@@ -589,9 +681,11 @@ fn formulaire_en_erreur(space_id: &str, message: String) -> Response {
         team_widget_url: build_team_widget_url(space_id),
         space_id: space_id.to_string(),
         is_prefilled: false,
+        teams_preselected: false,
         error_message: Some(message),
         form_action: AppRoutes::default().match_report.new_match_report(space_id),
         solo_entry_value: EntryMode::SoloEntry.as_str(),
+        team_entry_value: Some(EntryMode::TeamEntry.as_str()),
     };
     (StatusCode::UNPROCESSABLE_ENTITY, gabarit).into_response()
 }
@@ -779,8 +873,7 @@ mod entry_mode_tests {
         );
     }
 
-    /// « Chacun son équipe » se lit depuis la carte 652, même si l'option
-    /// reste grisée jusqu'à la 659.
+    /// « Chacun son équipe » se lit depuis la carte 652.
     #[test]
     fn the_team_entry_value_reads_as_team_entry() {
         assert_eq!(
@@ -809,7 +902,7 @@ mod entry_mode_tests {
 mod start_from_schedule_tests {
     use super::*;
     use crate::app::match_report::use_cases::test_doubles::{
-        PlainCompetition, ReadyTeams, RecordingRepository,
+        NamedTeams, PlainCompetition, ReadyTeams, RecordingRepository,
     };
     use crate::app::shared_kernel::identity::ids::CoachId;
 
@@ -865,6 +958,46 @@ mod start_from_schedule_tests {
         assert_eq!(appended, 0, "le GET ne doit rien écrire");
     }
 
+    /// Ouvre la page « Qui saisit ? » d'un brouillon du calendrier, ses deux
+    /// équipes coachées par `home_coach` et `away_coach`.
+    async fn open_with_coaches(home_coach: &str, away_coach: &str) -> String {
+        let d = draft(MatchReportOrigin::Pairing);
+        let mr_id = d.id.to_string();
+        let teams = NamedTeams::default()
+            .coached(&d.home_team_id.to_string(), home_coach)
+            .coached(&d.away_team_id.to_string(), away_coach);
+        let repo = RecordingRepository::holding(MatchReportState::Draft(d));
+        let ports = EditPagePorts {
+            repo: &repo,
+            competition_data: &PlainCompetition,
+            team_data: &teams,
+        };
+        let response = edit_page(&ports, "space", &mr_id).await;
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("corps lisible");
+        String::from_utf8(bytes.to_vec()).expect("UTF-8")
+    }
+
+    /// Carte 659-C : deux coachs distincts se voient offrir « Chacun son
+    /// équipe », avec sa valeur et sans « bientôt ».
+    #[tokio::test]
+    async fn two_coaches_are_offered_team_entry() {
+        let body = open_with_coaches("coach-a", "coach-b").await;
+        assert!(body.contains("Chacun son équipe"), "{body}");
+        assert!(body.contains(r#"value="TeamEntry""#), "{body}");
+        assert!(!body.contains("bientôt"), "{body}");
+    }
+
+    /// § 12.9 : deux équipes d'un même coach ne se voient pas offrir le mode B.
+    #[tokio::test]
+    async fn one_coach_of_both_teams_is_not_offered_team_entry() {
+        let body = open_with_coaches("coach-a", "coach-a").await;
+        assert!(body.contains("Je saisis tout"), "{body}");
+        assert!(!body.contains("Chacun son équipe"), "{body}");
+        assert!(!body.contains("TeamEntry"), "{body}");
+    }
+
     /// Un brouillon hors calendrier d'avant la carte 552 garde la sélection.
     #[tokio::test]
     async fn opening_a_manual_draft_keeps_the_selection() {
@@ -913,5 +1046,90 @@ mod start_from_schedule_tests {
             "mr",
         );
         assert_eq!(response.status(), StatusCode::CONFLICT);
+    }
+}
+
+/// Carte 659-C — le refus de « Chacun son équipe » hors calendrier.
+#[cfg(test)]
+mod team_entry_refusal_tests {
+    use super::*;
+    use crate::app::match_report::use_cases::test_doubles::NamedTeams;
+
+    const HOME: &str = "home-team";
+    const AWAY: &str = "away-team";
+
+    fn teams(home_coach: &str, away_coach: &str) -> NamedTeams {
+        NamedTeams::default()
+            .coached(HOME, home_coach)
+            .coached(AWAY, away_coach)
+    }
+
+    async fn chosen(teams: &NamedTeams, field: Option<&str>) -> Result<EntryMode, ModeRefusal> {
+        mode_choisi(teams, field, HOME, AWAY).await
+    }
+
+    #[tokio::test]
+    async fn team_entry_is_refused_for_one_coach_of_both_teams() {
+        let team_entry = Some(EntryMode::TeamEntry.as_str());
+        let same = teams("coach-a", "coach-a");
+        assert_eq!(chosen(&same, team_entry).await, Err(ModeRefusal::SameCoach));
+        let distinct = teams("coach-a", "coach-b");
+        assert_eq!(
+            chosen(&distinct, team_entry).await,
+            Ok(EntryMode::TeamEntry)
+        );
+        assert_eq!(chosen(&same, None).await, Ok(EntryMode::SoloEntry));
+    }
+
+    #[tokio::test]
+    async fn an_unknown_mode_is_unreadable() {
+        let distinct = teams("coach-a", "coach-b");
+        let refusal = chosen(&distinct, Some("UnknownEntry")).await;
+        assert_eq!(refusal, Err(ModeRefusal::Unreadable));
+    }
+
+    fn form() -> CreateMatchReportForm {
+        CreateMatchReportForm {
+            competition_id: "comp-1".into(),
+            season_id: "season-1".into(),
+            round_id: "round-1".into(),
+            home_team_id: HOME.into(),
+            away_team_id: AWAY.into(),
+            entry_mode: Some(EntryMode::TeamEntry.as_str().into()),
+        }
+    }
+
+    async fn body_of(response: Response) -> String {
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("corps lisible");
+        String::from_utf8(bytes.to_vec()).expect("UTF-8")
+    }
+
+    /// Le refus réaffiche le formulaire, le message lisible et les choix du
+    /// coach gardés : compétition, saison, journée, équipes.
+    #[tokio::test]
+    async fn the_refusal_shows_the_form_again_with_its_message() {
+        let response = mode_refusal_response("space", &form(), ModeRefusal::SameCoach);
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = body_of(response).await;
+        assert!(
+            body.contains("Les deux équipes ont le même coach"),
+            "{body}"
+        );
+        assert!(body.contains("chacun son équipe n"), "{body}");
+        assert!(body.contains("competition_id=comp-1"), "{body}");
+        assert!(body.contains("selected_home=home-team"), "{body}");
+        assert!(body.contains("selected_away=away-team"), "{body}");
+        assert!(
+            !body.contains("pré-sélectionné depuis le calendrier"),
+            "{body}"
+        );
+    }
+
+    #[test]
+    fn an_unreadable_mode_is_a_bare_400() {
+        let response = mode_refusal_response("space", &form(), ModeRefusal::Unreadable);
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }

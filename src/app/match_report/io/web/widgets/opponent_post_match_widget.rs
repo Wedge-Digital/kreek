@@ -5,15 +5,22 @@
 //! recharge sur le signal du match : les gains de l'adversaire apparaissent
 //! sans recharger la page, et le formulaire du coach n'est jamais remplacé.
 //!
-//! **Un rapport qui n'est plus en cours rend 204**, comme le fan factor de
-//! l'adversaire : htmx ne remplace rien.
+//! **L'écran d'attente bascule vers le récapitulatif** (carte 659-C, décision
+//! du 2026-11-24) : publié, ou prêt à publier alors que le camp qui regarde a
+//! validé, le rapport n'a plus rien à attendre ici — le widget rend un
+//! `HX-Redirect` vers le récapitulatif, où les deux coachs se retrouvent en
+//! direct. Un camp prêt à publier **sans** sa validation reste sur sa page :
+//! il y revient depuis le récapitulatif pour corriger son après-match, et ne
+//! doit pas en être chassé. Un brouillon ou un rapport annulé rend 204 : htmx
+//! ne remplace rien.
 
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
+use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::team_post_match::SidePostMatch;
 use crate::app::match_report::domain::value_objects::{NoStallingBonus, TeamSide};
 use crate::app::match_report::io::web::mvp_step_controller::parse_side;
-use crate::app::match_report::io::web::widgets::opponent_fan_factor_widget::load_in_progress;
 use crate::app::match_report::ports::{ICoachDataPort, ITeamDataPort};
+use crate::app::routes::AppRoutes;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
@@ -72,20 +79,84 @@ impl IntoResponse for OpponentPostMatchTemplate {
 }
 
 pub async fn get_opponent_post_match(
-    Path((_space_id, mr_id, side)): Path<(String, String, String)>,
+    Path((space_id, mr_id, side)): Path<(String, String, String)>,
     State(state): State<AppState>,
 ) -> Response {
     let Some(side) = parse_side(&side) else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    match load_in_progress(&state, &mr_id).await {
-        Ok(Some(pm)) => {
+    let report = match load_report(&state, &mr_id).await {
+        Ok(report) => report,
+        Err(status) => return status.into_response(),
+    };
+    // Le widget montre l'adversaire : le camp qui regarde est l'autre.
+    let screen = waiting_screen(report, side.opposite());
+    respond(&state, (&space_id, &mr_id), screen, side).await
+}
+
+/// La réponse du widget : l'adversaire, la bascule, ou rien.
+async fn respond(
+    state: &AppState,
+    (space_id, mr_id): (&str, &str),
+    screen: WaitingScreen,
+    side: TeamSide,
+) -> Response {
+    match screen {
+        WaitingScreen::Opponent(pm) => {
             let ctx = &state.match_report;
             let ports = (ctx.team_data.as_ref(), ctx.coach_data.as_ref());
             build(ports, &pm, side).await.into_response()
         }
-        Ok(None) => StatusCode::NO_CONTENT.into_response(),
-        Err(status) => status.into_response(),
+        WaitingScreen::ToRecap => to_recap(space_id, mr_id),
+        WaitingScreen::Nothing => StatusCode::NO_CONTENT.into_response(),
+    }
+}
+
+/// Ce que devient l'écran d'attente, selon l'état du rapport (carte 659-C).
+enum WaitingScreen {
+    /// L'après-match se saisit encore : le widget montre l'adversaire.
+    Opponent(MatchReportPreMatch),
+    /// Plus rien à attendre : la page cède la place au récapitulatif.
+    ToRecap,
+    /// Rien à montrer : 204.
+    Nothing,
+}
+
+/// Publié, le rapport se lit sur le récapitulatif. Prêt à publier, il y
+/// renvoie le camp qui a validé — figé, il n'a plus rien à saisir ici —, et
+/// garde celui qui ne l'a pas fait, venu corriger son après-match.
+fn waiting_screen(report: MatchReportState, viewer: TeamSide) -> WaitingScreen {
+    match report {
+        MatchReportState::PreMatch(pm) => WaitingScreen::Opponent(pm),
+        MatchReportState::ReadyToPublish(rtp) if rtp.validated_by.of(viewer).is_some() => {
+            WaitingScreen::ToRecap
+        }
+        MatchReportState::ReadyToPublish(rtp) => WaitingScreen::Opponent(rtp.into_pre_match()),
+        MatchReportState::Published(_) => WaitingScreen::ToRecap,
+        MatchReportState::Draft(_) | MatchReportState::Cancelled(_) => WaitingScreen::Nothing,
+    }
+}
+
+/// `HX-Redirect` : htmx quitte la page pour le récapitulatif.
+fn to_recap(space_id: &str, mr_id: &str) -> Response {
+    let url = AppRoutes::default().match_report.recap(space_id, mr_id);
+    match Response::builder()
+        .header("HX-Redirect", url)
+        .body(axum::body::Body::empty())
+    {
+        Ok(response) => response,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn load_report(state: &AppState, mr_id: &str) -> Result<MatchReportState, StatusCode> {
+    match state.match_report.match_report_repo.find_by_id(mr_id).await {
+        Ok(Some(report)) => Ok(report),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            tracing::error!("opponent post-match find_by_id {mr_id}: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
 
@@ -199,5 +270,72 @@ mod tests {
         assert_eq!(widget.recorded.unwrap().recorded_by, None);
         let home = build((&teams, &coaches), &pm, TeamSide::Home).await;
         assert!(home.recorded.is_none());
+    }
+
+    // ── L'écran d'attente bascule (carte 659-C) ───────────────────────────────
+
+    use crate::app::match_report::domain::match_report_ready_to_publish::MatchReportReadyToPublish;
+    use crate::app::match_report::domain::value_objects::NoStallingBonuses;
+
+    fn ready(validated: Option<TeamSide>) -> MatchReportReadyToPublish {
+        let mut pm = pre_match();
+        if let Some(side) = validated {
+            pm.validated_by = pm.validated_by.with(side, CoachId::new());
+        }
+        let gain = MatchGain::try_new(40).unwrap();
+        let fan = FanFactorMod::try_new(0).unwrap();
+        let bonuses = NoStallingBonuses::default();
+        MatchReportReadyToPublish::from_pre_match(&pm, gain, gain, bonuses, fan, fan, None, None)
+    }
+
+    fn screen(report: MatchReportState, viewer: TeamSide) -> &'static str {
+        match waiting_screen(report, viewer) {
+            WaitingScreen::Opponent(_) => "opponent",
+            WaitingScreen::ToRecap => "recap",
+            WaitingScreen::Nothing => "nothing",
+        }
+    }
+
+    /// En avant-match, rien ne change : le widget montre l'adversaire, même
+    /// au camp qui a déjà validé.
+    #[test]
+    fn a_pre_match_report_keeps_the_waiting_screen() {
+        let mut pm = pre_match();
+        pm.validated_by = pm.validated_by.with(TeamSide::Away, CoachId::new());
+        assert_eq!(
+            screen(MatchReportState::PreMatch(pm), TeamSide::Away),
+            "opponent"
+        );
+    }
+
+    /// L'après-match fermé, le camp qui a validé bascule vers le
+    /// récapitulatif ; l'autre reste, il peut y corriger son après-match.
+    #[test]
+    fn a_ready_report_sends_the_validated_side_to_the_recap() {
+        let rtp = || MatchReportState::ReadyToPublish(ready(Some(TeamSide::Away)));
+        assert_eq!(screen(rtp(), TeamSide::Away), "recap");
+        assert_eq!(screen(rtp(), TeamSide::Home), "opponent");
+        let none = MatchReportState::ReadyToPublish(ready(None));
+        assert_eq!(screen(none, TeamSide::Away), "opponent");
+    }
+
+    /// Publié, il n'y a plus rien à attendre : le récapitulatif, pour tous.
+    #[test]
+    fn a_published_report_sends_everyone_to_the_recap() {
+        let (published, _) = ready(None).publish(CoachId::new());
+        let report = || MatchReportState::Published(published.clone());
+        assert_eq!(screen(report(), TeamSide::Home), "recap");
+        assert_eq!(screen(report(), TeamSide::Away), "recap");
+    }
+
+    #[test]
+    fn the_redirection_is_an_hx_redirect_to_the_recap() {
+        let response = to_recap("space-1", "mr-1");
+        assert_eq!(response.status(), StatusCode::OK);
+        let target = response.headers().get("HX-Redirect").unwrap();
+        assert_eq!(
+            target,
+            &AppRoutes::default().match_report.recap("space-1", "mr-1")
+        );
     }
 }

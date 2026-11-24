@@ -1,4 +1,5 @@
-"""Valider son camp, et retirer sa validation (cartes 659-A et 659-B, épic E22).
+"""Valider son camp, retirer sa validation, et le récapitulatif en direct
+(cartes 659-A, 659-B et 659-C, épic E22).
 
 En « Chacun son équipe », chaque coach valide son équipe dès que son camp a
 son MVP et son après-match ; la seconde validation publie. Un camp validé ne
@@ -18,10 +19,19 @@ Scénarios :
        et revalide. Le coach adverse ne retire pas sa validation : 403, par
        l'écran d'attente comme par le récapitulatif. DevCoach enregistre, et
        sa validation publie.
+- V4 — Le direct (659-C), deux navigateurs : le membre simple enregistre et
+       valide depuis l'écran d'attente ; DevCoach enregistre et arrive sur le
+       récapitulatif ; l'écran d'attente du membre bascule seul vers le
+       récapitulatif. Le membre retire sa validation puis revalide : la page
+       de DevCoach, sans rechargement, voit « À valider », puis « Validé ✓ »
+       et « … et publier », et reçoit le toast « Les … sont validés par … ».
+       La validation de DevCoach publie ; la page du membre se recharge seule
+       et montre le rapport publié.
 
-Le mode B se démarre par un POST direct (`entry_mode=TeamEntry`) : l'option
-reste grisée jusqu'à la carte 659-C. DevCoach coache le domicile, le membre
-simple (`X-Bypass-Auth-Profile: simple`) l'extérieur.
+Le mode B se démarre ici par un POST direct (`entry_mode=TeamEntry`) ; la
+carte « Qui saisit ? » est couverte par `test_match_report_entry_mode.py`.
+DevCoach coache le domicile, le membre simple
+(`X-Bypass-Auth-Profile: simple`) l'extérieur.
 
 Prérequis : `make e2e-server` (port 3211, base kreek_e2e), `make init_e2e_db`.
 """
@@ -39,14 +49,25 @@ from match_report_helpers import (
     ensure_mvps,
     ensure_team_entry_inducements,
 )
+from realtime_helpers import (
+    DIRECT_TIMEOUT_MS,
+    goto_declared,
+    presence_declared,
+    recording_context,
+    toasts_of_match,
+    wait_for_match_toasts,
+)
 
 VALIDATE = re.compile(r"^Valider les ")
 PUBLISHES = re.compile(r"et publier")
+VALIDATED_TOAST = re.compile(r"^Les .+ sont validés par ")
+WITNESS = "() => { window.__sansRechargement = true; }"
+STILL_THERE = "() => window.__sansRechargement === true"
 
 
 @pytest.fixture(scope="module")
 def competition(browser, space_id):
-    return build_full_competition(browser, space_id, num_teams=2, num_rounds=3)
+    return build_full_competition(browser, space_id, num_teams=2, num_rounds=4)
 
 
 def _membre():
@@ -189,3 +210,71 @@ def test_retirer_sa_validation_corriger_et_revalider(browser, space_id, competit
         publier.click()
     expect(devcoach.locator(".ms-card-header-byline")).to_contain_text("Publié par")
     expect(devcoach.locator(".ms-validation-row")).to_have_count(0)
+
+
+# ── V4 — le récapitulatif en direct (carte 659-C) ─────────────────────────────
+
+def _rows(page):
+    return page.locator(".ms-validation-row")
+
+
+def _declared(page, action):
+    """Une action qui recharge la page, puis la présence déclarée de nouveau :
+    sans elle, l'onglet ne recevrait plus le signal du match."""
+    with page.expect_response(presence_declared):
+        action()
+
+
+def _click_and_reload(page, button):
+    with page.expect_navigation():
+        button.click()
+
+
+def test_le_recapitulatif_en_direct(browser, space_id, competition):
+    mr_id = _team_entry_with_mvps(space_id, competition, 3)
+
+    membre = recording_context(browser, PROFIL_SIMPLE).new_page()
+    goto_declared(membre, _url(space_id, mr_id, "step5/away"))
+    _declared(membre, lambda: _record(membre, 45))
+    valider = membre.get_by_role("button", name=VALIDATE)
+    _declared(membre, lambda: _click_and_reload(membre, valider))
+    expect(membre.locator(".team-step5-validated")).to_contain_text("Validé ✓")
+
+    # DevCoach ferme l'après-match : l'écran d'attente du membre bascule seul.
+    devcoach = recording_context(browser).new_page()
+    goto_declared(devcoach, _url(space_id, mr_id, "step5/home"))
+    with membre.expect_response(presence_declared, timeout=DIRECT_TIMEOUT_MS):
+        _declared(devcoach, lambda: _record(devcoach, 60))
+    assert devcoach.url.endswith(f"/{mr_id}/recap"), devcoach.url
+    assert membre.url.endswith(f"/{mr_id}/recap"), membre.url
+    expect(_rows(membre).nth(1)).to_contain_text("Validé ✓ par")
+    expect(_rows(devcoach).nth(1)).to_contain_text("Validé ✓ par")
+    devcoach.evaluate(WITNESS)
+
+    # Le retrait arrive chez DevCoach, sans toast ni rechargement.
+    retirer = membre.get_by_role("button", name="Retirer ma validation")
+    _declared(membre, lambda: _click_and_reload(membre, retirer))
+    expect(_rows(devcoach).nth(1)).to_contain_text("À valider", timeout=DIRECT_TIMEOUT_MS)
+    expect(devcoach.locator(".ms-btn-primary", has_text=PUBLISHES)).to_have_count(0)
+    expect(devcoach.locator(".ms-btn-primary", has_text=VALIDATE)).to_have_count(1)
+
+    # La validation aussi, avec son toast.
+    revalider = membre.get_by_role("button", name=VALIDATE)
+    _declared(membre, lambda: _click_and_reload(membre, revalider))
+    expect(_rows(devcoach).nth(1)).to_contain_text("Validé ✓ par", timeout=DIRECT_TIMEOUT_MS)
+    publier = devcoach.locator(".ms-btn-primary", has_text=PUBLISHES)
+    expect(publier).to_have_count(1)
+    wait_for_match_toasts(devcoach, mr_id, 1, timeout_ms=DIRECT_TIMEOUT_MS)
+    textes = [t["text"] for t in toasts_of_match(devcoach, mr_id)]
+    assert any(VALIDATED_TOAST.search(t.strip()) for t in textes), textes
+    assert devcoach.evaluate(STILL_THERE), "la page de DevCoach s'est rechargée"
+    assert toasts_of_match(membre, mr_id) == [], "l'auteur ne reçoit pas son toast"
+
+    # La validation de DevCoach publie ; la page du membre se recharge seule.
+    with membre.expect_navigation(timeout=DIRECT_TIMEOUT_MS):
+        with devcoach.expect_navigation():
+            publier.click()
+    for page in (devcoach, membre):
+        assert page.url.endswith(f"/{mr_id}/recap"), page.url
+        expect(page.locator(".ms-card-header-byline")).to_contain_text("Publié par")
+        expect(_rows(page)).to_have_count(0)

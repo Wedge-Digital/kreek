@@ -215,7 +215,7 @@ pub(super) async fn publish_post_match_recorded(
 }
 
 /// La validation d'un camp, en « Chacun son équipe » (carte 659-A) : un
-/// signal, sans nom — la page qui le reçoit relit l'agrégat.
+/// signal et, depuis la carte 659-C, un toast — l'équipe et le coach nommés.
 pub(super) async fn publish_side_validated(
     to: &Target<'_>,
     team_side: TeamSide,
@@ -225,16 +225,31 @@ pub(super) async fn publish_side_validated(
     let Some(scope) = match_scope(ports.repo.as_ref(), match_report_id).await else {
         return;
     };
-    let event = MatchReportAppEvent::MatchSideValidated {
+    let names = tokio::join!(
+        team_name(ports.team_data.as_ref(), scope.team_of(team_side)),
+        coach_name(ports.coach_data.as_ref(), &validated_by),
+    );
+    let event = side_validated_event(match_report_id, scope, (team_side, validated_by), names);
+    publier(app_event_bus, event.to_enveloppe());
+}
+
+fn side_validated_event(
+    match_report_id: &str,
+    scope: MatchScope,
+    (team_side, validated_by): (TeamSide, CoachId),
+    (team_name, validated_by_name): (Option<String>, Option<String>),
+) -> MatchReportAppEvent {
+    MatchReportAppEvent::MatchSideValidated {
         event_id: EventId::new(),
         match_report_id: match_report_id.to_string(),
         space_id: scope.space_id,
         home_team_id: scope.home_team_id,
         away_team_id: scope.away_team_id,
         team_side: side_payload(team_side),
+        team_name,
         validated_by: validated_by.to_string(),
-    };
-    publier(app_event_bus, event.to_enveloppe());
+        validated_by_name,
+    }
 }
 
 /// Le retrait de la validation d'un camp (carte 659-B) : un signal, sans
@@ -767,9 +782,10 @@ mod tests {
 
     /// La fermeture de l'après-match, appendée avec le second camp, ne sort
     /// pas : le signal de ce camp suffit (§ 12.7 de E22).
-    /// La validation d'un camp sort en signal (carte 659-A).
+    /// La validation d'un camp sort avec son équipe et son coach nommés
+    /// (cartes 659-A, 659-C).
     #[tokio::test]
-    async fn a_side_validation_leaves_as_a_signal() {
+    async fn a_side_validation_leaves_with_team_and_author_names() {
         let m = Match::new();
         let author = CoachId::new();
         let validated = MatchReportDomainEvent::TeamSideValidated {
@@ -781,7 +797,9 @@ mod tests {
             match_report_id,
             away_team_id,
             team_side,
+            team_name,
             validated_by,
+            validated_by_name,
             ..
         }) = event
         else {
@@ -790,7 +808,9 @@ mod tests {
         assert_eq!(match_report_id, "MR");
         assert_eq!(away_team_id, m.away.to_string());
         assert_eq!(team_side, TeamSidePayload::Away);
+        assert_eq!(team_name.as_deref(), Some("London Rats"));
         assert_eq!(validated_by, author.to_string());
+        assert_eq!(validated_by_name.as_deref(), Some("Morgane"));
     }
 
     /// Le retrait d'une validation sort en signal (carte 659-B).

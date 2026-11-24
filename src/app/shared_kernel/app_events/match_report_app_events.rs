@@ -167,7 +167,9 @@ pub enum MatchReportAppEvent {
         recorded_by: String,
     },
     /// Un camp a validé son équipe, en « Chacun son équipe » (carte 659-A).
-    /// Un signal ; son toast viendra avec la carte 659-C (§ 12.7 de E22).
+    /// Un signal, et un toast (carte 659-C, § 12.7 de E22) : « Les London
+    /// Rats sont validés par Morgane ». Les noms sont ceux de la 643, des
+    /// `Option` : un nom inconnu n'est pas inventé.
     MatchSideValidated {
         event_id: EventId,
         match_report_id: String,
@@ -175,7 +177,11 @@ pub enum MatchReportAppEvent {
         home_team_id: String,
         away_team_id: String,
         team_side: TeamSidePayload,
+        #[serde(default)]
+        team_name: Option<String>,
         validated_by: String,
+        #[serde(default)]
+        validated_by_name: Option<String>,
     },
     /// Un camp a retiré sa validation, en « Chacun son équipe » (carte
     /// 659-B). Un signal, sans toast (§ 12.7 de E22).

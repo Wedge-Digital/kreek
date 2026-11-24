@@ -86,6 +86,10 @@ pub mod path {
     /// Le retrait de la validation d'un camp (carte 659-B).
     pub const MATCH_REPORT_RECAP_WITHDRAW_VALIDATION: &str =
         "/app/{space_id}/match-report/{match_report_id}/recap/withdraw-validation";
+    /// Le bloc des validations du récapitulatif, rechargé en direct (carte
+    /// 659-C).
+    pub const MATCH_REPORT_RECAP_VALIDATION: &str =
+        "/app/{space_id}/match-report/{match_report_id}/recap/validation";
     // ── Impression (épic E16) ─────────────────────────────────────────────
     // `print` est un segment fixe : il prime sur `{match_report_id}`. La
     // seconde équipe est dans le chemin, contrôlée par `space_scope` (carte 594).
@@ -369,6 +373,12 @@ impl Routes {
 
     pub fn recap_withdraw_validation(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_RECAP_WITHDRAW_VALIDATION
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn recap_validation(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_RECAP_VALIDATION
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }
