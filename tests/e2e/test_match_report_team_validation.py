@@ -75,7 +75,10 @@ def _post_match(session, space_id, mr_id, side, gain):
 
 
 def _record(page, gain):
+    """Enregistre l'après-match de son camp, avec un paragraphe : sans lui, le
+    compte-rendu, et donc « Publié par », ne s'affiche pas."""
     page.locator("input[name=gain]").fill(str(gain))
+    page.locator("textarea[name=summary_paragraph]").fill(f"Un paragraphe à {gain} kPo.")
     with page.expect_navigation():
         page.get_by_role("button", name="Enregistrer").click()
 
@@ -107,7 +110,9 @@ def test_chacun_valide_et_la_seconde_validation_publie(browser, space_id, compet
     with devcoach.expect_navigation():
         publier.click()
     assert devcoach.url.endswith(f"/{mr_id}/recap"), devcoach.url
-    expect(devcoach.locator(".ms-card-header-byline")).to_contain_text("Publié par")
+    byline = devcoach.locator(".ms-card-header-byline")
+    expect(byline).to_contain_text("Publié par")
+    expect(byline.locator("strong")).to_have_text("DevCoach")
     expect(devcoach.locator(".ms-validation-row")).to_have_count(0)
 
 
