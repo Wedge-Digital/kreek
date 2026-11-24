@@ -363,6 +363,15 @@ impl SideAuthors {
         }
         self
     }
+
+    /// Le même registre, l'auteur de ce camp effacé (carte 659-B).
+    pub fn without(mut self, side: TeamSide) -> Self {
+        match side {
+            TeamSide::Home => self.home = None,
+            TeamSide::Away => self.away = None,
+        }
+        self
+    }
 }
 
 /// Verdict sur la possibilité de corriger un rapport déjà publié.

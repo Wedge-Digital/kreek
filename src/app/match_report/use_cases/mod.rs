@@ -27,3 +27,4 @@ pub mod test_doubles;
 pub mod unpublish_match_report_use_case;
 pub mod update_match_selection_use_case;
 pub mod validate_team_side_use_case;
+pub mod withdraw_team_side_validation_use_case;

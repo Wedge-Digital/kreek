@@ -12,6 +12,10 @@
 //! refusée par `SideValidated`, que la couche web rend en 409. L'état des
 //! validations traverse `into_pre_match` / `from_pre_match`, par où passent les
 //! corrections d'un rapport prêt à publier : sans quoi le gel se contournerait.
+//!
+//! **Le retrait** (carte 659-B, § 12.5) : un camp validé retire sa validation
+//! tant que le rapport n'est pas publié, et redevient modifiable. Il n'y a
+//! rien à retirer d'un rapport publié : la seconde validation publie aussitôt.
 
 use crate::app::match_report::domain::error::DomainError;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
@@ -40,6 +44,28 @@ pub(crate) fn ensure_not_validated(
     match validated_by.of(side) {
         Some(_) => Err(DomainError::SideValidated(side)),
         None => Ok(()),
+    }
+}
+
+/// Le retrait d'une validation : le mode B, un camp validé (carte 659-B).
+fn check_withdrawable(
+    entry_mode: EntryMode,
+    validated_by: &SideAuthors,
+    side: TeamSide,
+) -> Result<(), DomainError> {
+    if entry_mode != EntryMode::TeamEntry {
+        return Err(DomainError::NotTeamEntry);
+    }
+    match validated_by.of(side) {
+        Some(_) => Ok(()),
+        None => Err(DomainError::SideNotValidated(side)),
+    }
+}
+
+fn withdrawn_event(side: TeamSide, withdrawn_by: CoachId) -> MatchReportDomainEvent {
+    MatchReportDomainEvent::TeamSideValidationWithdrawn {
+        team_side: side,
+        withdrawn_by,
     }
 }
 
@@ -119,6 +145,25 @@ impl MatchReportPreMatch {
         self.version += 1;
         self
     }
+
+    /// Le retrait de la validation d'un camp qui attend l'autre (carte 659-B) :
+    /// le camp redevient modifiable.
+    pub fn withdraw_side_validation(
+        &self,
+        side: TeamSide,
+        withdrawn_by: CoachId,
+    ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        check_withdrawable(self.entry_mode, &self.validated_by, side)?;
+        let withdrawn = self.clone().apply_side_validation_withdrawn(side);
+        Ok((withdrawn, withdrawn_event(side, withdrawn_by)))
+    }
+
+    /// Le rejeu d'un `TeamSideValidationWithdrawn` dans l'avant-match.
+    pub(crate) fn apply_side_validation_withdrawn(mut self, side: TeamSide) -> Self {
+        self.validated_by = self.validated_by.without(side);
+        self.version += 1;
+        self
+    }
 }
 
 impl MatchReportReadyToPublish {
@@ -162,6 +207,26 @@ impl MatchReportReadyToPublish {
     /// Le rejeu d'un `TeamSideValidated` dans un rapport prêt à publier.
     pub(crate) fn apply_side_validated(mut self, side: TeamSide, validated_by: CoachId) -> Self {
         self.validated_by = self.validated_by.with(side, validated_by);
+        self.version += 1;
+        self
+    }
+
+    /// Le retrait de la validation d'un camp, l'autre n'ayant pas validé
+    /// (carte 659-B) : le camp redevient modifiable.
+    pub fn withdraw_side_validation(
+        &self,
+        side: TeamSide,
+        withdrawn_by: CoachId,
+    ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        check_withdrawable(self.entry_mode, &self.validated_by, side)?;
+        let withdrawn = self.clone().apply_side_validation_withdrawn(side);
+        Ok((withdrawn, withdrawn_event(side, withdrawn_by)))
+    }
+
+    /// Le rejeu d'un `TeamSideValidationWithdrawn` dans un rapport prêt à
+    /// publier.
+    pub(crate) fn apply_side_validation_withdrawn(mut self, side: TeamSide) -> Self {
+        self.validated_by = self.validated_by.without(side);
         self.version += 1;
         self
     }

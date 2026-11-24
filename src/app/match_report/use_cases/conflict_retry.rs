@@ -20,6 +20,9 @@
 //! refuse de valider deux fois le même camp ; un réessai après la validation
 //! de l'autre publie, ce qui est la règle.
 //!
+//! Depuis la carte 659-B, `withdraw_side_validation` y entre **sans garde** :
+//! le domaine refuse de retirer la validation d'un camp qui n'est pas validé.
+//!
 //! Le fan factor et l'après-match des deux camps (« Je saisis tout ») n'y
 //! entrent pas : leur domaine écrase sans refuser, et un réessai y serait un
 //! « dernier qui écrit gagne » silencieux.

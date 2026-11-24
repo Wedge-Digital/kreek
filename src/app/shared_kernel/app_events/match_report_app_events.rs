@@ -177,6 +177,17 @@ pub enum MatchReportAppEvent {
         team_side: TeamSidePayload,
         validated_by: String,
     },
+    /// Un camp a retiré sa validation, en « Chacun son équipe » (carte
+    /// 659-B). Un signal, sans toast (§ 12.7 de E22).
+    MatchSideValidationWithdrawn {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        team_side: TeamSidePayload,
+        withdrawn_by: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
@@ -317,6 +328,7 @@ impl MatchReportAppEvent {
     pub const MATCH_FAN_FACTOR_RECORDED: &'static str = "MatchFanFactorRecorded";
     pub const MATCH_POST_MATCH_RECORDED: &'static str = "MatchPostMatchRecorded";
     pub const MATCH_SIDE_VALIDATED: &'static str = "MatchSideValidated";
+    pub const MATCH_SIDE_VALIDATION_WITHDRAWN: &'static str = "MatchSideValidationWithdrawn";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -334,6 +346,7 @@ impl MatchReportAppEvent {
             Self::MatchFanFactorRecorded { .. } => Self::MATCH_FAN_FACTOR_RECORDED,
             Self::MatchPostMatchRecorded { .. } => Self::MATCH_POST_MATCH_RECORDED,
             Self::MatchSideValidated { .. } => Self::MATCH_SIDE_VALIDATED,
+            Self::MatchSideValidationWithdrawn { .. } => Self::MATCH_SIDE_VALIDATION_WITHDRAWN,
         }
     }
 
@@ -378,6 +391,9 @@ impl MatchReportAppEvent {
                 match_report_id, ..
             }
             | Self::MatchSideValidated {
+                match_report_id, ..
+            }
+            | Self::MatchSideValidationWithdrawn {
                 match_report_id, ..
             } => match_report_id,
         }

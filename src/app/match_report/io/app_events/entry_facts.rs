@@ -237,6 +237,29 @@ pub(super) async fn publish_side_validated(
     publier(app_event_bus, event.to_enveloppe());
 }
 
+/// Le retrait de la validation d'un camp (carte 659-B) : un signal, sans
+/// nom, comme la validation.
+pub(super) async fn publish_side_validation_withdrawn(
+    to: &Target<'_>,
+    team_side: TeamSide,
+    withdrawn_by: CoachId,
+) {
+    let (match_report_id, app_event_bus, ports) = (to.match_report_id, to.app_event_bus, to.ports);
+    let Some(scope) = match_scope(ports.repo.as_ref(), match_report_id).await else {
+        return;
+    };
+    let event = MatchReportAppEvent::MatchSideValidationWithdrawn {
+        event_id: EventId::new(),
+        match_report_id: match_report_id.to_string(),
+        space_id: scope.space_id,
+        home_team_id: scope.home_team_id,
+        away_team_id: scope.away_team_id,
+        team_side: side_payload(team_side),
+        withdrawn_by: withdrawn_by.to_string(),
+    };
+    publier(app_event_bus, event.to_enveloppe());
+}
+
 /// Les lignes nommées par le service du récapitulatif : libellés et vedettes
 /// au catalogue, mercenaires par leur poste. Une sélection vide reste vide.
 async fn selection_items(
@@ -768,6 +791,32 @@ mod tests {
         assert_eq!(away_team_id, m.away.to_string());
         assert_eq!(team_side, TeamSidePayload::Away);
         assert_eq!(validated_by, author.to_string());
+    }
+
+    /// Le retrait d'une validation sort en signal (carte 659-B).
+    #[tokio::test]
+    async fn a_withdrawn_validation_leaves_as_a_signal() {
+        let m = Match::new();
+        let author = CoachId::new();
+        let withdrawn = MatchReportDomainEvent::TeamSideValidationWithdrawn {
+            team_side: TeamSide::Home,
+            withdrawn_by: author,
+        };
+        let event = m.published(withdrawn, m.scoped()).await;
+        let Some(MatchReportAppEvent::MatchSideValidationWithdrawn {
+            match_report_id,
+            home_team_id,
+            team_side,
+            withdrawn_by,
+            ..
+        }) = event
+        else {
+            panic!("MatchSideValidationWithdrawn attendu : {event:?}");
+        };
+        assert_eq!(match_report_id, "MR");
+        assert_eq!(home_team_id, m.home.to_string());
+        assert_eq!(team_side, TeamSidePayload::Home);
+        assert_eq!(withdrawn_by, author.to_string());
     }
 
     #[tokio::test]

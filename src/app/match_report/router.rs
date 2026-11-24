@@ -14,7 +14,7 @@ use crate::app::match_report::io::web::mvp_draw_controller::post_mvp_draw;
 use crate::app::match_report::io::web::mvp_step_controller::{get_mvp_step, post_mvp_step};
 use crate::app::match_report::io::web::pre_match_controller::{get_pre_match, post_pre_match};
 use crate::app::match_report::io::web::recap_controller::{
-    get_recap, post_publish, post_unpublish,
+    get_recap, post_publish, post_unpublish, post_withdraw_validation,
 };
 use crate::app::match_report::io::web::record_action_controller::{
     delete_action, post_action_step3, post_action_step4,
@@ -24,7 +24,7 @@ use crate::app::match_report::io::web::team_pre_match_controller::{
     get_team_pre_match, post_team_pre_match,
 };
 use crate::app::match_report::io::web::team_step5_controller::{
-    get_team_step5, post_team_step5, post_validate_side,
+    get_team_step5, post_team_step5, post_validate_side, post_withdraw_side_validation,
 };
 use crate::app::match_report::io::web::widgets::action_log_widget::get_action_log;
 use crate::app::match_report::io::web::widgets::action_panel_widget::{
@@ -156,6 +156,11 @@ fn routes_de_camp() -> Router<AppState> {
             path::MATCH_REPORT_STEP5_SIDE_VALIDATE,
             post(post_validate_side),
         )
+        // Son retrait (carte 659-B) : le camp de la route, gardé de même.
+        .route(
+            path::MATCH_REPORT_STEP5_SIDE_WITHDRAW_VALIDATION,
+            post(post_withdraw_side_validation),
+        )
 }
 
 fn routes_ouvertes() -> Router<AppState> {
@@ -179,6 +184,12 @@ fn routes_ouvertes() -> Router<AppState> {
         .route(path::MATCH_REPORT_RECAP, get(get_recap))
         .route(path::MATCH_REPORT_RECAP_PUBLISH, post(post_publish))
         .route(path::MATCH_REPORT_RECAP_UNPUBLISH, post(post_unpublish))
+        // Le retrait d'une validation (carte 659-B), gardé comme la
+        // publication.
+        .route(
+            path::MATCH_REPORT_RECAP_WITHDRAW_VALIDATION,
+            post(post_withdraw_validation),
+        )
 }
 
 /// La lecture d'un compte rendu en cours, ouverte à l'autre coach (carte 634).

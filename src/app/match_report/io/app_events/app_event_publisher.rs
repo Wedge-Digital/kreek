@@ -217,6 +217,12 @@ pub(super) async fn aiguiller(
             team_side,
             validated_by,
         } => entry_facts::publish_side_validated(&to, team_side, validated_by).await,
+        // Son retrait (carte 659-B) sort de même : la page de l'autre coach
+        // relit l'agrégat.
+        MatchReportDomainEvent::TeamSideValidationWithdrawn {
+            team_side,
+            withdrawn_by,
+        } => entry_facts::publish_side_validation_withdrawn(&to, team_side, withdrawn_by).await,
         // Ce qui ne sort pas du BC, nommé un à un et sans joker (carte 631) :
         // un événement ajouté casse la compilation ici, et son auteur tranche
         // — il sort, ou il rejoint cette liste.

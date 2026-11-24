@@ -101,6 +101,9 @@ pub enum DomainError {
     /// Une validation de camp sans l'après-match de ce camp (carte 659-A, R9
     /// de E22).
     PostMatchMissing(TeamSide),
+    /// Le retrait de la validation d'un camp qui n'est pas validé (carte
+    /// 659-B, § 12.5 de E22). La couche web le rend en 409.
+    SideNotValidated(TeamSide),
 }
 
 impl fmt::Display for DomainError {
@@ -181,6 +184,10 @@ impl fmt::Display for DomainError {
             Self::PostMatchMissing(_) => write!(
                 f,
                 "Enregistrez l'après-match de cette équipe avant de la valider."
+            ),
+            Self::SideNotValidated(_) => write!(
+                f,
+                "Cette équipe n'a pas validé son camp : il n'y a rien à retirer."
             ),
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),

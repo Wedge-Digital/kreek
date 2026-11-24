@@ -21,7 +21,7 @@ use crate::app::match_report::domain::value_objects::{
 use crate::app::match_report::io::web::mvp_step_controller::{parse_side, side_slug};
 use crate::app::match_report::io::web::pre_match_controller::SwitchSideVm;
 use crate::app::match_report::io::web::recap_controller::{
-    execute_validation, validation_response,
+    execute_validation, execute_withdrawal, validation_response, withdrawal_response,
 };
 use crate::app::match_report::io::web::write_conflict::{
     conflict_response, domain_refusal_response,
@@ -36,6 +36,7 @@ use crate::app::match_report::use_cases::record_team_post_match_use_case::{
 use crate::app::match_report::use_cases::validate_team_side_use_case::{
     ValidateTeamSideCommand, ValidationStage,
 };
+use crate::app::match_report::use_cases::withdraw_team_side_validation_use_case::WithdrawTeamSideValidationCommand;
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::identity::ids::CoachId;
@@ -91,6 +92,9 @@ pub struct TeamStep5Template {
     /// « Valider les [mon équipe] », sur l'écran d'attente : le camp a son
     /// après-match, l'autre pas encore, et il n'a pas validé (carte 659-A).
     pub validate_url: Option<String>,
+    /// « Retirer ma validation », sous « Validé ✓ » (carte 659-B) : le camp
+    /// redevient modifiable.
+    pub withdraw_url: Option<String>,
 }
 
 impl IntoResponse for TeamStep5Template {
@@ -235,6 +239,7 @@ fn build_page(
         validated: pm.validated_by.of(side).is_some(),
         validate_url: offers_validation(loaded, side)
             .then(|| routes.step5_side_validate(ids.space_id, ids.mr_id, side_slug(side))),
+        withdraw_url: withdraw_url(ids, &loaded.pm, side),
         app_routes: AppRoutes::default(),
         space_id: ids.space_id.to_string(),
         match_report_id: ids.mr_id.to_string(),
@@ -247,6 +252,14 @@ fn build_page(
 fn offers_validation(loaded: &Loaded, side: TeamSide) -> bool {
     let pm = &loaded.pm;
     !loaded.closed && pm.post_match_of(side).is_some() && pm.validated_by.of(side).is_none()
+}
+
+/// Le retrait, offert sous un camp validé (carte 659-B) : la garde de camp a
+/// déjà dit que l'utilisateur tient ce camp.
+fn withdraw_url(ids: &PageIds<'_>, pm: &MatchReportPreMatch, side: TeamSide) -> Option<String> {
+    pm.validated_by.of(side)?;
+    let routes = AppRoutes::default().match_report;
+    Some(routes.step5_side_withdraw_validation(ids.space_id, ids.mr_id, side_slug(side)))
 }
 
 fn side_name(names: &(String, String), side: TeamSide) -> &str {
@@ -392,6 +405,38 @@ async fn validate_and_return(
     let result = execute_validation(state, cmd).await;
     let back = url_after_validation(ids, side, result.as_ref().ok().copied());
     validation_response(result, &back)
+}
+
+/// Le retrait de la validation d'un camp depuis l'écran d'attente (carte
+/// 659-B). Le camp vient de la route, que `garde_camp` a vérifiée : le coach
+/// adverse y reçoit un 403. Le use case est celui du récapitulatif ; retour
+/// sur l'écran du camp, de nouveau modifiable.
+pub async fn post_withdraw_side_validation(
+    auth_session: AuthSession,
+    Path((space_id, mr_id, side)): Path<(String, String, String)>,
+    State(state): State<AppState>,
+) -> Response {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Some(cmd) = withdrawal_command(&mr_id, &side, user.id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let routes = AppRoutes::default().match_report;
+    let back = routes.step5_side(&space_id, &mr_id, side_slug(cmd.team_side));
+    withdrawal_response(execute_withdrawal(&state, cmd).await, &back)
+}
+
+fn withdrawal_command(
+    mr_id: &str,
+    side: &str,
+    by: CoachId,
+) -> Option<WithdrawTeamSideValidationCommand> {
+    Some(WithdrawTeamSideValidationCommand {
+        match_report_id: MatchReportId::try_new(mr_id).ok()?,
+        team_side: parse_side(side)?,
+        withdrawn_by: by,
+    })
 }
 
 fn validation_command(mr_id: &str, side: &str, by: CoachId) -> Option<ValidateTeamSideCommand> {
@@ -770,6 +815,42 @@ mod tests {
             (teams(), false),
         );
         assert!(page.validated && page.validate_url.is_none());
+    }
+
+    /// Carte 659-B : « Retirer ma validation » sous « Validé ✓ », et
+    /// seulement là ; après le retrait, l'enregistrement et la validation
+    /// reviennent.
+    #[test]
+    fn the_page_offers_the_withdrawal_under_validated() {
+        let teams = || (team("London Rats"), team("Orcland Raiders"));
+        let validated = waiting_home().apply_side_validated(TeamSide::Home, CoachId::new());
+        let page = build_page(
+            &IDS,
+            &loaded(validated.clone(), false),
+            TeamSide::Home,
+            (teams(), false),
+        );
+        let url = page.withdraw_url.unwrap();
+        assert!(url.ends_with("/M/step5/home/withdraw-validation"), "{url}");
+        let withdrawn = validated.apply_side_validation_withdrawn(TeamSide::Home);
+        let page = build_page(
+            &IDS,
+            &loaded(withdrawn, false),
+            TeamSide::Home,
+            (teams(), false),
+        );
+        assert!(page.withdraw_url.is_none() && !page.validated);
+        assert!(page.validate_url.is_some());
+    }
+
+    /// Le camp retiré vient de la route ; un camp illisible est refusé.
+    #[test]
+    fn the_withdrawn_side_comes_from_the_route() {
+        let by = CoachId::new();
+        let cmd = withdrawal_command(MR, "home", by).unwrap();
+        assert_eq!((cmd.team_side, cmd.withdrawn_by), (TeamSide::Home, by));
+        assert!(withdrawal_command(MR, "both", by).is_none());
+        assert!(withdrawal_command("illisible", "home", by).is_none());
     }
 
     /// Le camp vient de la route ; un camp illisible est refusé.

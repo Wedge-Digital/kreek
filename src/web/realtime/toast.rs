@@ -102,7 +102,9 @@ pub fn notice_of(event: &MatchReportAppEvent) -> Option<MatchNotice> {
         // L'après-match d'un camp non plus (carte 658).
         | E::MatchPostMatchRecorded { .. }
         // La validation d'un camp : son toast vient avec la carte 659-C.
-        | E::MatchSideValidated { .. } => None,
+        | E::MatchSideValidated { .. }
+        // Son retrait : un signal, sans toast (carte 659-B, § 12.7 de E22).
+        | E::MatchSideValidationWithdrawn { .. } => None,
     }
 }
 

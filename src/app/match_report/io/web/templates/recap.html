@@ -231,7 +231,16 @@
           <div class="ms-validation-row">
             <span class="ms-validation-team">{{ side.team_name }}</span>
             {% if side.validated %}
-            <span class="ms-validation-status ms-validation-status--done">Valid&eacute; &#10003;{% if let Some(name) = side.validated_by.as_ref() %} par {{ name }}{% endif %}</span>
+            <span class="ms-validation-side">
+              <span class="ms-validation-status ms-validation-status--done">Valid&eacute; &#10003;{% if let Some(name) = side.validated_by.as_ref() %} par {{ name }}{% endif %}</span>
+              {# Carte 659-B : le retrait, pour qui peut le faire. #}
+              {% if let Some(label) = side.withdraw_label %}
+              <form class="ms-validation-withdraw-form" method="post" action="{{ withdraw_validation_url }}">
+                <input type="hidden" name="team_side" value="{{ side.team_side }}">
+                <button type="submit" class="ms-validation-withdraw">{{ label }}</button>
+              </form>
+              {% endif %}
+            </span>
             {% else %}
             <span class="ms-validation-status">&Agrave; valider</span>
             {% endif %}

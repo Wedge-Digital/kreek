@@ -232,6 +232,31 @@ pub async fn side_to_validate(
     pick_side(&sides, requested)
 }
 
+/// Le camp dont cet utilisateur retire la validation (carte 659-B, § 12.6 de
+/// E22) : celui du coach, l'admin le choisit par `requested`. Le formulaire
+/// ne désigne jamais le camp d'un coach ; il ne peut que faire refuser la
+/// requête — un coach qui vise la validation de l'autre camp reçoit un 403,
+/// plutôt que de voir sa demande détournée vers le sien.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn side_to_withdraw(
+    deps: &AccesRapportDeps<'_>,
+    user: &User,
+    space_id: &str,
+    scope: &PorteeRapport,
+    requested: Option<TeamSide>,
+) -> Option<TeamSide> {
+    let sides = sides_validatable_by(deps, user, space_id, scope).await;
+    pick_withdrawn_side(&sides, requested)
+}
+
+/// Un camp demandé hors des siens : rien. Sinon, comme `pick_side`.
+fn pick_withdrawn_side(sides: &[TeamSide], requested: Option<TeamSide>) -> Option<TeamSide> {
+    match requested {
+        Some(side) if !sides.contains(&side) => None,
+        _ => pick_side(sides, requested),
+    }
+}
+
 /// Un seul camp possible : le sien, quoi que dise le formulaire. Deux : celui
 /// demandé. Aucun : rien.
 fn pick_side(sides: &[TeamSide], requested: Option<TeamSide>) -> Option<TeamSide> {
@@ -843,6 +868,50 @@ mod write_tests {
         assert_eq!(pick_side(&both, Some(TeamSide::Away)), Some(TeamSide::Away));
         assert_eq!(pick_side(&both, None), None);
         assert_eq!(pick_side(&[], Some(TeamSide::Home)), None);
+    }
+
+    // ── Le retrait d'une validation (carte 659-B) ─────────────────────────────
+
+    async fn withdrawn_side(who: &str, requested: Option<TeamSide>) -> Option<TeamSide> {
+        let admin_access = FakeAdminAccess::new().space_admin(
+            &EntityId::try_new(ADMIN).unwrap(),
+            &EntityId::try_new(SPACE).unwrap(),
+        );
+        let team_data = FakeTeamData { failing: None };
+        let deps = AccesRapportDeps {
+            admin_access: &admin_access,
+            team_data: &team_data,
+        };
+        side_to_withdraw(&deps, &user(who), SPACE, &scope(), requested).await
+    }
+
+    /// Un coach retire la validation de son camp, sans avoir à le nommer.
+    #[tokio::test]
+    async fn a_coach_withdraws_his_own_side() {
+        assert_eq!(withdrawn_side(HOME_COACH, None).await, Some(TeamSide::Home));
+        let home = Some(TeamSide::Home);
+        assert_eq!(withdrawn_side(HOME_COACH, home).await, Some(TeamSide::Home));
+    }
+
+    /// § 12.6 : le coach adverse ne retire pas la validation de l'autre camp —
+    /// sa requête est refusée (403), pas détournée vers le sien.
+    #[tokio::test]
+    async fn the_opposing_coach_does_not_withdraw_the_other_side() {
+        let away = Some(TeamSide::Away);
+        assert_eq!(withdrawn_side(HOME_COACH, away).await, None);
+        let home = Some(TeamSide::Home);
+        assert_eq!(withdrawn_side(AWAY_COACH, home).await, None);
+    }
+
+    /// L'admin nomme le camp ; sans camp, rien. Un tiers ne retire rien.
+    #[tokio::test]
+    async fn the_admin_withdraws_the_side_he_names_and_a_third_party_nothing() {
+        let away = Some(TeamSide::Away);
+        assert_eq!(withdrawn_side(ADMIN, away).await, Some(TeamSide::Away));
+        assert_eq!(withdrawn_side(ADMIN, None).await, None);
+        assert_eq!(withdrawn_side(THIRD_PARTY, None).await, None);
+        let home = Some(TeamSide::Home);
+        assert_eq!(withdrawn_side(THIRD_PARTY, home).await, None);
     }
 
     #[tokio::test]

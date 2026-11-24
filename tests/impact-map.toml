@@ -559,7 +559,8 @@
 # Carte 659-A — valider son camp en « Chacun son équipe » : l'écran d'attente,
 # le récapitulatif « Validé ✓ par … », la seconde validation qui publie. La
 # publication sort vers `ranking`, `players` et `teams` ; le validateur est
-# nommé par `auth`.
+# nommé par `auth`. Carte 659-B — retirer sa validation, corriger, revalider :
+# mêmes BCs.
 "test_match_report_team_validation" = ["match_report", "players", "competitions", "teams",
                                        "ranking", "auth", "spaces", "references",
                                        "team_creation", "spp_calculator"]

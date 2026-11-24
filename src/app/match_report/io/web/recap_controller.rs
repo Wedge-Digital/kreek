@@ -27,7 +27,7 @@ use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::correction_eligibility_service;
 use crate::app::match_report::use_cases::match_report_access_service::{
     can_write_report, est_administrateur, is_authorized, load_entry_scope, side_to_validate,
-    sides_validatable_by, AccesRapportDeps, EntryScope, PorteeRapport,
+    side_to_withdraw, sides_validatable_by, AccesRapportDeps, EntryScope, PorteeRapport,
 };
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
@@ -37,6 +37,9 @@ use crate::app::match_report::use_cases::unpublish_match_report_use_case::{
 };
 use crate::app::match_report::use_cases::validate_team_side_use_case::{
     self, ValidateTeamSideCommand, ValidateTeamSideError, ValidationStage,
+};
+use crate::app::match_report::use_cases::withdraw_team_side_validation_use_case::{
+    self, WithdrawTeamSideValidationCommand, WithdrawTeamSideValidationError,
 };
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -82,6 +85,8 @@ pub struct RecapTemplate {
     pub admin_bar: Option<AdminBarVm>,
     pub under_correction: bool,
     pub publish_url: String,
+    /// Le retrait d'une validation, en « Chacun son équipe » (carte 659-B).
+    pub withdraw_validation_url: String,
     pub back_to_step5_url: String,
     pub competition_url: String,
     pub home_team_detail_url: String,
@@ -379,6 +384,9 @@ async fn build_recap_template(
         admin_bar: AdminBarVm::build(correction, move_widget_url),
         under_correction: !is_published && source.was_published_before,
         publish_url: routes.match_report.recap_publish(space_id, match_report_id),
+        withdraw_validation_url: routes
+            .match_report
+            .recap_withdraw_validation(space_id, match_report_id),
         back_to_step5_url: routes.match_report.step5(space_id, match_report_id),
         competition_url: routes.competitions.competition_detail(
             space_id,
@@ -415,7 +423,13 @@ async fn build_validation_panel(
         sides_validatable_by(&deps, user, space_id, &scope),
         validator_names(coach_data, source.validated_by),
     );
-    let facts = ValidationFacts::new(source.validated_by, &validatable, team_names, validators);
+    let facts = ValidationFacts::new(
+        source.validated_by,
+        &validatable,
+        team_names,
+        validators,
+        user.id,
+    );
     Some(ValidationPanelVm::from_domain(facts))
 }
 
@@ -627,6 +641,87 @@ pub(crate) fn validation_response(
         Err(ValidateTeamSideError::NotInCompatibleState) => StatusCode::CONFLICT.into_response(),
         Err(ValidateTeamSideError::Internal(e)) => {
             tracing::error!("validation d'un camp : {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+/// Le retrait de la validation d'un camp (carte 659-B), gardé comme la
+/// publication : le droit d'écrire, puis le camp du coach — jamais celui du
+/// formulaire, que seul l'admin choisit. Le mode A n'a rien à retirer : 404.
+pub async fn post_withdraw_validation(
+    auth_session: AuthSession,
+    Path((space_id, match_report_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    form: Result<Form<PublishForm>, FormRejection>,
+) -> Response {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Ok(mr_id) = MatchReportId::try_new(&match_report_id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let ids = (space_id.as_str(), match_report_id.as_str());
+    let access = match authorize_recap_write(&state, &user, ids.0, ids.1).await {
+        Ok(access) if access.validates_by_side() => access,
+        Ok(_) => return StatusCode::NOT_FOUND.into_response(),
+        Err(status) => return status.into_response(),
+    };
+    let target = (&access.scope, requested_side(form));
+    withdraw_side(&state, &user, ids, mr_id, target).await
+}
+
+/// Retire la validation du camp que le service d'accès désigne ; retour au
+/// récapitulatif, où le bouton « Valider les … » revient.
+async fn withdraw_side(
+    state: &AppState,
+    user: &User,
+    (space_id, match_report_id): (&str, &str),
+    mr_id: MatchReportId,
+    (scope, requested): (&PorteeRapport, Option<TeamSide>),
+) -> Response {
+    let deps = AccesRapportDeps::from_state(state);
+    let Some(side) = side_to_withdraw(&deps, user, space_id, scope, requested).await else {
+        return StatusCode::FORBIDDEN.into_response();
+    };
+    let cmd = WithdrawTeamSideValidationCommand {
+        match_report_id: mr_id,
+        team_side: side,
+        withdrawn_by: user.id,
+    };
+    let result = execute_withdrawal(state, cmd).await;
+    let routes = AppRoutes::default().match_report;
+    withdrawal_response(result, &routes.recap(space_id, match_report_id))
+}
+
+/// Le use case de retrait, sur les dépôts de l'état.
+pub(crate) async fn execute_withdrawal(
+    state: &AppState,
+    cmd: WithdrawTeamSideValidationCommand,
+) -> Result<(), WithdrawTeamSideValidationError> {
+    withdraw_team_side_validation_use_case::execute(
+        cmd,
+        state.match_report.match_report_repo.as_ref(),
+        &state.match_report.event_bus,
+    )
+    .await
+}
+
+/// La réponse d'un retrait, commune au récapitulatif et à l'écran d'attente :
+/// une redirection vers `back_to` ; un camp non validé est un 409.
+pub(crate) fn withdrawal_response(
+    result: Result<(), WithdrawTeamSideValidationError>,
+    back_to: &str,
+) -> Response {
+    use WithdrawTeamSideValidationError as E;
+    match result {
+        Ok(()) => Redirect::to(back_to).into_response(),
+        Err(E::Conflict) => conflict_response(),
+        Err(E::Domain(err)) => domain_refusal_response(&err),
+        Err(E::NotFound) => StatusCode::NOT_FOUND.into_response(),
+        Err(E::NotInCompatibleState) => StatusCode::CONFLICT.into_response(),
+        Err(E::Internal(e)) => {
+            tracing::error!("retrait de la validation d'un camp : {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
@@ -1189,6 +1284,31 @@ mod side_validation_tests {
             status(ValidateTeamSideError::Domain(missing)),
             StatusCode::UNPROCESSABLE_ENTITY
         );
+    }
+
+    fn withdrawal_status(e: WithdrawTeamSideValidationError) -> StatusCode {
+        withdrawal_response(Err(e), "/recap").status()
+    }
+
+    /// Carte 659-B : un retrait renvoie là d'où il vient ; un camp non validé
+    /// est un 409, un rapport publié aussi.
+    #[test]
+    fn a_withdrawal_goes_back_and_each_refusal_has_its_status() {
+        let ok = withdrawal_response(Ok(()), "/recap");
+        assert_eq!(ok.status(), StatusCode::SEE_OTHER);
+        assert_eq!(ok.headers().get("location").unwrap(), "/recap");
+        use WithdrawTeamSideValidationError as E;
+        let not_validated = DomainError::SideNotValidated(TeamSide::Away);
+        let cases = [
+            (E::Domain(not_validated), StatusCode::CONFLICT),
+            (E::Conflict, StatusCode::CONFLICT),
+            (E::NotFound, StatusCode::NOT_FOUND),
+            (E::NotInCompatibleState, StatusCode::CONFLICT),
+            (E::Internal("x".into()), StatusCode::INTERNAL_SERVER_ERROR),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(withdrawal_status(error), expected);
+        }
     }
 
     #[test]

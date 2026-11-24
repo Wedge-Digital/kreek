@@ -225,6 +225,13 @@ pub enum MatchReportDomainEvent {
         team_side: TeamSide,
         validated_by: CoachId,
     },
+    /// Un camp retire sa validation, en « Chacun son équipe » (carte 659-B,
+    /// § 12.5 de E22) : le camp redevient modifiable, et se revalide. Tant que
+    /// le rapport n'est pas publié — la seconde validation publie aussitôt.
+    TeamSideValidationWithdrawn {
+        team_side: TeamSide,
+        withdrawn_by: CoachId,
+    },
     MatchReportPublished {
         published_by: CoachId,
         published_at: DateTime<Utc>,
@@ -271,6 +278,7 @@ impl MatchReportDomainEvent {
             Self::TeamPostMatchRecorded { .. } => "TeamPostMatchRecorded",
             Self::PostMatchClosed => "PostMatchClosed",
             Self::TeamSideValidated { .. } => "TeamSideValidated",
+            Self::TeamSideValidationWithdrawn { .. } => "TeamSideValidationWithdrawn",
             Self::MatchReportPublished { .. } => "MatchReportPublished",
             Self::MatchReportUnpublished { .. } => "MatchReportUnpublished",
             Self::RoundReassigned { .. } => "RoundReassigned",

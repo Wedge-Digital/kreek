@@ -5,6 +5,7 @@ use crate::app::match_report::domain::value_objects::{
 use crate::app::match_report::use_cases::inducements_recap_service::{
     RecapLine, RecapSide, RecordedBy,
 };
+use crate::app::shared_kernel::identity::ids::CoachId;
 
 // ── Récap — VMs pur domaine (from_domain / all_from_domain) ───────────────────
 
@@ -62,6 +63,11 @@ pub struct SideValidationVm {
     pub validated: bool,
     /// Le nom de qui a validé, quand le port le connaît.
     pub validated_by: Option<String>,
+    /// La forme écrite du camp, envoyée par le formulaire de retrait.
+    pub team_side: &'static str,
+    /// Le libellé du bouton de retrait, pour qui peut retirer cette
+    /// validation (carte 659-B) ; `None` sinon.
+    pub withdraw_label: Option<&'static str>,
 }
 
 /// Un camp que l'utilisateur peut valider, et le libellé de son bouton.
@@ -85,6 +91,8 @@ pub struct ValidationFacts<'a> {
     pub validatable: &'a [TeamSide],
     pub team_names: (&'a str, &'a str),
     pub validators: (Option<String>, Option<String>),
+    /// Qui regarde : « ma validation » est la sienne (carte 659-B).
+    pub viewer: CoachId,
 }
 
 impl<'a> ValidationFacts<'a> {
@@ -93,12 +101,14 @@ impl<'a> ValidationFacts<'a> {
         validatable: &'a [TeamSide],
         team_names: (&'a str, &'a str),
         validators: (Option<String>, Option<String>),
+        viewer: CoachId,
     ) -> Self {
         Self {
             validated,
             validatable,
             team_names,
             validators,
+            viewer,
         }
     }
 }
@@ -131,6 +141,22 @@ fn side_validation(facts: &ValidationFacts<'_>, side: TeamSide) -> SideValidatio
         team_name: of_side(facts.team_names, side).to_string(),
         validated: facts.validated.of(side).is_some(),
         validated_by: of_side(facts.validators.clone(), side),
+        team_side: of_side(("home", "away"), side),
+        withdraw_label: withdraw_label(facts, side),
+    }
+}
+
+/// « Retirer ma validation » sous un camp validé, pour qui peut le valider —
+/// le coach du camp, ou l'admin (carte 659-B). L'admin qui retire la
+/// validation d'un autre lit « Retirer la validation ».
+fn withdraw_label(facts: &ValidationFacts<'_>, side: TeamSide) -> Option<&'static str> {
+    let validator = facts.validated.of(side)?;
+    if !facts.validatable.contains(&side) {
+        return None;
+    }
+    match validator == facts.viewer {
+        true => Some("Retirer ma validation"),
+        false => Some("Retirer la validation"),
     }
 }
 
@@ -460,13 +486,49 @@ mod validation_panel_tests {
     use crate::app::shared_kernel::identity::ids::CoachId;
 
     fn facts(validated: SideAuthors, validatable: &[TeamSide]) -> ValidationFacts<'_> {
+        seen_by(validated, validatable, CoachId::new())
+    }
+
+    fn seen_by(
+        validated: SideAuthors,
+        validatable: &[TeamSide],
+        viewer: CoachId,
+    ) -> ValidationFacts<'_> {
         let names = ("London Rats", "Orcland Raiders");
         ValidationFacts::new(
             validated,
             validatable,
             names,
             (Some("Morgane".into()), None),
+            viewer,
         )
+    }
+
+    /// Carte 659-B : le coach qui a validé lit « Retirer ma validation » sous
+    /// son camp ; le camp de l'autre, ou un camp non validé, n'en a pas.
+    #[test]
+    fn a_coach_is_offered_to_withdraw_his_validation() {
+        let coach = CoachId::new();
+        let validated = SideAuthors::default()
+            .with(TeamSide::Home, coach)
+            .with(TeamSide::Away, CoachId::new());
+        let panel = ValidationPanelVm::from_domain(seen_by(validated, &[TeamSide::Home], coach));
+        assert_eq!(panel.sides[0].withdraw_label, Some("Retirer ma validation"));
+        assert_eq!(panel.sides[0].team_side, "home");
+        assert_eq!(panel.sides[1].withdraw_label, None);
+        let none = ValidationPanelVm::from_domain(facts(SideAuthors::default(), &[TeamSide::Home]));
+        assert!(none.sides.iter().all(|s| s.withdraw_label.is_none()));
+    }
+
+    /// L'admin retire chaque camp validé ; celui d'un autre se dit « la ».
+    #[test]
+    fn the_admin_may_withdraw_each_validated_side() {
+        let admin = CoachId::new();
+        let validated = SideAuthors::default().with(TeamSide::Away, CoachId::new());
+        let panel = ValidationPanelVm::from_domain(seen_by(validated, &TeamSide::BOTH, admin));
+        assert_eq!(panel.sides[0].withdraw_label, None);
+        assert_eq!(panel.sides[1].withdraw_label, Some("Retirer la validation"));
+        assert_eq!(panel.sides[1].team_side, "away");
     }
 
     /// Le coach du domicile, personne n'a validé : son bouton, rien d'autre.

@@ -23,7 +23,7 @@ pub fn conflict_response() -> Response {
 /// 422 pour tout autre motif.
 pub fn domain_refusal_status(err: &DomainError) -> StatusCode {
     match err {
-        DomainError::SideValidated(_) => StatusCode::CONFLICT,
+        DomainError::SideValidated(_) | DomainError::SideNotValidated(_) => StatusCode::CONFLICT,
         _ => StatusCode::UNPROCESSABLE_ENTITY,
     }
 }
@@ -45,6 +45,13 @@ mod tests {
         assert_eq!(domain_refusal_status(&validated), StatusCode::CONFLICT);
         let response = domain_refusal_response(&validated);
         assert_eq!(response.status(), StatusCode::CONFLICT);
+    }
+
+    /// Carte 659-B : retirer une validation absente est un conflit d'état.
+    #[test]
+    fn a_withdrawal_of_a_side_not_validated_is_a_409() {
+        let refused = DomainError::SideNotValidated(TeamSide::Away);
+        assert_eq!(domain_refusal_status(&refused), StatusCode::CONFLICT);
     }
 
     #[test]

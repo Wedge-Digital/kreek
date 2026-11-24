@@ -38,6 +38,10 @@ pub mod path {
     /// (carte 659-A).
     pub const MATCH_REPORT_STEP5_SIDE_VALIDATE: &str =
         "/app/{space_id}/match-report/{match_report_id}/step5/{side}/validate";
+    /// Le retrait de la validation d'un camp depuis l'écran d'attente (carte
+    /// 659-B).
+    pub const MATCH_REPORT_STEP5_SIDE_WITHDRAW_VALIDATION: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step5/{side}/withdraw-validation";
     /// L'après-match d'un camp, en lecture seule : le bloc de l'adversaire,
     /// rechargé sur le signal du match (carte 658).
     pub const MATCH_REPORT_STEP5_OPPONENT: &str =
@@ -79,6 +83,9 @@ pub mod path {
         "/app/{space_id}/match-report/{match_report_id}/recap/publish";
     pub const MATCH_REPORT_RECAP_UNPUBLISH: &str =
         "/app/{space_id}/match-report/{match_report_id}/recap/unpublish";
+    /// Le retrait de la validation d'un camp (carte 659-B).
+    pub const MATCH_REPORT_RECAP_WITHDRAW_VALIDATION: &str =
+        "/app/{space_id}/match-report/{match_report_id}/recap/withdraw-validation";
     // ── Impression (épic E16) ─────────────────────────────────────────────
     // `print` est un segment fixe : il prime sur `{match_report_id}`. La
     // seconde équipe est dans le chemin, contrôlée par `space_scope` (carte 594).
@@ -223,6 +230,20 @@ impl Routes {
             .replace("{side}", side)
     }
 
+    /// `side` vaut `home` ou `away` : le camp dont on retire la validation
+    /// (carte 659-B).
+    pub fn step5_side_withdraw_validation(
+        &self,
+        space_id: &str,
+        match_report_id: &str,
+        side: &str,
+    ) -> String {
+        path::MATCH_REPORT_STEP5_SIDE_WITHDRAW_VALIDATION
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{side}", side)
+    }
+
     /// `side` vaut `home` ou `away` : le camp dont on lit l'après-match.
     pub fn step5_opponent(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
         path::MATCH_REPORT_STEP5_OPPONENT
@@ -342,6 +363,12 @@ impl Routes {
 
     pub fn recap_unpublish(&self, space_id: &str, match_report_id: &str) -> String {
         path::MATCH_REPORT_RECAP_UNPUBLISH
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+    }
+
+    pub fn recap_withdraw_validation(&self, space_id: &str, match_report_id: &str) -> String {
+        path::MATCH_REPORT_RECAP_WITHDRAW_VALIDATION
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
     }

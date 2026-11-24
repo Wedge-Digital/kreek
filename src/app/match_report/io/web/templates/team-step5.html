@@ -26,8 +26,13 @@
   {% if validated %}
   <div class="mr-info-banner mr-info-banner--ok team-step5-validated">
     <span class="mr-info-icon">&#10003;</span>
-    <span><strong>Validé &#10003;</strong> — les {{ own_team_name }} ne se modifient plus.</span>
+    <span><strong>Validé &#10003;</strong> — les {{ own_team_name }} ne se modifient plus, sauf à retirer votre validation.</span>
   </div>
+  {% if let Some(url) = withdraw_url.as_ref() %}
+  <form class="mr-actions team-step5-withdraw" method="post" action="{{ url }}">
+    <button type="submit" class="btn-outline-sm">Retirer ma validation</button>
+  </form>
+  {% endif %}
   {% else if let Some(url) = validate_url.as_ref() %}
   <form class="mr-actions team-step5-validate" method="post" action="{{ url }}">
     <span>En attendant l'autre équipe, vous pouvez valider la vôtre.</span>

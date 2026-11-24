@@ -560,6 +560,23 @@
 .ms-page.ms-validation-status { font-size: var(--text-tiny); color: var(--dark-3); }
 .ms-page .ms-validation-status--done,
 .ms-page.ms-validation-status--done { color: var(--green); font-weight: 600; }
+/* Le retrait d'une validation (carte 659-B) */
+.ms-page .ms-validation-side,
+.ms-page.ms-validation-side { display: flex; align-items: center; gap: var(--p1); flex-wrap: wrap; justify-content: flex-end; }
+.ms-page .ms-validation-withdraw-form,
+.ms-page.ms-validation-withdraw-form { margin: 0; }
+.ms-page .ms-validation-withdraw,
+.ms-page.ms-validation-withdraw {
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--dark-2);
+  border: 1px solid var(--dark-4);
+  border-radius: 6px;
+  font-size: var(--text-tiny);
+  cursor: pointer;
+}
+.ms-page .ms-validation-withdraw:hover,
+.ms-page.ms-validation-withdraw:hover { background: var(--dark-6); }
 
 /* ── CTA ── */
 .ms-page .ms-cta-row,

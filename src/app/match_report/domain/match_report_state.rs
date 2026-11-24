@@ -592,6 +592,16 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
             ) => MatchReportState::ReadyToPublish(
                 rtp.apply_side_validated(*team_side, *validated_by),
             ),
+            // Le retrait d'une validation (carte 659-B), dans les deux mêmes
+            // états.
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::TeamSideValidationWithdrawn { team_side, .. },
+            ) => MatchReportState::PreMatch(pm.apply_side_validation_withdrawn(*team_side)),
+            (
+                Some(MatchReportState::ReadyToPublish(rtp)),
+                MatchReportDomainEvent::TeamSideValidationWithdrawn { team_side, .. },
+            ) => MatchReportState::ReadyToPublish(rtp.apply_side_validation_withdrawn(*team_side)),
             // Le changement de journée vaut pour les quatre états vivants
             // (carte 557) : la journée change, le reste de l'état non.
             (Some(vivant), MatchReportDomainEvent::RoundReassigned { round_id }) => {
@@ -2762,5 +2772,102 @@ mod tests {
             .unpublish(CoachId::new(), CorrectionEligibility::Eligible)
             .unwrap();
         assert_eq!(back.validated_by, Default::default());
+    }
+
+    // ── Carte 659-B — retirer sa validation ──────────────────────────────────
+
+    /// § 12.5 : valider, retirer, écrire de nouveau dans le camp, revalider —
+    /// et le flux se rejoue à l'identique.
+    #[test]
+    fn a_withdrawn_side_is_written_again_and_revalidated_on_replay() {
+        let by = CoachId::new();
+        let (stream, pm) = validated_while_waiting(TeamSide::Away, by);
+        let (withdrawn, withdrawal) = pm.withdraw_side_validation(TeamSide::Away, by).unwrap();
+        assert_eq!(withdrawn.validated_by.of(TeamSide::Away), None);
+        assert_eq!(withdrawn.version, pm.version + 1);
+        assert!(withdrawn.check_side_open(TeamSide::Away).is_ok());
+        let (outcome, rewritten) = withdrawn
+            .record_team_post_match(side_entry(TeamSide::Away, 50, None))
+            .unwrap();
+        let (revalidated, revalidation) =
+            pending(outcome).validate_side(TeamSide::Away, by).unwrap();
+        let stream = stream
+            .into_iter()
+            .chain([withdrawal])
+            .chain(rewritten)
+            .chain([revalidation]);
+        let MatchReportState::PreMatch(replayed_pm) = replayed(stream.collect()) else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(replayed_pm.validated_by, revalidated.validated_by);
+        assert_eq!(replayed_pm.version, revalidated.version);
+        let away = replayed_pm.post_match_of(TeamSide::Away).unwrap();
+        assert_eq!(away.gain, gain(50));
+    }
+
+    /// Le retrait dans un rapport prêt à publier : il se rejoue, et
+    /// `into_pre_match` — par où passent les corrections — le garde.
+    #[test]
+    fn a_withdrawal_in_ready_to_publish_replays_and_survives_into_pre_match() {
+        let (stream, rtp) = both_post_matches();
+        let by = CoachId::new();
+        let (outcome, validation) = rtp.validate_side(TeamSide::Home, by).unwrap();
+        let SideValidationOutcome::Validated(rtp) = outcome else {
+            panic!("attendu Validated");
+        };
+        let (withdrawn, withdrawal) = rtp.withdraw_side_validation(TeamSide::Home, by).unwrap();
+        assert_eq!(withdrawn.validated_by.of(TeamSide::Home), None);
+        let pm = withdrawn.clone().into_pre_match();
+        assert_eq!(pm.validated_by, withdrawn.validated_by);
+        assert!(pm.check_side_open(TeamSide::Home).is_ok());
+        let stream = stream.into_iter().chain(validation).chain([withdrawal]);
+        let MatchReportState::ReadyToPublish(replayed_rtp) = replayed(stream.collect()) else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(replayed_rtp.validated_by, withdrawn.validated_by);
+        assert_eq!(replayed_rtp.version, withdrawn.version);
+    }
+
+    /// Retirer ne touche qu'à son camp : l'autre reste validé.
+    #[test]
+    fn a_withdrawal_leaves_the_other_side_validated() {
+        let (_, rtp) = both_post_matches();
+        let rtp = rtp
+            .apply_side_validated(TeamSide::Home, CoachId::new())
+            .apply_side_validated(TeamSide::Away, CoachId::new());
+        let (withdrawn, _) = rtp
+            .withdraw_side_validation(TeamSide::Away, CoachId::new())
+            .unwrap();
+        assert!(withdrawn.validated_by.of(TeamSide::Home).is_some());
+        assert_eq!(withdrawn.validated_by.of(TeamSide::Away), None);
+    }
+
+    #[test]
+    fn a_side_not_validated_has_nothing_to_withdraw() {
+        let (_, pm) = waiting_on(TeamSide::Home);
+        let refused = pm.withdraw_side_validation(TeamSide::Home, CoachId::new());
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::SideNotValidated(TeamSide::Home)
+        );
+        let (_, rtp) = both_post_matches();
+        let refused = rtp.withdraw_side_validation(TeamSide::Away, CoachId::new());
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::SideNotValidated(TeamSide::Away)
+        );
+    }
+
+    #[test]
+    fn a_validation_is_not_withdrawn_in_solo_entry() {
+        let (_, rtp) = both_post_matches();
+        let mut rtp = rtp.apply_side_validated(TeamSide::Home, CoachId::new());
+        rtp.entry_mode = EntryMode::SoloEntry;
+        let refused = rtp.withdraw_side_validation(TeamSide::Home, CoachId::new());
+        assert_eq!(refused.unwrap_err(), DomainError::NotTeamEntry);
+        let mut pm = frozen_home();
+        pm.entry_mode = EntryMode::SoloEntry;
+        let refused = pm.withdraw_side_validation(TeamSide::Home, CoachId::new());
+        assert_eq!(refused.unwrap_err(), DomainError::NotTeamEntry);
     }
 }

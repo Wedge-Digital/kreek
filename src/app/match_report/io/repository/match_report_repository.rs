@@ -303,6 +303,8 @@ impl MatchReportRepository {
             // La validation d'un camp n'a pas de colonne (carte 659-A) : la
             // phase change au `MatchReportPublished` de la seconde.
             MatchReportDomainEvent::TeamSideValidated { .. } => {}
+            // Son retrait non plus (carte 659-B).
+            MatchReportDomainEvent::TeamSideValidationWithdrawn { .. } => {}
             MatchReportDomainEvent::PostMatchRecorded { .. }
             | MatchReportDomainEvent::PostMatchClosed => {
                 sqlx::query(

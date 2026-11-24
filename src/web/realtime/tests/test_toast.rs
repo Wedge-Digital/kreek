@@ -248,6 +248,25 @@ fn a_side_validation_makes_no_toast_yet() {
     assert_eq!(TOAST_EVENT_TYPES.len(), 4);
 }
 
+/// Le retrait d'une validation : un signal, sans toast (carte 659-B).
+#[test]
+fn a_withdrawn_validation_makes_no_toast() {
+    let event = MatchReportAppEvent::MatchSideValidationWithdrawn {
+        event_id: EventId::new(),
+        match_report_id: MATCH.into(),
+        space_id: SPACE.into(),
+        home_team_id: HOME.into(),
+        away_team_id: AWAY.into(),
+        team_side: TeamSidePayload::Away,
+        withdrawn_by: AUTHOR.into(),
+    };
+    assert_eq!(notice_of(&event), None);
+    assert_eq!(event.event_type(), "MatchSideValidationWithdrawn");
+    assert_eq!(event.match_report_id(), MATCH);
+    assert!(!TOAST_EVENT_TYPES.contains(&event.event_type()));
+    assert_eq!(TOAST_EVENT_TYPES.len(), 4);
+}
+
 /// Le fan factor d'un camp ne fait que le signal (§ 12.7 de E22, carte 654).
 #[test]
 fn a_team_fan_factor_makes_no_toast() {
