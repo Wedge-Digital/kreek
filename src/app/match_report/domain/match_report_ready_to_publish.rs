@@ -75,6 +75,10 @@ pub struct MatchReportReadyToPublish {
     /// Qui a enregistré l'après-match de chaque camp, en « Chacun son
     /// équipe » (carte 658). Vide en « Je saisis tout ».
     pub post_match_recorded_by: SideAuthors,
+    /// Qui a validé chaque camp, en « Chacun son équipe » (carte 659-A) :
+    /// venu de l'avant-match, et rendu par `into_pre_match` pour que le gel
+    /// tienne pendant une correction. Vide en « Je saisis tout ».
+    pub validated_by: SideAuthors,
     /// Vrai quand ce rapport a déjà été publié puis dépublié pour correction.
     ///
     /// N'existe pas sur `MatchReportPreMatch` : `into_pre_match()` est une
@@ -201,6 +205,7 @@ impl MatchReportReadyToPublish {
             summary_body,
             summary_paragraphs: SummaryParagraphs::default(),
             post_match_recorded_by: SideAuthors::default(),
+            validated_by: pm.validated_by,
             // Un rapport qui atteint cet état pour la première fois n'a jamais
             // été publié. Seul `unpublish()` positionne ce drapeau.
             was_published_before: false,
@@ -234,6 +239,7 @@ impl MatchReportReadyToPublish {
             away_inducements_recorded_by: self.away_inducements_recorded_by,
             fan_factor_recorded_by: self.fan_factor_recorded_by,
             team_post_match,
+            validated_by: self.validated_by,
             star_engagements: self.star_engagements,
             home_temp_players: self.home_temp_players,
             away_temp_players: self.away_temp_players,
@@ -359,6 +365,7 @@ mod tests {
             was_published_before: false,
             summary_paragraphs: Default::default(),
             post_match_recorded_by: Default::default(),
+            validated_by: Default::default(),
         }
     }
 

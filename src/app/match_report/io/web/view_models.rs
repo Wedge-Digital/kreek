@@ -1,6 +1,6 @@
 use crate::app::match_report::domain::team_post_match::SummaryParagraphs;
 use crate::app::match_report::domain::value_objects::{
-    ActionPlayer, InjuryType, MatchAction, MatchActionType, PurchaseKind, TeamSide,
+    ActionPlayer, InjuryType, MatchAction, MatchActionType, PurchaseKind, SideAuthors, TeamSide,
 };
 use crate::app::match_report::use_cases::inducements_recap_service::{
     RecapLine, RecapSide, RecordedBy,
@@ -52,6 +52,99 @@ impl SummaryParagraphVm {
                 })
             })
             .collect()
+    }
+}
+
+/// Où en est la validation d'un camp, au récapitulatif non publié d'un
+/// rapport en « Chacun son équipe » (carte 659-A).
+pub struct SideValidationVm {
+    pub team_name: String,
+    pub validated: bool,
+    /// Le nom de qui a validé, quand le port le connaît.
+    pub validated_by: Option<String>,
+}
+
+/// Un camp que l'utilisateur peut valider, et le libellé de son bouton.
+pub struct ValidateButtonVm {
+    /// La forme écrite du camp, envoyée par le formulaire de l'admin.
+    pub team_side: &'static str,
+    pub label: String,
+}
+
+/// Le bloc de validation : chaque camp, et un bouton par camp que
+/// l'utilisateur valide et qui ne l'est pas encore (§ 12.6 de E22).
+pub struct ValidationPanelVm {
+    pub sides: Vec<SideValidationVm>,
+    pub buttons: Vec<ValidateButtonVm>,
+}
+
+/// Ce que le bloc de validation lit : les validations du domaine, les camps
+/// que l'utilisateur valide, les noms des équipes et des validateurs.
+pub struct ValidationFacts<'a> {
+    pub validated: SideAuthors,
+    pub validatable: &'a [TeamSide],
+    pub team_names: (&'a str, &'a str),
+    pub validators: (Option<String>, Option<String>),
+}
+
+impl<'a> ValidationFacts<'a> {
+    pub fn new(
+        validated: SideAuthors,
+        validatable: &'a [TeamSide],
+        team_names: (&'a str, &'a str),
+        validators: (Option<String>, Option<String>),
+    ) -> Self {
+        Self {
+            validated,
+            validatable,
+            team_names,
+            validators,
+        }
+    }
+}
+
+impl ValidationPanelVm {
+    pub fn from_domain(facts: ValidationFacts<'_>) -> Self {
+        let sides = vec![
+            side_validation(&facts, TeamSide::Home),
+            side_validation(&facts, TeamSide::Away),
+        ];
+        let buttons = facts
+            .validatable
+            .iter()
+            .filter(|side| facts.validated.of(**side).is_none())
+            .map(|side| validate_button(&facts, *side))
+            .collect();
+        Self { sides, buttons }
+    }
+}
+
+fn of_side<T>(pair: (T, T), side: TeamSide) -> T {
+    match side {
+        TeamSide::Home => pair.0,
+        TeamSide::Away => pair.1,
+    }
+}
+
+fn side_validation(facts: &ValidationFacts<'_>, side: TeamSide) -> SideValidationVm {
+    SideValidationVm {
+        team_name: of_side(facts.team_names, side).to_string(),
+        validated: facts.validated.of(side).is_some(),
+        validated_by: of_side(facts.validators.clone(), side),
+    }
+}
+
+/// « Valider les [équipe] », et « … et publier » quand l'autre a validé : ce
+/// clic-là publie (R9).
+fn validate_button(facts: &ValidationFacts<'_>, side: TeamSide) -> ValidateButtonVm {
+    let name = of_side(facts.team_names, side);
+    let publishes = facts.validated.of(side.opposite()).is_some();
+    ValidateButtonVm {
+        team_side: of_side(("home", "away"), side),
+        label: match publishes {
+            true => format!("Valider les {name} et publier"),
+            false => format!("Valider les {name}"),
+        },
     }
 }
 
@@ -359,6 +452,58 @@ pub fn team_initials(team_name: &str) -> String {
         .take(2)
         .collect::<String>()
         .to_uppercase()
+}
+
+#[cfg(test)]
+mod validation_panel_tests {
+    use super::*;
+    use crate::app::shared_kernel::identity::ids::CoachId;
+
+    fn facts(validated: SideAuthors, validatable: &[TeamSide]) -> ValidationFacts<'_> {
+        let names = ("London Rats", "Orcland Raiders");
+        ValidationFacts::new(
+            validated,
+            validatable,
+            names,
+            (Some("Morgane".into()), None),
+        )
+    }
+
+    /// Le coach du domicile, personne n'a validé : son bouton, rien d'autre.
+    #[test]
+    fn a_coach_is_offered_to_validate_his_side() {
+        let panel =
+            ValidationPanelVm::from_domain(facts(SideAuthors::default(), &[TeamSide::Home]));
+        assert_eq!(panel.buttons.len(), 1);
+        assert_eq!(panel.buttons[0].label, "Valider les London Rats");
+        assert_eq!(panel.buttons[0].team_side, "home");
+        assert!(panel.sides.iter().all(|s| !s.validated));
+    }
+
+    /// L'autre a validé : le clic publie, et le bloc dit qui a validé.
+    #[test]
+    fn the_second_validation_says_it_publishes() {
+        let validated = SideAuthors::default().with(TeamSide::Home, CoachId::new());
+        let panel = ValidationPanelVm::from_domain(facts(validated, &[TeamSide::Away]));
+        assert_eq!(
+            panel.buttons[0].label,
+            "Valider les Orcland Raiders et publier"
+        );
+        assert!(panel.sides[0].validated);
+        assert_eq!(panel.sides[0].validated_by.as_deref(), Some("Morgane"));
+        assert!(!panel.sides[1].validated);
+    }
+
+    /// Un camp validé n'a plus de bouton ; l'admin en a un par camp restant.
+    #[test]
+    fn the_admin_has_one_button_per_side_still_to_validate() {
+        let validated = SideAuthors::default().with(TeamSide::Home, CoachId::new());
+        let panel = ValidationPanelVm::from_domain(facts(validated, &TeamSide::BOTH));
+        let sides: Vec<_> = panel.buttons.iter().map(|b| b.team_side).collect();
+        assert_eq!(sides, ["away"]);
+        let none = ValidationPanelVm::from_domain(facts(SideAuthors::default(), &TeamSide::BOTH));
+        assert_eq!(none.buttons.len(), 2);
+    }
 }
 
 #[cfg(test)]

@@ -16,6 +16,10 @@
 //! le domaine remplace l'après-match d'un camp au lieu de le refuser, donc le
 //! réessai vérifie que son camp n'a pas bougé depuis la première lecture.
 //!
+//! Depuis la carte 659-A, `validate_side` y entre **sans garde** : le domaine
+//! refuse de valider deux fois le même camp ; un réessai après la validation
+//! de l'autre publie, ce qui est la règle.
+//!
 //! Le fan factor et l'après-match des deux camps (« Je saisis tout ») n'y
 //! entrent pas : leur domaine écrase sans refuser, et un réessai y serait un
 //! « dernier qui écrit gagne » silencieux.

@@ -11,7 +11,7 @@ use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::mvp_draw::{DrawnMvp, DRAW_SIZE};
 use crate::app::match_report::domain::value_objects::{EntryMode, MatchAction, TeamSide};
 use crate::app::match_report::io::web::record_action_controller::build_player;
-use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::io::web::write_conflict::{conflict_response, domain_refusal_status};
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::record_mvp_use_case::{
     self, RecordMvpCommand, RecordMvpError,
@@ -411,7 +411,7 @@ pub(crate) fn error_response(e: RecordMvpError) -> Response {
 /// vient d'une page périmée : elle se recharge sur le MVP qui existe. Moins de
 /// six désignés, un doublon : le motif seul (carte 638).
 fn domain_refusal(err: DomainError) -> Response {
-    let status = StatusCode::UNPROCESSABLE_ENTITY;
+    let status = domain_refusal_status(&err);
     match err {
         DomainError::MvpAlreadyRecorded => {
             (status, [("HX-Refresh", "true")], err.to_string()).into_response()

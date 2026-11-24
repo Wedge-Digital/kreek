@@ -300,6 +300,9 @@ impl MatchReportRepository {
             // L'après-match d'un camp n'écrit rien : la phase change au
             // `PostMatchClosed` appendé avec le second (carte 658, § 12.8).
             MatchReportDomainEvent::TeamPostMatchRecorded { .. } => {}
+            // La validation d'un camp n'a pas de colonne (carte 659-A) : la
+            // phase change au `MatchReportPublished` de la seconde.
+            MatchReportDomainEvent::TeamSideValidated { .. } => {}
             MatchReportDomainEvent::PostMatchRecorded { .. }
             | MatchReportDomainEvent::PostMatchClosed => {
                 sqlx::query(

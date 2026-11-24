@@ -166,6 +166,17 @@ pub enum MatchReportAppEvent {
         team_side: TeamSidePayload,
         recorded_by: String,
     },
+    /// Un camp a validé son équipe, en « Chacun son équipe » (carte 659-A).
+    /// Un signal ; son toast viendra avec la carte 659-C (§ 12.7 de E22).
+    MatchSideValidated {
+        event_id: EventId,
+        match_report_id: String,
+        space_id: String,
+        home_team_id: String,
+        away_team_id: String,
+        team_side: TeamSidePayload,
+        validated_by: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
@@ -305,6 +316,7 @@ impl MatchReportAppEvent {
     pub const MATCH_INDUCEMENTS_CANCELLED: &'static str = "MatchInducementsCancelled";
     pub const MATCH_FAN_FACTOR_RECORDED: &'static str = "MatchFanFactorRecorded";
     pub const MATCH_POST_MATCH_RECORDED: &'static str = "MatchPostMatchRecorded";
+    pub const MATCH_SIDE_VALIDATED: &'static str = "MatchSideValidated";
 
     pub fn event_type(&self) -> &'static str {
         match self {
@@ -321,6 +333,7 @@ impl MatchReportAppEvent {
             Self::MatchInducementsCancelled { .. } => Self::MATCH_INDUCEMENTS_CANCELLED,
             Self::MatchFanFactorRecorded { .. } => Self::MATCH_FAN_FACTOR_RECORDED,
             Self::MatchPostMatchRecorded { .. } => Self::MATCH_POST_MATCH_RECORDED,
+            Self::MatchSideValidated { .. } => Self::MATCH_SIDE_VALIDATED,
         }
     }
 
@@ -362,6 +375,9 @@ impl MatchReportAppEvent {
                 match_report_id, ..
             }
             | Self::MatchPostMatchRecorded {
+                match_report_id, ..
+            }
+            | Self::MatchSideValidated {
                 match_report_id, ..
             } => match_report_id,
         }

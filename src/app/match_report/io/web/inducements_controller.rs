@@ -9,7 +9,7 @@ use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{EntryMode, RosterPositionUid, TeamValue};
 use crate::app::match_report::io::web::pre_match_controller::SwitchSideVm;
 use crate::app::match_report::io::web::view_models::{team_initials, RecapSideVm};
-use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::io::web::write_conflict::{conflict_response, domain_refusal_status};
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::match_report::use_cases::inducements_recap_service::{
     self, InducementsRecap, RecapPorts,
@@ -587,9 +587,7 @@ fn refus_d_achat(erreur: &RecordInducementsError) -> Option<(StatusCode, String)
             StatusCode::CONFLICT,
             DomainError::TopdogHasNotChosen.to_string(),
         )),
-        RecordInducementsError::Domain(e) => {
-            Some((StatusCode::UNPROCESSABLE_ENTITY, e.to_string()))
-        }
+        RecordInducementsError::Domain(e) => Some((domain_refusal_status(e), e.to_string())),
         RecordInducementsError::UnauthorizedInducement(uid) => Some((
             StatusCode::UNPROCESSABLE_ENTITY,
             format!("Coup de pouce non autorisé pour cette équipe : {uid}"),

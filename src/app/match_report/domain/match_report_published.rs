@@ -148,6 +148,9 @@ impl MatchReportPublished {
             summary_body: self.summary_body.clone(),
             summary_paragraphs: self.summary_paragraphs.clone(),
             post_match_recorded_by: self.post_match_recorded_by,
+            // La correction demande de nouveau les deux validations (R10 de
+            // E22) : un rapport dépublié n'a aucun camp validé.
+            validated_by: SideAuthors::default(),
             was_published_before: true,
         }
     }

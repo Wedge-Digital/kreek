@@ -100,7 +100,9 @@ pub fn notice_of(event: &MatchReportAppEvent) -> Option<MatchNotice> {
         // Le fan factor d'un camp : un signal, pas de toast (§ 12.7 de E22).
         | E::MatchFanFactorRecorded { .. }
         // L'après-match d'un camp non plus (carte 658).
-        | E::MatchPostMatchRecorded { .. } => None,
+        | E::MatchPostMatchRecorded { .. }
+        // La validation d'un camp : son toast vient avec la carte 659-C.
+        | E::MatchSideValidated { .. } => None,
     }
 }
 

@@ -542,6 +542,25 @@
 .ms-page .ms-injury-badge--death,
 .ms-page.ms-injury-badge--death   { background: rgba(0,0,0,0.07);      color: var(--dark-2); }
 
+/* ── Validation des camps, en « Chacun son équipe » (carte 659-A) ── */
+.ms-page .ms-validation-row,
+.ms-page.ms-validation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p1);
+  padding: 9px 0;
+  border-bottom: 1px solid var(--dark-6);
+}
+.ms-page .ms-validation-row:last-child,
+.ms-page.ms-validation-row:last-child { border-bottom: none; }
+.ms-page .ms-validation-team,
+.ms-page.ms-validation-team { font-size: var(--text-small); font-weight: 600; color: var(--dark-1); }
+.ms-page .ms-validation-status,
+.ms-page.ms-validation-status { font-size: var(--text-tiny); color: var(--dark-3); }
+.ms-page .ms-validation-status--done,
+.ms-page.ms-validation-status--done { color: var(--green); font-weight: 600; }
+
 /* ── CTA ── */
 .ms-page .ms-cta-row,
 .ms-page.ms-cta-row {

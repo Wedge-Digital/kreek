@@ -20,13 +20,21 @@ use crate::app::match_report::domain::value_objects::{
 };
 use crate::app::match_report::io::web::mvp_step_controller::{parse_side, side_slug};
 use crate::app::match_report::io::web::pre_match_controller::SwitchSideVm;
-use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::io::web::recap_controller::{
+    execute_validation, validation_response,
+};
+use crate::app::match_report::io::web::write_conflict::{
+    conflict_response, domain_refusal_response,
+};
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::match_report_access_service::{
     est_administrateur, AccesRapportDeps,
 };
 use crate::app::match_report::use_cases::record_team_post_match_use_case::{
     self, PostMatchStage, RecordTeamPostMatchCommand, RecordTeamPostMatchError,
+};
+use crate::app::match_report::use_cases::validate_team_side_use_case::{
+    ValidateTeamSideCommand, ValidationStage,
 };
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
@@ -77,6 +85,12 @@ pub struct TeamStep5Template {
     pub recap_url: Option<String>,
     /// L'admin peut saisir l'autre camp (§ 12.6 de E22).
     pub switch: Option<SwitchSideVm>,
+    /// Le camp est validé, donc figé (carte 659-A) : « Validé ✓ », et plus
+    /// d'enregistrement.
+    pub validated: bool,
+    /// « Valider les [mon équipe] », sur l'écran d'attente : le camp a son
+    /// après-match, l'autre pas encore, et il n'a pas validé (carte 659-A).
+    pub validate_url: Option<String>,
 }
 
 impl IntoResponse for TeamStep5Template {
@@ -218,10 +232,21 @@ fn build_page(
             url: routes.step5_side(ids.space_id, ids.mr_id, side_slug(opponent)),
             team_name: side_name(&names, opponent).to_string(),
         }),
+        validated: pm.validated_by.of(side).is_some(),
+        validate_url: offers_validation(loaded, side)
+            .then(|| routes.step5_side_validate(ids.space_id, ids.mr_id, side_slug(side))),
         app_routes: AppRoutes::default(),
         space_id: ids.space_id.to_string(),
         match_report_id: ids.mr_id.to_string(),
     }
+}
+
+/// L'écran d'attente offre la validation (carte 659-A, décision du
+/// 2026-11-24) : le camp a son après-match, n'a pas validé, et l'autre n'a pas
+/// encore le sien — une fois l'après-match fermé, c'est le récapitulatif.
+fn offers_validation(loaded: &Loaded, side: TeamSide) -> bool {
+    let pm = &loaded.pm;
+    !loaded.closed && pm.post_match_of(side).is_some() && pm.validated_by.of(side).is_none()
 }
 
 fn side_name(names: &(String, String), side: TeamSide) -> &str {
@@ -336,6 +361,61 @@ fn url_after(ids: &PageIds<'_>, side: TeamSide, stage: PostMatchStage) -> String
     }
 }
 
+/// La validation d'un camp depuis l'écran d'attente (carte 659-A). Le camp
+/// vient de la route, que `garde_camp` a vérifiée : jamais du formulaire. Le
+/// use case est celui du récapitulatif.
+pub async fn post_validate_side(
+    auth_session: AuthSession,
+    Path((space_id, mr_id, side)): Path<(String, String, String)>,
+    State(state): State<AppState>,
+) -> Response {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Some(cmd) = validation_command(&mr_id, &side, user.id) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    let ids = PageIds {
+        space_id: &space_id,
+        mr_id: &mr_id,
+    };
+    validate_and_return(&state, &ids, cmd).await
+}
+
+/// Le use case du récapitulatif, puis le retour sur l'écran du camp.
+async fn validate_and_return(
+    state: &AppState,
+    ids: &PageIds<'_>,
+    cmd: ValidateTeamSideCommand,
+) -> Response {
+    let side = cmd.team_side;
+    let result = execute_validation(state, cmd).await;
+    let back = url_after_validation(ids, side, result.as_ref().ok().copied());
+    validation_response(result, &back)
+}
+
+fn validation_command(mr_id: &str, side: &str, by: CoachId) -> Option<ValidateTeamSideCommand> {
+    Some(ValidateTeamSideCommand {
+        match_report_id: MatchReportId::try_new(mr_id).ok()?,
+        team_side: parse_side(side)?,
+        validated_by: by,
+    })
+}
+
+/// Retour sur l'écran du camp, qui dit « Validé ✓ » ; le récapitulatif si la
+/// validation a publié.
+fn url_after_validation(
+    ids: &PageIds<'_>,
+    side: TeamSide,
+    stage: Option<ValidationStage>,
+) -> String {
+    let routes = AppRoutes::default().match_report;
+    match stage {
+        Some(ValidationStage::Published) => routes.recap(ids.space_id, ids.mr_id),
+        _ => routes.step5_side(ids.space_id, ids.mr_id, side_slug(side)),
+    }
+}
+
 fn build_command(
     mr_id: &str,
     side: &str,
@@ -366,9 +446,7 @@ fn filled(text: Option<String>) -> Option<String> {
 fn error_response(e: RecordTeamPostMatchError) -> Response {
     match e {
         RecordTeamPostMatchError::Conflict => conflict_response(),
-        RecordTeamPostMatchError::Domain(err) => {
-            (StatusCode::UNPROCESSABLE_ENTITY, err.to_string()).into_response()
-        }
+        RecordTeamPostMatchError::Domain(err) => domain_refusal_response(&err),
         RecordTeamPostMatchError::NotFound => StatusCode::NOT_FOUND.into_response(),
         RecordTeamPostMatchError::NotInCompatibleState => StatusCode::CONFLICT.into_response(),
         RecordTeamPostMatchError::Internal(msg) => {
@@ -636,5 +714,87 @@ mod tests {
             status(RecordTeamPostMatchError::Internal("base".into())),
             StatusCode::INTERNAL_SERVER_ERROR
         );
+    }
+
+    // ── La validation depuis l'écran d'attente (carte 659-A) ───────────────
+
+    fn loaded(pm: MatchReportPreMatch, closed: bool) -> Loaded {
+        Loaded { pm, closed }
+    }
+
+    fn waiting_home() -> MatchReportPreMatch {
+        team_entry_with_mvps().apply_team_post_match(&side_entry(TeamSide::Home))
+    }
+
+    /// L'écran d'attente offre la validation au camp qui a son après-match,
+    /// tant qu'il n'a pas validé et que l'autre n'a pas fini.
+    #[test]
+    fn the_waiting_screen_offers_the_validation() {
+        assert!(offers_validation(
+            &loaded(waiting_home(), false),
+            TeamSide::Home
+        ));
+        assert!(!offers_validation(
+            &loaded(waiting_home(), false),
+            TeamSide::Away
+        ));
+        assert!(!offers_validation(
+            &loaded(waiting_home(), true),
+            TeamSide::Home
+        ));
+        let validated = waiting_home().apply_side_validated(TeamSide::Home, CoachId::new());
+        assert!(!offers_validation(
+            &loaded(validated, false),
+            TeamSide::Home
+        ));
+    }
+
+    /// Le bouton, puis « Validé ✓ » : la page le sait du domaine.
+    #[test]
+    fn the_page_shows_the_button_then_validated() {
+        let teams = || (team("London Rats"), team("Orcland Raiders"));
+        let page = build_page(
+            &IDS,
+            &loaded(waiting_home(), false),
+            TeamSide::Home,
+            (teams(), false),
+        );
+        let url = page.validate_url.unwrap();
+        assert!(url.ends_with("/M/step5/home/validate"), "{url}");
+        assert!(!page.validated);
+        let validated = waiting_home().apply_side_validated(TeamSide::Home, CoachId::new());
+        let page = build_page(
+            &IDS,
+            &loaded(validated, false),
+            TeamSide::Home,
+            (teams(), false),
+        );
+        assert!(page.validated && page.validate_url.is_none());
+    }
+
+    /// Le camp vient de la route ; un camp illisible est refusé.
+    #[test]
+    fn the_validated_side_comes_from_the_route() {
+        let by = CoachId::new();
+        let cmd = validation_command(MR, "away", by).unwrap();
+        assert_eq!((cmd.team_side, cmd.validated_by), (TeamSide::Away, by));
+        assert!(validation_command(MR, "both", by).is_none());
+        assert!(validation_command("illisible", "home", by).is_none());
+    }
+
+    /// Retour sur l'écran du camp ; au récapitulatif si la validation publie.
+    #[test]
+    fn after_a_validation_the_page_or_the_recap() {
+        let waiting = url_after_validation(
+            &IDS,
+            TeamSide::Away,
+            Some(ValidationStage::AwaitingOtherSide),
+        );
+        assert!(waiting.ends_with("/M/step5/away"), "{waiting}");
+        let refused = url_after_validation(&IDS, TeamSide::Home, None);
+        assert!(refused.ends_with("/M/step5/home"), "{refused}");
+        let published =
+            url_after_validation(&IDS, TeamSide::Away, Some(ValidationStage::Published));
+        assert!(published.ends_with("/M/recap"), "{published}");
     }
 }

@@ -7,21 +7,27 @@ use crate::app::match_report::domain::team_post_match::SummaryParagraphs;
 use crate::app::match_report::domain::value_objects::MatchAction;
 use crate::app::match_report::domain::value_objects::NoStallingBonus;
 use crate::app::match_report::domain::value_objects::{CorrectionBlocker, CorrectionEligibility};
+use crate::app::match_report::domain::value_objects::{EntryMode, SideAuthors, TeamSide};
 use crate::app::match_report::io::web::builders::{
     build_correction_zone, build_performance_rows, build_published_by, build_round_context_vm,
     build_team_banner, AdminBarVm, CorrectionZoneVm, PerformanceRowVm, RoundContextVm,
     TeamBannerVm,
 };
+use crate::app::match_report::io::web::mvp_step_controller::parse_side;
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm, SummaryParagraphVm,
+    ValidationFacts, ValidationPanelVm,
 };
-use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::io::web::write_conflict::{
+    conflict_response, domain_refusal_response,
+};
+use crate::app::match_report::ports::ICoachDataPort;
 use crate::app::match_report::ports::ITeamDataPort;
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::correction_eligibility_service;
 use crate::app::match_report::use_cases::match_report_access_service::{
-    can_write_report, est_administrateur, is_authorized, load_entry_scope, AccesRapportDeps,
-    PorteeRapport,
+    can_write_report, est_administrateur, is_authorized, load_entry_scope, side_to_validate,
+    sides_validatable_by, AccesRapportDeps, EntryScope, PorteeRapport,
 };
 use crate::app::match_report::use_cases::publish_match_report_use_case::{
     self, PublishMatchReportCommand, PublishMatchReportError,
@@ -29,14 +35,21 @@ use crate::app::match_report::use_cases::publish_match_report_use_case::{
 use crate::app::match_report::use_cases::unpublish_match_report_use_case::{
     self, UnpublishMatchReportCommand, UnpublishMatchReportError,
 };
+use crate::app::match_report::use_cases::validate_team_side_use_case::{
+    self, ValidateTeamSideCommand, ValidateTeamSideError, ValidationStage,
+};
 use crate::app::routes::AppRoutes;
 use crate::app::shared_kernel::bloodbowl::ids::MatchReportId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
+use crate::app::shared_kernel::identity::ids::CoachId;
 use crate::state::AppState;
 use askama::Template;
+use axum::extract::rejection::FormRejection;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Redirect, Response};
+use axum::Form;
+use serde::Deserialize;
 
 // ── Template ─────────────────────────────────────────────────────────────────
 
@@ -57,6 +70,10 @@ pub struct RecapTemplate {
     pub result: MatchResultVm,
     /// Le paragraphe de chaque camp, en « Chacun son équipe » (carte 658).
     pub summary_paragraphs: Vec<SummaryParagraphVm>,
+    /// La validation de chaque camp, en « Chacun son équipe » non publié
+    /// (carte 659-A). `None` en « Je saisis tout » : le récapitulatif y reste
+    /// celui d'avant.
+    pub validation: Option<ValidationPanelVm>,
     pub gains_fan: GainsFanVm,
     pub timeline_halves: Vec<HalfTimelineVm>,
     pub mvps: Vec<MvpRowVm>,
@@ -106,6 +123,10 @@ struct RecapSource<'a> {
     summary_title: Option<String>,
     summary_body: Option<String>,
     summary_paragraphs: SummaryParagraphs,
+    /// Vrai pour un rapport en « Chacun son équipe » **non publié** : c'est
+    /// lui qui se valide camp par camp (carte 659-A).
+    validates_by_side: bool,
+    validated_by: SideAuthors,
     was_published_before: bool,
 }
 
@@ -130,6 +151,8 @@ impl<'a> RecapSource<'a> {
             summary_title: rtp.summary_title.clone(),
             summary_body: rtp.summary_body.clone(),
             summary_paragraphs: rtp.summary_paragraphs.clone(),
+            validates_by_side: rtp.entry_mode == EntryMode::TeamEntry,
+            validated_by: rtp.validated_by,
             was_published_before: rtp.was_published_before,
         }
     }
@@ -154,6 +177,9 @@ impl<'a> RecapSource<'a> {
             summary_title: p.summary_title.clone(),
             summary_body: p.summary_body.clone(),
             summary_paragraphs: p.summary_paragraphs.clone(),
+            // Publié, il n'y a plus rien à valider.
+            validates_by_side: false,
+            validated_by: SideAuthors::default(),
             // Sans objet sur un rapport publié : le bandeau ne concerne que
             // l'état corrigeable.
             was_published_before: false,
@@ -320,6 +346,8 @@ async fn build_recap_template(
 
     let routes = AppRoutes::default();
     let move_widget_url = build_move_widget_url(&source, space_id, user, &routes, state).await;
+    let names = (home_team_name.as_str(), away_team_name.as_str());
+    let validation = build_validation_panel(&source, user, space_id, names, state).await;
     RecapTemplate {
         app_routes: routes,
         space_id: space_id.to_string(),
@@ -362,8 +390,49 @@ async fn build_recap_template(
             &source.summary_paragraphs,
             (&home_team_name, &away_team_name),
         ),
+        validation,
         result,
     }
+}
+
+/// Le bloc de validation d'un rapport en « Chacun son équipe » non publié
+/// (carte 659-A) : les camps que l'utilisateur valide viennent du service
+/// d'accès, les validations du domaine.
+async fn build_validation_panel(
+    source: &RecapSource<'_>,
+    user: &User,
+    space_id: &str,
+    team_names: (&str, &str),
+    state: &AppState,
+) -> Option<ValidationPanelVm> {
+    if !source.validates_by_side {
+        return None;
+    }
+    let deps = AccesRapportDeps::from_state(state);
+    let scope = PorteeRapport::from_source(source);
+    let coach_data = state.match_report.coach_data.as_ref();
+    let (validatable, validators) = tokio::join!(
+        sides_validatable_by(&deps, user, space_id, &scope),
+        validator_names(coach_data, source.validated_by),
+    );
+    let facts = ValidationFacts::new(source.validated_by, &validatable, team_names, validators);
+    Some(ValidationPanelVm::from_domain(facts))
+}
+
+/// Les noms de qui a validé chaque camp, domicile puis visiteur.
+async fn validator_names(
+    coach_data: &dyn ICoachDataPort,
+    validated: SideAuthors,
+) -> (Option<String>, Option<String>) {
+    tokio::join!(
+        validator_name(coach_data, validated.of(TeamSide::Home)),
+        validator_name(coach_data, validated.of(TeamSide::Away)),
+    )
+}
+
+/// Le nom de qui a validé un camp, quand le port le connaît.
+async fn validator_name(coach_data: &dyn ICoachDataPort, coach: Option<CoachId>) -> Option<String> {
+    coach_data.find_coach_name(&coach?.to_string()).await
 }
 
 /// L'adresse du widget de déplacement, pour un administrateur et un rapport
@@ -451,10 +520,28 @@ fn blocked_zone(space_id: &str, match_report_id: &str) -> CorrectionZoneVm {
 
 // ── POST ──────────────────────────────────────────────────────────────────────
 
+/// Le camp que l'admin choisit de valider (carte 659-A, § 12.6). Lu, jamais
+/// cru : pour un coach, le camp est le sien, quoi que dise ce champ.
+#[derive(Deserialize)]
+pub struct PublishForm {
+    pub team_side: Option<String>,
+}
+
+/// Le camp demandé par le formulaire, s'il y en a un et qu'il se lit. Un
+/// POST sans corps — la publication du mode A — n'en demande aucun.
+fn requested_side(form: Result<Form<PublishForm>, FormRejection>) -> Option<TeamSide> {
+    let Form(form) = form.ok()?;
+    parse_side(form.team_side.as_deref()?)
+}
+
+/// En « Je saisis tout », publie. En « Chacun son équipe », valide un camp —
+/// celui du coach, ou celui que l'admin choisit — et la seconde validation
+/// publie (carte 659-A).
 pub async fn post_publish(
     auth_session: AuthSession,
     Path((space_id, match_report_id)): Path<(String, String)>,
     State(state): State<AppState>,
+    form: Result<Form<PublishForm>, FormRejection>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
         return StatusCode::UNAUTHORIZED.into_response();
@@ -462,19 +549,117 @@ pub async fn post_publish(
     let Ok(mr_id) = MatchReportId::try_new(&match_report_id) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
+    let ids = (space_id.as_str(), match_report_id.as_str());
+    publish_or_validate(&state, &user, ids, mr_id, requested_side(form)).await
+}
 
-    if let Err(status) = authorize_recap_action(&state, &user, &space_id, &match_report_id).await {
-        return status.into_response();
+/// Le mode de saisie décide : publier (mode A, inchangé), ou valider un camp.
+async fn publish_or_validate(
+    state: &AppState,
+    user: &User,
+    ids: (&str, &str),
+    mr_id: MatchReportId,
+    requested: Option<TeamSide>,
+) -> Response {
+    let access = match authorize_recap_write(state, user, ids.0, ids.1).await {
+        Ok(access) => access,
+        Err(status) => return status.into_response(),
+    };
+    if access.validates_by_side() {
+        return validate_side(state, user, ids, mr_id, (&access.scope, requested)).await;
     }
     let cmd = PublishMatchReportCommand {
         match_report_id: mr_id,
         published_by: user.id,
     };
-    publish_response(
-        execute_publish(&state, cmd).await,
-        &space_id,
-        &match_report_id,
+    publish_response(execute_publish(state, cmd).await, ids.0, ids.1)
+}
+
+/// Valide le camp de l'utilisateur (carte 659-A) : le service d'accès dit
+/// lequel, le use case fait le reste. Retour au récapitulatif, qui montre la
+/// validation — ou le rapport publié.
+async fn validate_side(
+    state: &AppState,
+    user: &User,
+    (space_id, match_report_id): (&str, &str),
+    mr_id: MatchReportId,
+    (scope, requested): (&PorteeRapport, Option<TeamSide>),
+) -> Response {
+    let deps = AccesRapportDeps::from_state(state);
+    let Some(side) = side_to_validate(&deps, user, space_id, scope, requested).await else {
+        return StatusCode::FORBIDDEN.into_response();
+    };
+    let cmd = ValidateTeamSideCommand {
+        match_report_id: mr_id,
+        team_side: side,
+        validated_by: user.id,
+    };
+    let result = execute_validation(state, cmd).await;
+    let routes = AppRoutes::default().match_report;
+    validation_response(result, &routes.recap(space_id, match_report_id))
+}
+
+/// Le use case de validation, sur les dépôts de l'état.
+pub(crate) async fn execute_validation(
+    state: &AppState,
+    cmd: ValidateTeamSideCommand,
+) -> Result<ValidationStage, ValidateTeamSideError> {
+    validate_team_side_use_case::execute(
+        cmd,
+        state.match_report.match_report_repo.as_ref(),
+        &state.match_report.event_bus,
     )
+    .await
+}
+
+/// La réponse d'une validation, commune au récapitulatif et à l'écran
+/// d'attente de l'après-match : une redirection vers `back_to` ; un camp déjà
+/// validé est un 409, comme toute écriture dans un camp validé.
+pub(crate) fn validation_response(
+    result: Result<ValidationStage, ValidateTeamSideError>,
+    back_to: &str,
+) -> Response {
+    match result {
+        Ok(_) => Redirect::to(back_to).into_response(),
+        Err(ValidateTeamSideError::Conflict) => conflict_response(),
+        Err(ValidateTeamSideError::Domain(err)) => domain_refusal_response(&err),
+        Err(ValidateTeamSideError::NotFound) => StatusCode::NOT_FOUND.into_response(),
+        Err(ValidateTeamSideError::NotInCompatibleState) => StatusCode::CONFLICT.into_response(),
+        Err(ValidateTeamSideError::Internal(e)) => {
+            tracing::error!("validation d'un camp : {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+/// Ce qu'une écriture du récapitulatif a vérifié : la portée du rapport, et
+/// son mode de saisie.
+struct RecapAccess {
+    scope: PorteeRapport,
+    entry: EntryScope,
+}
+
+impl RecapAccess {
+    /// « Chacun son équipe » : publier, c'est valider son camp (carte 659-A).
+    fn validates_by_side(&self) -> bool {
+        EntryMode::from_written(&self.entry.entry_mode) == Some(EntryMode::TeamEntry)
+    }
+}
+
+/// Le rapport, son mode, et le droit d'y écrire (`can_write_report`).
+async fn authorize_recap_write(
+    state: &AppState,
+    user: &User,
+    space_id: &str,
+    match_report_id: &str,
+) -> Result<RecapAccess, StatusCode> {
+    let scope = load_recap_scope(state, match_report_id).await?;
+    let entry = load_entry(state, match_report_id).await?;
+    let deps = AccesRapportDeps::from_state(state);
+    match can_write_report(&deps, user, space_id, &scope, &entry).await {
+        true => Ok(RecapAccess { scope, entry }),
+        false => Err(StatusCode::FORBIDDEN),
+    }
 }
 
 /// Charge le rapport et vérifie que l'utilisateur a le droit d'y écrire —
@@ -505,16 +690,21 @@ async fn write_permission(
     match_report_id: &str,
     scope: &PorteeRapport,
 ) -> Result<bool, StatusCode> {
+    let entry = load_entry(state, match_report_id).await?;
+    let deps = AccesRapportDeps::from_state(state);
+    Ok(can_write_report(&deps, user, space_id, scope, &entry).await)
+}
+
+/// Le mode de saisie et le démarreur, lus sur la projection.
+async fn load_entry(state: &AppState, match_report_id: &str) -> Result<EntryScope, StatusCode> {
     let repo = state.match_report.match_report_repo.as_ref();
-    let entry = load_entry_scope(repo, match_report_id)
+    load_entry_scope(repo, match_report_id)
         .await
         .map_err(|e| {
             tracing::error!("recap : mode de saisie de {match_report_id} : {e}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
-        .ok_or(StatusCode::NOT_FOUND)?;
-    let deps = AccesRapportDeps::from_state(state);
-    Ok(can_write_report(&deps, user, space_id, scope, &entry).await)
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 async fn load_recap_scope(
@@ -887,6 +1077,7 @@ mod published_by_tests {
             was_published_before: false,
             summary_paragraphs: Default::default(),
             post_match_recorded_by: Default::default(),
+            validated_by: Default::default(),
         }
     }
 
@@ -913,5 +1104,110 @@ mod published_by_tests {
         let rtp = make_rtp();
         let source = RecapSource::from_rtp(&rtp);
         assert_eq!(displayed_publisher(&source, &rtp.created_by).await, None);
+    }
+
+    /// Carte 659-A : seul un rapport en « Chacun son équipe » non publié se
+    /// valide camp par camp ; publié, il n'a plus rien à valider.
+    #[test]
+    fn only_an_unpublished_team_entry_report_shows_the_validation() {
+        let mut rtp = make_rtp();
+        assert!(!RecapSource::from_rtp(&rtp).validates_by_side);
+        rtp.entry_mode = crate::app::match_report::domain::value_objects::EntryMode::TeamEntry;
+        assert!(RecapSource::from_rtp(&rtp).validates_by_side);
+        let (published, _) = rtp.publish(CoachId::new());
+        assert!(!RecapSource::from_published(&published).validates_by_side);
+    }
+}
+
+/// Carte 659-A : publier, en « Chacun son équipe », c'est valider son camp.
+#[cfg(test)]
+mod side_validation_tests {
+    use super::*;
+    use crate::app::match_report::domain::error::DomainError;
+    use axum::extract::FromRequest;
+
+    async fn form_of(body: &'static str, content_type: Option<&str>) -> Option<TeamSide> {
+        let mut request = axum::http::Request::builder().method("POST");
+        if let Some(ct) = content_type {
+            request = request.header("content-type", ct);
+        }
+        let request = request.body(axum::body::Body::from(body)).unwrap();
+        requested_side(Form::<PublishForm>::from_request(request, &()).await)
+    }
+
+    const FORM: Option<&str> = Some("application/x-www-form-urlencoded");
+
+    /// Le camp de l'admin se lit ; un POST sans corps — le mode A — n'en
+    /// demande aucun, et un camp illisible non plus.
+    #[tokio::test]
+    async fn the_requested_side_is_read_from_the_form() {
+        assert_eq!(form_of("team_side=away", FORM).await, Some(TeamSide::Away));
+        assert_eq!(form_of("", FORM).await, None);
+        assert_eq!(form_of("", None).await, None);
+        assert_eq!(form_of("team_side=both", FORM).await, None);
+    }
+
+    fn entry(mode: EntryMode) -> RecapAccess {
+        RecapAccess {
+            scope: PorteeRapport {
+                competition_id: "c".into(),
+                home_team_id: "h".into(),
+                away_team_id: "a".into(),
+            },
+            entry: EntryScope {
+                entry_mode: mode.as_str().to_string(),
+                started_by: None,
+            },
+        }
+    }
+
+    /// Le mode A publie comme avant ; le mode B valide.
+    #[test]
+    fn only_team_entry_validates_by_side() {
+        assert!(entry(EntryMode::TeamEntry).validates_by_side());
+        assert!(!entry(EntryMode::SoloEntry).validates_by_side());
+    }
+
+    fn status(e: ValidateTeamSideError) -> StatusCode {
+        validation_response(Err(e), "/recap").status()
+    }
+
+    /// Une validation renvoie là d'où elle vient ; un camp déjà validé est un
+    /// 409, un après-match manquant un 422.
+    #[test]
+    fn a_validation_goes_back_and_a_frozen_side_is_a_409() {
+        let ok = validation_response(Ok(ValidationStage::Published), "/recap");
+        assert_eq!(ok.status(), StatusCode::SEE_OTHER);
+        assert_eq!(ok.headers().get("location").unwrap(), "/recap");
+        let frozen = DomainError::SideValidated(TeamSide::Home);
+        assert_eq!(
+            status(ValidateTeamSideError::Domain(frozen)),
+            StatusCode::CONFLICT
+        );
+        let missing = DomainError::PostMatchMissing(TeamSide::Home);
+        assert_eq!(
+            status(ValidateTeamSideError::Domain(missing)),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+    }
+
+    #[test]
+    fn each_validation_refusal_has_its_status() {
+        assert_eq!(
+            status(ValidateTeamSideError::Conflict),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            status(ValidateTeamSideError::NotFound),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            status(ValidateTeamSideError::NotInCompatibleState),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            status(ValidateTeamSideError::Internal("x".into())),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 }

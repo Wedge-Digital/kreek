@@ -34,6 +34,10 @@ pub mod path {
     /// L'après-match d'un camp, en « Chacun son équipe » (carte 658).
     pub const MATCH_REPORT_STEP5_SIDE: &str =
         "/app/{space_id}/match-report/{match_report_id}/step5/{side}";
+    /// La validation d'un camp depuis l'écran d'attente de l'après-match
+    /// (carte 659-A).
+    pub const MATCH_REPORT_STEP5_SIDE_VALIDATE: &str =
+        "/app/{space_id}/match-report/{match_report_id}/step5/{side}/validate";
     /// L'après-match d'un camp, en lecture seule : le bloc de l'adversaire,
     /// rechargé sur le signal du match (carte 658).
     pub const MATCH_REPORT_STEP5_OPPONENT: &str =
@@ -206,6 +210,14 @@ impl Routes {
     /// `side` vaut `home` ou `away`.
     pub fn step5_side(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
         path::MATCH_REPORT_STEP5_SIDE
+            .replace("{space_id}", space_id)
+            .replace("{match_report_id}", match_report_id)
+            .replace("{side}", side)
+    }
+
+    /// `side` vaut `home` ou `away` : le camp qu'on valide (carte 659-A).
+    pub fn step5_side_validate(&self, space_id: &str, match_report_id: &str, side: &str) -> String {
+        path::MATCH_REPORT_STEP5_SIDE_VALIDATE
             .replace("{space_id}", space_id)
             .replace("{match_report_id}", match_report_id)
             .replace("{side}", side)

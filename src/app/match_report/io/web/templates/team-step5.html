@@ -23,7 +23,19 @@
 
   {% call steps::indicator(4) %}{% endcall %}
 
-  {% if already_recorded %}
+  {% if validated %}
+  <div class="mr-info-banner mr-info-banner--ok team-step5-validated">
+    <span class="mr-info-icon">&#10003;</span>
+    <span><strong>Validé &#10003;</strong> — les {{ own_team_name }} ne se modifient plus.</span>
+  </div>
+  {% else if let Some(url) = validate_url.as_ref() %}
+  <form class="mr-actions team-step5-validate" method="post" action="{{ url }}">
+    <span>En attendant l'autre équipe, vous pouvez valider la vôtre.</span>
+    <button type="submit" class="btn-primary-sm">Valider les {{ own_team_name }}</button>
+  </form>
+  {% endif %}
+
+  {% if already_recorded && !validated %}
   <div class="mr-info-banner mr-info-banner--neutral">
     <span class="mr-info-icon">&#9998;</span>
     <span>Après-match déjà enregistré — vous pouvez modifier et soumettre à nouveau.</span>
@@ -131,7 +143,9 @@
       {% if let Some(url) = recap_url.as_ref() %}
       <a href="{{ url }}" class="btn-outline-sm">Récapitulatif</a>
       {% endif %}
+      {% if !validated %}
       <button type="submit" class="btn-primary-sm">Enregistrer &#8594;</button>
+      {% endif %}
     </div>
   </form>
 

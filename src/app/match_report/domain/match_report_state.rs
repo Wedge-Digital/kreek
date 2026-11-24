@@ -572,6 +572,26 @@ pub fn rehydrate(events: Vec<MatchReportDomainEvent>) -> Result<MatchReportState
                     .ok_or(DomainError::InvalidEventSequence)?;
                 MatchReportState::ReadyToPublish(ready)
             }
+            // La validation d'un camp, en « Chacun son équipe » (carte 659-A) :
+            // dans l'avant-match comme dans un rapport prêt à publier. Le
+            // `MatchReportPublished` de la seconde la suit, par l'arête
+            // ordinaire.
+            (
+                Some(MatchReportState::PreMatch(pm)),
+                MatchReportDomainEvent::TeamSideValidated {
+                    team_side,
+                    validated_by,
+                },
+            ) => MatchReportState::PreMatch(pm.apply_side_validated(*team_side, *validated_by)),
+            (
+                Some(MatchReportState::ReadyToPublish(rtp)),
+                MatchReportDomainEvent::TeamSideValidated {
+                    team_side,
+                    validated_by,
+                },
+            ) => MatchReportState::ReadyToPublish(
+                rtp.apply_side_validated(*team_side, *validated_by),
+            ),
             // Le changement de journée vaut pour les quatre états vivants
             // (carte 557) : la journée change, le reste de l'état non.
             (Some(vivant), MatchReportDomainEvent::RoundReassigned { round_id }) => {
@@ -2436,5 +2456,311 @@ mod tests {
         );
         assert_eq!(a.total_home_gain_kpo(), b.total_home_gain_kpo());
         assert_eq!(a.summary_title, b.summary_title);
+    }
+
+    // ── Carte 659-A — valider son camp ───────────────────────────────────────
+
+    use crate::app::match_report::domain::team_validation::SideValidationOutcome;
+
+    /// Un avant-match « Chacun son équipe », les deux MVP désignés et
+    /// l'après-match du seul camp donné : l'écran d'attente.
+    fn waiting_on(side: TeamSide) -> (Vec<MatchReportDomainEvent>, MatchReportPreMatch) {
+        let (stream, pm) = team_entry_with_mvps();
+        let (outcome, events) = pm
+            .record_team_post_match(side_entry(side, 40, None))
+            .unwrap();
+        (stream.into_iter().chain(events).collect(), pending(outcome))
+    }
+
+    /// Le camp validé dans l'avant-match, et le flux qui y mène.
+    fn validated_while_waiting(
+        side: TeamSide,
+        by: CoachId,
+    ) -> (Vec<MatchReportDomainEvent>, MatchReportPreMatch) {
+        let (stream, pm) = waiting_on(side);
+        let (validated, event) = pm.validate_side(side, by).unwrap();
+        (stream.into_iter().chain([event]).collect(), validated)
+    }
+
+    fn replayed(stream: Vec<MatchReportDomainEvent>) -> MatchReportState {
+        rehydrate(stream).unwrap()
+    }
+
+    /// R9 : valider exige l'après-match de son camp.
+    #[test]
+    fn a_side_without_its_post_match_is_not_validated() {
+        let (_, pm) = waiting_on(TeamSide::Home);
+        let refused = pm.validate_side(TeamSide::Away, CoachId::new());
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::PostMatchMissing(TeamSide::Away)
+        );
+    }
+
+    /// R9 : valider exige le MVP de son camp — un MVP supprimé en correction
+    /// après l'après-match suffit à refuser.
+    #[test]
+    fn a_side_without_its_mvp_is_not_validated() {
+        let (_, mut rtp) = both_post_matches();
+        rtp.away_actions.clear();
+        let refused = rtp.validate_side(TeamSide::Away, CoachId::new());
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::MvpMissing(TeamSide::Away)
+        );
+        assert!(rtp.validate_side(TeamSide::Home, CoachId::new()).is_ok());
+    }
+
+    /// § 12.4 : seul ce camp compte — l'autre n'a pas encore son après-match.
+    #[test]
+    fn a_side_validates_without_waiting_for_the_other() {
+        let (_, pm) = waiting_on(TeamSide::Away);
+        let by = CoachId::new();
+        let (validated, event) = pm.validate_side(TeamSide::Away, by).unwrap();
+        assert_eq!(validated.validated_by.of(TeamSide::Away), Some(by));
+        assert_eq!(validated.validated_by.of(TeamSide::Home), None);
+        assert_eq!(validated.version, pm.version + 1);
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::TeamSideValidated {
+                team_side: TeamSide::Away,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn a_side_is_not_validated_in_solo_entry() {
+        let (_, mut rtp) = both_post_matches();
+        rtp.entry_mode = EntryMode::SoloEntry;
+        let refused = rtp.validate_side(TeamSide::Home, CoachId::new());
+        assert_eq!(refused.unwrap_err(), DomainError::NotTeamEntry);
+    }
+
+    #[test]
+    fn a_side_is_not_validated_twice() {
+        let (_, pm) = validated_while_waiting(TeamSide::Home, CoachId::new());
+        let refused = pm.validate_side(TeamSide::Home, CoachId::new());
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::SideValidated(TeamSide::Home)
+        );
+    }
+
+    /// § 12.4 : la validation se rejoue dans l'avant-match, survit à la
+    /// fermeture de l'après-match, et à l'aller-retour `into_pre_match`.
+    #[test]
+    fn a_validation_in_pre_match_replays_and_survives_the_round_trip() {
+        let by = CoachId::new();
+        let (stream, decided) = validated_while_waiting(TeamSide::Home, by);
+        let MatchReportState::PreMatch(pm) = replayed(stream.clone()) else {
+            panic!("attendu PreMatch");
+        };
+        assert_eq!(pm.validated_by, decided.validated_by);
+        assert_eq!(pm.version, decided.version);
+        let (outcome, events) = pm
+            .record_team_post_match(side_entry(TeamSide::Away, 30, None))
+            .unwrap();
+        let rtp = closed(outcome);
+        assert_eq!(rtp.validated_by.of(TeamSide::Home), Some(by));
+        assert_eq!(rtp.clone().into_pre_match().validated_by, rtp.validated_by);
+        let MatchReportState::ReadyToPublish(replayed_rtp) =
+            replayed(stream.into_iter().chain(events).collect())
+        else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(replayed_rtp.validated_by.of(TeamSide::Home), Some(by));
+    }
+
+    /// R9 : la seconde validation rend la validation puis la publication,
+    /// `published_by` étant le second validateur ; le flux se rejoue en
+    /// `Published`.
+    #[test]
+    fn the_second_validation_publishes() {
+        let (stream, rtp) = both_post_matches();
+        let (first, second) = (CoachId::new(), CoachId::new());
+        let (outcome, first_events) = rtp.validate_side(TeamSide::Away, first).unwrap();
+        let SideValidationOutcome::Validated(rtp) = outcome else {
+            panic!("attendu Validated");
+        };
+        let (outcome, events) = rtp.validate_side(TeamSide::Home, second).unwrap();
+        let SideValidationOutcome::Published(published) = outcome else {
+            panic!("attendu Published");
+        };
+        assert_eq!(published.published_by, second);
+        let [MatchReportDomainEvent::TeamSideValidated { .. }, MatchReportDomainEvent::MatchReportPublished { published_by, .. }] =
+            events.as_slice()
+        else {
+            panic!("attendu validation puis publication : {events:?}");
+        };
+        assert_eq!(*published_by, second);
+        let stream = stream.into_iter().chain(first_events).chain(events);
+        let MatchReportState::Published(p) = replayed(stream.collect()) else {
+            panic!("attendu Published");
+        };
+        assert_eq!(p.published_by, second);
+        assert_eq!(p.version, published.version);
+    }
+
+    /// La publication de la seconde validation est celle du mode A : mêmes
+    /// valeurs que `publish()` sur le rapport validé.
+    #[test]
+    fn the_published_report_is_the_one_publish_would_make() {
+        let (_, rtp) = both_post_matches();
+        let rtp = rtp.apply_side_validated(TeamSide::Home, CoachId::new());
+        let by = CoachId::new();
+        let (expected, _) = rtp.publish(by);
+        let (outcome, _) = rtp.validate_side(TeamSide::Away, by).unwrap();
+        let SideValidationOutcome::Published(published) = outcome else {
+            panic!("attendu Published");
+        };
+        assert_eq!(
+            (published.home_gain, published.away_gain),
+            (expected.home_gain, expected.away_gain)
+        );
+        // Une version de plus : celle de la validation, appendée avant.
+        assert_eq!(published.version, expected.version + 1);
+        assert_eq!(published.summary_title, expected.summary_title);
+        assert_eq!(published.published_by, by);
+    }
+
+    /// La seconde validation n'arrive jamais dans l'avant-match ; si elle y
+    /// arrivait, elle ne publierait pas.
+    #[test]
+    fn a_validation_in_pre_match_never_publishes() {
+        let (_, mut pm) = waiting_on(TeamSide::Home);
+        pm.validated_by = pm.validated_by.with(TeamSide::Away, CoachId::new());
+        let (validated, _) = pm.validate_side(TeamSide::Home, CoachId::new()).unwrap();
+        assert!(validated.validated_by.of(TeamSide::Home).is_some());
+    }
+
+    // Le gel (§ 12.5) : chaque famille d'écriture, dans un camp validé.
+
+    fn frozen_home() -> MatchReportPreMatch {
+        validated_while_waiting(TeamSide::Home, CoachId::new()).1
+    }
+
+    fn frozen() -> DomainError {
+        DomainError::SideValidated(TeamSide::Home)
+    }
+
+    #[test]
+    fn a_validated_side_refuses_its_fan_factor() {
+        let refused = frozen_home().record_team_fan_factor(
+            fan_factor(TeamSide::Home, 2),
+            CoachId::new(),
+            Some((tv(1000), tv(1000))),
+        );
+        assert_eq!(refused.unwrap_err(), frozen());
+    }
+
+    #[test]
+    fn a_validated_side_refuses_an_action() {
+        use crate::app::match_report::domain::value_objects::{
+            ActionPlayer, MatchActionType, TurnNumber,
+        };
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        let refused = frozen_home().record_action(
+            TeamSide::Home,
+            TurnNumber::try_new(3).unwrap(),
+            ActionPlayer::Regular(PlayerId::new()),
+            MatchActionType::Touchdown,
+            "Joueur".into(),
+            String::new(),
+            ActionId("td".into()),
+            CoachId::new(),
+            &[],
+        );
+        assert_eq!(refused.unwrap_err(), frozen());
+    }
+
+    #[test]
+    fn a_validated_side_refuses_a_deletion() {
+        let mvp = ActionId("mvp-Home".into());
+        let refused = frozen_home().delete_action(&mvp, CoachId::new(), &TeamSide::BOTH);
+        assert_eq!(refused.unwrap_err(), frozen());
+    }
+
+    #[test]
+    fn a_validated_side_refuses_a_chosen_or_drawn_mvp() {
+        use crate::app::match_report::domain::value_objects::ActionPlayer;
+        use crate::app::shared_kernel::bloodbowl::ids::PlayerId;
+        use rand::SeedableRng;
+        let pm = frozen_home();
+        let chosen = pm.record_mvp(
+            TeamSide::Home,
+            ActionPlayer::Regular(PlayerId::new()),
+            "MVP".into(),
+            String::new(),
+            ActionId("mvp-2".into()),
+            CoachId::new(),
+        );
+        assert_eq!(chosen.unwrap_err(), frozen());
+        let mut rng = rand::rngs::StdRng::seed_from_u64(7);
+        let drawn = pm.draw_mvp(
+            TeamSide::Home,
+            vec![],
+            &mut rng,
+            ActionId("mvp-3".into()),
+            CoachId::new(),
+        );
+        assert_eq!(drawn.unwrap_err(), frozen());
+    }
+
+    #[test]
+    fn a_validated_side_refuses_its_post_match_before_and_after_closing() {
+        let pm = frozen_home();
+        let refused = pm.record_team_post_match(side_entry(TeamSide::Home, 70, None));
+        assert_eq!(refused.unwrap_err(), frozen());
+        let (outcome, _) = pm
+            .record_team_post_match(side_entry(TeamSide::Away, 30, None))
+            .unwrap();
+        let rtp = closed(outcome);
+        let refused = rtp.record_team_post_match(side_entry(TeamSide::Home, 70, None));
+        assert_eq!(refused.unwrap_err(), frozen());
+        assert!(rtp
+            .record_team_post_match(side_entry(TeamSide::Away, 35, None))
+            .is_ok());
+    }
+
+    /// Une équipe à qui son tier n'offre rien n'a jamais validé de coups de
+    /// pouce : sans le gel, elle pourrait encore en envoyer.
+    #[test]
+    fn a_validated_side_refuses_inducements() {
+        let pm = frozen_home();
+        let refused = pm.check_inducements_open_for(&pm.home_team_id.clone());
+        assert_eq!(refused.unwrap_err(), frozen());
+    }
+
+    /// Les corrections d'un rapport prêt à publier passent par
+    /// `into_pre_match` : le gel y tient.
+    #[test]
+    fn the_freeze_holds_through_into_pre_match() {
+        let (_, rtp) = both_post_matches();
+        let rtp = rtp.apply_side_validated(TeamSide::Away, CoachId::new());
+        assert_eq!(
+            rtp.check_side_open(TeamSide::Away).unwrap_err(),
+            DomainError::SideValidated(TeamSide::Away)
+        );
+        let pm = rtp.into_pre_match();
+        assert!(pm.check_side_open(TeamSide::Home).is_ok());
+        let mvp = ActionId("mvp-Away".into());
+        let refused = pm.delete_action(&mvp, CoachId::new(), &TeamSide::BOTH);
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::SideValidated(TeamSide::Away)
+        );
+    }
+
+    /// La correction demande de nouveau les deux validations (R10 de E22).
+    #[test]
+    fn an_unpublished_report_has_no_validated_side() {
+        let (_, rtp) = both_post_matches();
+        let rtp = rtp.apply_side_validated(TeamSide::Home, CoachId::new());
+        let (published, _) = rtp.publish(CoachId::new());
+        let (back, _) = published
+            .unpublish(CoachId::new(), CorrectionEligibility::Eligible)
+            .unwrap();
+        assert_eq!(back.validated_by, Default::default());
     }
 }

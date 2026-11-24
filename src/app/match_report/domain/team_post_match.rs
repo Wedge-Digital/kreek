@@ -143,6 +143,7 @@ impl MatchReportPreMatch {
         &self,
         entry: TeamPostMatch,
     ) -> Result<(TeamPostMatchOutcome, Vec<MatchReportDomainEvent>), DomainError> {
+        self.check_side_open(entry.side)?;
         entry.check(self.entry_mode, self.actions_for(entry.side))?;
         let event = entry.to_event();
         let pending = self.clone().apply_team_post_match(&entry);
@@ -197,6 +198,7 @@ impl MatchReportReadyToPublish {
         &self,
         entry: TeamPostMatch,
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        self.check_side_open(entry.side)?;
         entry.check(self.entry_mode, self.actions_of(entry.side))?;
         Ok((self.clone().apply_team_post_match(&entry), entry.to_event()))
     }

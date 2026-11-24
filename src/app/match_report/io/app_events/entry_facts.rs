@@ -214,6 +214,29 @@ pub(super) async fn publish_post_match_recorded(
     publier(app_event_bus, event.to_enveloppe());
 }
 
+/// La validation d'un camp, en « Chacun son équipe » (carte 659-A) : un
+/// signal, sans nom — la page qui le reçoit relit l'agrégat.
+pub(super) async fn publish_side_validated(
+    to: &Target<'_>,
+    team_side: TeamSide,
+    validated_by: CoachId,
+) {
+    let (match_report_id, app_event_bus, ports) = (to.match_report_id, to.app_event_bus, to.ports);
+    let Some(scope) = match_scope(ports.repo.as_ref(), match_report_id).await else {
+        return;
+    };
+    let event = MatchReportAppEvent::MatchSideValidated {
+        event_id: EventId::new(),
+        match_report_id: match_report_id.to_string(),
+        space_id: scope.space_id,
+        home_team_id: scope.home_team_id,
+        away_team_id: scope.away_team_id,
+        team_side: side_payload(team_side),
+        validated_by: validated_by.to_string(),
+    };
+    publier(app_event_bus, event.to_enveloppe());
+}
+
 /// Les lignes nommées par le service du récapitulatif : libellés et vedettes
 /// au catalogue, mercenaires par leur poste. Une sélection vide reste vide.
 async fn selection_items(
@@ -721,6 +744,32 @@ mod tests {
 
     /// La fermeture de l'après-match, appendée avec le second camp, ne sort
     /// pas : le signal de ce camp suffit (§ 12.7 de E22).
+    /// La validation d'un camp sort en signal (carte 659-A).
+    #[tokio::test]
+    async fn a_side_validation_leaves_as_a_signal() {
+        let m = Match::new();
+        let author = CoachId::new();
+        let validated = MatchReportDomainEvent::TeamSideValidated {
+            team_side: TeamSide::Away,
+            validated_by: author,
+        };
+        let event = m.published(validated, m.scoped()).await;
+        let Some(MatchReportAppEvent::MatchSideValidated {
+            match_report_id,
+            away_team_id,
+            team_side,
+            validated_by,
+            ..
+        }) = event
+        else {
+            panic!("MatchSideValidated attendu : {event:?}");
+        };
+        assert_eq!(match_report_id, "MR");
+        assert_eq!(away_team_id, m.away.to_string());
+        assert_eq!(team_side, TeamSidePayload::Away);
+        assert_eq!(validated_by, author.to_string());
+    }
+
     #[tokio::test]
     async fn the_post_match_closing_stays_inside() {
         let m = Match::new();

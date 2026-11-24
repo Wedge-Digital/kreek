@@ -5,7 +5,9 @@ use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatc
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{D3Roll, DedicatedFans, EntryMode};
 use crate::app::match_report::io::web::mvp_step_controller::side_slug;
-use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::io::web::write_conflict::{
+    conflict_response, domain_refusal_response,
+};
 use crate::app::match_report::ports::TeamInfoDto;
 use crate::app::match_report::use_cases::match_report_access_service::{
     arrival_side, PorteeRapport,
@@ -360,7 +362,7 @@ pub(crate) fn fan_factor_error_response(e: RecordFanFactorError) -> Response {
 
 fn domain_refusal(err: DomainError) -> Response {
     tracing::warn!("fan factor refusé : {err}");
-    (StatusCode::UNPROCESSABLE_ENTITY, err.to_string()).into_response()
+    domain_refusal_response(&err)
 }
 
 #[cfg(test)]

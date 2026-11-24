@@ -197,6 +197,50 @@ pub async fn can_write_side(
         .holds(side)
 }
 
+/// Les camps que cet utilisateur peut valider, en « Chacun son équipe »
+/// (carte 659-A, § 12.6 de E22) : l'admin les deux, un coach le sien,
+/// d'après `camp_du_coach`, un tiers aucun.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn sides_validatable_by(
+    deps: &AccesRapportDeps<'_>,
+    user: &User,
+    space_id: &str,
+    scope: &PorteeRapport,
+) -> Vec<TeamSide> {
+    if est_administrateur(deps, user, space_id, &scope.competition_id).await {
+        return TeamSide::BOTH.to_vec();
+    }
+    let camp = camp_du_coach(deps.team_data, scope, &user.id.to_string()).await;
+    TeamSide::BOTH
+        .into_iter()
+        .filter(|side| camp.holds(*side))
+        .collect()
+}
+
+/// Le camp que valide cet utilisateur (carte 659-A, § 12.6 de E22) : celui du
+/// coach, **jamais celui du formulaire** ; l'admin le choisit par `requested`.
+/// `None` : rien à valider pour lui, la requête est refusée.
+// arch:no-instrument — service de lecture : une question de droit, aucune intention métier
+pub async fn side_to_validate(
+    deps: &AccesRapportDeps<'_>,
+    user: &User,
+    space_id: &str,
+    scope: &PorteeRapport,
+    requested: Option<TeamSide>,
+) -> Option<TeamSide> {
+    let sides = sides_validatable_by(deps, user, space_id, scope).await;
+    pick_side(&sides, requested)
+}
+
+/// Un seul camp possible : le sien, quoi que dise le formulaire. Deux : celui
+/// demandé. Aucun : rien.
+fn pick_side(sides: &[TeamSide], requested: Option<TeamSide>) -> Option<TeamSide> {
+    match sides {
+        [only] => Some(*only),
+        _ => requested.filter(|side| sides.contains(side)),
+    }
+}
+
 /// Ce mode peut-il être choisi pour ce match ? (carte 652, § 12.9 de E22)
 ///
 /// « Je saisis tout », toujours. « Chacun son équipe » exige **deux coachs
@@ -750,6 +794,55 @@ mod write_tests {
     async fn a_failing_port_or_an_unknown_team_refuses_team_entry() {
         assert!(!may_choose(HOME, AWAY, Some(AWAY)).await);
         assert!(!may_choose(HOME, "equipe-inconnue", None).await);
+    }
+
+    // ── La validation d'un camp (carte 659-A) ─────────────────────────────────
+
+    async fn validated_side(who: &str, requested: Option<TeamSide>) -> Option<TeamSide> {
+        let admin_access = FakeAdminAccess::new().space_admin(
+            &EntityId::try_new(ADMIN).unwrap(),
+            &EntityId::try_new(SPACE).unwrap(),
+        );
+        let team_data = FakeTeamData { failing: None };
+        let deps = AccesRapportDeps {
+            admin_access: &admin_access,
+            team_data: &team_data,
+        };
+        side_to_validate(&deps, &user(who), SPACE, &scope(), requested).await
+    }
+
+    /// § 12.6 : un coach qui poste le camp de l'autre valide le sien.
+    #[tokio::test]
+    async fn a_coach_validates_his_own_side_whatever_the_form_says() {
+        let away = Some(TeamSide::Away);
+        assert_eq!(validated_side(HOME_COACH, away).await, Some(TeamSide::Home));
+        assert_eq!(validated_side(HOME_COACH, None).await, Some(TeamSide::Home));
+        let home = Some(TeamSide::Home);
+        assert_eq!(validated_side(AWAY_COACH, home).await, Some(TeamSide::Away));
+    }
+
+    /// L'admin choisit le camp ; sans choix, il ne valide rien.
+    #[tokio::test]
+    async fn the_admin_validates_the_side_he_names() {
+        let away = Some(TeamSide::Away);
+        assert_eq!(validated_side(ADMIN, away).await, Some(TeamSide::Away));
+        assert_eq!(validated_side(ADMIN, None).await, None);
+    }
+
+    #[tokio::test]
+    async fn a_third_party_validates_nothing() {
+        assert_eq!(
+            validated_side(THIRD_PARTY, Some(TeamSide::Home)).await,
+            None
+        );
+    }
+
+    #[test]
+    fn a_coach_of_both_teams_picks_among_his_sides() {
+        let both = TeamSide::BOTH;
+        assert_eq!(pick_side(&both, Some(TeamSide::Away)), Some(TeamSide::Away));
+        assert_eq!(pick_side(&both, None), None);
+        assert_eq!(pick_side(&[], Some(TeamSide::Home)), None);
     }
 
     #[tokio::test]

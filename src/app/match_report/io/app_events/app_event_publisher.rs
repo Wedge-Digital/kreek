@@ -210,6 +210,13 @@ pub(super) async fn aiguiller(
             recorded_by,
             ..
         } => entry_facts::publish_post_match_recorded(&to, team_side, recorded_by).await,
+        // La validation d'un camp (carte 659-A) : elle sort pour que la page
+        // de l'autre coach la voie arriver. La publication qui la suit, à la
+        // seconde, sort par son propre bras.
+        MatchReportDomainEvent::TeamSideValidated {
+            team_side,
+            validated_by,
+        } => entry_facts::publish_side_validated(&to, team_side, validated_by).await,
         // Ce qui ne sort pas du BC, nommé un à un et sans joker (carte 631) :
         // un événement ajouté casse la compilation ici, et son auteur tranche
         // — il sort, ou il rejoint cette liste.
@@ -943,6 +950,7 @@ mod unpublished_events_tests {
             was_published_before: true,
             summary_paragraphs: Default::default(),
             post_match_recorded_by: Default::default(),
+            validated_by: Default::default(),
         }
     }
 

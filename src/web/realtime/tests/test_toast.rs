@@ -6,7 +6,7 @@ use crate::app::shared_kernel::app_events::match_report_app_events::{
     TeamSidePayload,
 };
 use crate::app::shared_kernel::identity::ids::EventId;
-use crate::web::realtime::toast::{match_link, notice_of, SEE_MATCH};
+use crate::web::realtime::toast::{match_link, notice_of, SEE_MATCH, TOAST_EVENT_TYPES};
 
 const SPACE: &str = "space-1";
 const MATCH: &str = "match-1";
@@ -226,6 +226,26 @@ fn a_team_post_match_makes_no_toast() {
         recorded_by: AUTHOR.into(),
     };
     assert_eq!(notice_of(&event), None);
+}
+
+/// La validation d'un camp ne fait que le signal à la carte 659-A : son toast
+/// vient avec la 659-C, et `TOAST_EVENT_TYPES` reste à quatre.
+#[test]
+fn a_side_validation_makes_no_toast_yet() {
+    let event = MatchReportAppEvent::MatchSideValidated {
+        event_id: EventId::new(),
+        match_report_id: MATCH.into(),
+        space_id: SPACE.into(),
+        home_team_id: HOME.into(),
+        away_team_id: AWAY.into(),
+        team_side: TeamSidePayload::Home,
+        validated_by: AUTHOR.into(),
+    };
+    assert_eq!(notice_of(&event), None);
+    assert_eq!(event.event_type(), "MatchSideValidated");
+    assert_eq!(event.match_report_id(), MATCH);
+    assert!(!TOAST_EVENT_TYPES.contains(&event.event_type()));
+    assert_eq!(TOAST_EVENT_TYPES.len(), 4);
 }
 
 /// Le fan factor d'un camp ne fait que le signal (§ 12.7 de E22, carte 654).

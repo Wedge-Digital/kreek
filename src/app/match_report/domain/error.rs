@@ -94,6 +94,13 @@ pub enum DomainError {
     /// Un titre de résumé envoyé pour le visiteur : le titre est au domicile
     /// (carte 658, R8 de E22).
     TitleIsHomeOnly,
+    /// Une écriture dans un camp validé, ou une seconde validation du même
+    /// camp : un camp validé est figé (carte 659-A, § 12.5 de E22). La couche
+    /// web le rend en 409.
+    SideValidated(TeamSide),
+    /// Une validation de camp sans l'après-match de ce camp (carte 659-A, R9
+    /// de E22).
+    PostMatchMissing(TeamSide),
 }
 
 impl fmt::Display for DomainError {
@@ -167,6 +174,14 @@ impl fmt::Display for DomainError {
             Self::TitleIsHomeOnly => {
                 write!(f, "Le titre du résumé revient à l'équipe à domicile.")
             }
+            Self::SideValidated(_) => write!(
+                f,
+                "Cette équipe a validé son camp : il ne se modifie plus."
+            ),
+            Self::PostMatchMissing(_) => write!(
+                f,
+                "Enregistrez l'après-match de cette équipe avant de la valider."
+            ),
             Self::EmptyEventStream => write!(f, "aucun événement dans le stream"),
             Self::InvalidD3Roll(v) => write!(f, "jet de D3 invalide : {v} (attendu 1, 2 ou 3)"),
             Self::BudgetExceeded { spent, budget } => {

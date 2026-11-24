@@ -6,7 +6,9 @@ use crate::app::match_report::domain::value_objects::{
     TempPlayerId, TurnNumber,
 };
 use crate::app::match_report::io::web::widgets::action_log_widget::{load_entry, load_scope};
-use crate::app::match_report::io::web::write_conflict::conflict_response;
+use crate::app::match_report::io::web::write_conflict::{
+    conflict_response, domain_refusal_response,
+};
 use crate::app::match_report::use_cases::delete_action_use_case::{
     self, DeleteActionCommand, DeleteActionError,
 };
@@ -128,6 +130,10 @@ async fn post_action(
                 .unwrap()
         }
         Err(RecordActionError::Conflict) => conflict_response(),
+        // Carte 659-A : un camp validé est figé.
+        Err(RecordActionError::Domain(err @ DomainError::SideValidated(_))) => {
+            domain_refusal_response(&err)
+        }
         Err(e) => match refus_client(&e) {
             Some(motif) => {
                 tracing::warn!("action refusée : {motif} ({e:?})");
@@ -222,6 +228,10 @@ pub async fn delete_action(
         // requête forgée sur l'autre camp est refusée.
         Err(DeleteActionError::Domain(err @ DomainError::ActionOutsideSide(_))) => {
             (StatusCode::FORBIDDEN, err.to_string()).into_response()
+        }
+        // Carte 659-A : un camp validé est figé.
+        Err(DeleteActionError::Domain(err @ DomainError::SideValidated(_))) => {
+            domain_refusal_response(&err)
         }
         Err(e) => {
             tracing::error!("delete_action: {e:?}");

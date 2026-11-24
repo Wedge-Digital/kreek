@@ -23,7 +23,9 @@ use crate::app::match_report::io::web::step5_controller::{get_step5, post_step5}
 use crate::app::match_report::io::web::team_pre_match_controller::{
     get_team_pre_match, post_team_pre_match,
 };
-use crate::app::match_report::io::web::team_step5_controller::{get_team_step5, post_team_step5};
+use crate::app::match_report::io::web::team_step5_controller::{
+    get_team_step5, post_team_step5, post_validate_side,
+};
 use crate::app::match_report::io::web::widgets::action_log_widget::get_action_log;
 use crate::app::match_report::io::web::widgets::action_panel_widget::{
     get_action_panel_step3, get_action_panel_step4,
@@ -147,6 +149,12 @@ fn routes_de_camp() -> Router<AppState> {
         .route(
             path::MATCH_REPORT_STEP5_SIDE,
             get(get_team_step5).post(post_team_step5),
+        )
+        // La validation d'un camp depuis l'écran d'attente (carte 659-A) :
+        // le camp est celui de la route, que la garde a vérifié.
+        .route(
+            path::MATCH_REPORT_STEP5_SIDE_VALIDATE,
+            post(post_validate_side),
         )
 }
 

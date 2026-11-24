@@ -217,6 +217,14 @@ pub enum MatchReportDomainEvent {
     /// `ReadyToPublish` (carte 658, § 12.8 de E22). Toujours appendé avec le
     /// second `TeamPostMatchRecorded`, dans le même `append_many`.
     PostMatchClosed,
+    /// Un camp a validé son équipe, en « Chacun son équipe » (carte 659-A, R9
+    /// de E22). Exige le MVP et l'après-match **de ce camp** ; le camp est
+    /// ensuite figé (§ 12.5). La seconde validation est suivie de
+    /// `MatchReportPublished`, dans le même `append_many`.
+    TeamSideValidated {
+        team_side: TeamSide,
+        validated_by: CoachId,
+    },
     MatchReportPublished {
         published_by: CoachId,
         published_at: DateTime<Utc>,
@@ -262,6 +270,7 @@ impl MatchReportDomainEvent {
             Self::PostMatchRecorded { .. } => "PostMatchRecorded",
             Self::TeamPostMatchRecorded { .. } => "TeamPostMatchRecorded",
             Self::PostMatchClosed => "PostMatchClosed",
+            Self::TeamSideValidated { .. } => "TeamSideValidated",
             Self::MatchReportPublished { .. } => "MatchReportPublished",
             Self::MatchReportUnpublished { .. } => "MatchReportUnpublished",
             Self::RoundReassigned { .. } => "RoundReassigned",

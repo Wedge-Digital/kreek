@@ -8,5 +8,6 @@ pub mod match_report_repository_port;
 pub mod match_report_state;
 pub mod mvp_draw;
 pub mod team_post_match;
+pub mod team_validation;
 pub mod underdog;
 pub mod value_objects;

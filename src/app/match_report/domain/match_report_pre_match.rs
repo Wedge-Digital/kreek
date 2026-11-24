@@ -10,8 +10,8 @@ use crate::app::match_report::domain::value_objects::TurnNumber;
 use crate::app::match_report::domain::value_objects::{
     ActionId, ActionPlayer, AllowedInducementSpec, D3Roll, DedicatedFans, EntryMode,
     FanFactorAuthors, FanFactorMod, InducementMaxQty, InducementPurchase, InducementQty,
-    MatchAction, MatchActionType, MatchGain, MatchReportOrigin, PurchaseKind, TeamSide, TeamValue,
-    TempPlayer, TempPlayerKind,
+    MatchAction, MatchActionType, MatchGain, MatchReportOrigin, PurchaseKind, SideAuthors,
+    TeamSide, TeamValue, TempPlayer, TempPlayerKind,
 };
 use crate::app::shared_kernel::bloodbowl::ids::{CompetitionId, MatchReportId, RoundId, SeasonId};
 use crate::app::shared_kernel::bloodbowl::inducement_definition::InducementId;
@@ -66,6 +66,9 @@ pub struct MatchReportPreMatch {
     /// L'après-match de chaque camp, en « Chacun son équipe », tant que
     /// l'autre n'a pas le sien (carte 658). Vide en « Je saisis tout ».
     pub team_post_match: TeamPostMatches,
+    /// Qui a validé chaque camp, en « Chacun son équipe » (carte 659-A) : un
+    /// camp validé est figé. Vide en « Je saisis tout ».
+    pub validated_by: SideAuthors,
     pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
@@ -158,6 +161,14 @@ impl MatchReportPreMatch {
     }
 
     /// L'équipe de ce camp.
+    /// Le camp d'une équipe du match : le domicile, ou le visiteur.
+    pub fn side_of_team(&self, team_id: &TeamId) -> TeamSide {
+        match team_id == &self.home_team_id {
+            true => TeamSide::Home,
+            false => TeamSide::Away,
+        }
+    }
+
     pub fn team_id_of(&self, side: TeamSide) -> &TeamId {
         match side {
             TeamSide::Home => &self.home_team_id,
@@ -223,6 +234,8 @@ impl MatchReportPreMatch {
         if self.entry_mode != EntryMode::TeamEntry {
             return Err(DomainError::NotTeamEntry);
         }
+        // Un camp validé est figé (carte 659-A).
+        self.check_side_open(side)?;
         if self.fan_roll_of(side).is_some() {
             return Err(DomainError::FanFactorAlreadyRecorded(side));
         }
@@ -395,6 +408,10 @@ impl MatchReportPreMatch {
     /// converti par `into_pre_match()` n'en porte pas, et doit être refusé
     /// pour ce qu'il est.
     pub fn check_inducements_open_for(&self, team_id: &TeamId) -> Result<(), DomainError> {
+        // Un camp validé est figé (carte 659-A) : une équipe à qui son tier
+        // n'offre rien n'a jamais validé de coups de pouce, et sans ce refus
+        // pourrait encore en envoyer — et réinscrire ses temporaires.
+        self.check_side_open(self.side_of_team(team_id))?;
         if self.has_recorded_inducements(team_id) {
             return Err(DomainError::InducementsAlreadyRecorded);
         }
@@ -613,6 +630,7 @@ impl MatchReportPreMatch {
         recorded_by: CoachId,
         offered_inducements: &[TeamId],
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        self.check_side_open(team_side)?;
         check_match_action(&action)?;
         if !self.has_kicked_off(offered_inducements) {
             return Err(DomainError::MatchNotStarted);
@@ -644,6 +662,7 @@ impl MatchReportPreMatch {
         action_id: ActionId,
         recorded_by: CoachId,
     ) -> Result<(Self, MatchReportDomainEvent), DomainError> {
+        self.check_side_open(side)?;
         if self.has_mvp(side) {
             return Err(DomainError::MvpAlreadyRecorded);
         }
@@ -711,6 +730,7 @@ impl MatchReportPreMatch {
         action_id: ActionId,
         recorded_by: CoachId,
     ) -> Result<(Self, Vec<MatchReportDomainEvent>), DomainError> {
+        self.check_side_open(side)?;
         mvp_draw::check_designated(&designated)?;
         let winner = mvp_draw::pick(&designated, rng).clone();
         let (mut updated, recorded) = self.record_mvp(
@@ -770,6 +790,7 @@ impl MatchReportPreMatch {
             return Err(DomainError::DrawnMvpIsFinal);
         }
         let team_side = self.side_of_action(action_id)?;
+        self.check_side_open(team_side)?;
         if !writable_sides.contains(&team_side) {
             return Err(DomainError::ActionOutsideSide(team_side));
         }
@@ -938,6 +959,7 @@ impl MatchReportPreMatch {
             away_inducements_recorded_by: None,
             fan_factor_recorded_by: Default::default(),
             team_post_match: TeamPostMatches::default(),
+            validated_by: SideAuthors::default(),
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
@@ -1220,6 +1242,7 @@ mod tests {
             drawn_mvps: vec![],
             version: 1,
             team_post_match: Default::default(),
+            validated_by: Default::default(),
         }
     }
 
