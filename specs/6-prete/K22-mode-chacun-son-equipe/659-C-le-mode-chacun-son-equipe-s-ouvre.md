@@ -33,6 +33,13 @@ status: approved
 - **Le récapitulatif non publié déclare sa présence** ; le bloc des
   validations devient un widget rechargé sur `matchChanged` ; à la
   publication (`MatchReportPublished`), la page entière se recharge.
+- **L'écran d'attente bascule vers le récapitulatif** (décision du
+  2026-11-24) : le premier camp valide depuis `team-step5` et y reste ; son
+  widget de l'adversaire
+  (`io/web/widgets/opponent_post_match_widget.rs`) rend 204 dès que le rapport
+  n'est plus en avant-match, et l'écran ne verrait jamais la publication. Il
+  rend désormais un `HX-Redirect` vers le récapitulatif quand le rapport a
+  quitté l'avant-match : les deux coachs s'y retrouvent, en direct.
 - **Le toast** : `notice_of` rend, pour `MatchSideValidated`, « Les London Rats
   sont validés par Morgane » (§ 12.7) ; `TOAST_EVENT_TYPES` passe à cinq. Le
   retrait reste un signal.
@@ -48,7 +55,8 @@ status: approved
 ## Fichiers touchés
 
 `io/web/templates/recap.html`, un widget des validations et sa route,
-`io/web/recap_controller.rs`, `src/web/realtime/toast.rs`,
+`io/web/recap_controller.rs`, `io/web/widgets/opponent_post_match_widget.rs`,
+`src/web/realtime/toast.rs`,
 `io/web/templates/match_report/entry-mode-card.html`,
 `io/web/match_selection_controller.rs`, `io/web/templates/match-mode.html`,
 `io/web/templates/match-selection.html` ;
@@ -70,8 +78,9 @@ status: approved
 - **Unitaires** : `notice_of(MatchSideValidated)` et son texte ; l'option
   masquée pour deux équipes d'un même coach, affichée sinon.
 - **E2E** (deux contextes) : le visiteur valide, le domicile voit « Validé ✓ »
-  et le bouton « … et publier » **sans rechargement** et reçoit le toast ; sa
-  validation publie, les deux pages montrent le rapport publié. La carte
+  et le bouton « … et publier » **sans rechargement** et reçoit le toast ; l'écran
+  d'attente du visiteur bascule vers le récapitulatif ; sa validation publie,
+  les deux pages montrent le rapport publié. La carte
   « Qui saisit ? » propose « Chacun son équipe » et démarre le mode B
   (`test_match_report_entry_mode.py:26-37` migré) ; elle ne le propose pas pour
   deux équipes d'un même coach.
