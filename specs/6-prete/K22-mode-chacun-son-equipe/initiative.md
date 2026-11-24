@@ -7,9 +7,9 @@ origine: kanban/epics/en_cours/E22-mode-chacun-son-equipe.md
 
 # E22 — Le mode « Chacun son équipe »
 
-> **Rangement.** Les sept cartes livrées (652 à 658) ont été séparées dans [K214](../../7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md), en `7-livree/`, le 2026-11-19. Restent ici 659 à 661 ; leurs lignes « Dépend de » citent toujours les cartes livrées, dont les identifiants n'ont pas changé.
+> **Rangement.** Les sept cartes livrées (652 à 658) ont été séparées dans [K214](../../7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md), en `7-livree/`, le 2026-11-19. Restent ici 659-A, 659-B, 659-C, 660 et 661 — l'ancienne 659 découpée en trois le 2026-11-24 ; leurs lignes « Dépend de » citent toujours les cartes livrées, dont les identifiants n'ont pas changé.
 
-**État :** `en_cours` — 10 cartes, 652 à 661 ; 7 faites (652 à 658). Découpage validé le 2026-11-01 ;
+**État :** `en_cours` — 12 cartes, 652 à 661 (659 en trois) ; 7 faites (652 à 658), 5 restantes, approuvées le 2026-11-24. Découpage validé le 2026-11-01 ;
 cadrage et décisions le 2026-11-11.
 **Cadrage :** `docs/specs/saisie-mobile/E22-cadrage.md`. Née le 2026-11-01 des
 maquettes mobiles. Dépend de E19 (camp du coach courant), E20 (annulation des
@@ -56,7 +56,7 @@ Règles :
   carte n'y ajoute rien.
 
 Décisions du 2026-11-11 (cadrage, § 12) : l'option « Chacun son équipe »
-s'ouvre à la 659 ; une commande d'un camp est réessayée une fois sur conflit ;
+s'ouvre à la 659-C ; une commande d'un camp est réessayée une fois sur conflit ;
 le match commence quand les deux avant-matchs et les deux sélections de coups
 de pouce sont enregistrés ; la validation est un geste distinct, possible dès
 que son camp est prêt ; un camp validé est figé, sa validation se retire tant
@@ -75,7 +75,9 @@ validation fait un toast ; `PostMatchClosed` dit le passage en
 | 656 | Les actions de son camp | accès à la seule étape de son camp ; « ＋ Action de mon équipe » sans choix d'équipe ; ✕ sur ses seules actions ; le coup d'envoi après les deux avant-matchs |
 | 657 | Le MVP de son camp | l'étape MVP réduite à son camp, sans attendre l'autre, l'état de l'adversaire affiché |
 | 658 | Les gains, les fans et le paragraphe de son camp | **fusion** des cartes « gains et fan factor » et « deux paragraphes » : un événement d'après-match par camp, émis ; l'étape 5 réduite à son camp ; le titre au domicile ; les deux paragraphes au récapitulatif |
-| 659 | Valider son camp | « publier » devient « valider mon camp » ; la seconde validation publie ; « validé par » pour chaque camp, à côté du « publié par » de E19 ; l'option « Chacun son équipe » s'ouvre |
+| 659-A | Valider son camp | « publier » devient « valider mon camp » ; la seconde validation publie ; un camp validé est figé ; « validé par » pour chaque camp, à côté du « publié par » de E19 |
+| 659-B | Retirer sa validation | « Retirer ma validation » tant que l'autre n'a pas validé ; le camp redevient modifiable |
+| 659-C | Le mode « Chacun son équipe » s'ouvre | le récapitulatif en direct, le toast de validation ; l'option « Chacun son équipe » s'ouvre dans « Qui saisit ? » |
 | 660 | Corriger un compte rendu à deux | l'un ou l'autre coach dépublie, aux règles actuelles ; les deux validations sont remises à zéro et redemandées |
 | 661 | Les tests e2e à deux coachs | deux contextes de navigateur, un par coach, sur le même match |
 
@@ -87,7 +89,7 @@ coach, et sa carte pose le droit par camp dont toutes les autres dépendent. La
 parcours dans l'ordre du match — avant-match, coups de pouce, actions, MVP,
 gains et résumé, validation —, chaque étape livrable seule tant que les
 suivantes restent en « tout dans un formulaire ». Le mode B ne se choisit dans
-l'interface qu'à la 659 : avant, il ne se démarre que par un POST de test.
+l'interface qu'à la 659-C : avant, il ne se démarre que par un POST de test.
 
 Les événements par camp (fan factor, après-match) doivent laisser intacts les
 événements à deux camps de « Je saisis tout » : l'historique se rejoue tel
@@ -107,7 +109,7 @@ sur la cohabitation des formes :
 | 655 Favori a fini | aucune | aucun événement : `InducementsRecorded` porte déjà la validation du favori ; le mode A enchaîne comme aujourd'hui |
 | 656, 657 Actions, MVP | aucune | les actions sont déjà stockées par camp, avec leur auteur |
 | 658 Après-match et paragraphes | deux événements **ajoutés**, des champs de paragraphe dans l'agrégat, mode B seul | `PostMatchRecorded` reste celui du mode A. **Le `MatchReportPublished` émis vers `teams`, `ranking` et `competitions` ne change pas** — `players` reçoit, lui, les `PlayerMatchImpactAppEvent` du publisher, inchangés aussi : les deux camps y sont assemblés. Le résumé ne sort pas du BC (vérifié). Le récapitulatif affiche désormais un corps de résumé sans titre, qu'il masquait |
-| 659 Valider son camp | deux événements **ajoutés** (validation, retrait) | la publication émet le même événement qu'aujourd'hui ; `published_by` est le second validateur |
+| 659-A, 659-B Valider, retirer | deux événements **ajoutés** (validation, retrait) | la publication émet le même événement qu'aujourd'hui ; `published_by` est le second validateur |
 | 660 Correction à deux | aucune | règle d'éligibilité actuelle, inchangée |
 | 661 Tests | aucune | — |
 

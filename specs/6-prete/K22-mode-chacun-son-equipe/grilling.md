@@ -17,7 +17,7 @@ Aucune trace dans le dépôt.
 - **K22-B6** — Les actions de son camp (ticket `656-les-actions-de-son-camp`)
 - **K22-B7** — Le MVP de son camp (ticket `657-le-mvp-de-son-camp`)
 - **K22-B8** — Les gains, les fans et le paragraphe de son camp (ticket `658-les-gains-les-fans-et-le-paragraphe-de-son-camp`)
-- **K22-B9** — Valider son camp (ticket `659-valider-son-camp`)
+- **K22-B9** — Valider son camp (tickets `659-A-valider-son-camp`, `659-B-retirer-sa-validation`, `659-C-le-mode-chacun-son-equipe-s-ouvre` — l'ancienne 659, découpée le 2026-11-24)
 - **K22-B10** — Corriger un compte rendu à deux (ticket `660-corriger-un-compte-rendu-a-deux`)
 - **K22-B11** — Les tests e2e à deux coachs (ticket `661-les-tests-e2e-a-deux-coachs`)
 

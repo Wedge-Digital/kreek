@@ -27,7 +27,7 @@ Le 2026-11-19. Les cartes de `kanban/<état>/` et les épics de `kanban/epics/<�
 | [K19](7-livree/K19-saisie-du-compte-rendu-droits-et-robustesse/initiative.md) | `7-livree` | épic E19 | 5 |
 | [K20](7-livree/K20-coups-de-pouce-panier-et-annulation/initiative.md) | `7-livree` | épic E20 | 5 |
 | [K21](7-livree/K21-mode-de-saisie-et-apres-match-en-sequence/initiative.md) | `7-livree` | épic E21 | 9 |
-| [K22](5-tickets/K22-mode-chacun-son-equipe/initiative.md) | `5-tickets` | épic E22 | 3 |
+| [K22](6-prete/K22-mode-chacun-son-equipe/initiative.md) | `6-prete` | épic E22 | 5 |
 | [K23](7-livree/K23-temps-reel-connexions-et-notifications/initiative.md) | `7-livree` | épic E23 | 6 |
 | [K24](1-backlog/06-K24-navigation-mobile/initiative.md) | `1-backlog` | épic E24 | 0 |
 | [K25](1-backlog/07-K25-retrouver-ses-matchs/initiative.md) | `1-backlog` | épic E25 | 0 |

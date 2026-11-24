@@ -7,7 +7,7 @@ origine: kanban/epics/en_cours/E22-mode-chacun-son-equipe.md
 # K214 — Chacun son équipe, jusqu'aux gains (part livrée de K22)
 
 Initiative créée le 2026-11-19, à la reprise de la migration, en séparant les cartes déjà
-livrées de l'initiative [K22](../../specs/5-tickets/K22-mode-chacun-son-equipe/initiative.md) (épic E22), sur décision de
+livrées de l'initiative [K22](../../specs/6-prete/K22-mode-chacun-son-equipe/initiative.md) (épic E22), sur décision de
 l'humain : une initiative ne passe en `6-prete/` que si tous ses tickets sont à réaliser, et
 les cartes livrées restent archivées en `7-livree/`. Le contexte, la conception et le critère
 « Terminé quand » sont ceux de K22. Restent dans K22 les cartes 659 à 661 (valider son camp, corriger à deux, tests e2e).

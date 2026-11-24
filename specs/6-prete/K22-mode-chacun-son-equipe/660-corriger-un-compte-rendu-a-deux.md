@@ -1,42 +1,50 @@
 ---
 id: 660-corriger-un-compte-rendu-a-deux
 parent: K22
-status: draft
+status: approved
 ---
 
 # Corriger un compte rendu à deux
 
-**Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 9 · **Dépend de :** 659  
-**Dépend de** : 659-valider-son-camp
+**Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 11 · **Dépend de :** 659-C  
+**Dépend de** : 659-A-valider-son-camp, 659-C-le-mode-chacun-son-equipe-s-ouvre
 **Conception :** `docs/specs/saisie-mobile/E22-cadrage.md` (R10, § 1 « La correction »)
 
 ## Le constat
 
 - La dépublication suit `correction_eligibility_service::evaluate` : bloquée si
   des SPP ont été dépensés depuis le match ou si une équipe est en phase
-  d'amélioration (`src/app/match_report/use_cases/correction_eligibility_service.rs:19-58`).
-  `unpublish` rend un `ReadyToPublish` marqué `was_published_before`
-  (`domain/match_report_published.rs:81-95`).
-- La garde est `can_write_report` (`io/web/recap_controller.rs:477-508`) : en
-  mode B, depuis la 652, elle laisse passer les deux coachs.
-- Rien ne retient de validation à remettre à zéro avant la 659.
+  d'amélioration (`src/app/match_report/use_cases/correction_eligibility_service.rs:22-37`,
+  verdict `:59`). `unpublish` rend un `ReadyToPublish` marqué
+  `was_published_before` (`domain/match_report_published.rs:86-100`).
+- La garde est `authorize_recap_action` (`io/web/recap_controller.rs:480-498`),
+  règle `can_write_report` : en mode B, depuis la 652, elle laisse passer les
+  deux coachs.
+- **La correction par camp existe déjà** : en `ReadyToPublish`, le fan factor,
+  les actions et le MVP passent par `into_pre_match()` et la garde par camp
+  (652 à 657), et l'après-match d'un camp « remplace ses seules valeurs »
+  (`domain/team_post_match.rs`, 658). Reste ce que la 659-A a ajouté : des
+  validations, que la dépublication ne remet pas à zéro.
+- Le récapitulatif dépublié affiche un bandeau « Il a été dépublié… »
+  (`io/web/templates/recap.html:211-216`), sans dire par qui.
 
 ## Ce qui change
 
 - **`MatchReportUnpublished`** remet les deux validations à zéro, à la commande
   comme au rejeu (`domain/match_report_state.rs`, arête `Published` →
   `ReadyToPublish`) : aucun événement nouveau.
-- Chaque coach corrige son camp — fan factor, actions, MVP, après-match — puis
-  revalide ; la seconde validation republie (659).
+- Chaque coach corrige son camp — par les écrans existants — puis revalide ;
+  la seconde validation republie (659-A).
 - Le récapitulatif corrigeable en mode B : « Dépublié par … — à revalider par
-  les deux camps », l'état des validations à zéro.
+  les deux camps », le bloc des validations à zéro (widget de la 659-C).
 - Mode A inchangé.
 
 ## Fichiers touchés
 
 `domain/match_report_published.rs`, `domain/match_report_ready_to_publish.rs`,
 `domain/match_report_state.rs`, `io/web/recap_controller.rs`,
-`templates/recap.html`.
+`io/web/templates/recap.html` (chemins sous `src/app/match_report/`) ; le
+fichier e2e de la 659-A, `tests/impact-map.toml`.
 
 ## Règles et invariants
 

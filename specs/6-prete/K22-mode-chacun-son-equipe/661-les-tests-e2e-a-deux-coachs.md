@@ -1,13 +1,13 @@
 ---
 id: 661-les-tests-e2e-a-deux-coachs
 parent: K22
-status: draft
+status: approved
 ---
 
 # Les tests e2e à deux coachs
 
-**Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 10 · **Dépend de :** 652 à 660  
-**Dépend de** : 652-le-second-coach-rejoint-le-match, 653-deux-coachs-ecrivent-en-meme-temps, 654-l-avant-match-de-son-camp, 655-le-favori-a-fini-ses-achats, 656-les-actions-de-son-camp, 657-le-mvp-de-son-camp, 658-les-gains-les-fans-et-le-paragraphe-de-son-camp, 659-valider-son-camp, 660-corriger-un-compte-rendu-a-deux
+**Épic :** E22 — Le mode « Chacun son équipe » · **Ordre :** 12 · **Dépend de :** 652 à 660  
+**Dépend de** : 652-le-second-coach-rejoint-le-match, 653-deux-coachs-ecrivent-en-meme-temps, 654-l-avant-match-de-son-camp, 655-le-favori-a-fini-ses-achats, 656-les-actions-de-son-camp, 657-le-mvp-de-son-camp, 658-les-gains-les-fans-et-le-paragraphe-de-son-camp, 659-A-valider-son-camp, 659-B-retirer-sa-validation, 659-C-le-mode-chacun-son-equipe-s-ouvre, 660-corriger-un-compte-rendu-a-deux
 **Conception :** `docs/specs/saisie-mobile/E22-cadrage.md` (§ 7)
 
 ## Le constat
@@ -33,7 +33,9 @@ Un fichier `tests/e2e/test_match_report_team_entry.py`, sur le modèle de
   deux paragraphes ;
 - **les refus** : un POST direct dans le camp adverse sur chaque famille de
   routes (`step2`, coups de pouce, mercenaires, actions, suppression, MVP,
-  tirage, `step5`, validation) rend 403 ;
+  tirage, `step5`, validation, retrait de validation) rend 403 ;
+- **le gel** : une écriture dans un camp validé rend 409 ; après « Retirer ma
+  validation », elle passe ;
 - **le démarrage concurrent** : les deux coachs cliquent « Commencer » ; un seul
   mode est retenu, l'autre arrive sur l'état du match.
 
