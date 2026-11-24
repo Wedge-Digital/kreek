@@ -30,13 +30,21 @@ status: approved
   `POST /recap/publish`. Mode A : 404.
 - **Le récapitulatif** : « Retirer ma validation » sous un camp validé, pour
   qui peut le retirer.
+- **L'écran d'attente aussi** (décision du 2026-11-24, pendant de celle de la
+  659-A) : le premier camp valide depuis `team-step5`, en `PreMatch`, où le
+  récapitulatif n'existe pas. Sous « Validé ✓ », « Retirer ma validation »
+  poste sur `POST /step5/{side}/withdraw-validation`, gardée par la garde de
+  camp ; la commande est la même que sur le récapitulatif.
+- **Retirer un camp non validé** : erreur domaine `SideNotValidated`, rendue
+  en 409.
 - **App event `MatchSideValidationWithdrawn`** : signal, sans toast (§ 12.7).
 
 ## Fichiers touchés
 
 `domain/events.rs`, les états `PreMatch` et `ReadyToPublish`,
 `domain/match_report_state.rs`, `domain/error.rs`, un use case de retrait,
-`io/web/recap_controller.rs`, le routeur, `io/web/templates/recap.html`,
+`io/web/recap_controller.rs`, `io/web/team_step5_controller.rs`, le routeur,
+`io/web/templates/recap.html`, `io/web/templates/team-step5.html`,
 `io/app_events/app_event_publisher.rs`,
 `io/repository/match_report_repository.rs`,
 `src/app/shared_kernel/app_events/match_report_app_events.rs`,
@@ -54,8 +62,8 @@ status: approved
 - **Unitaires** : valider, retirer, écrire dans le camp, revalider — rejoué ;
   retrait d'un camp non validé refusé ; le coach adverse ne retire pas (403) ;
   `MatchSideValidationWithdrawn` sort du publisher.
-- **E2E** : le visiteur valide, retire, modifie son fan factor d'après-match,
-  revalide ; le domicile valide et publie.
+- **E2E** : le visiteur valide depuis l'écran d'attente, retire, modifie son
+  fan factor d'après-match, revalide ; le domicile valide et publie.
 
 ## Conséquences sur les données de production
 
