@@ -57,6 +57,14 @@ status: approved
   « Valider les [mon équipe] », « … et publier » si l'autre a validé ; l'admin
   a un bouton par camp non validé. Pas de rechargement en direct : c'est la
   659-C.
+- **Le premier camp valide depuis l'écran d'attente** (décision du
+  2026-11-24) : le récapitulatif n'existe pas en `PreMatch`
+  (`io/web/recap_controller.rs:247-258`), et le camp qui a fini son
+  après-match attend l'autre sur `team-step5`
+  (`io/web/team_step5_controller.rs:328-332`). Cet écran d'attente porte
+  « Valider les [mon équipe] », puis « Validé ✓ » ; la validation y suit la
+  même commande que sur le récapitulatif. Le récapitulatif reste réservé à
+  `ReadyToPublish`.
 - **App event `MatchSideValidated`** (signal, sans toast — le toast est à la
   659-C) : l'aiguillage du publisher, `MatchReportAppEvent::event_type` /
   `match_report_id` et `toast::notice_of` sont exhaustifs, l'ajout s'y range.
@@ -69,7 +77,8 @@ status: approved
 `domain/match_report_ready_to_publish.rs`, `domain/match_report_state.rs`,
 `domain/team_post_match.rs`, `domain/error.rs`, un use case de validation,
 `use_cases/publish_match_report_use_case.rs`, `io/web/recap_controller.rs`,
-`io/web/templates/recap.html`, `io/app_events/app_event_publisher.rs`,
+`io/web/templates/recap.html`, `io/web/team_step5_controller.rs`,
+`io/web/templates/team-step5.html`, `io/app_events/app_event_publisher.rs`,
 `io/repository/match_report_repository.rs`,
 `src/app/shared_kernel/app_events/match_report_app_events.rs`,
 `src/web/realtime/toast.rs` (bras sans toast) ;
