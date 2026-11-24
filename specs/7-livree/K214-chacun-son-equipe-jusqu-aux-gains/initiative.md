@@ -10,7 +10,7 @@ Initiative créée le 2026-11-19, à la reprise de la migration, en séparant le
 livrées de l'initiative [K22](../../specs/6-prete/K22-mode-chacun-son-equipe/initiative.md) (épic E22), sur décision de
 l'humain : une initiative ne passe en `6-prete/` que si tous ses tickets sont à réaliser, et
 les cartes livrées restent archivées en `7-livree/`. Le contexte, la conception et le critère
-« Terminé quand » sont ceux de K22. Restent dans K22 les cartes 659 à 661 (valider son camp, corriger à deux, tests e2e).
+« Terminé quand » sont ceux de K22. Restent dans K22 les cartes 659-B à 661 (retirer sa validation, ouvrir le mode, corriger à deux, tests e2e).
 
 ## Tickets
 
@@ -21,3 +21,4 @@ les cartes livrées restent archivées en `7-livree/`. Le contexte, la conceptio
 - `656-les-actions-de-son-camp` — Les actions de son camp (livrée à la migration)
 - `657-le-mvp-de-son-camp` — Le MVP de son camp (livrée à la migration)
 - `658-les-gains-les-fans-et-le-paragraphe-de-son-camp` — Les gains, les fans et le paragraphe de son camp (livrée à la migration)
+- `659-A-valider-son-camp` — Valider son camp, la seconde validation publie (livrée le 2026-11-24)
