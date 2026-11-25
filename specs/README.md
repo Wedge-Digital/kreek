@@ -58,13 +58,13 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E01 — Saison de jeu : le cycle de vie d'une équipe](7-livree/K1-saison-de-jeu/initiative.md) | `done` | 10 |
 | [E02 — Notifications e-mail de compétition](7-livree/K2-notifications-email/initiative.md) | `done` | 13 |
 | [E03 — Front : ni saut, ni clignotement](7-livree/K3-front-ni-saut-ni-clignotement/initiative.md) | `done` | 4 |
-| [E04 — Les verrous architecturaux](1-backlog/01-K4-verrous-architecturaux/initiative.md) | `to_be_refined` | 6 |
-| [E05 — Couverture e2e du déjà livré](1-backlog/02-K5-couverture-e2e/initiative.md) | `to_be_refined` | 4 |
-| [E06 — La fiche d'équipe complétée](1-backlog/03-K6-fiche-equipe-completee/initiative.md) | `to_be_refined` — 7 cartes livrées séparées dans [K212](7-livree/K212-fiche-equipe-tresorerie-et-matchs/initiative.md) | 8 |
+| [E04 — Les verrous architecturaux](8-abandonnee/K4-verrous-architecturaux/initiative.md) | remontée au projet (I1), hors de ce dépôt | 6 |
+| [E05 — Couverture e2e du déjà livré](8-abandonnee/K5-couverture-e2e/initiative.md) | remontée au projet (I2), hors de ce dépôt | 4 |
+| [E06 — La fiche d'équipe complétée](8-abandonnee/K6-fiche-equipe-completee/initiative.md) | remontée au projet (I3), hors de ce dépôt — 7 cartes livrées séparées dans [K212](7-livree/K212-fiche-equipe-tresorerie-et-matchs/initiative.md) | 8 |
 | [E07 — Entrées utilisateur et identité](5-tickets/K7-entrees-utilisateur-et-identite/initiative.md) | `en_cours` · 1/2 — la 329 séparée dans [K213](7-livree/K213-noms-sortir-de-la-liste-blanche/initiative.md) | 2 |
 | [E08 — Mode customisation : finir la livraison](7-livree/K8-mode-customisation/initiative.md) | `done` · fusionnée dans la 398 | 2 |
-| [E09 — BC `news`](1-backlog/04-K9-bc-news/initiative.md) | `to_be_refined` | 2 |
-| [E10 — Référentiels éditables](1-backlog/05-K10-referentiels-editables/initiative.md) | `to_be_refined` | 20 |
+| [E09 — BC `news`](8-abandonnee/K9-bc-news/initiative.md) | remontée au projet (I4), hors de ce dépôt | 2 |
+| [E10 — Référentiels éditables](8-abandonnee/K10-referentiels-editables/initiative.md) | remontée au projet (I5), hors de ce dépôt | 20 |
 | [E11 — Savoir ce qui se passe en production](7-livree/K11-journal-de-production/initiative.md) | `done` | 9 |
 | [E12 — Administrer les membres d'un espace](7-livree/K12-administrer-les-membres-d-un-espace/initiative.md) | `done` · 21/21 | 21 |
 | [E13 — Gestion des erreurs coûteuses](7-livree/K13-gestion-des-erreurs-couteuses/initiative.md) | `done` · 4/4 | 4 |
@@ -77,9 +77,9 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E21 — Le mode de saisie et l'après-match en séquence](7-livree/K21-mode-de-saisie-et-apres-match-en-sequence/initiative.md) | `done` · 9/9 | 9 |
 | [E22 — Le mode « Chacun son équipe »](7-livree/K22-mode-chacun-son-equipe/initiative.md) | `done` · 12/12 — les cartes dans [K214](7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md) | 12 |
 | [E23 — Le temps réel : connexions, présence et notifications](7-livree/K23-temps-reel-connexions-et-notifications/initiative.md) | `done` · 6/6 | 6 |
-| [E24 — La navigation mobile](1-backlog/06-K24-navigation-mobile/initiative.md) | `to_be_refined` | 3 |
-| [E25 — Retrouver ses matchs](1-backlog/07-K25-retrouver-ses-matchs/initiative.md) | `to_be_refined` | 4 |
-| [E26 — Les équipes sur mobile : recherche et fiches](1-backlog/08-K26-equipes-sur-mobile/initiative.md) | `to_be_refined` | 5 |
+| [E24 — La navigation mobile](8-abandonnee/K24-navigation-mobile/initiative.md) | remontée au projet (I6), hors de ce dépôt | 3 |
+| [E25 — Retrouver ses matchs](8-abandonnee/K25-retrouver-ses-matchs/initiative.md) | remontée au projet (I7), hors de ce dépôt | 4 |
+| [E26 — Les équipes sur mobile : recherche et fiches](8-abandonnee/K26-equipes-sur-mobile/initiative.md) | remontée au projet (I8), hors de ce dépôt | 5 |
 
 ## Les cartes sans épic
 
