@@ -34,7 +34,14 @@ PROFIL_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
 
 @pytest.fixture(scope="module")
 def competition(browser, space_id):
-    return build_full_competition(browser, space_id, 2, 3)
+    return build_full_competition(browser, space_id, 2, 2)
+
+
+@pytest.fixture(scope="module")
+def competition_mode_b(browser, space_id):
+    """Une compétition à part pour démarrer en mode B : un match déjà en cours
+    entre les mêmes équipes ferait refuser le démarrage (409)."""
+    return build_full_competition(browser, space_id, 2, 1)
 
 
 @pytest.fixture(scope="module")
@@ -118,10 +125,10 @@ def test_commencer_demarre_en_je_saisis_tout(page: Page, space_id, competition):
     assert demarreur, "le démarreur doit être enregistré"
 
 
-def test_commencer_en_chacun_son_equipe(page: Page, space_id, competition):
+def test_commencer_en_chacun_son_equipe(page: Page, space_id, competition_mode_b):
     """Carte 659-C : « Qui saisit ? » propose « Chacun son équipe » pour deux
     coachs distincts, et le match en sort démarré en mode B."""
-    mr_id = draft_of_round(competition["round_ids"][2])
+    mr_id = draft_of_round(competition_mode_b["round_ids"][0])
     page.goto(f"{BASE_URL}/app/{space_id}/match-report/{mr_id}", wait_until="load")
 
     carte = page.locator(".entry-mode-card")

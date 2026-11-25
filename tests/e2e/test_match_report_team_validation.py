@@ -256,7 +256,10 @@ def test_le_recapitulatif_en_direct(browser, space_id, competition):
     _declared(membre, lambda: _click_and_reload(membre, retirer))
     expect(_rows(devcoach).nth(1)).to_contain_text("À valider", timeout=DIRECT_TIMEOUT_MS)
     expect(devcoach.locator(".ms-btn-primary", has_text=PUBLISHES)).to_have_count(0)
-    expect(devcoach.locator(".ms-btn-primary", has_text=VALIDATE)).to_have_count(1)
+    # DevCoach est admin de l'espace : un bouton par camp non validé (§ 12.6).
+    domicile = _rows(devcoach).nth(0).locator(".ms-validation-team").inner_text()
+    valider_domicile = devcoach.get_by_role("button", name=f"Valider les {domicile}")
+    expect(valider_domicile).to_have_count(1)
 
     # La validation aussi, avec son toast.
     revalider = membre.get_by_role("button", name=VALIDATE)
