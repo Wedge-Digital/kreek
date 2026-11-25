@@ -954,6 +954,7 @@ mod unpublished_events_tests {
             summary_title: None,
             summary_body: None,
             was_published_before: true,
+            unpublished_by: None,
             summary_paragraphs: Default::default(),
             post_match_recorded_by: Default::default(),
             validated_by: Default::default(),

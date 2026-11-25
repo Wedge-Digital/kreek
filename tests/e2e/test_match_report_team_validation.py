@@ -1,5 +1,5 @@
-"""Valider son camp, retirer sa validation, et le récapitulatif en direct
-(cartes 659-A, 659-B et 659-C, épic E22).
+"""Valider son camp, retirer sa validation, le récapitulatif en direct, et
+corriger à deux (cartes 659-A, 659-B, 659-C et 660, épic E22).
 
 En « Chacun son équipe », chaque coach valide son équipe dès que son camp a
 son MVP et son après-match ; la seconde validation publie. Un camp validé ne
@@ -27,6 +27,14 @@ Scénarios :
        et « … et publier », et reçoit le toast « Les … sont validés par … ».
        La validation de DevCoach publie ; la page du membre se recharge seule
        et montre le rapport publié.
+- V5 — Corriger à deux (660) : le rapport publié par les deux validations,
+       le membre simple le dépublie par « Corriger le rapport ». DevCoach
+       recharge — pas de direct pour la dépublication — et lit « Dépublié par
+       … — à revalider par les deux camps », les deux camps « À valider ». Le
+       membre corrige son après-match (gain de 35 à 70) et revalide ; la
+       validation de DevCoach republie (« Publié par »). Le classement perd
+       puis retrouve ses deux lignes, et la trésorerie du visiteur reçoit le
+       gain corrigé.
 
 Le mode B se démarre ici par un POST direct (`entry_mode=TeamEntry`) ; la
 carte « Qui saisit ? » est couverte par `test_match_report_entry_mode.py`.
@@ -43,6 +51,7 @@ import requests
 from playwright.sync_api import expect
 
 from competition_lifecycle import BASE_URL, build_full_competition
+from db_helpers import attendre_que, query_db
 from match_report_helpers import (
     PROFIL_SIMPLE,
     create_draft,
@@ -67,7 +76,7 @@ STILL_THERE = "() => window.__sansRechargement === true"
 
 @pytest.fixture(scope="module")
 def competition(browser, space_id):
-    return build_full_competition(browser, space_id, num_teams=2, num_rounds=4)
+    return build_full_competition(browser, space_id, num_teams=2, num_rounds=5)
 
 
 def _membre():
@@ -281,3 +290,108 @@ def test_le_recapitulatif_en_direct(browser, space_id, competition):
         assert page.url.endswith(f"/{mr_id}/recap"), page.url
         expect(page.locator(".ms-card-header-byline")).to_contain_text("Publié par")
         expect(_rows(page)).to_have_count(0)
+
+
+# ── V5 — corriger un compte rendu à deux (carte 660) ──────────────────────────
+
+UNPUBLISHED_BY = re.compile(r"Dépublié par .+ — à revalider par les deux camps")
+
+
+def _ranking_lines(mr_id):
+    rows = query_db(f"SELECT count(*) FROM ranking_lines WHERE match_report_id = '{mr_id}'")
+    return int(rows[0]) if rows else 0
+
+
+def _team_phase(team_id):
+    rows = query_db(f"SELECT game_phase FROM team_proj WHERE team_id = '{team_id}'")
+    return rows[0] if rows else None
+
+
+def _last_income(team_id):
+    """Le gain du dernier match crédité à l'équipe : la trésorerie ne vit que
+    dans l'event store de `teams`."""
+    rows = query_db(
+        "SELECT payload FROM team_event_store "
+        f"WHERE team_id = '{team_id}' AND payload::text LIKE '%PostMatchSequenceStarted%' "
+        "ORDER BY version DESC LIMIT 1"
+    )
+    found = re.search(r'"treasury_income":\s*(\d+)', rows[0]) if rows else None
+    return int(found.group(1)) if found else None
+
+
+def _published_by_both(browser, space_id, mr_id):
+    """Chacun son après-match et sa validation ; celle de DevCoach publie."""
+    membre = _membre()
+    assert _post_match(membre, space_id, mr_id, "away", 35).status_code in (302, 303)
+    assert _post_match(requests.Session(), space_id, mr_id, "home", 60).status_code in (302, 303)
+    valide = membre.post(_url(space_id, mr_id, "recap/publish"), allow_redirects=False)
+    assert valide.status_code in (302, 303), f"obtenu {valide.status_code}"
+    devcoach = browser.new_context().new_page()
+    devcoach.goto(_url(space_id, mr_id, "recap"), wait_until="load")
+    with devcoach.expect_navigation():
+        devcoach.locator(".ms-btn-primary", has_text=PUBLISHES).click()
+    expect(devcoach.locator(".ms-card-header-byline")).to_contain_text("Publié par")
+    return devcoach
+
+
+def _wait_correctable(mr_id, team_ids):
+    """La correction n'est permise que les deux équipes en amélioration : leur
+    passage vient d'un app event, après la publication. Le gain du visiteur
+    (35, qu'aucun scénario précédent n'a crédité) dit que `teams` a reçu
+    celle-ci, et non la précédente."""
+    attendre_que(lambda: _ranking_lines(mr_id) == 2, quoi="le classement compte le match")
+    attendre_que(lambda: _last_income(team_ids[1]) == 35, quoi="le gain du visiteur crédité")
+    for team_id in team_ids:
+        attendre_que(
+            lambda t=team_id: _team_phase(t) == "PlayerImprovement",
+            quoi=f"l'équipe {team_id} en amélioration",
+        )
+
+
+def test_corriger_un_compte_rendu_a_deux(browser, space_id, competition):
+    mr_id = _team_entry_with_mvps(space_id, competition, 4)
+    exterieur = competition["team_ids"][1]
+    devcoach = _published_by_both(browser, space_id, mr_id)
+    _wait_correctable(mr_id, competition["team_ids"][:2])
+
+    # Le visiteur dépublie, par le bouton du récapitulatif publié.
+    membre = browser.new_context(extra_http_headers=PROFIL_SIMPLE).new_page()
+    membre.goto(_url(space_id, mr_id, "recap"), wait_until="load")
+    corriger = membre.locator(".ms-correct-btn")
+    expect(corriger).to_be_enabled()
+    membre.once("dialog", lambda dialog: dialog.accept())
+    with membre.expect_navigation():
+        corriger.click()
+    expect(membre.locator(".ms-unpublished-banner")).to_be_visible()
+    attendre_que(lambda: _ranking_lines(mr_id) == 0, quoi="le classement compensé")
+
+    # Le domicile recharge : qui a dépublié, et les deux camps à revalider.
+    devcoach.reload(wait_until="load")
+    bandeau = devcoach.locator(".ms-unpublished-banner")
+    expect(bandeau).to_contain_text(UNPUBLISHED_BY)
+    expect(bandeau).not_to_contain_text("DevCoach")
+    expect(_rows(devcoach)).to_have_count(2)
+    expect(_rows(devcoach).nth(0)).to_contain_text("À valider")
+    expect(_rows(devcoach).nth(1)).to_contain_text("À valider")
+
+    # Le visiteur corrige son après-match, puis revalide depuis le récapitulatif.
+    membre.goto(_url(space_id, mr_id, "step5/away"), wait_until="load")
+    _record(membre, 70)
+    assert membre.url.endswith(f"/{mr_id}/recap"), membre.url
+    with membre.expect_navigation():
+        membre.get_by_role("button", name=VALIDATE).click()
+    expect(_rows(membre).nth(1)).to_contain_text("Validé ✓ par")
+
+    # La validation du domicile republie.
+    devcoach.reload(wait_until="load")
+    expect(_rows(devcoach).nth(1)).to_contain_text("Validé ✓ par")
+    publier = devcoach.locator(".ms-btn-primary", has_text=PUBLISHES)
+    with devcoach.expect_navigation():
+        publier.click()
+    expect(devcoach.locator(".ms-card-header-byline")).to_contain_text("Publié par")
+    expect(devcoach.locator(".ms-unpublished-banner")).to_have_count(0)
+    expect(_rows(devcoach)).to_have_count(0)
+
+    # Le classement suit, et la trésorerie reçoit le gain corrigé.
+    attendre_que(lambda: _ranking_lines(mr_id) == 2, quoi="le classement rejoué")
+    attendre_que(lambda: _last_income(exterieur) == 70, quoi="le gain corrigé du visiteur")

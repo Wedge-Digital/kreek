@@ -212,16 +212,7 @@
         </div>
       </div>
 
-      {% if under_correction %}
-      <div class="ms-unpublished-banner">
-        <span class="ms-unpublished-banner-icon">&#9998;</span>
-        <span class="ms-unpublished-banner-text">
-          <strong>Ce rapport est en cours de correction.</strong>
-          Il a &eacute;t&eacute; d&eacute;publi&eacute; et ses effets ont &eacute;t&eacute; annul&eacute;s.
-          Ils seront r&eacute;appliqu&eacute;s &agrave; la re-publication.
-        </span>
-      </div>
-      {% endif %}
+      {% include "recap-unpublished-banner.html" %}
 
       {# « Chacun son équipe » non publié : le bloc des validations et ses
          boutons, rechargé seul sur le signal du match (carte 659-C) — jamais

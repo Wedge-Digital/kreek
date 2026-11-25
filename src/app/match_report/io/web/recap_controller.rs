@@ -10,13 +10,13 @@ use crate::app::match_report::domain::value_objects::{CorrectionBlocker, Correct
 use crate::app::match_report::domain::value_objects::{EntryMode, SideAuthors, TeamSide};
 use crate::app::match_report::io::web::builders::{
     build_correction_zone, build_performance_rows, build_published_by, build_round_context_vm,
-    build_team_banner, AdminBarVm, CorrectionZoneVm, PerformanceRowVm, RoundContextVm,
-    TeamBannerVm,
+    build_team_banner, build_unpublished_by, AdminBarVm, CorrectionZoneVm, PerformanceRowVm,
+    RoundContextVm, TeamBannerVm,
 };
 use crate::app::match_report::io::web::mvp_step_controller::parse_side;
 use crate::app::match_report::io::web::view_models::{
     GainsFanVm, HalfTimelineVm, InjuryRowVm, MatchResultVm, MvpRowVm, SummaryParagraphVm,
-    ValidationFacts, ValidationPanelVm,
+    UnpublishedBannerVm, ValidationFacts, ValidationPanelVm,
 };
 use crate::app::match_report::io::web::write_conflict::{
     conflict_response, domain_refusal_response,
@@ -83,7 +83,9 @@ pub struct RecapTemplate {
     pub injuries: Vec<InjuryRowVm>,
     pub performances: Vec<PerformanceRowVm>,
     pub admin_bar: Option<AdminBarVm>,
-    pub under_correction: bool,
+    /// Le bandeau d'un rapport en cours de correction ; en « Chacun son
+    /// équipe », il nomme qui l'a dépublié (carte 660).
+    pub unpublished_banner: Option<UnpublishedBannerVm>,
     pub publish_url: String,
     /// Le retrait d'une validation, en « Chacun son équipe » (carte 659-B).
     pub withdraw_validation_url: String,
@@ -135,6 +137,9 @@ struct RecapSource<'a> {
     validates_by_side: bool,
     validated_by: SideAuthors,
     was_published_before: bool,
+    /// Qui a dépublié le rapport (carte 660). `None` sur un rapport publié ou
+    /// jamais dépublié.
+    unpublished_by: Option<String>,
 }
 
 impl<'a> RecapSource<'a> {
@@ -161,6 +166,7 @@ impl<'a> RecapSource<'a> {
             validates_by_side: rtp.entry_mode == EntryMode::TeamEntry,
             validated_by: rtp.validated_by,
             was_published_before: rtp.was_published_before,
+            unpublished_by: rtp.unpublished_by.map(|coach| coach.to_string()),
         }
     }
 
@@ -190,6 +196,7 @@ impl<'a> RecapSource<'a> {
             // Sans objet sur un rapport publié : le bandeau ne concerne que
             // l'état corrigeable.
             was_published_before: false,
+            unpublished_by: None,
         }
     }
 }
@@ -480,7 +487,8 @@ async fn build_recap_template(
         source.summary_body.clone(),
     );
 
-    let (round_context, performances, published_by) = tokio::join!(
+    let coach_data = state.match_report.coach_data.as_ref();
+    let (round_context, performances, published_by, unpublished_by) = tokio::join!(
         build_round_context_vm(
             state.match_report.competition_data.as_ref(),
             &source.season_id,
@@ -493,10 +501,8 @@ async fn build_recap_template(
             &home_info.roster_id,
             &away_info.roster_id,
         ),
-        build_published_by(
-            state.match_report.coach_data.as_ref(),
-            source.published_by.as_deref()
-        ),
+        build_published_by(coach_data, source.published_by.as_deref()),
+        build_unpublished_by(coach_data, source.unpublished_by.as_deref()),
     );
 
     // Le garde-fou ne se calcule que pour un rapport publié : quatre
@@ -540,7 +546,11 @@ async fn build_recap_template(
         injuries: InjuryRowVm::all_from_domain(source.home_actions, source.away_actions),
         performances,
         admin_bar: AdminBarVm::build(correction, move_widget_url),
-        under_correction: !is_published && source.was_published_before,
+        unpublished_banner: UnpublishedBannerVm::of_correction(
+            !is_published && source.was_published_before,
+            source.validates_by_side,
+            unpublished_by,
+        ),
         publish_url: routes.match_report.recap_publish(space_id, match_report_id),
         withdraw_validation_url: routes
             .match_report
@@ -1331,6 +1341,7 @@ mod published_by_tests {
             summary_title: Some("Titre".to_string()),
             summary_body: Some("Corps".to_string()),
             was_published_before: false,
+            unpublished_by: None,
             summary_paragraphs: Default::default(),
             post_match_recorded_by: Default::default(),
             validated_by: Default::default(),
@@ -1372,6 +1383,94 @@ mod published_by_tests {
         assert!(RecapSource::from_rtp(&rtp).validates_by_side);
         let (published, _) = rtp.publish(CoachId::new());
         assert!(!RecapSource::from_published(&published).validates_by_side);
+    }
+
+    // ── Carte 660 — le bandeau d'un rapport dépublié ────────────────────────
+
+    /// Le bandeau seul, tel que `recap.html` l'inclut.
+    #[derive(Template)]
+    #[template(path = "recap-unpublished-banner.html")]
+    struct BannerTemplate {
+        unpublished_banner: Option<UnpublishedBannerVm>,
+    }
+
+    /// Le rapport publié puis dépublié par `unpublisher`, dans le mode donné.
+    fn unpublished_in(mode: EntryMode, unpublisher: CoachId) -> MatchReportReadyToPublish {
+        let mut rtp = make_rtp();
+        rtp.entry_mode = mode;
+        let (published, _) = rtp.publish(CoachId::new());
+        let (back, _) = published
+            .unpublish(unpublisher, CorrectionEligibility::Eligible)
+            .unwrap();
+        back
+    }
+
+    /// Le bandeau que rendrait le récapitulatif, le port ne connaissant que
+    /// `known`.
+    async fn displayed_banner(rtp: &MatchReportReadyToPublish, known: &CoachId) -> String {
+        let source = RecapSource::from_rtp(rtp);
+        let coach_data = FakeCoachData {
+            coach_id: known.to_string(),
+        };
+        let name = build_unpublished_by(&coach_data, source.unpublished_by.as_deref()).await;
+        let banner = UnpublishedBannerVm::of_correction(
+            source.was_published_before,
+            source.validates_by_side,
+            name,
+        );
+        BannerTemplate {
+            unpublished_banner: banner,
+        }
+        .render()
+        .unwrap()
+    }
+
+    /// En « Chacun son équipe », le bandeau nomme qui a dépublié et demande
+    /// les deux validations.
+    #[tokio::test]
+    async fn a_team_entry_banner_names_who_unpublished() {
+        let visitor = CoachId::new();
+        let rtp = unpublished_in(EntryMode::TeamEntry, visitor);
+        let html = displayed_banner(&rtp, &visitor).await;
+        assert!(
+            html.contains("D&eacute;publi&eacute; par DevCoach"),
+            "{html}"
+        );
+        assert!(html.contains("revalider par les deux camps"), "{html}");
+        assert!(!html.contains("en cours de correction"), "{html}");
+    }
+
+    /// Un nom que le port ne connaît pas n'est pas inventé.
+    #[tokio::test]
+    async fn an_unknown_unpublisher_is_not_named() {
+        let rtp = unpublished_in(EntryMode::TeamEntry, CoachId::new());
+        let html = displayed_banner(&rtp, &CoachId::new()).await;
+        assert!(html.contains("D&eacute;publi&eacute; &mdash;"), "{html}");
+        assert!(!html.contains("publi&eacute; par"), "{html}");
+    }
+
+    /// En « Je saisis tout », le bandeau reste celui d'avant.
+    #[tokio::test]
+    async fn a_solo_entry_banner_is_unchanged() {
+        let coach = CoachId::new();
+        let rtp = unpublished_in(EntryMode::SoloEntry, coach);
+        let html = displayed_banner(&rtp, &coach).await;
+        assert!(
+            html.contains("Ce rapport est en cours de correction."),
+            "{html}"
+        );
+        assert!(!html.contains("DevCoach"), "{html}");
+        assert!(!html.contains("revalider"), "{html}");
+    }
+
+    /// Ni un rapport publié, ni un rapport jamais dépublié n'ont de bandeau.
+    #[tokio::test]
+    async fn no_banner_outside_a_correction() {
+        let rtp = make_rtp();
+        let html = displayed_banner(&rtp, &rtp.created_by).await;
+        assert!(!html.contains("ms-unpublished-banner"), "{html}");
+        let (published, _) = rtp.publish(CoachId::new());
+        assert_eq!(RecapSource::from_published(&published).unpublished_by, None);
     }
 }
 

@@ -69,6 +69,10 @@ pub struct MatchReportPreMatch {
     /// Qui a validé chaque camp, en « Chacun son équipe » (carte 659-A) : un
     /// camp validé est figé. Vide en « Je saisis tout ».
     pub validated_by: SideAuthors,
+    /// Qui a dépublié le rapport (carte 660). Toujours `None` dans un vrai
+    /// avant-match : seul un `ReadyToPublish` corrigé le porte, et
+    /// `into_pre_match` le confie ici pour que `from_pre_match` le lui rende.
+    pub unpublished_by: Option<CoachId>,
     pub star_engagements: Vec<(TeamId, InducementId)>,
     pub home_temp_players: Vec<TempPlayer>,
     pub away_temp_players: Vec<TempPlayer>,
@@ -960,6 +964,7 @@ impl MatchReportPreMatch {
             fan_factor_recorded_by: Default::default(),
             team_post_match: TeamPostMatches::default(),
             validated_by: SideAuthors::default(),
+            unpublished_by: None,
             star_engagements: vec![],
             home_temp_players: vec![],
             away_temp_players: vec![],
@@ -1243,6 +1248,7 @@ mod tests {
             version: 1,
             team_post_match: Default::default(),
             validated_by: Default::default(),
+            unpublished_by: None,
         }
     }
 

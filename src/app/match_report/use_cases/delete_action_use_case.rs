@@ -148,6 +148,7 @@ mod tests {
             version: 1,
             team_post_match: Default::default(),
             validated_by: Default::default(),
+            unpublished_by: None,
         };
         let action_id = ActionId("ACT01".into());
         let (updated, _) = pm

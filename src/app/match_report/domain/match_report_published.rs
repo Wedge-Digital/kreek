@@ -99,12 +99,13 @@ impl MatchReportPublished {
             unpublished_by,
             unpublished_at: Utc::now(),
         };
-        Ok((self.to_ready_to_publish(), event))
+        Ok((self.to_ready_to_publish(unpublished_by), event))
     }
 
     /// Reconstruit l'état corrigeable à partir du rapport publié. Symétrique de
-    /// `from_ready_to_publish`, drapeau de correction en plus.
-    fn to_ready_to_publish(&self) -> MatchReportReadyToPublish {
+    /// `from_ready_to_publish`, drapeau de correction et auteur de la
+    /// dépublication en plus (carte 660).
+    fn to_ready_to_publish(&self, unpublished_by: CoachId) -> MatchReportReadyToPublish {
         MatchReportReadyToPublish {
             id: self.id.clone(),
             space_id: self.space_id.clone(),
@@ -152,6 +153,7 @@ impl MatchReportPublished {
             // E22) : un rapport dépublié n'a aucun camp validé.
             validated_by: SideAuthors::default(),
             was_published_before: true,
+            unpublished_by: Some(unpublished_by),
         }
     }
 

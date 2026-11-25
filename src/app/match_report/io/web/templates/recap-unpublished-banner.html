@@ -1,0 +1,18 @@
+{# Le bandeau d'un rapport dépublié pour correction (inclus par recap.html).
+   En « Chacun son équipe », il dit qui a dépublié et que les deux camps
+   revalident (carte 660) ; en « Je saisis tout », il reste celui d'avant. #}
+{% if let Some(banner) = unpublished_banner.as_ref() %}
+<div class="ms-unpublished-banner">
+  <span class="ms-unpublished-banner-icon">&#9998;</span>
+  <span class="ms-unpublished-banner-text">
+    {% if banner.revalidated_by_both_sides %}
+    <strong>{% if let Some(name) = banner.unpublished_by.as_ref() %}D&eacute;publi&eacute; par {{ name }}{% else %}D&eacute;publi&eacute;{% endif %} &mdash; &agrave; revalider par les deux camps.</strong>
+    Ses effets ont &eacute;t&eacute; annul&eacute;s. Ils seront r&eacute;appliqu&eacute;s &agrave; la re-publication.
+    {% else %}
+    <strong>Ce rapport est en cours de correction.</strong>
+    Il a &eacute;t&eacute; d&eacute;publi&eacute; et ses effets ont &eacute;t&eacute; annul&eacute;s.
+    Ils seront r&eacute;appliqu&eacute;s &agrave; la re-publication.
+    {% endif %}
+  </span>
+</div>
+{% endif %}

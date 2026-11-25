@@ -181,6 +181,31 @@ fn count_touchdowns(actions: &[MatchAction]) -> u8 {
         .count() as u8
 }
 
+/// Le bandeau d'un rapport dépublié pour correction. En « Chacun son
+/// équipe », il dit qui l'a dépublié et que les deux camps revalident
+/// (carte 660) ; en « Je saisis tout », il reste celui d'avant.
+pub struct UnpublishedBannerVm {
+    /// Vrai en « Chacun son équipe » : la republication attend les deux
+    /// validations.
+    pub revalidated_by_both_sides: bool,
+    /// Le nom de qui a dépublié, quand le port le connaît — jamais inventé.
+    pub unpublished_by: Option<String>,
+}
+
+impl UnpublishedBannerVm {
+    /// Le bandeau, pour le seul rapport en cours de correction.
+    pub fn of_correction(
+        under_correction: bool,
+        validates_by_side: bool,
+        unpublished_by: Option<String>,
+    ) -> Option<Self> {
+        under_correction.then_some(Self {
+            revalidated_by_both_sides: validates_by_side,
+            unpublished_by: unpublished_by.filter(|_| validates_by_side),
+        })
+    }
+}
+
 pub struct GainsFanVm {
     /// Le total crédité, bonus compris : le chiffre reste un seul nombre.
     pub home_gain_kpo: u32,

@@ -86,6 +86,12 @@ pub struct MatchReportReadyToPublish {
     /// en `ReadyToPublish`, le rapport y reste — `rehydrate` mute l'état en
     /// place pour tous les événements d'édition.
     pub was_published_before: bool, // arch:ok fait booléen sans invariant à protéger
+    /// Qui a dépublié le rapport pour le corriger (carte 660) : posé par
+    /// `unpublish`, à la commande comme au rejeu, et rendu par
+    /// `into_pre_match` / `from_pre_match` pour survivre à la correction d'un
+    /// camp. `None` pour un rapport jamais dépublié ; une nouvelle publication
+    /// le perd, la dépublication suivante le repose.
+    pub unpublished_by: Option<CoachId>,
 }
 
 impl MatchReportReadyToPublish {
@@ -209,6 +215,7 @@ impl MatchReportReadyToPublish {
             // Un rapport qui atteint cet état pour la première fois n'a jamais
             // été publié. Seul `unpublish()` positionne ce drapeau.
             was_published_before: false,
+            unpublished_by: pm.unpublished_by,
         }
     }
 
@@ -240,6 +247,7 @@ impl MatchReportReadyToPublish {
             fan_factor_recorded_by: self.fan_factor_recorded_by,
             team_post_match,
             validated_by: self.validated_by,
+            unpublished_by: self.unpublished_by,
             star_engagements: self.star_engagements,
             home_temp_players: self.home_temp_players,
             away_temp_players: self.away_temp_players,
@@ -363,6 +371,7 @@ mod tests {
             summary_title,
             summary_body,
             was_published_before: false,
+            unpublished_by: None,
             summary_paragraphs: Default::default(),
             post_match_recorded_by: Default::default(),
             validated_by: Default::default(),

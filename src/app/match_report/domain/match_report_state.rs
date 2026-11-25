@@ -2870,4 +2870,122 @@ mod tests {
         let refused = pm.withdraw_side_validation(TeamSide::Home, CoachId::new());
         assert_eq!(refused.unwrap_err(), DomainError::NotTeamEntry);
     }
+
+    // ── Carte 660 — corriger un compte rendu à deux ──────────────────────────
+
+    use crate::app::match_report::domain::match_report_published::MatchReportPublished;
+    use crate::app::match_report::domain::value_objects::CorrectionBlocker;
+
+    /// Les deux validations, visiteur puis domicile : la seconde publie.
+    fn published_by_both(
+        rtp: &MatchReportReadyToPublish,
+    ) -> (Vec<MatchReportDomainEvent>, MatchReportPublished) {
+        let (outcome, mut events) = rtp.validate_side(TeamSide::Away, CoachId::new()).unwrap();
+        let SideValidationOutcome::Validated(rtp) = outcome else {
+            panic!("attendu Validated");
+        };
+        let (outcome, second) = rtp.validate_side(TeamSide::Home, CoachId::new()).unwrap();
+        let SideValidationOutcome::Published(published) = outcome else {
+            panic!("attendu Published");
+        };
+        events.extend(second);
+        (events, published)
+    }
+
+    /// R10 : dépublié, un rapport « Chacun son équipe » n'a plus aucun camp
+    /// validé, et retient qui l'a dépublié — l'événement le porte déjà.
+    #[test]
+    fn an_unpublished_team_entry_report_knows_who_unpublished_it() {
+        let (_, rtp) = both_post_matches();
+        assert_eq!(rtp.unpublished_by, None);
+        let (_, published) = published_by_both(&rtp);
+        let visitor = CoachId::new();
+        let (back, event) = published
+            .unpublish(visitor, CorrectionEligibility::Eligible)
+            .unwrap();
+        assert_eq!(back.validated_by, Default::default());
+        assert_eq!(back.unpublished_by, Some(visitor));
+        assert!(back.was_published_before);
+        assert!(matches!(
+            event,
+            MatchReportDomainEvent::MatchReportUnpublished { unpublished_by, .. }
+                if unpublished_by == visitor
+        ));
+    }
+
+    /// Les corrections d'un camp passent par `into_pre_match` : l'auteur de
+    /// la dépublication y survit, et `from_pre_match` le rend. L'après-match
+    /// d'un camp, corrigé sur place, le garde aussi.
+    #[test]
+    fn the_unpublisher_survives_a_side_correction() {
+        let (_, rtp) = both_post_matches();
+        let (_, published) = published_by_both(&rtp);
+        let visitor = CoachId::new();
+        let (back, _) = published
+            .unpublish(visitor, CorrectionEligibility::Eligible)
+            .unwrap();
+        let pm = back.clone().into_pre_match();
+        assert_eq!(pm.unpublished_by, Some(visitor));
+        let bonuses = NoStallingBonuses::default();
+        let fan = FanFactorMod::try_new(0).unwrap();
+        let again = MatchReportReadyToPublish::from_pre_match(
+            &pm,
+            gain(60),
+            gain(70),
+            bonuses,
+            fan,
+            fan,
+            None,
+            None,
+        );
+        assert_eq!(again.unpublished_by, Some(visitor));
+        let (corrected, _) = back
+            .record_team_post_match(side_entry(TeamSide::Away, 70, None))
+            .unwrap();
+        assert_eq!(corrected.unpublished_by, Some(visitor));
+    }
+
+    /// Trois cycles publier (deux validations) / dépublier, chaque fois par
+    /// un autre coach : le rejeu retient le dernier, sans validation, et
+    /// retrouve l'état de la commande.
+    #[test]
+    fn three_team_entry_publish_unpublish_cycles_replay() {
+        let (mut stream, mut rtp) = both_post_matches();
+        let mut last = None;
+        for _ in 0..3 {
+            let (validations, published) = published_by_both(&rtp);
+            let unpublisher = CoachId::new();
+            let (back, unpublished) = published
+                .unpublish(unpublisher, CorrectionEligibility::Eligible)
+                .unwrap();
+            stream.extend(validations);
+            stream.push(unpublished);
+            rtp = back;
+            last = Some(unpublisher);
+        }
+        let MatchReportState::ReadyToPublish(replayed_rtp) = replayed(stream) else {
+            panic!("attendu ReadyToPublish");
+        };
+        assert_eq!(replayed_rtp.unpublished_by, last);
+        assert_eq!(replayed_rtp.unpublished_by, rtp.unpublished_by);
+        assert_eq!(replayed_rtp.validated_by, Default::default());
+        assert_eq!(replayed_rtp.version, rtp.version);
+        assert!(replayed_rtp.was_published_before);
+    }
+
+    /// R10 : l'éligibilité reste celle d'aujourd'hui — bloquée, la
+    /// dépublication d'un rapport publié par les deux validations est refusée.
+    #[test]
+    fn a_blocked_team_entry_report_is_not_unpublished() {
+        let (_, rtp) = both_post_matches();
+        let (_, published) = published_by_both(&rtp);
+        let blocker = CorrectionBlocker::SppAlreadySpent {
+            side: TeamSide::Away,
+        };
+        let refused = published.unpublish(CoachId::new(), CorrectionEligibility::Blocked(blocker));
+        assert_eq!(
+            refused.unwrap_err(),
+            DomainError::CorrectionNotAllowed(blocker)
+        );
+    }
 }

@@ -117,6 +117,15 @@ pub async fn build_published_by(
     coach_data.find_coach_name(published_by?).await
 }
 
+/// Le nom de qui a dépublié le rapport (carte 660), résolu comme « Publié
+/// par » : inconnu du port, il n'est pas affiché.
+pub async fn build_unpublished_by(
+    coach_data: &dyn ICoachDataPort,
+    unpublished_by: Option<&str>,
+) -> Option<String> {
+    coach_data.find_coach_name(unpublished_by?).await
+}
+
 // ── Barre d'administration (carte 557) ───────────────────────────────────────
 
 /// Les actions réservées, sous le cartouche. Chacune porte son propre droit :

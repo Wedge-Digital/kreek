@@ -303,6 +303,7 @@ mod tests {
             version: 1,
             team_post_match: Default::default(),
             validated_by: Default::default(),
+            unpublished_by: None,
         }
     }
 
