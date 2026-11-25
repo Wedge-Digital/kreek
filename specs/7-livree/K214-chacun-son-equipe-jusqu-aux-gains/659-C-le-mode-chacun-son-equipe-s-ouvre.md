@@ -95,3 +95,14 @@ peuvent naître en mode B.**
 Un coach choisit « Chacun son équipe » dans « Qui saisit ? » ; sur le
 récapitulatif, la validation de l'autre arrive sans rechargement, avec un
 toast, et la seconde validation montre le rapport publié aux deux.
+
+## Limites connues à la livraison (2026-11-25)
+
+- **Le message de refus hors calendrier** dit « même coach » aussi quand
+  `may_choose_entry_mode` refuse pour une autre cause (équipe inconnue, port
+  en erreur) : la fonction rend un booléen.
+- **Le masquage de l'option pour un même coach** n'est couvert qu'en
+  unitaire : les fixtures e2e donnent un coach distinct à chaque équipe du
+  calendrier.
+- **La mise à jour d'un ancien brouillon hors calendrier** rend encore un 400
+  nu si le mode B est refusé ; seule la création réaffiche le formulaire.

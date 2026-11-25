@@ -7,9 +7,9 @@ origine: kanban/epics/en_cours/E22-mode-chacun-son-equipe.md
 
 # E22 — Le mode « Chacun son équipe »
 
-> **Rangement.** Les sept cartes livrées (652 à 658) ont été séparées dans [K214](../../7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md), en `7-livree/`, le 2026-11-19. 659-A et 659-B les y ont rejointes le 2026-11-24. Restent ici 659-C, 660 et 661 — l'ancienne 659 découpée en trois le 2026-11-24 ; leurs lignes « Dépend de » citent toujours les cartes livrées, dont les identifiants n'ont pas changé.
+> **Rangement.** Les sept cartes livrées (652 à 658) ont été séparées dans [K214](../../7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md), en `7-livree/`, le 2026-11-19. 659-A, 659-B et 659-C les y ont rejointes les 24 et 25 novembre 2026. Restent ici 660 et 661 — l'ancienne 659 découpée en trois le 2026-11-24 ; leurs lignes « Dépend de » citent toujours les cartes livrées, dont les identifiants n'ont pas changé.
 
-**État :** `en_cours` — 12 cartes, 652 à 661 (659 en trois) ; 9 faites (652 à 659-B), 3 restantes, approuvées le 2026-11-24. Découpage validé le 2026-11-01 ;
+**État :** `en_cours` — 12 cartes, 652 à 661 (659 en trois) ; 10 faites (652 à 659-C), 2 restantes, approuvées le 2026-11-24. Découpage validé le 2026-11-01 ;
 cadrage et décisions le 2026-11-11.
 **Cadrage :** `docs/specs/saisie-mobile/E22-cadrage.md`. Née le 2026-11-01 des
 maquettes mobiles. Dépend de E19 (camp du coach courant), E20 (annulation des
