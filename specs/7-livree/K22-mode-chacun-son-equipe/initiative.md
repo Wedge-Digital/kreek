@@ -1,15 +1,15 @@
 ---
 id: K22
 title: "Le mode « Chacun son équipe »"
-status: in_progress
+status: done
 origine: kanban/epics/en_cours/E22-mode-chacun-son-equipe.md
 ---
 
 # E22 — Le mode « Chacun son équipe »
 
-> **Rangement.** Les sept cartes livrées (652 à 658) ont été séparées dans [K214](../../7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md), en `7-livree/`, le 2026-11-19. 659-A, 659-B, 659-C et 660 les y ont rejointes les 24 et 25 novembre 2026. Reste ici 661 — l'ancienne 659 découpée en trois le 2026-11-24 ; leurs lignes « Dépend de » citent toujours les cartes livrées, dont les identifiants n'ont pas changé.
+> **Rangement.** Les sept cartes livrées (652 à 658) ont été séparées dans [K214](../../7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md), en `7-livree/`, le 2026-11-19. 659-A, 659-B, 659-C et 660 les y ont rejointes les 24 et 25 novembre 2026, puis 661 le 2026-11-25 : toutes les cartes sont dans K214, et K22 rejoint `7-livree/`. La 659 a été découpée en trois le 2026-11-24 ; les lignes « Dépend de » citent toujours les cartes livrées, dont les identifiants n'ont pas changé.
 
-**État :** `en_cours` — 12 cartes, 652 à 661 (659 en trois) ; 11 faites (652 à 660), 1 restante, approuvées le 2026-11-24. Découpage validé le 2026-11-01 ;
+**État :** `done` — 12 cartes, 652 à 661 (659 en trois), toutes livrées le 2026-11-25. Découpage validé le 2026-11-01 ;
 cadrage et décisions le 2026-11-11.
 **Cadrage :** `docs/specs/saisie-mobile/E22-cadrage.md`. Née le 2026-11-01 des
 maquettes mobiles. Dépend de E19 (camp du coach courant), E20 (annulation des
@@ -52,8 +52,9 @@ Règles :
   nouveau les deux validations (décisions du 2026-11-01).
 - **Démarrage concurrent** : deux coachs cliquent « Commencer » en même temps —
   le premier choix de mode validé l'emporte ; l'autre arrive sur l'état du match.
-  **Déjà tenu par E21** (409 et rechargement, ou ouverture silencieuse) : aucune
-  carte n'y ajoute rien.
+  **Déjà tenu par E21** (409 et rechargement, ou ouverture silencieuse) ; la 661
+  a montré que le formulaire « Commencer », non htmx, ignorait le rechargement :
+  le conflit y redirige désormais (303) vers l'état du match.
 
 Décisions du 2026-11-11 (cadrage, § 12) : l'option « Chacun son équipe »
 s'ouvre à la 659-C ; une commande d'un camp est réessayée une fois sur conflit ;

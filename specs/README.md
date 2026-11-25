@@ -75,7 +75,7 @@ cartes sont prêtes et une à raffiner reste en `to_be_refined/`.
 | [E19 — Saisie du compte rendu : droits et robustesse](7-livree/K19-saisie-du-compte-rendu-droits-et-robustesse/initiative.md) | `done` · 5/5 | 5 |
 | [E20 — Coups de pouce : le panier et l'annulation](7-livree/K20-coups-de-pouce-panier-et-annulation/initiative.md) | `done` · 5/5 | 5 |
 | [E21 — Le mode de saisie et l'après-match en séquence](7-livree/K21-mode-de-saisie-et-apres-match-en-sequence/initiative.md) | `done` · 9/9 | 9 |
-| [E22 — Le mode « Chacun son équipe »](6-prete/K22-mode-chacun-son-equipe/initiative.md) | `en_cours` · 11/12 — 652 à 660 séparées dans [K214](7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md) | 12 |
+| [E22 — Le mode « Chacun son équipe »](7-livree/K22-mode-chacun-son-equipe/initiative.md) | `done` · 12/12 — les cartes dans [K214](7-livree/K214-chacun-son-equipe-jusqu-aux-gains/initiative.md) | 12 |
 | [E23 — Le temps réel : connexions, présence et notifications](7-livree/K23-temps-reel-connexions-et-notifications/initiative.md) | `done` · 6/6 | 6 |
 | [E24 — La navigation mobile](1-backlog/06-K24-navigation-mobile/initiative.md) | `to_be_refined` | 3 |
 | [E25 — Retrouver ses matchs](1-backlog/07-K25-retrouver-ses-matchs/initiative.md) | `to_be_refined` | 4 |

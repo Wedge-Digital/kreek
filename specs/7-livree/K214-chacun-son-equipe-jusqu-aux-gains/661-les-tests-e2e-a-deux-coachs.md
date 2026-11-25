@@ -79,3 +79,14 @@ Le scénario passe en CI : deux coachs, chacun dans son navigateur, saisissent
 le même match en « Chacun son équipe », toute écriture dans le camp de l'autre
 est refusée, et le compte rendu se publie à la seconde validation avec les deux
 paragraphes du résumé.
+
+## Livrée le 2026-11-25
+
+Quatre scénarios dans `test_match_report_team_entry.py` : le parcours complet
+à deux, le refus d'écrire dans le camp de l'autre, le retrait de validation, et
+le « Commencer » concurrent.
+
+Ce dernier a révélé un défaut des cartes 623, 631 et 633 : le formulaire
+« Commencer » n'est pas htmx et ignorait le `HX-Refresh` du 409 ; le second
+coach voyait le corps brut de l'erreur. Corrigé dans la carte, sur décision de
+l'humain : sans en-tête htmx, le conflit redirige (303) vers l'état du match.
