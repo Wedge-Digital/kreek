@@ -39,8 +39,21 @@ Un fichier `tests/e2e/test_match_report_team_entry.py`, sur le modèle de
 - **le démarrage concurrent** : les deux coachs cliquent « Commencer » ; un seul
   mode est retenu, l'autre arrive sur l'état du match.
 
-`match_report_helpers.create_draft` gagne `entry_mode=None` (absent =
-`SoloEntry`) ; un helper `start_team_entry` démarre un match en mode B.
+`match_report_helpers.create_draft` a déjà son `entry_mode` (cartes
+précédentes) ; un helper `start_team_entry` démarre un match en mode B.
+
+**Ajustements du 2026-11-25** (après 659-A à 660) :
+
+- la validation dans le camp adverse se refuse sur `step5/{side}/validate`
+  (garde de camp) : sur `recap/publish`, un coach qui poste le `team_side` de
+  l'autre valide le sien (659-A, voulu) ; le retrait se refuse sur
+  `step5/{side}/withdraw-validation` et sur `recap/withdraw-validation` avec
+  le `team_side` adverse ;
+- le démarrage concurrent : le second « Commencer » reçoit 409 et recharge
+  sur l'état du match (`io/web/match_selection_controller.rs:835`) ;
+- chaque scénario a ses propres équipes : un match en cours entre les mêmes
+  équipes fait refuser un démarrage (409), et une équipe restée dans sa
+  séquence d'après-match ne reçoit pas le match publié suivant.
 
 ## Fichiers touchés
 
