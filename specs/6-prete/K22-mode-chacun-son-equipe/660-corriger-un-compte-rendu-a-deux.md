@@ -37,6 +37,12 @@ status: approved
   la seconde validation republie (659-A).
 - Le récapitulatif corrigeable en mode B : « Dépublié par … — à revalider par
   les deux camps », le bloc des validations à zéro (widget de la 659-C).
+- **Qui a dépublié** : l'état prêt à publier retient `unpublished_by:
+  Option<CoachId>`, à la commande comme au rejeu, et le garde à travers
+  `into_pre_match` / `from_pre_match` (les corrections d'un camp y passent).
+  `MatchReportUnpublished` le porte déjà : ni événement ni colonne.
+- **Pas de direct pour la dépublication** (décision du 2026-11-25) : le
+  récapitulatif publié ne déclare pas sa présence ; l'autre coach recharge.
 - Mode A inchangé.
 
 ## Fichiers touchés
