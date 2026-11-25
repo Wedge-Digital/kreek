@@ -35,7 +35,7 @@ Scénarios :
 - E4 — Le démarrage concurrent : les deux coachs ont le brouillon ouvert ;
        DevCoach commence en « Chacun son équipe », puis E2E Coach 01 clique
        « Commencer » sur sa page restée ouverte, en « Je saisis tout ». Un
-       seul mode est retenu ; le second reçoit 409, et retrouve le match dans
+       seul mode est retenu ; le second est renvoyé (303) sur l'état du match,
        son avant-match.
 
 **Le refus vient de la garde, pas du formulaire.** Chaque POST porte le corps
@@ -523,12 +523,12 @@ def test_e4_deux_commencer_un_seul_mode_retenu(
     # Sa page est restée sur le brouillon, cochée sur « Je saisis tout ».
     with coach.expect_response(_is_start_post(mr_id)) as second:
         coach.get_by_role("button", name="Commencer").click()
-    assert second.value.status == 409, f"obtenu {second.value.status}"
-    assert second.value.headers.get("hx-refresh") == "true", second.value.headers
+    # Un formulaire ordinaire : pas de 409 brut, une redirection vers le match.
+    assert second.value.status == 303, f"obtenu {second.value.status}"
+
+    # Il arrive, sans rien faire de plus, sur l'état du match : son
+    # avant-match, en « Chacun son équipe ».
+    coach.wait_for_url(f"**/{mr_id}/step2/{sides['coach']}", timeout=10000)
 
     _assert_started_by_devcoach(mr_id, ctx)
     assert _appended(mr_id, "EntryModeChosen") == 1, "un seul mode choisi"
-
-    # L'état du match : son avant-match, en « Chacun son équipe ».
-    coach.goto(_url(space_id, mr_id), wait_until="load")
-    coach.wait_for_url(f"**/{mr_id}/step2/{sides['coach']}", timeout=10000)

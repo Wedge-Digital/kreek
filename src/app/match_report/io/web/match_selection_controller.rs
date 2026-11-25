@@ -18,7 +18,7 @@ use crate::app::shared_kernel::identity::ids::SpaceId;
 use crate::state::AppState;
 use askama::Template;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::Form;
 use serde::Deserialize;
@@ -765,6 +765,7 @@ pub async fn update_match_selection(
     auth_session: AuthSession,
     Path((space_id, match_report_id)): Path<(String, String)>,
     State(state): State<AppState>,
+    headers: HeaderMap,
     Form(form): Form<UpdateMatchSelectionForm>,
 ) -> impl IntoResponse {
     let Some(user) = auth_session.user else {
@@ -781,7 +782,40 @@ pub async fn update_match_selection(
         &state.match_report.event_bus,
     )
     .await;
-    update_response(result, &space_id, &match_report_id)
+    let caller = Caller::of(&headers);
+    update_response(result, &space_id, &match_report_id, caller)
+}
+
+/// Qui a posté « Commencer » : le formulaire de `match-mode.html` est un
+/// formulaire ordinaire, qui ignore `HX-Refresh` (carte 661).
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Caller {
+    Htmx,
+    Form,
+}
+
+impl Caller {
+    fn of(headers: &HeaderMap) -> Self {
+        match headers.contains_key("hx-request") {
+            true => Self::Htmx,
+            false => Self::Form,
+        }
+    }
+}
+
+/// Le match déjà démarré par un autre : htmx recharge sur `HX-Refresh` ; un
+/// formulaire ordinaire l'ignorerait et afficherait le corps de l'erreur — il
+/// est renvoyé sur l'adresse du match, qui mène à son état (carte 661).
+fn started_elsewhere(space_id: &str, match_report_id: &str, caller: Caller) -> Response {
+    match caller {
+        Caller::Htmx => conflict_response(),
+        Caller::Form => Redirect::to(
+            &AppRoutes::default()
+                .match_report
+                .edit_match_report(space_id, match_report_id),
+        )
+        .into_response(),
+    }
 }
 
 /// La commande du POST, puis le droit de choisir son mode pour les équipes du
@@ -832,12 +866,13 @@ fn requested_teams(form: &UpdateMatchSelectionForm) -> Result<Option<(TeamId, Te
 }
 
 /// Deux « Commencer » simultanés : le second échoue sur la version, ou trouve
-/// le match déjà démarré — 409 et rechargement dans les deux cas, et il arrive
-/// sur l'état du match (cartes 623, 631, 633).
+/// le match déjà démarré — il arrive sur l'état du match dans les deux cas
+/// (cartes 623, 631, 633 ; formulaire ordinaire, carte 661).
 fn update_response(
     result: Result<MatchReportId, update_match_selection_use_case::UpdateMatchSelectionError>,
     space_id: &str,
     match_report_id: &str,
+    caller: Caller,
 ) -> Response {
     use update_match_selection_use_case::UpdateMatchSelectionError as E;
     match result {
@@ -852,7 +887,9 @@ fn update_response(
             tracing::warn!("update_match_selection: team {tid} not available");
             StatusCode::CONFLICT.into_response()
         }
-        Err(E::Conflict | E::NotInDraftPhase) => conflict_response(),
+        Err(E::Conflict | E::NotInDraftPhase) => {
+            started_elsewhere(space_id, match_report_id, caller)
+        }
         Err(e) => {
             tracing::error!("update_match_selection: {e:?}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -1036,16 +1073,44 @@ mod start_from_schedule_tests {
         assert!(cmd.requested_teams.is_some());
     }
 
-    /// Deux « Commencer » simultanés : le second, qui trouve le match déjà
-    /// démarré, reçoit 409 et recharge la page.
+    /// Deux « Commencer » simultanés, par htmx : le second, qui trouve le match
+    /// déjà démarré, reçoit 409 et recharge la page.
     #[test]
-    fn a_second_start_is_a_conflict() {
+    fn a_second_htmx_start_is_a_conflict() {
         let response = update_response(
             Err(update_match_selection_use_case::UpdateMatchSelectionError::NotInDraftPhase),
             "space",
             "mr",
+            Caller::Htmx,
         );
         assert_eq!(response.status(), StatusCode::CONFLICT);
+        assert_eq!(response.headers()["HX-Refresh"], "true");
+    }
+
+    /// Carte 661 : le formulaire « Commencer » est ordinaire ; le second
+    /// arrivé est renvoyé sur l'adresse du match, qui mène à son état.
+    #[test]
+    fn a_second_form_start_lands_on_the_match() {
+        for err in [
+            update_match_selection_use_case::UpdateMatchSelectionError::NotInDraftPhase,
+            update_match_selection_use_case::UpdateMatchSelectionError::Conflict,
+        ] {
+            let response = update_response(Err(err), "space", "mr", Caller::Form);
+            assert_eq!(response.status(), StatusCode::SEE_OTHER);
+            let expected = AppRoutes::default()
+                .match_report
+                .edit_match_report("space", "mr");
+            assert_eq!(response.headers()["location"], expected.as_str());
+        }
+    }
+
+    /// L'en-tête `HX-Request` distingue htmx d'un formulaire ordinaire.
+    #[test]
+    fn the_caller_reads_the_htmx_header() {
+        let mut headers = HeaderMap::new();
+        assert_eq!(Caller::of(&headers), Caller::Form);
+        headers.insert("hx-request", "true".parse().unwrap());
+        assert_eq!(Caller::of(&headers), Caller::Htmx);
     }
 }
 
