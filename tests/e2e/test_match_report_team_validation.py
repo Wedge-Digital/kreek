@@ -378,6 +378,9 @@ def test_corriger_un_compte_rendu_a_deux(browser, space_id, competition):
     membre.goto(_url(space_id, mr_id, "step5/away"), wait_until="load")
     _record(membre, 70)
     assert membre.url.endswith(f"/{mr_id}/recap"), membre.url
+    # Corrigé, le rapport reste en correction : le bandeau ne tombe pas.
+    devcoach.reload(wait_until="load")
+    expect(devcoach.locator(".ms-unpublished-banner")).to_contain_text(UNPUBLISHED_BY)
     with membre.expect_navigation():
         membre.get_by_role("button", name=VALIDATE).click()
     expect(_rows(membre).nth(1)).to_contain_text("Validé ✓ par")

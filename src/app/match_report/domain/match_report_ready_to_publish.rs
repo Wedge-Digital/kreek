@@ -84,7 +84,9 @@ pub struct MatchReportReadyToPublish {
     /// N'existe pas sur `MatchReportPreMatch` : `into_pre_match()` est une
     /// conversion transitoire interne aux use cases, jamais persistée. Une fois
     /// en `ReadyToPublish`, le rapport y reste — `rehydrate` mute l'état en
-    /// place pour tous les événements d'édition.
+    /// place pour tous les événements d'édition. L'aller-retour par
+    /// `into_pre_match` / `from_pre_match` le retrouve par `unpublished_by`
+    /// (carte 660).
     pub was_published_before: bool, // arch:ok fait booléen sans invariant à protéger
     /// Qui a dépublié le rapport pour le corriger (carte 660) : posé par
     /// `unpublish`, à la commande comme au rejeu, et rendu par
@@ -212,9 +214,11 @@ impl MatchReportReadyToPublish {
             summary_paragraphs: SummaryParagraphs::default(),
             post_match_recorded_by: SideAuthors::default(),
             validated_by: pm.validated_by,
-            // Un rapport qui atteint cet état pour la première fois n'a jamais
-            // été publié. Seul `unpublish()` positionne ce drapeau.
-            was_published_before: false,
+            // Seul `unpublish()` pose `unpublished_by`, et toute publication
+            // repart d'un `Published` qui ne le porte pas : un avant-match qui
+            // l'a reçu d'`into_pre_match` vient d'un rapport dépublié (carte
+            // 660). Sans quoi le bandeau tomberait à la première correction.
+            was_published_before: pm.unpublished_by.is_some(),
             unpublished_by: pm.unpublished_by,
         }
     }

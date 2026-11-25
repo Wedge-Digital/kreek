@@ -2945,6 +2945,43 @@ mod tests {
         assert_eq!(corrected.unpublished_by, Some(visitor));
     }
 
+    /// Le drapeau de correction, qui pilote le bandeau, survit à la
+    /// correction d'un camp par `into_pre_match` / `from_pre_match`. Un
+    /// rapport jamais dépublié, lui, n'en porte pas.
+    #[test]
+    fn a_side_correction_keeps_the_report_under_correction() {
+        let (_, rtp) = both_post_matches();
+        let (_, published) = published_by_both(&rtp);
+        let (back, _) = published
+            .unpublish(CoachId::new(), CorrectionEligibility::Eligible)
+            .unwrap();
+        let fan = FanFactorMod::try_new(0).unwrap();
+        let bonuses = NoStallingBonuses::default();
+        let corrected = MatchReportReadyToPublish::from_pre_match(
+            &back.into_pre_match(),
+            gain(60),
+            gain(70),
+            bonuses,
+            fan,
+            fan,
+            None,
+            None,
+        );
+        assert!(corrected.was_published_before);
+        let fresh = MatchReportReadyToPublish::from_pre_match(
+            &rtp.clone().into_pre_match(),
+            gain(60),
+            gain(70),
+            bonuses,
+            fan,
+            fan,
+            None,
+            None,
+        );
+        assert!(!fresh.was_published_before);
+        assert_eq!(fresh.unpublished_by, None);
+    }
+
     /// Trois cycles publier (deux validations) / dépublier, chaque fois par
     /// un autre coach : le rejeu retient le dernier, sans validation, et
     /// retrouve l'état de la commande.
