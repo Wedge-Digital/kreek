@@ -133,10 +133,12 @@ def ensure_inducements(space_id, mr_id, via=None):
 PROFIL_SIMPLE = {"X-Bypass-Auth-Profile": "simple"}
 
 
-def record_team_fan_factor(space_id, mr_id, side, roll, headers=None):
+def record_team_fan_factor(space_id, mr_id, side, roll, headers=None, via=None):
     """Le jet d'un camp, en « Chacun son équipe » (carte 654) : `POST
-    /step2/{side}`, le camp dans la route. Rend la réponse, non suivie."""
-    return requests.post(
+    /step2/{side}`, le camp dans la route. Rend la réponse, non suivie.
+
+    `via` : comme pour `create_draft`, l'auteur du jet (carte 661)."""
+    return (via or requests).post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/step2/{side}",
         data={"fan_roll": str(roll)},
         headers=headers or {},
@@ -145,7 +147,7 @@ def record_team_fan_factor(space_id, mr_id, side, roll, headers=None):
     )
 
 
-def ensure_team_entry_inducements(space_id, mr_id):
+def ensure_team_entry_inducements(space_id, mr_id, away_via=None):
     """`ensure_inducements` en « Chacun son équipe » (carte 654) : chaque
     coach lance son jet — DevCoach le domicile, le membre simple l'extérieur —,
     puis les coups de pouce sont passés, le favori d'abord.
@@ -153,21 +155,57 @@ def ensure_team_entry_inducements(space_id, mr_id):
     Chaque jet mène aux coups de pouce de son équipe, que **son coach** passe :
     la page est sous `garde_camp` (carte 655). On ne sait pas d'avance laquelle
     est le favori : une page refusée — l'outsider avant le favori — est
-    retentée une fois que l'autre est passée."""
+    retentée une fois que l'autre est passée.
+
+    `away_via` : la session d'un coach réellement connecté qui tient
+    l'extérieur, à la place de l'en-tête du membre simple (carte 661)."""
+    pass_team_entry_inducements(roll_team_fan_factors(space_id, mr_id, away_via))
+
+
+def _team_entry_writers(away_via):
+    """Qui écrit chaque camp, `(client http, en-têtes)` : DevCoach le
+    domicile ; l'extérieur, le membre simple par l'en-tête, ou la session
+    `away_via`."""
+    away = (away_via, {}) if away_via is not None else (requests, PROFIL_SIMPLE)
+    return {"home": (requests, {}), "away": away}
+
+
+def roll_team_fan_factors(space_id, mr_id, away_via=None):
+    """Les deux jets, chacun par son coach. Rend, pour chaque camp, la page où
+    mène le jet et qui l'a lancé : `(page, client http, en-têtes)`."""
+    writers = _team_entry_writers(away_via)
     pages = []
-    for side, roll, headers in (("home", 2, None), ("away", 3, PROFIL_SIMPLE)):
-        resp = record_team_fan_factor(space_id, mr_id, side, roll, headers)
+    for side, roll in (("home", 2), ("away", 3)):
+        http, headers = writers[side]
+        resp = record_team_fan_factor(space_id, mr_id, side, roll, headers, via=http)
         assert resp.status_code in (302, 303), f"fan factor {side}: {resp.status_code}"
-        pages.append((resp.headers.get("Location", ""), headers or {}))
-    pending = [(page, headers) for page, headers in pages if "/inducements/" in page]
+        pages.append((resp.headers.get("Location", ""), http, headers))
+    return pages
+
+
+def pass_team_entry_inducements(pages):
+    """Chaque coach passe les coups de pouce de son équipe, sur la page où
+    l'a mené son jet ; l'outsider refusé avant le favori est retenté."""
+    pending = [page for page in pages if "/inducements/" in page[0]]
     for _ in range(2):
         pending = [
-            (page, headers) for page, headers in pending
-            if requests.post(
+            (page, http, headers) for page, http, headers in pending
+            if http.post(
                 f"{BASE_URL}{page}", data={"selection": ""}, headers=headers, allow_redirects=False
             ).status_code not in (302, 303)
         ]
     assert not pending, f"coups de pouce non passés : {pending}"
+
+
+def start_team_entry(space_id, ctx, round_id, home, away, via=None) -> str:
+    """Un match démarré en « Chacun son équipe » (carte 661), avant-match
+    ouvert : `create_draft` avec le mode B, puis le constat en base — un mode
+    perdu en route ferait échouer le test bien plus loin, sans dire pourquoi."""
+    mr_id = create_draft(space_id, ctx, round_id, home, away, via=via, entry_mode="TeamEntry")
+    phase, mode, starter = entry_mode_of(mr_id)
+    assert (phase, mode) == ("PreMatch", "TeamEntry"), (mr_id, phase, mode)
+    assert starter, "le démarreur doit être enregistré"
+    return mr_id
 
 
 def start_match(space_id, ctx, round_id, home, away, via=None) -> str:
@@ -236,13 +274,15 @@ def record_action_api(space_id, mr_id, side, player_id, turn, action_type, via=N
     assert resp.status_code == 200, f"record_action {action_type}: {resp.status_code}\n{resp.text[:200]}"
 
 
-def record_mvp_api(space_id, mr_id, side, player_id, player_type="regular"):
+def record_mvp_api(space_id, mr_id, side, player_id, player_type="regular", via=None):
     """Désigne le MVP d'un camp par son étape (carte 637).
 
     Le POST d'action refuse `MVP` : le MVP n'entre que par `/mvp/{side}`, au
     tour 16, et un seul par camp — un second est refusé en 422.
+
+    `via` : comme pour `create_draft`, l'auteur de la désignation.
     """
-    resp = requests.post(
+    resp = (via or requests).post(
         f"{BASE_URL}/app/{space_id}/match-report/{mr_id}/mvp/{side}",
         data={"player_id": player_id, "player_type": player_type},
         allow_redirects=False,
@@ -251,12 +291,15 @@ def record_mvp_api(space_id, mr_id, side, player_id, player_type="regular"):
     return resp
 
 
-def ensure_mvps(space_id, mr_id):
+def ensure_mvps(space_id, mr_id, vias=None):
     """Donne son MVP à chaque camp qui n'en a pas (carte 638).
 
     Le MVP est obligatoire : l'après-match ne se clôt pas sans. Les tests qui
     ne s'intéressent pas au MVP traversent l'étape par ici, sans toucher à
     ceux qui l'ont déjà désigné eux-mêmes.
+
+    `vias` : l'auteur de chaque camp, `{"away": session}` — DevCoach, admin,
+    pour un camp absent (carte 661).
 
     Le MVP rapporte des SPP : il est donné au **dernier** joueur actif de
     l'équipe qui n'a aucune action dans ce rapport, pour ne pas se mêler des
@@ -264,7 +307,9 @@ def ensure_mvps(space_id, mr_id):
     """
     for side in ("home", "away"):
         if not _has_mvp(mr_id, side):
-            record_mvp_api(space_id, mr_id, side, _mvp_candidate(mr_id, side))
+            record_mvp_api(
+                space_id, mr_id, side, _mvp_candidate(mr_id, side), via=(vias or {}).get(side)
+            )
 
 
 def _has_mvp(mr_id, side):

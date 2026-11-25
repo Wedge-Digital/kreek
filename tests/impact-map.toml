@@ -569,6 +569,16 @@
                                        "ranking", "auth", "spaces", "references",
                                        "team_creation", "spp_calculator"]
 
+# Carte 661 — deux coachs saisissent le même match en « Chacun son équipe », de
+# bout en bout : la carte « Qui saisit ? », les avant-matchs, les coups de pouce
+# du favori puis de l'outsider, les actions au direct, les MVP, les gains et la
+# seconde validation qui publie ; les refus de camp, le gel, le démarrage
+# concurrent. Un coach réellement connecté (`auth`) ; la publication sort vers
+# `ranking`, `players` et `teams` ; mêmes BCs que les cartes 659-A à 660.
+"test_match_report_team_entry" = ["match_report", "players", "competitions", "teams",
+                                  "ranking", "auth", "spaces", "references",
+                                  "team_creation", "spp_calculator"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni
