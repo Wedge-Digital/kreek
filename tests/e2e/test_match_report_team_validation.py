@@ -76,7 +76,14 @@ STILL_THERE = "() => window.__sansRechargement === true"
 
 @pytest.fixture(scope="module")
 def competition(browser, space_id):
-    return build_full_competition(browser, space_id, num_teams=2, num_rounds=5)
+    return build_full_competition(browser, space_id, num_teams=2, num_rounds=4)
+
+
+@pytest.fixture(scope="module")
+def competition_correction(browser, space_id):
+    """Des équipes neuves pour V5 : une équipe qui a déjà reçu un match publié
+    reste dans sa séquence d'après-match, et ne recevrait pas celui-ci."""
+    return build_full_competition(browser, space_id, num_teams=2, num_rounds=1)
 
 
 def _membre():
@@ -337,8 +344,8 @@ def _published_by_both(browser, space_id, mr_id):
 def _wait_correctable(mr_id, team_ids):
     """La correction n'est permise que les deux équipes en amélioration : leur
     passage vient d'un app event, après la publication. Le gain du visiteur
-    (35, qu'aucun scénario précédent n'a crédité) dit que `teams` a reçu
-    celle-ci, et non la précédente."""
+    (35) dit que `teams` a reçu cette publication : ses équipes, neuves, n'en
+    ont reçu aucune autre."""
     attendre_que(lambda: _ranking_lines(mr_id) == 2, quoi="le classement compte le match")
     attendre_que(lambda: _last_income(team_ids[1]) == 35, quoi="le gain du visiteur crédité")
     for team_id in team_ids:
@@ -348,8 +355,9 @@ def _wait_correctable(mr_id, team_ids):
         )
 
 
-def test_corriger_un_compte_rendu_a_deux(browser, space_id, competition):
-    mr_id = _team_entry_with_mvps(space_id, competition, 4)
+def test_corriger_un_compte_rendu_a_deux(browser, space_id, competition_correction):
+    competition = competition_correction
+    mr_id = _team_entry_with_mvps(space_id, competition, 0)
     exterieur = competition["team_ids"][1]
     devcoach = _published_by_both(browser, space_id, mr_id)
     _wait_correctable(mr_id, competition["team_ids"][:2])
