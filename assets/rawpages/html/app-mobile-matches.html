@@ -21,7 +21,10 @@
         <div class="home-grid" id="app-content">
 <div class="mb-page">
   <div class="mb-title-row"><div class="h3-gras">Mes matchs</div></div>
-  <div class="tabs"><a class="tab active">À jouer · 3</a><a class="tab">Joués</a></div>
+  <!-- I7 : l'onglet « Matchs » de la barre mène ici (I7-B5). Les matchs à
+       jouer seuls : l'onglet « Joués » est hors périmètre. Tri par date, toutes
+       équipes confondues ; seul le prochain match de chaque équipe a un bouton
+       (I7-B2), qui suit l'état de la saisie (I7-B3). -->
 
   <div class="mb-match mb-match--mine">
     <div class="mb-match-meta"><span>Prochain match · Ligue de Condate · J4</span><span class="mb-match-due">avant le 14/12</span></div>
@@ -60,6 +63,29 @@
     </div>
     <div class="mb-activity"><span class="mb-live-dot"></span>Morgane a saisi 3 actions · il y a 3 min</div>
     <div class="mb-match-actions"><a class="btn btn-primary-blue btn-sm" href="app-mobile-match-mode-joined.html">Continuer</a></div>
+  </div>
+
+  <!-- L'adversaire a commencé en « Je saisis tout » : je n'ai rien à saisir,
+       je suis le match en lecture seule (I7-B3). -->
+  <div class="mb-match mb-match--mine">
+    <div class="mb-match-meta"><span>Prochain match · Ligue de Condate · J4</span><span class="mb-match-due">avant le 14/12</span></div>
+    <div class="mb-card">
+    <div class="match-widget match-widget--in-progress match-widget--clickable">
+      <div class="match-side match-side--home">
+        <div class="match-team-logo-sm match-team-logo-sm--initials">SB</div>
+        <div class="match-team-info"><div class="match-team-name">Sang-Bleu</div><div class="match-team-sub">Yann · Vampires</div></div>
+      </div>
+      <div class="match-score-block">
+        <div class="match-in-progress-block"><div class="match-status-badge match-status-badge--in-progress">En cours · 0 – 0</div></div>
+      </div>
+      <div class="match-side match-side--away">
+        <div class="match-team-info match-team-info--right"><div class="match-team-name">Ombres du Val</div><div class="match-team-sub">Elfes noirs · toi</div></div>
+        <div class="match-team-logo-sm match-team-logo-sm--initials">OV</div>
+      </div>
+    </div>
+    </div>
+    <div class="mb-activity"><span class="mb-live-dot"></span>Yann saisit tout le match · il y a 1 min</div>
+    <div class="mb-match-actions"><a class="btn btn-outline btn-sm">Suivre</a></div>
   </div>
 
   <div class="mb-match">
