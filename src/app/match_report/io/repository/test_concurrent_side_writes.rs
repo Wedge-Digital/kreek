@@ -10,7 +10,7 @@
 use super::match_report_repository::MatchReportRepository;
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_repository_port::{
-    EntryModeRow, IMatchReportRepository, MatchActionRow, RepositoryError,
+    EntryModeRow, IMatchReportRepository, MatchActionRow, PairingEntryRow, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
@@ -106,6 +106,15 @@ impl IMatchReportRepository for InterleavingRepository {
         ids: &[String],
     ) -> Result<Vec<(String, String)>, RepositoryError> {
         self.inner.find_phases_by_pairings(ids).await
+    }
+    async fn find_entry_states_by_pairings(
+        &self,
+        space_id: &str,
+        ids: &[String],
+    ) -> Result<Vec<PairingEntryRow>, RepositoryError> {
+        self.inner
+            .find_entry_states_by_pairings(space_id, ids)
+            .await
     }
     async fn find_id_by_round_and_teams(
         &self,

@@ -9,7 +9,7 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::{
-    IMatchReportRepository, MatchActionRow, RepositoryError,
+    EntryModeRow, IMatchReportRepository, MatchActionRow, PairingEntryRow, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{
@@ -92,6 +92,16 @@ impl IMatchReportRepository for ConflictingRepository {
         &self,
         _: &[String],
     ) -> Result<Vec<(String, String)>, RepositoryError> {
+        Ok(vec![])
+    }
+    async fn find_entry_states_by_pairings(
+        &self,
+        _: &str,
+        _: &[String],
+    ) -> Result<
+        Vec<crate::app::match_report::domain::match_report_repository_port::PairingEntryRow>,
+        RepositoryError,
+    > {
         Ok(vec![])
     }
     async fn find_id_by_round_and_teams(
@@ -180,6 +190,16 @@ impl IMatchReportRepository for RecordingRepository {
         &self,
         _: &[String],
     ) -> Result<Vec<(String, String)>, RepositoryError> {
+        Ok(vec![])
+    }
+    async fn find_entry_states_by_pairings(
+        &self,
+        _: &str,
+        _: &[String],
+    ) -> Result<
+        Vec<crate::app::match_report::domain::match_report_repository_port::PairingEntryRow>,
+        RepositoryError,
+    > {
         Ok(vec![])
     }
     async fn find_id_by_round_and_teams(
@@ -304,6 +324,16 @@ impl IMatchReportRepository for ScriptedRepository {
     ) -> Result<Vec<(String, String)>, RepositoryError> {
         Ok(vec![])
     }
+    async fn find_entry_states_by_pairings(
+        &self,
+        _: &str,
+        _: &[String],
+    ) -> Result<
+        Vec<crate::app::match_report::domain::match_report_repository_port::PairingEntryRow>,
+        RepositoryError,
+    > {
+        Ok(vec![])
+    }
     async fn find_id_by_round_and_teams(
         &self,
         _: &str,
@@ -395,6 +425,16 @@ impl IMatchReportRepository for ScopedRepository {
     ) -> Result<Vec<(String, String)>, RepositoryError> {
         Ok(vec![])
     }
+    async fn find_entry_states_by_pairings(
+        &self,
+        _: &str,
+        _: &[String],
+    ) -> Result<
+        Vec<crate::app::match_report::domain::match_report_repository_port::PairingEntryRow>,
+        RepositoryError,
+    > {
+        Ok(vec![])
+    }
     async fn find_id_by_round_and_teams(
         &self,
         _: &str,
@@ -405,6 +445,85 @@ impl IMatchReportRepository for ScopedRepository {
     }
     async fn find_actions_by_match(&self, _: &str) -> Result<Vec<MatchActionRow>, RepositoryError> {
         Ok(vec![])
+    }
+}
+
+/// L'état de saisie d'appariements tel que la projection le rend (carte 676).
+/// Rend **tout** ce qu'il tient, quels que soient l'espace et les appariements
+/// demandés : le filtre est l'affaire du SQL, éprouvé sur une vraie base.
+/// Toute autre lecture ou écriture est un défaut du service testé.
+pub struct PairingEntryRepository {
+    rows: Vec<PairingEntryRow>,
+}
+
+impl PairingEntryRepository {
+    pub fn holding(rows: Vec<PairingEntryRow>) -> Self {
+        Self { rows }
+    }
+}
+
+#[async_trait]
+impl IMatchReportRepository for PairingEntryRepository {
+    async fn append(
+        &self,
+        _: &str,
+        _: &MatchReportDomainEvent,
+        _: u64,
+    ) -> Result<u64, RepositoryError> {
+        panic!("une lecture n'écrit pas")
+    }
+    async fn find_space_id(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn find_by_id(&self, _: &str) -> Result<Option<MatchReportState>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn find_access_scope(
+        &self,
+        _: &str,
+    ) -> Result<Option<(String, String, String)>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn find_entry_mode(&self, _: &str) -> Result<Option<EntryModeRow>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn find_team_ids(&self, _: &str) -> Result<Option<(String, String)>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn append_many(
+        &self,
+        _: &str,
+        _: Vec<MatchReportDomainEvent>,
+        _: u64,
+    ) -> Result<u64, RepositoryError> {
+        panic!("une lecture n'écrit pas")
+    }
+    async fn find_id_by_pairing(&self, _: &str) -> Result<Option<String>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn find_phases_by_pairings(
+        &self,
+        _: &[String],
+    ) -> Result<Vec<(String, String)>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn find_entry_states_by_pairings(
+        &self,
+        _: &str,
+        _: &[String],
+    ) -> Result<Vec<PairingEntryRow>, RepositoryError> {
+        Ok(self.rows.clone())
+    }
+    async fn find_id_by_round_and_teams(
+        &self,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<Option<String>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
+    }
+    async fn find_actions_by_match(&self, _: &str) -> Result<Vec<MatchActionRow>, RepositoryError> {
+        panic!("seul l'état de saisie par appariement est lu")
     }
 }
 

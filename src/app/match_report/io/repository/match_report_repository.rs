@@ -1,6 +1,6 @@
 use crate::app::match_report::domain::events::MatchReportDomainEvent;
 use crate::app::match_report::domain::match_report_repository_port::{
-    EntryModeRow, IMatchReportRepository, MatchActionRow, RepositoryError,
+    EntryModeRow, IMatchReportRepository, MatchActionRow, PairingEntryRow, RepositoryError,
 };
 use crate::app::match_report::domain::match_report_state::{rehydrate, MatchReportState};
 use crate::app::match_report::domain::value_objects::{EntryMode, TeamSide};
@@ -588,6 +588,20 @@ impl IMatchReportRepository for MatchReportRepository {
             .collect())
     }
 
+    async fn find_entry_states_by_pairings(
+        &self,
+        space_id: &str,
+        pairing_ids: &[String],
+    ) -> Result<Vec<PairingEntryRow>, RepositoryError> {
+        let rows = sqlx::query(include_str!("sql/find_entry_states_by_pairings.sql"))
+            .bind(space_id)
+            .bind(pairing_ids)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(RepositoryError::Database)?;
+        Ok(rows.iter().map(pairing_entry_row_from).collect())
+    }
+
     async fn find_id_by_round_and_teams(
         &self,
         round_id: &str,
@@ -631,6 +645,20 @@ impl IMatchReportRepository for MatchReportRepository {
         .await
         .map_err(RepositoryError::Database)?;
         rows.iter().map(action_row_from).collect()
+    }
+}
+
+/// Une ligne de `match_report_proj` en état de saisie d'un appariement.
+fn pairing_entry_row_from(r: &sqlx::postgres::PgRow) -> PairingEntryRow {
+    PairingEntryRow {
+        pairing_id: r.get("pairing_id"),
+        match_report_id: r.get("match_report_id"),
+        competition_id: r.get("competition_id"),
+        home_team_id: r.get("home_team_id"),
+        away_team_id: r.get("away_team_id"),
+        phase: r.get("phase"),
+        entry_mode: r.get("entry_mode"),
+        started_by: r.get("started_by"),
     }
 }
 
@@ -902,6 +930,79 @@ mod tests {
             .execute(&pool)
             .await
             .ok();
+    }
+
+    /// Un rapport d'appariement créé dans cet espace.
+    async fn create_pairing_report(
+        repo: &MatchReportRepository,
+        space_id: SpaceId,
+        pairing_id: &str,
+    ) -> String {
+        let mr_id = MatchReportId::new().to_string();
+        let mut created = test_created_event(&mr_id);
+        if let MatchReportDomainEvent::MatchReportCreated {
+            space_id: s,
+            pairing_id: p,
+            ..
+        } = &mut created
+        {
+            *s = space_id;
+            *p = Some(pairing_id.to_string());
+        }
+        repo.append(&mr_id, &created, 0).await.unwrap();
+        mr_id
+    }
+
+    fn cancelled_event() -> MatchReportDomainEvent {
+        MatchReportDomainEvent::MatchReportCancelled {
+            reason: "Pairing supprimé".to_string(),
+            journeymen: vec![],
+            home_team_id: Some(TeamId::new()),
+            away_team_id: Some(TeamId::new()),
+            pairing_id: None,
+        }
+    }
+
+    /// Carte 676 : le lot rend le brouillon vivant avec sa phase et son mode ;
+    /// ni le rapport annulé, ni l'appariement sans rapport, ni le rapport d'un
+    /// autre espace n'y figurent.
+    #[tokio::test]
+    async fn entry_states_skip_cancelled_missing_and_foreign_reports() {
+        let Some(pool) = test_pool().await else {
+            return;
+        };
+        let repo = MatchReportRepository::new(pool.clone());
+        let space = SpaceId::new();
+        let pairings: Vec<String> = (0..4).map(|_| MatchReportId::new().to_string()).collect();
+        let live = create_pairing_report(&repo, space, &pairings[0]).await;
+        let cancelled = create_pairing_report(&repo, space, &pairings[1]).await;
+        repo.append(&cancelled, &cancelled_event(), 1)
+            .await
+            .unwrap();
+        // `pairings[2]` reste sans rapport.
+        let foreign = create_pairing_report(&repo, SpaceId::new(), &pairings[3]).await;
+
+        let rows = repo
+            .find_entry_states_by_pairings(&space.to_string(), &pairings)
+            .await
+            .unwrap();
+        let seen: Vec<_> = rows
+            .iter()
+            .map(|r| (r.pairing_id.as_str(), r.match_report_id.as_str()))
+            .collect();
+        assert_eq!(seen, vec![(pairings[0].as_str(), live.as_str())]);
+        assert_eq!(
+            (
+                rows[0].phase.as_str(),
+                rows[0].entry_mode.as_str(),
+                &rows[0].started_by
+            ),
+            ("Draft", "SoloEntry", &None)
+        );
+
+        for mr_id in [live, cancelled, foreign] {
+            delete_report(&pool, &mr_id).await;
+        }
     }
 
     #[tokio::test]

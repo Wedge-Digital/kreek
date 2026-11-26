@@ -1,3 +1,4 @@
+pub mod entry_action;
 pub mod error;
 pub mod events;
 pub mod match_report_draft;

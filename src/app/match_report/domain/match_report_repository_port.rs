@@ -32,6 +32,23 @@ pub struct EntryModeRow {
     pub started_by: Option<String>,
 }
 
+/// L'état de saisie du rapport rattaché à un appariement (carte 676). DTO de
+/// lecture : ce qu'il faut pour décider de l'action d'un coach — la phase et
+/// le démarreur pour l'avancement, la portée et le mode pour
+/// `can_write_report`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PairingEntryRow {
+    pub pairing_id: String,
+    pub match_report_id: String,
+    pub competition_id: String,
+    pub home_team_id: String,
+    pub away_team_id: String,
+    pub phase: String,
+    pub entry_mode: String,
+    /// Vide tant que le rapport n'est qu'un brouillon.
+    pub started_by: Option<String>,
+}
+
 #[derive(Debug)]
 pub enum RepositoryError {
     ConcurrentWrite,
@@ -121,6 +138,18 @@ pub trait IMatchReportRepository: Send + Sync {
         &self,
         pairing_ids: &[String],
     ) -> Result<Vec<(String, String)>, RepositoryError>;
+
+    /// L'état de saisie des rapports **non annulés** de cet espace rattachés à
+    /// ces appariements (carte 676). Un appariement sans rapport n'a pas de
+    /// ligne.
+    ///
+    /// En lot, comme `find_phases_by_pairings` : « Mes matchs » interroge tous
+    /// les prochains matchs d'un coach d'un coup.
+    async fn find_entry_states_by_pairings(
+        &self,
+        space_id: &str,
+        pairing_ids: &[String],
+    ) -> Result<Vec<PairingEntryRow>, RepositoryError>;
 
     async fn find_id_by_round_and_teams(
         &self,

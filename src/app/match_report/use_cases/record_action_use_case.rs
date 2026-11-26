@@ -465,6 +465,16 @@ mod tests {
         ) -> Result<Vec<(String, String)>, RepositoryError> {
             panic!("le dépôt ne doit pas être sollicité")
         }
+        async fn find_entry_states_by_pairings(
+            &self,
+            _: &str,
+            _: &[String],
+        ) -> Result<
+            Vec<crate::app::match_report::domain::match_report_repository_port::PairingEntryRow>,
+            RepositoryError,
+        > {
+            Ok(vec![])
+        }
         async fn find_id_by_round_and_teams(
             &self,
             _: &str,
