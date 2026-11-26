@@ -1,0 +1,83 @@
+/* « Mes matchs » (carte 677) — la page et les cartes de son widget.
+ *
+ * Reprise des pièces `mb-*` de la maquette `app-mobile-matches.html`
+ * (`assets/rawpages/html/app-mobile.css`), sous la portée `.my-matches` : le
+ * widget est rendu dans la page hôte, et n'a pas d'autre usage. Le bloc de
+ * match lui-même vient du composant `components/match-widget.css`, les
+ * boutons de `common.css`. */
+
+.my-matches {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--p1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p1);
+}
+
+.my-matches .my-matches-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p1);
+}
+
+.my-matches .my-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p1);
+}
+
+/* ── Une carte de match ── */
+.my-matches .my-matches-match {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p05);
+}
+
+.my-matches .my-matches-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--p05);
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dark-3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.my-matches .my-matches-due {
+  color: var(--main-blue);
+  white-space: nowrap;
+}
+
+.my-matches .my-matches-card {
+  background: var(--white);
+  border-radius: 12px;
+  padding: var(--p1);
+}
+
+/* Le prochain match d'une équipe : le seul qui porte un bouton. */
+.my-matches .my-matches-match--next .my-matches-card {
+  border-left: 4px solid var(--main-blue);
+}
+
+.my-matches .my-matches-actions {
+  display: flex;
+  gap: var(--p05);
+}
+.my-matches .my-matches-actions > * {
+  flex: 1;
+  text-align: center;
+}
+
+.my-matches .my-matches-empty {
+  background: var(--white);
+  border-radius: 12px;
+  padding: var(--p2) var(--p1);
+  text-align: center;
+  font-size: var(--text-small);
+  color: var(--dark-3);
+}

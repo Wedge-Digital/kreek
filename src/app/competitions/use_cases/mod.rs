@@ -3,6 +3,7 @@ pub mod coach_matches_service;
 pub mod competition_admin_access_service;
 pub mod create_draft_competition;
 pub mod finalize_competition;
+pub mod my_matches_service;
 pub mod next_opponent_service;
 pub mod notification_dispatch;
 pub mod notification_recipients;

@@ -1,0 +1,16 @@
+{% extends "app-layout.html" %}
+
+{# « Mes matchs » (carte 677) — page hôte sans logique : le titre, et le
+   widget qui rend les cartes. L'onglet mobile « Matchs » y mène. #}
+{% block content %}
+<div class="my-matches">
+  <div class="my-matches-title-row">
+    <div class="h3-gras">Mes matchs</div>
+  </div>
+  <div hx-get="{{ app_routes.competitions.my_matches_widget(space_id) }}"
+       hx-trigger="load"
+       hx-target="this"
+       hx-swap="innerHTML">
+  </div>
+</div>
+{% endblock %}

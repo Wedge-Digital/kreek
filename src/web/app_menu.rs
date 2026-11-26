@@ -12,6 +12,8 @@ use axum::response::{Html, IntoResponse, Response};
 pub enum ActiveSection {
     Competitions,
     MatchReport,
+    /// « Mes matchs » (carte 677) : la page de l'onglet mobile « Matchs ».
+    MyMatches,
     CreateTeam,
     MyTeams,
 }
@@ -26,8 +28,9 @@ pub struct AppMenu {
     pub active_section: Option<ActiveSection>,
     /// Gouverne l'entrée « Administration ».
     pub peut_administrer: bool,
-    /// Cache « Saisir un Match » — sous-menu desktop **et** tabbar mobile, qui
-    /// sont deux markups distincts (carte 550).
+    /// Cache « Saisir un Match » du sous-menu desktop (carte 550). L'onglet
+    /// mobile, lui, mène désormais à « Mes matchs » et reste visible : c'est
+    /// la page qui masque « Nouveau match » (carte 677).
     pub hors_calendrier_interdit: bool,
 }
 
@@ -36,8 +39,13 @@ impl AppMenu {
         matches!(self.active_section, Some(ActiveSection::Competitions))
     }
 
-    fn match_report_active(&self) -> bool {
-        matches!(self.active_section, Some(ActiveSection::MatchReport))
+    /// L'onglet mobile « Matchs » : sur « Mes matchs », et sur la saisie d'un
+    /// match, que l'ancien onglet « Match » couvrait (carte 677).
+    fn my_matches_active(&self) -> bool {
+        matches!(
+            self.active_section,
+            Some(ActiveSection::MyMatches | ActiveSection::MatchReport)
+        )
     }
 
     fn create_team_active(&self) -> bool {
@@ -85,6 +93,7 @@ fn extract_active_section(current_url: &str) -> Option<ActiveSection> {
         match parts[2] {
             "competitions" => Some(ActiveSection::Competitions),
             "match-report" => Some(ActiveSection::MatchReport),
+            "my-matches" => Some(ActiveSection::MyMatches),
             "team" => match parts.get(3) {
                 Some(&"list") => Some(ActiveSection::MyTeams),
                 _ => Some(ActiveSection::CreateTeam),
@@ -107,8 +116,8 @@ struct ContexteEspace {
     section: Option<ActiveSection>,
     peut_administrer: bool,
     /// Vrai dès qu'**une** compétition de l'espace interdit les matchs hors
-    /// calendrier (carte 550). L'entrée « Saisir un Match » disparaît alors pour
-    /// tout le monde, dans les deux tailles d'écran.
+    /// calendrier (carte 550). L'entrée « Saisir un Match » du sous-menu
+    /// desktop disparaît alors pour tout le monde.
     hors_calendrier_interdit: bool,
 }
 
@@ -179,7 +188,7 @@ pub async fn app_menu(
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_active_section, extract_space_id, ActiveSection};
+    use super::{extract_active_section, extract_space_id, ActiveSection, AppMenu};
 
     const ULID: &str = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
 
@@ -259,6 +268,26 @@ mod tests {
     fn section_my_teams_sur_team_list() {
         let s = extract_active_section(&format!("/app/{ULID}/team/list"));
         assert_eq!(s, Some(ActiveSection::MyTeams));
+    }
+
+    #[test]
+    fn section_my_matches_sur_mes_matchs() {
+        let s = extract_active_section(&format!("/app/{ULID}/my-matches"));
+        assert_eq!(s, Some(ActiveSection::MyMatches));
+    }
+
+    /// L'onglet « Matchs » est actif sur sa page, et sur la saisie d'un match
+    /// — que l'ancien onglet « Match » couvrait.
+    #[test]
+    fn l_onglet_matchs_est_actif_sur_mes_matchs_et_sur_la_saisie() {
+        let menu = |section| AppMenu {
+            active_section: section,
+            ..Default::default()
+        };
+        assert!(menu(Some(ActiveSection::MyMatches)).my_matches_active());
+        assert!(menu(Some(ActiveSection::MatchReport)).my_matches_active());
+        assert!(!menu(Some(ActiveSection::Competitions)).my_matches_active());
+        assert!(!menu(None).my_matches_active());
     }
 
     #[test]

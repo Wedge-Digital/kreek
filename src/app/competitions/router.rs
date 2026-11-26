@@ -49,6 +49,7 @@ use crate::app::competitions::io::web::competition_widget::{
     get_competition_widget, get_competition_widget_detail, get_json_competitions, get_json_rounds,
     get_json_seasons,
 };
+use crate::app::competitions::io::web::my_matches_controller::get_my_matches_page;
 use crate::app::competitions::io::web::new_competition::{
     get_new_competition_phase_1, get_new_competition_phase_1_edit, get_new_competition_phase_2,
     post_competition_rules, post_new_competition, post_update_competition,
@@ -68,6 +69,7 @@ use crate::app::competitions::io::web::widgets::latest_results_widget::latest_re
 use crate::app::competitions::io::web::widgets::move_pairing_widget::{
     get_move_pairing_targets, get_move_pairing_widget, post_move_pairing,
 };
+use crate::app::competitions::io::web::widgets::my_matches_widget::get_my_matches_widget;
 use crate::app::competitions::io::web::widgets::notification_settings_widget::{
     get_notification_settings_widget, post_notification_settings,
 };
@@ -120,6 +122,8 @@ pub fn router() -> Router<AppState> {
             path::COMPETITION_LATEST_RESULTS_WIDGET,
             get(latest_results_widget),
         )
+        .route(path::MY_MATCHES, get(get_my_matches_page))
+        .route(path::MY_MATCHES_WIDGET, get(get_my_matches_widget))
         .route(path::TEAM_MATCHES_WIDGET, get(get_team_matches_widget))
         .route(path::TEAM_PRINT_NEXT_OPPONENT, get(get_print_next_opponent))
         .route(

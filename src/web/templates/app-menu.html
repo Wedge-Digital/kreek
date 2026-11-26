@@ -30,10 +30,9 @@
                hx-swap="outerHTML"
                hx-push-url="true">Les Compétitions</div>
           {# Carte 550 — l'entrée disparaît dès qu'une compétition de l'espace
-             interdit les matchs hors calendrier. Le markup mobile plus bas porte
-             la **même** condition : les deux coexistent ici, et c'est le CSS qui
-             bascule l'affichage. En modifier un seul laisse l'entrée en place
-             sur l'autre taille d'écran. #}
+             interdit les matchs hors calendrier. Sur mobile, depuis la carte
+             677, l'onglet mène à « Mes matchs » et reste visible : c'est le
+             bouton « Nouveau match » de cette page qui suit la même règle. #}
           {% if !hors_calendrier_interdit %}
           <div class="sub-menu-btn"
                hx-get="{{ app_routes.match_report.new_match_report(sid) }}"
@@ -112,18 +111,18 @@
     <span class="mobile-tab-icon">🏆</span>
     <span class="mobile-tab-label">Compétitions</span>
   </div>
-  {# Même condition que le sous-menu desktop plus haut (carte 550). #}
-  {% if !hors_calendrier_interdit %}
-  <div class="mobile-tab{% if self.match_report_active() %} active{% endif %}"
-       hx-get="{{ app_routes.match_report.new_match_report(sid) }}"
+  {# « Mes matchs » (carte 677) : toujours visible. La règle du hors
+     calendrier ne masque plus l'onglet, mais le bouton « Nouveau match » de la
+     page ; le sous-menu desktop, lui, garde « Saisir un Match » (carte 550). #}
+  <div class="mobile-tab{% if self.my_matches_active() %} active{% endif %}"
+       hx-get="{{ app_routes.competitions.my_matches(sid) }}"
        hx-target="#app-content"
        hx-select="#app-content"
        hx-swap="outerHTML"
        hx-push-url="true">
-    <span class="mobile-tab-icon">📋</span>
-    <span class="mobile-tab-label">Match</span>
+    <span class="mobile-tab-icon">🏈</span>
+    <span class="mobile-tab-label">Matchs</span>
   </div>
-  {% endif %}
   <div class="mobile-tab{% if self.create_team_active() %} active{% endif %}"
        hx-get="{{ app_routes.team_creation.draft_team(sid) }}"
        hx-target="#app-content"

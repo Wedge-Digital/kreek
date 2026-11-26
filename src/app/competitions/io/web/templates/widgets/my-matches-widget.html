@@ -1,0 +1,45 @@
+{# Les cartes de « Mes matchs » — widget servi par `competitions` (carte 677).
+
+   Une carte par match à jouer, dans l'ordre du service (675). Seul le
+   prochain match d'une équipe porte un bouton, et c'est `match_report` qui
+   dit lequel (676). Le bloc de match est le composant partagé, sans lien :
+   c'est le bouton qui mène à la saisie.
+
+   La feuille est `pages/my-matches.css`, sous la portée de la page hôte. #}
+{% import "match-widget.html" as widget %}
+<div class="my-matches-list" hx-disinherit="*">
+  {% if matches.is_empty() %}
+  <div class="my-matches-empty">Aucun match à jouer</div>
+  {% else %}
+  {% for m in matches %}
+  <div class="my-matches-match{% if m.is_next %} my-matches-match--next{% endif %}">
+    <div class="my-matches-meta">
+      <span>{% if m.is_next %}Prochain match · {% endif %}{{ m.context }}</span>
+      {% if let Some(due) = m.due %}<span class="my-matches-due">{{ due }}</span>{% endif %}
+    </div>
+    <div class="my-matches-card">
+      {% call widget::match_widget(m.block) %}{% endcall %}
+    </div>
+    {% if let Some(action) = m.action %}
+    <div class="my-matches-actions">
+      <a class="btn {% if action.outline %}btn-outline{% else %}btn-primary-blue{% endif %} btn-sm"
+         href="{{ action.url }}">{{ action.label }}</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {# Hors calendrier : un match qu'aucune journée ne prévoit. Masqué dès
+     qu'une compétition de l'espace l'interdit (carte 550). #}
+  {% if off_schedule_allowed %}
+  <div class="my-matches-actions my-matches-new">
+    <a class="btn btn-primary-blue btn-sm"
+       hx-get="{{ app_routes.match_report.new_match_report(space_id) }}"
+       hx-target="#app-content"
+       hx-select="#app-content"
+       hx-swap="outerHTML"
+       hx-push-url="true">Nouveau match</a>
+  </div>
+  {% endif %}
+</div>

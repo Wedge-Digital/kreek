@@ -46,6 +46,12 @@ pub mod path {
     /// chemin, la saison se résout depuis l'inscription.
     pub const TEAM_PRINT_NEXT_OPPONENT: &str =
         "/app/{space_id}/competitions/teams/{team_id}/print/next-opponent";
+    /// « Mes matchs » (carte 677) : la page, puis le widget qui rend les
+    /// cartes. **Hors de `/competitions`** : le segment `my-matches` est ce qui
+    /// rend l'onglet mobile « Matchs » actif (`ActiveSection::MyMatches`) — sous
+    /// `/competitions`, ce serait l'onglet « Compétitions ».
+    pub const MY_MATCHES: &str = "/app/{space_id}/my-matches";
+    pub const MY_MATCHES_WIDGET: &str = "/app/{space_id}/my-matches/widget";
     pub const COMPETITION_ADMIN: &str =
         "/app/{space_id}/competitions/{competition_id}/{season_id}/admin";
     pub const COMPETITION_ADMIN_ENROLLMENTS: &str =
@@ -232,6 +238,12 @@ impl Routes {
 
     pub fn latest_results_widget(&self, sid: &str) -> String {
         path::COMPETITION_LATEST_RESULTS_WIDGET.replace("{space_id}", sid)
+    }
+    pub fn my_matches(&self, sid: &str) -> String {
+        path::MY_MATCHES.replace("{space_id}", sid)
+    }
+    pub fn my_matches_widget(&self, sid: &str) -> String {
+        path::MY_MATCHES_WIDGET.replace("{space_id}", sid)
     }
     pub fn competition_widget_json_competitions(&self, sid: &str) -> String {
         path::COMPETITION_WIDGET_JSON_COMPETITIONS.replace("{space_id}", sid)
@@ -500,5 +512,24 @@ impl Routes {
             .replace("{space_id}", sid)
             .replace("{competition_id}", cid)
             .replace("{season_id}", season_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Routes;
+
+    const SPACE: &str = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+
+    /// Le segment `my-matches` suit l'espace : c'est lui
+    /// qu'`extract_active_section` lit pour rendre l'onglet « Matchs » actif.
+    #[test]
+    fn my_matches_routes_live_under_the_space() {
+        let routes = Routes::default();
+        assert_eq!(routes.my_matches(SPACE), format!("/app/{SPACE}/my-matches"));
+        assert_eq!(
+            routes.my_matches_widget(SPACE),
+            format!("/app/{SPACE}/my-matches/widget")
+        );
     }
 }

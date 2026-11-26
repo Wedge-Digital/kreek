@@ -164,6 +164,21 @@ pub fn build_team_matches(
         .collect()
 }
 
+/// Le bloc d'un match **sans lien** vers le rapport, son libellé de journée
+/// dedans — pour « Mes matchs » (carte 677), où c'est le bouton d'action qui
+/// mène au rapport, et où la liste est plate comme celle d'une équipe.
+///
+/// L'équipe de référence est celle qui reçoit : elle ne sert ici qu'à poser le
+/// libellé, la pastille d'issue n'existant pas sur un match à jouer.
+pub fn build_unlinked_match(row: PairingDisplayDto) -> MatchResultatVm {
+    let no_link = ResultAuthorization {
+        is_admin: false,
+        my_team_ids: HashSet::new(),
+    };
+    let reference = row.home_team_id.clone();
+    to_resultat_vm(row, &no_link, Some(&reference), "")
+}
+
 pub fn build_journees(
     rows: Vec<PairingDisplayDto>,
     max_rounds: usize,
@@ -402,6 +417,20 @@ mod tests {
         );
 
         assert_eq!(vm.report_url, None);
+    }
+
+    /// « Mes matchs » (carte 677) : le bloc ne mène nulle part — c'est le
+    /// bouton qui le fait —, mais il porte sa journée.
+    #[test]
+    fn an_unlinked_match_has_no_link_but_its_round_label() {
+        let mut row = rencontre("A", "B", None, "upcoming");
+        row.match_report_url = Some("/rapport/direct".to_string());
+
+        let vm = build_unlinked_match(row);
+
+        assert_eq!(vm.report_url, None);
+        assert_eq!(vm.round_label.as_deref(), Some("Journée 3"));
+        assert_eq!(vm.outcome, None);
     }
 
     #[test]

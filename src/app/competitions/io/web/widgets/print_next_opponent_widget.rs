@@ -105,7 +105,7 @@ fn round_label(pairing: &PairingDisplayDto) -> String {
 }
 
 /// `2026-10-25` (ou un horodatage qui commence ainsi) → `25/10/2026`.
-fn date_fr(iso: &str) -> Option<String> {
+pub fn date_fr(iso: &str) -> Option<String> {
     let jour = iso.get(..10)?;
     let mut parts = jour.split('-');
     let (a, m, j) = (parts.next()?, parts.next()?, parts.next()?);

@@ -15,8 +15,8 @@ use crate::app::competitions::io::repository::group_repository::GroupRepository;
 use crate::app::competitions::io::repository::match_day_repository::MatchDayRepository;
 use crate::app::competitions::io::repository::season_repository::SeasonRepository;
 use crate::app::competitions::ports::{
-    ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchReportStatusPort,
-    IRankingRecomputePort, ITeamInfoPort, ITiebreakCatalogPort,
+    ICompetitionReferencePort, ICompetitionSpaceMemberPort, IMatchEntryPort,
+    IMatchReportStatusPort, IRankingRecomputePort, ITeamInfoPort, ITiebreakCatalogPort,
 };
 use crate::app::shared_kernel::bloodbowl::admin_access::IAdminAccessPort;
 use crate::common::services::email::IEmailService;
@@ -37,6 +37,9 @@ pub struct CompetitionsContext {
     pub admin_access: Arc<dyn IAdminAccessPort>,
     pub tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
     pub match_report_status_port: Arc<dyn IMatchReportStatusPort>,
+    /// Le bouton de saisie de « Mes matchs », décidé par `match_report`
+    /// (carte 677).
+    pub match_entry_port: Arc<dyn IMatchEntryPort>,
     /// Le seul port de ce BC qui **ordonne** — cf. `IRankingRecomputePort`.
     pub ranking_recompute_port: Arc<dyn IRankingRecomputePort>,
     pub email_service: Arc<dyn IEmailService>,
@@ -106,6 +109,7 @@ impl CompetitionsContext {
         admin_access: Arc<dyn IAdminAccessPort>,
         tiebreak_catalog_port: Arc<dyn ITiebreakCatalogPort>,
         match_report_status_port: Arc<dyn IMatchReportStatusPort>,
+        match_entry_port: Arc<dyn IMatchEntryPort>,
         ranking_recompute_port: Arc<dyn IRankingRecomputePort>,
         email_service: Arc<dyn IEmailService>,
         app_url: String,
@@ -121,6 +125,7 @@ impl CompetitionsContext {
             admin_access,
             tiebreak_catalog_port,
             match_report_status_port,
+            match_entry_port,
             ranking_recompute_port,
             email_service,
             app_url,

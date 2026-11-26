@@ -499,6 +499,13 @@ pub async fn compose(cfg: AppConfig, pool: sqlx::PgPool) -> AppState {
             Arc::new(crate::infrastructure::competitions::match_report_status_adapter::MatchReportStatusAdapter::new(
                 Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
             )),
+            // « Mes matchs » (carte 677) : le bouton de chaque prochain match,
+            // décidé par `match_report` avec ses propres règles d'accès.
+            Arc::new(crate::infrastructure::competitions::match_entry_adapter::MatchEntryAdapter::new(
+                Arc::new(crate::app::match_report::io::repository::match_report_repository::MatchReportRepository::new(pool.clone())),
+                admin_access.clone(),
+                match_report_team_data.clone(),
+            )),
             // `competitions` demande à `ranking` de se rejouer. Pas de cycle :
             // les deux adaptateurs se ramènent aux dépôts, et
             // `ranking_competition_port` est construit plus haut.

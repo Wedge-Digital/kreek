@@ -1,3 +1,5 @@
+use crate::app::auth::domain::user::User;
+use crate::app::competitions::domain::match_entry::MatchEntryKind;
 use async_trait::async_trait;
 
 #[derive(Clone)]
@@ -71,6 +73,32 @@ pub trait IMatchReportStatusPort: Send + Sync {
     /// Parmi ces pairings, ceux dont le rapport de match est publié — donc
     /// ceux dont la rencontre ne peut plus être supprimée.
     async fn find_published_pairings(&self, pairing_ids: &[String]) -> Result<Vec<String>, String>;
+}
+
+// ── ACL vers le BC `match_report` (le bouton de « Mes matchs », carte 677) ────
+
+/// Le bouton d'un appariement pour un coach, et où il mène. DTO de lecture :
+/// primitives assumées.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MatchEntryLinkDto {
+    pub pairing_id: String,
+    pub kind: MatchEntryKind,
+    pub url: String,
+}
+
+/// Consultation : « que peut faire ce coach sur ces matchs, **maintenant** ? »
+/// C'est `match_report` qui en décide, d'après l'état de la saisie.
+#[async_trait]
+pub trait IMatchEntryPort: Send + Sync {
+    /// Le bouton de ce coach pour chacun de ces appariements. Un appariement
+    /// sans bouton — sans rapport, rapport clos, ou coach étranger au match —
+    /// n'a pas de ligne ; l'ordre de la réponse n'est pas celui de la demande.
+    async fn find_entry_links(
+        &self,
+        user: &User,
+        space_id: &str,
+        pairing_ids: &[String],
+    ) -> Result<Vec<MatchEntryLinkDto>, String>;
 }
 
 // ── ACL vers le BC `references` (résolution de noms pour l'onglet résumé) ──────
