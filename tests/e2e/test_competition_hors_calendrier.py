@@ -32,6 +32,7 @@ from playwright.sync_api import Page, expect
 from competition_lifecycle import BASE_URL, build_full_competition
 from db_helpers import execute_db, query_db
 from match_report_helpers import draft_of_round
+from realtime_helpers import log_in
 
 HX = {"HX-Request": "true"}
 #: `requests` ne pose pas de `Content-Type` quand le corps est **vide**, et le
@@ -40,6 +41,11 @@ HX = {"HX-Request": "true"}
 #: existe pour offrir serait le seul que le test ne saurait pas envoyer.
 FORM = {**HX, "Content-Type": "application/x-www-form-urlencoded"}
 MEMBRE_SIMPLE = {**HX, "X-Bypass-Auth-Profile": "simple"}
+
+#: « Mes matchs » est lu par un coach qui n'a que quelques équipes : DevCoach
+#: en tient plus d'une centaine dans la base de la suite, et le widget consulte
+#: l'accès de tous ses prochains matchs à la fois (cf. `test_my_matches`).
+COACH_LEGER = "E2E Coach 08"
 
 DESKTOP = {"width": 1440, "height": 900}
 MOBILE = {"width": 390, "height": 844}
@@ -189,28 +195,56 @@ def test_un_membre_simple_ne_regle_rien(space_id, competition):
 # ══ 2 · Les points d'entrée ════════════════════════════════════════════════════
 
 
-@pytest.mark.parametrize("taille,selecteur", [
-    ("desktop", ".sub-menu-btn"),
-    ("mobile", ".mobile-tab"),
-])
+def _entree_desktop(page: Page, space_id, presente: bool) -> None:
+    """Le sous-menu « Saisir un Match » de la barre latérale."""
+    page.goto(f"{BASE_URL}/app/{space_id}/competitions", wait_until="load")
+    entree = page.locator(".sub-menu-btn", has_text="Match")
+    if presente:
+        expect(entree.first).to_be_attached(timeout=15000)
+    else:
+        expect(entree).to_have_count(0, timeout=15000)
+
+
+def _entree_mobile(page: Page, space_id, presente: bool) -> None:
+    """Depuis la carte 677, l'onglet « Matchs » reste ; c'est « Nouveau match »,
+    au bas de « Mes matchs », qui suit la règle.
+
+    L'onglet se cherche par son libellé **exact** : `has_text="Match"`
+    attraperait « Matchs », et l'ancien onglet « Match » passerait pour présent.
+    """
+    page.goto(f"{BASE_URL}/app/{space_id}/my-matches", wait_until="load")
+    onglet = page.locator(".mobile-tab").filter(has=page.get_by_text("Matchs", exact=True))
+    expect(onglet).to_be_visible(timeout=15000)
+    expect(page.locator(".mobile-tab").filter(has=page.get_by_text("Match", exact=True))).to_have_count(0)
+    expect(page.locator(".my-matches-list")).to_be_visible(timeout=15000)
+    nouveau = page.locator(".my-matches-new a", has_text="Nouveau match")
+    expect(nouveau).to_have_count(1 if presente else 0)
+
+
+_ENTREE = {"desktop": (DESKTOP, _entree_desktop), "mobile": (MOBILE, _entree_mobile)}
+
+
+@pytest.mark.parametrize("taille", ["desktop", "mobile"])
 def test_l_entree_de_menu_disparait_dans_les_deux_tailles(
-    page: Page, space_id, competition, taille, selecteur
+    page: Page, space_id, competition, taille
 ):
     """**Deux markups, deux vérifications.**
 
     Le sous-menu desktop et la tabbar mobile coexistent dans `app-menu.html` ;
     en conditionner un seul laisse l'entrée en place sur l'autre taille d'écran,
-    et aucun test à une seule fenêtre ne le verrait.
+    et aucun test à une seule fenêtre ne le verrait. Sur mobile, l'entrée qui
+    disparaît est « Nouveau match » dans « Mes matchs » (carte 677).
     """
-    page.set_viewport_size(DESKTOP if taille == "desktop" else MOBILE)
+    viewport, verifier = _ENTREE[taille]
+    page.set_viewport_size(viewport)
+    if taille == "mobile":
+        log_in(page, COACH_LEGER)
 
     _regler(space_id, competition, True)
-    page.goto(f"{BASE_URL}/app/{space_id}/competitions", wait_until="load")
-    expect(page.locator(selecteur, has_text="Match").first).to_be_attached(timeout=15000)
+    verifier(page, space_id, presente=True)
 
     _regler(space_id, competition, False)
-    page.goto(f"{BASE_URL}/app/{space_id}/competitions", wait_until="load")
-    expect(page.locator(selecteur, has_text="Match")).to_have_count(0, timeout=15000)
+    verifier(page, space_id, presente=False)
 
     _regler(space_id, competition, True)
 

@@ -579,6 +579,16 @@
                                   "ranking", "auth", "spaces", "references",
                                   "team_creation", "spp_calculator"]
 
+# Carte 678 — « Mes matchs » (épic I7-E1-KR), scénarios S1 à S6. `competitions`
+# sert la page, le widget et le réglage du hors calendrier ; il lit les équipes
+# inscrites du coach dans `teams` et le bouton de chaque match dans
+# `match_report` (« Qui saisit ? », l'avant-match, `/live`, la saisie hors
+# calendrier). Un coach réellement connecté (`auth`) ; l'onglet mobile est dans
+# `src/web` (déjà `@core`). Le reste est la fixture `build_full_competition` ;
+# aucun match n'est publié, d'où l'absence de `spp_calculator`.
+"test_my_matches" = ["competitions", "match_report", "teams", "auth", "spaces",
+                     "references", "team_creation", "players", "ranking"]
+
 # ── Trou de couverture connu ─────────────────────────────────────────────────
 # Le BC `news` n'a qu'une seule couverture e2e, partielle : le widget
 # "Derniers résultats" de l'accueil (`test_accueil_derniers_resultats`, fourni
