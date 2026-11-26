@@ -2,7 +2,7 @@
 id: 677-la-page-mes-matchs
 parent: I7-E1-KR
 ticket: I7-E1-KR-T3
-status: approved
+status: done
 ---
 
 # La page « Mes matchs »

@@ -2,7 +2,7 @@
 id: 676-l-action-de-saisie-d-un-match
 parent: I7-E1-KR
 ticket: I7-E1-KR-T2
-status: approved
+status: done
 ---
 
 # L'action de saisie d'un match

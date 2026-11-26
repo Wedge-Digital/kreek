@@ -2,7 +2,7 @@
 id: 678-les-tests-e2e-de-mes-matchs
 parent: I7-E1-KR
 ticket: I7-E1-KR-T4
-status: approved
+status: done
 ---
 
 # Les tests e2e de « Mes matchs »

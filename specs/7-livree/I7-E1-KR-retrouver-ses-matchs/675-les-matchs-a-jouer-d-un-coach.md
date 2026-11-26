@@ -2,7 +2,7 @@
 id: 675-les-matchs-a-jouer-d-un-coach
 parent: I7-E1-KR
 ticket: I7-E1-KR-T1
-status: approved
+status: done
 ---
 
 # Les matchs à jouer d'un coach

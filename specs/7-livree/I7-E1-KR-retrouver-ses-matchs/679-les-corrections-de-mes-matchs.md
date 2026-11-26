@@ -2,7 +2,7 @@
 id: 679-les-corrections-de-mes-matchs
 parent: I7-E1-KR
 ticket: I7-E1-KR-T5
-status: approved
+status: done
 ---
 
 # Les corrections de « Mes matchs »
