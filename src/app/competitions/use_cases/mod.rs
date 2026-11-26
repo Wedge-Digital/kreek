@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod coach_matches_service;
 pub mod competition_admin_access_service;
 pub mod create_draft_competition;
 pub mod finalize_competition;

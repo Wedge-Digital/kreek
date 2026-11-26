@@ -12,6 +12,7 @@ use crate::app::competitions::domain::next_opponent::{
     upcoming_opponents, NextOpponent, PairingStatus, ScheduledPairing,
 };
 use crate::app::competitions::ports::ITeamInfoPort;
+use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::{MatchId, PairingId};
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
@@ -117,7 +118,10 @@ fn readable(row: &PairingDisplayDto) -> Option<ScheduledPairing> {
     read
 }
 
-fn scheduled(row: &PairingDisplayDto) -> Option<ScheduledPairing> {
+/// La rencontre lue depuis la projection, `None` si un identifiant ou le
+/// statut est illisible. Partagée avec les matchs à jouer d'un coach
+/// (carte 675) : une seule lecture de la projection.
+pub(crate) fn scheduled(row: &PairingDisplayDto) -> Option<ScheduledPairing> {
     Some(ScheduledPairing {
         round_id: MatchId::try_new(&row.round_id).ok()?,
         round_position: MatchDayPosition::try_new(row.round_position).ok()?,
@@ -127,7 +131,16 @@ fn scheduled(row: &PairingDisplayDto) -> Option<ScheduledPairing> {
             away_team_id: TeamId::try_new(&row.away_team_id).ok()?,
         },
         status: PairingStatus::from_projection(&row.match_status)?,
+        deadline: deadline(row.round_date_end.as_deref()),
     })
+}
+
+/// La date limite de la journée. Une chaîne vide — la valeur par défaut de
+/// `DateString` — vaut « sans date », et une date illisible aussi : elle ne
+/// sert qu'à trier, elle ne justifie pas d'écarter la rencontre.
+fn deadline(raw: Option<&str>) -> Option<DateString> {
+    raw.and_then(|s| DateString::try_new(s).ok())
+        .filter(|d| !d.as_ref().is_empty())
 }
 
 #[cfg(test)]
@@ -162,6 +175,29 @@ mod tests {
             away_casualties: None,
             match_report_url: None,
         }
+    }
+
+    #[test]
+    fn the_deadline_is_read_and_an_empty_or_invalid_one_is_no_date() {
+        assert_eq!(
+            deadline(Some("2026-12-01")),
+            Some(DateString::try_new("2026-12-01").unwrap())
+        );
+        assert_eq!(deadline(Some("")), None);
+        assert_eq!(deadline(Some("1er décembre")), None);
+        assert_eq!(deadline(None), None);
+    }
+
+    #[test]
+    fn scheduled_carries_the_round_deadline() {
+        let (moi, a) = (TeamId::new(), TeamId::new());
+        let mut row = ligne(&moi, &a, 1, "upcoming");
+        row.round_date_end = Some("2026-12-01".into());
+        let read = scheduled(&row).expect("ligne lisible");
+        assert_eq!(
+            read.deadline.map(|d| d.to_string()),
+            Some("2026-12-01".into())
+        );
     }
 
     #[test]

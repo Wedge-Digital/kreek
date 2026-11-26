@@ -35,6 +35,24 @@ pub trait ITeamInfoPort: Send + Sync {
         &self,
         team_id: &str,
     ) -> Result<Option<TeamEnrollmentDto>, String>;
+
+    /// Les équipes **inscrites** d'un coach dans un espace — les brouillons,
+    /// les équipes renvoyées ou refusées n'en sont pas (carte 675).
+    ///
+    /// Aucun filtre de saison : le code ne connaît pas de saison « en cours »,
+    /// et une équipe n'est inscrite qu'à une saison à la fois.
+    async fn find_coach_enrolled_teams(
+        &self,
+        coach_id: &str,
+        space_id: &str,
+    ) -> Result<Vec<CoachTeamDto>, String>;
+}
+
+/// Une équipe inscrite d'un coach. DTO de lecture : primitives assumées.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CoachTeamDto {
+    pub team_id: String,
+    pub team_name: String,
 }
 
 pub struct TeamEnrollmentDto {

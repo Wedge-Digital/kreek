@@ -1,3 +1,4 @@
+pub mod coach_matches;
 pub mod competition;
 pub mod competition_invitations;
 pub mod competition_notifications;

@@ -366,6 +366,13 @@ mod tests {
         ) -> Result<Option<crate::app::competitions::ports::TeamEnrollmentDto>, String> {
             Ok(None)
         }
+        async fn find_coach_enrolled_teams(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Result<Vec<crate::app::competitions::ports::CoachTeamDto>, String> {
+            Ok(vec![])
+        }
     }
 
     struct FakeGroupRepoWithEmptyGroup(&'static str);
@@ -417,6 +424,13 @@ mod tests {
             _: &str,
         ) -> Result<Option<crate::app::competitions::ports::TeamEnrollmentDto>, String> {
             Ok(None)
+        }
+        async fn find_coach_enrolled_teams(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Result<Vec<crate::app::competitions::ports::CoachTeamDto>, String> {
+            Ok(vec![])
         }
     }
 

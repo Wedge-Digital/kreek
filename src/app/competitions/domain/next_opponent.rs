@@ -9,6 +9,7 @@
 //! imprimé.
 
 use crate::app::competitions::domain::match_day::{MatchDayPosition, Pairing};
+use crate::app::shared_kernel::bloodbowl::date_string::DateString;
 use crate::app::shared_kernel::bloodbowl::ids::MatchId;
 use crate::app::shared_kernel::bloodbowl::team::TeamId;
 
@@ -36,11 +37,16 @@ impl PairingStatus {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ScheduledPairing {
     pub round_id: MatchId,
     pub round_position: MatchDayPosition,
     pub pairing: Pairing,
     pub status: PairingStatus,
+    /// La date limite de la journée, `None` quand elle n'en a pas. Elle ne
+    /// compte pas pour le prochain adversaire (R12) ; seule la liste des
+    /// matchs à jouer d'un coach s'en sert pour trier (carte 675).
+    pub deadline: Option<DateString>,
 }
 
 /// Où joue l'adversaire. Sert au favori à égalité de VE (R10) : l'équipe à
@@ -118,6 +124,7 @@ mod tests {
                 away_team_id: exterieur.clone(),
             },
             status,
+            deadline: None,
         }
     }
 
