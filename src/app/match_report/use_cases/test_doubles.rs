@@ -25,6 +25,7 @@ use crate::app::shared_kernel::bloodbowl::team::TeamId;
 use crate::app::shared_kernel::identity::ids::{CoachId, SpaceId};
 use async_trait::async_trait;
 use std::collections::VecDeque;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 /// Rend l'état confié au premier `find_by_id`, et refuse tout append.
@@ -684,6 +685,42 @@ impl ICompetitionDataPort for PlainCompetition {
     }
 }
 
+/// Une compétition dont le tier offre un coup de pouce à toute équipe (carte
+/// 679) : chacune a ses coups de pouce à valider avant le match.
+pub struct GenerousCompetition;
+
+#[async_trait]
+impl ICompetitionDataPort for GenerousCompetition {
+    async fn find_tier_rules_for_roster(&self, _: &str, _: &str) -> Option<TierRulesDto> {
+        let bribe = crate::app::match_report::ports::InducementSpecDto {
+            uid: "bribe".into(),
+            max_qty: 1,
+            unit_cost: 100,
+        };
+        Some(TierRulesDto {
+            allowed_inducements: vec![bribe],
+            allowed_star_players: vec![],
+        })
+    }
+    async fn find_round_context(&self, a: &str, b: &str) -> Option<RoundContextDto> {
+        PlainCompetition.find_round_context(a, b).await
+    }
+    async fn autorise_hors_calendrier(&self, a: &str) -> bool {
+        PlainCompetition.autorise_hors_calendrier(a).await
+    }
+    async fn creer_appariement(
+        &self,
+        _: &str,
+        _: &str,
+        _: &str,
+        _: &str,
+        _: &str,
+        _: &str,
+    ) -> Result<String, CreationAppariementError> {
+        Err(CreationAppariementError::Indisponible("doublure".into()))
+    }
+}
+
 /// Des équipes dont on choisit le coach et le nom, une à une (carte 655) :
 /// ce qu'une page lit des équipes du match, et rien d'autre. Une équipe
 /// absente n'a ni coach ni nom ; `coach_unreadable` fait échouer la lecture du
@@ -756,6 +793,72 @@ impl ITeamDataPort for NamedTeams {
     }
     async fn find_team_season(&self, _: &str) -> Option<String> {
         None
+    }
+}
+
+/// Des `NamedTeams` qui comptent leurs lectures de coach en vol (carte 679) :
+/// `peak()` rend le plus grand nombre de lectures simultanées observé. Chaque
+/// lecture rend la main avant de répondre, pour que les autres puissent
+/// démarrer pendant qu'elle est pendante.
+pub struct ConcurrencyProbeTeams {
+    teams: NamedTeams,
+    in_flight: AtomicUsize,
+    peak: AtomicUsize,
+}
+
+impl ConcurrencyProbeTeams {
+    pub fn over(teams: NamedTeams) -> Self {
+        Self {
+            teams,
+            in_flight: AtomicUsize::new(0),
+            peak: AtomicUsize::new(0),
+        }
+    }
+    pub fn peak(&self) -> usize {
+        self.peak.load(Ordering::SeqCst)
+    }
+    async fn probe<T>(&self, read: impl std::future::Future<Output = T>) -> T {
+        let now = self.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
+        self.peak.fetch_max(now, Ordering::SeqCst);
+        tokio::task::yield_now().await;
+        let answer = read.await;
+        self.in_flight.fetch_sub(1, Ordering::SeqCst);
+        answer
+    }
+}
+
+#[async_trait]
+impl ITeamDataPort for ConcurrencyProbeTeams {
+    async fn is_team_ready_to_play(&self, t: &str) -> Result<bool, String> {
+        self.teams.is_team_ready_to_play(t).await
+    }
+    async fn is_team_in_player_improvement(&self, t: &str) -> Result<bool, String> {
+        self.teams.is_team_in_player_improvement(t).await
+    }
+    async fn is_coach_of_team(&self, team_id: &str, coach_id: &str) -> Result<bool, String> {
+        self.probe(self.teams.is_coach_of_team(team_id, coach_id))
+            .await
+    }
+    async fn find_team_coach(&self, team_id: &str) -> Result<Option<String>, String> {
+        self.probe(self.teams.find_team_coach(team_id)).await
+    }
+    async fn find_team_info(&self, t: &str) -> Option<TeamInfoDto> {
+        self.teams.find_team_info(t).await
+    }
+    async fn find_team_value(&self, t: &str) -> Option<u32> {
+        self.teams.find_team_value(t).await
+    }
+    async fn find_team_treasury(&self, t: &str) -> Option<u32> {
+        self.teams.find_team_treasury(t).await
+    }
+    async fn find_journeyman_position(&self, t: &str) -> Option<JourneymanPositionDto> {
+        self.teams.find_journeyman_position(t).await
+    }
+    async fn find_roster_positions(&self, t: &str) -> Vec<RosterPositionDto> {
+        self.teams.find_roster_positions(t).await
+    }
+    async fn find_team_season(&self, t: &str) -> Option<String> {
+        self.teams.find_team_season(t).await
     }
 }
 

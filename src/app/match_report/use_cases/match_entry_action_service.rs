@@ -18,7 +18,16 @@ use crate::app::match_report::domain::match_report_repository_port::{
 use crate::app::match_report::use_cases::match_report_access_service::{
     camp_du_coach, can_write_report, AccesRapportDeps, CampDuCoach, EntryScope, PorteeRapport,
 };
-use futures_util::future::join_all;
+use futures_util::stream::{self, StreamExt};
+
+/// Le nombre de rapports dont l'accès se consulte en même temps (carte 679).
+///
+/// Chaque consultation tient au plus deux lectures de port à la fois (le camp
+/// du coach interroge les deux équipes ensemble) : quatre rapports, c'est au
+/// plus huit connexions, quel que soit le nombre de matchs du coach. Sans
+/// borne, un coach de 120 équipes prenait 98 connexions sur 100 ; en
+/// production, le pool en compte 20.
+pub const MAX_CONCURRENT_ACCESS_CHECKS: usize = 4;
 
 /// L'action d'un coach sur le rapport d'un appariement.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,10 +61,20 @@ pub async fn entry_actions_for_pairings(
     let rows = repo
         .find_entry_states_by_pairings(space_id, pairing_ids)
         .await?;
-    let actions = rows
+    let actions: Vec<_> = rows
         .iter()
-        .map(|row| entry_action_for(deps, user, space_id, row));
-    Ok(join_all(actions).await)
+        .map(|row| entry_action_for(deps, user, space_id, row))
+        .collect();
+    Ok(bounded_in_order(actions).await)
+}
+
+/// Les consultations, `MAX_CONCURRENT_ACCESS_CHECKS` à la fois, rendues dans
+/// l'ordre des lignes.
+async fn bounded_in_order<F: std::future::Future>(futures: Vec<F>) -> Vec<F::Output> {
+    stream::iter(futures)
+        .buffered(MAX_CONCURRENT_ACCESS_CHECKS)
+        .collect()
+        .await
 }
 
 /// L'action de ce coach sur ce rapport. Un rapport clos ne consulte aucun
@@ -118,7 +137,9 @@ fn entry_scope_of(row: &PairingEntryRow) -> EntryScope {
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::EntryMode;
-    use crate::app::match_report::use_cases::test_doubles::{NamedTeams, PairingEntryRepository};
+    use crate::app::match_report::use_cases::test_doubles::{
+        ConcurrencyProbeTeams, NamedTeams, PairingEntryRepository,
+    };
     use crate::app::shared_kernel::bloodbowl::admin_access::FakeAdminAccess;
     use crate::app::shared_kernel::identity::coach_name::CoachName;
     use crate::app::shared_kernel::identity::email::Email;
@@ -329,6 +350,43 @@ mod tests {
             .await
             .unwrap();
         assert!(found.is_empty());
+    }
+
+    /// Carte 679 : quel que soit le nombre de matchs, les lectures de port
+    /// simultanées restent bornées — deux par rapport consulté au plus — et
+    /// les actions reviennent dans l'ordre des lignes.
+    #[tokio::test]
+    async fn access_checks_run_a_bounded_number_at_a_time() {
+        let (teams, found) = probe_many_reports(30).await;
+        let pairing_ids: Vec<_> = found.iter().map(|a| a.pairing_id.clone()).collect();
+        let order: Vec<_> = (0..30).map(|i| format!("pairing-{i}")).collect();
+        assert_eq!(pairing_ids, order);
+        assert!(
+            teams.peak() > 1,
+            "la doublure doit voir des lectures simultanées"
+        );
+        let bound = 2 * MAX_CONCURRENT_ACCESS_CHECKS;
+        assert!(teams.peak() <= bound, "{} > {bound}", teams.peak());
+    }
+
+    /// `count` rapports commencés par le coach du domicile, consultés à
+    /// travers la doublure qui compte les lectures simultanées.
+    async fn probe_many_reports(count: usize) -> (ConcurrencyProbeTeams, Vec<PairingEntryAction>) {
+        let rows: Vec<PairingEntryRow> = (0..count)
+            .map(|i| PairingEntryRow {
+                pairing_id: format!("pairing-{i}"),
+                ..row("PreMatch", EntryMode::SoloEntry, Some(HOME_COACH))
+            })
+            .collect();
+        let (admin_access, repo) = (admins(), PairingEntryRepository::holding(rows));
+        let teams = ConcurrencyProbeTeams::over(teams());
+        let deps = AccesRapportDeps {
+            admin_access: &admin_access,
+            team_data: &teams,
+        };
+        let (coach, pairings) = (user(HOME_COACH), vec![PAIRING.to_string()]);
+        let found = entry_actions_for_pairings(&repo, &deps, &coach, SPACE, &pairings).await;
+        (teams, found.unwrap())
     }
 
     #[test]

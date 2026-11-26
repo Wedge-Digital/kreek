@@ -612,6 +612,18 @@ impl MatchReportPreMatch {
         if self.entry_mode != EntryMode::TeamEntry {
             return true;
         }
+        self.is_pre_match_over(offered_inducements)
+    }
+
+    /// L'avant-match est fini (carte 679), quel que soit le mode : les deux
+    /// fans factors lancés, et chaque équipe à qui son tier offre des coups de
+    /// pouce les a validés. C'est l'étape où reprend un coach qui revient à son
+    /// rapport.
+    ///
+    /// Distinct de `has_kicked_off`, qui dit si une action peut s'écrire : en
+    /// « Je saisis tout », elle le peut toujours, mais le coach qui n'a pas
+    /// lancé son fan factor reprend encore à l'avant-match.
+    pub fn is_pre_match_over(&self, offered_inducements: &[TeamId]) -> bool {
         TeamSide::BOTH
             .iter()
             .all(|side| self.fan_roll_of(*side).is_some())
@@ -2078,6 +2090,29 @@ mod tests {
     fn en_je_saisis_tout_une_action_n_attend_rien() {
         let pm = make_pm(1000, 1000);
         assert!(touchdown_on(&pm, &[pm.home_team_id.clone()]).is_ok());
+    }
+
+    // ── Carte 679 — la fin de l'avant-match, dans les deux modes ─────────────
+
+    #[test]
+    fn en_je_saisis_tout_l_avant_match_attend_les_fans_factors() {
+        let pm = make_pm(1000, 1000);
+        assert!(!pm.is_pre_match_over(&[]));
+        let mut pm = team_entry_rolled();
+        pm.entry_mode = EntryMode::SoloEntry;
+        assert!(pm.is_pre_match_over(&[]));
+    }
+
+    #[test]
+    fn l_avant_match_attend_les_coups_de_pouce_offerts_dans_les_deux_modes() {
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            let mut pm = team_entry_rolled();
+            pm.entry_mode = mode;
+            let offered = [pm.home_team_id.clone()];
+            assert!(!pm.is_pre_match_over(&offered), "{mode:?}");
+            pm.home_inducements = Some(vec![]);
+            assert!(pm.is_pre_match_over(&offered), "{mode:?}");
+        }
     }
 
     #[test]

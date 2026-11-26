@@ -46,6 +46,12 @@ pub async fn offered_inducements(
     if pm.entry_mode != EntryMode::TeamEntry {
         return vec![];
     }
+    offered_by_tier(pm, ports).await
+}
+
+/// Les équipes à qui leur tier offre des coups de pouce, quel que soit le
+/// mode de saisie.
+async fn offered_by_tier(pm: &MatchReportPreMatch, ports: &KickOffPorts<'_>) -> Vec<TeamId> {
     let (home, away) = (pm.home_team_id.to_string(), pm.away_team_id.to_string());
     let (home_offered, away_offered) = tokio::join!(
         offers_inducements(pm, &home, ports.team_data, ports.competition_data),
@@ -75,6 +81,15 @@ pub async fn kick_off_detour(
     Some(detour_of(pm, side, &offered))
 }
 
+/// Le coach qui revient à son rapport en est-il au match ? (carte 679) — dans
+/// les deux modes, l'avant-match fini (`is_pre_match_over`), coups de pouce
+/// offerts compris. En « Je saisis tout », `has_kicked_off` dit toujours oui :
+/// c'est la règle d'écriture d'une action, pas l'étape où l'on reprend.
+// arch:no-instrument — service de lecture : une question d'étape, aucune intention métier
+pub async fn has_reached_the_match(pm: &MatchReportPreMatch, ports: &KickOffPorts<'_>) -> bool {
+    pm.is_pre_match_over(&offered_by_tier(pm, ports).await)
+}
+
 /// Les coups de pouce dès que son jet est lancé et que son tier en offre ;
 /// sinon son avant-match.
 fn detour_of(pm: &MatchReportPreMatch, side: TeamSide, offered: &[TeamId]) -> KickOffDetour {
@@ -91,7 +106,9 @@ fn detour_of(pm: &MatchReportPreMatch, side: TeamSide, offered: &[TeamId]) -> Ki
 mod tests {
     use super::*;
     use crate::app::match_report::domain::value_objects::{D3Roll, InducementPurchase};
-    use crate::app::match_report::use_cases::test_doubles::pre_match;
+    use crate::app::match_report::use_cases::test_doubles::{
+        plain_kick_off, pre_match, GenerousCompetition, ReadyTeams,
+    };
 
     fn team_entry() -> MatchReportPreMatch {
         let mut pm = pre_match();
@@ -159,6 +176,50 @@ mod tests {
         let pm = rolled(rolled(team_entry(), TeamSide::Home), TeamSide::Away);
         let pm = with_inducements(pm, TeamSide::Home);
         assert!(pm.has_kicked_off(std::slice::from_ref(&pm.home_team_id)));
+    }
+
+    fn generous() -> KickOffPorts<'static> {
+        KickOffPorts {
+            team_data: &ReadyTeams,
+            competition_data: &GenerousCompetition,
+        }
+    }
+
+    fn both_rolled(mode: EntryMode) -> MatchReportPreMatch {
+        let mut pm = rolled(rolled(team_entry(), TeamSide::Home), TeamSide::Away);
+        pm.entry_mode = mode;
+        pm
+    }
+
+    /// Carte 679 : sans fan factor, on reprend à l'avant-match — même en « Je
+    /// saisis tout », où une action pourrait pourtant s'écrire.
+    #[tokio::test]
+    async fn sans_fan_factor_le_match_n_est_pas_atteint_dans_les_deux_modes() {
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            let mut pm = pre_match();
+            pm.entry_mode = mode;
+            assert!(!has_reached_the_match(&pm, &plain_kick_off()).await);
+        }
+    }
+
+    /// Carte 679 : les coups de pouce offerts comptent dans les deux modes,
+    /// alors que `offered_inducements` n'en voit qu'en « Chacun son équipe ».
+    #[tokio::test]
+    async fn le_match_est_atteint_une_fois_les_coups_de_pouce_valides() {
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            let pm = both_rolled(mode);
+            assert!(!has_reached_the_match(&pm, &generous()).await, "{mode:?}");
+            let pm = with_inducements(with_inducements(pm, TeamSide::Home), TeamSide::Away);
+            assert!(has_reached_the_match(&pm, &generous()).await, "{mode:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn sans_coups_de_pouce_offerts_les_fans_factors_suffisent() {
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            let pm = both_rolled(mode);
+            assert!(has_reached_the_match(&pm, &plain_kick_off()).await);
+        }
     }
 
     #[test]

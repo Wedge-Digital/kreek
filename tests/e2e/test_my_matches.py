@@ -11,8 +11,7 @@ Scénarios :
        matchs à jouer n'ont pas de bouton.
 - S2 — Il commence l'un d'eux depuis la page et va jusqu'au coup d'envoi ; de
        retour, le bouton dit « Continuer » et le ramène à l'étape où il s'était
-       arrêté. Ce second temps est marqué `xfail` strict : « Continuer » le
-       renvoie à l'avant-match (défaut produit, cf. le test).
+       arrêté (carte 679).
 - S3 — L'adversaire a commencé en « Je saisis tout » : le bouton dit
        « Suivre », en contour, et ouvre la lecture seule (`/live`).
 - S4 — L'adversaire a commencé en « Chacun son équipe » : « Continuer » mène
@@ -29,11 +28,9 @@ Scénarios :
   `can_write_report` l'autorise toujours, il ne verrait jamais « Suivre ».
 - DevCoach et E2E Coach 01 tiennent les deux premières équipes de chaque
   `build_full_competition` : plus d'une centaine d'équipes inscrites chacun
-  dans la base de la suite. Le widget consulte l'accès de **tous** leurs
-  prochains matchs à la fois (`join_all`), ce qui porte le pool du serveur e2e
-  à son maximum — autant de connexions que Postgres en accepte — et refuse
-  ensuite toute autre connexion pendant dix minutes, `psql` des tests compris
-  (cf. compte rendu de la carte 678).
+  dans la base de la suite, donc une page longue à composer. Le widget en
+  consultait l'accès sans borne jusqu'à épuiser le pool (carte 678) ; il le
+  borne depuis la carte 679, mais la page reste lente pour eux.
 
 Les scénarios regardent donc par les yeux d'E2E Coach 08 et 09, qui n'ont que
 quelques équipes. DevCoach ne fait que monter les compétitions, dont il est
@@ -383,16 +380,6 @@ def test_s2_le_match_commence_porte_continuer(coach: Page, space_id, competition
     assert f"/match-report/{mr_id}/" in coach.url, coach.url
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Défaut produit relevé par la carte 678 : `from_pairing` mène à "
-        "`edit_match_report`, dont l'aiguillage (`match_selection_controller::"
-        "edit_page`) renvoie tout rapport en phase `PreMatch` sur `/step2` — "
-        "l'avant-match, même une fois le coup d'envoi donné. Strict : ce test "
-        "passera quand l'aiguillage sera corrigé, et le marqueur devra partir."
-    ),
-)
 def test_s2_continuer_ramene_a_l_etape_en_cours(coach: Page, space_id, competition_continuer):
     mr_id, current_step = _start_and_kick_off(coach, space_id, competition_continuer)
     _continue(coach, space_id, competition_continuer)

@@ -1,5 +1,6 @@
 use crate::app::auth::auth_backend::AuthSession;
 use crate::app::match_report::domain::match_report_draft::MatchReportDraft;
+use crate::app::match_report::domain::match_report_pre_match::MatchReportPreMatch;
 use crate::app::match_report::domain::match_report_repository_port::IMatchReportRepository;
 use crate::app::match_report::domain::match_report_state::MatchReportState;
 use crate::app::match_report::domain::value_objects::{EntryMode, MatchReportOrigin};
@@ -7,6 +8,7 @@ use crate::app::match_report::io::web::write_conflict::conflict_response;
 use crate::app::match_report::ports::{
     CreationAppariementError, ICompetitionDataPort, ITeamDataPort,
 };
+use crate::app::match_report::use_cases::kick_off_service::{has_reached_the_match, KickOffPorts};
 use crate::app::match_report::use_cases::match_report_access_service::may_choose_entry_mode;
 use crate::app::match_report::use_cases::{
     create_match_report_use_case, update_match_selection_use_case,
@@ -273,14 +275,37 @@ pub(crate) async fn edit_page(
             match_mode_page(ports, space_id, &draft).await
         }
         MatchReportState::Draft(draft) => selection_page(space_id, &draft),
-        MatchReportState::PreMatch(_) => {
-            Redirect::to(&routes.step2(space_id, match_report_id)).into_response()
-        }
+        MatchReportState::PreMatch(pm) => resume_page(ports, space_id, &pm).await,
         MatchReportState::ReadyToPublish(_) => {
             Redirect::to(&routes.step5(space_id, match_report_id)).into_response()
         }
         MatchReportState::Cancelled(_) => StatusCode::GONE.into_response(),
         MatchReportState::Published(_) => StatusCode::CONFLICT.into_response(),
+    }
+}
+
+/// Un rapport commencé reprend où il en est (carte 679) : le match une fois
+/// l'avant-match fini, l'avant-match sinon. Vaut pour les deux modes ; en
+/// « Chacun son équipe », `/step2` mène chacun à son camp, et `/live` renvoie
+/// encore à son avant-match ou à ses coups de pouce qui n'a pas fini le sien.
+async fn resume_page(
+    ports: &EditPagePorts<'_>,
+    space_id: &str,
+    pm: &MatchReportPreMatch,
+) -> Response {
+    let kick_off = KickOffPorts {
+        team_data: ports.team_data,
+        competition_data: ports.competition_data,
+    };
+    let at_the_match = has_reached_the_match(pm, &kick_off).await;
+    Redirect::to(&resume_url(space_id, &pm.id.to_string(), at_the_match)).into_response()
+}
+
+fn resume_url(space_id: &str, mr_id: &str, at_the_match: bool) -> String {
+    let routes = AppRoutes::default().match_report;
+    match at_the_match {
+        true => routes.live(space_id, mr_id),
+        false => routes.step2(space_id, mr_id),
     }
 }
 
@@ -938,8 +963,10 @@ mod entry_mode_tests {
 #[cfg(test)]
 mod start_from_schedule_tests {
     use super::*;
+    use crate::app::match_report::domain::value_objects::D3Roll;
     use crate::app::match_report::use_cases::test_doubles::{
-        NamedTeams, PlainCompetition, ReadyTeams, RecordingRepository,
+        pre_match, GenerousCompetition, NamedTeams, PlainCompetition, ReadyTeams,
+        RecordingRepository,
     };
     use crate::app::shared_kernel::identity::ids::CoachId;
 
@@ -1033,6 +1060,65 @@ mod start_from_schedule_tests {
         assert!(body.contains("Je saisis tout"), "{body}");
         assert!(!body.contains("Chacun son équipe"), "{body}");
         assert!(!body.contains("TeamEntry"), "{body}");
+    }
+
+    /// Où mène « Continuer » sur ce rapport commencé : l'en-tête `Location`.
+    async fn resumed_at(pm: MatchReportPreMatch, competition: &dyn ICompetitionDataPort) -> String {
+        let mr_id = pm.id.to_string();
+        let repo = RecordingRepository::holding(MatchReportState::PreMatch(pm));
+        let ports = EditPagePorts {
+            repo: &repo,
+            competition_data: competition,
+            team_data: &ReadyTeams,
+        };
+        let response = edit_page(&ports, "space", &mr_id).await;
+        assert!(response.status().is_redirection(), "{}", response.status());
+        let location = response.headers()[axum::http::header::LOCATION].to_str();
+        location.expect("en-tête lisible").to_string()
+    }
+
+    fn started(mode: EntryMode, rolled: bool) -> MatchReportPreMatch {
+        let mut pm = pre_match();
+        pm.entry_mode = mode;
+        if rolled {
+            pm.home_fan_roll = Some(D3Roll::try_new(2).unwrap());
+            pm.away_fan_roll = Some(D3Roll::try_new(3).unwrap());
+        }
+        pm
+    }
+
+    /// Carte 679 : avant le coup d'envoi, l'avant-match, dans les deux modes.
+    #[tokio::test]
+    async fn before_kick_off_continue_leads_to_the_pre_match() {
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            let url = resumed_at(started(mode, false), &PlainCompetition).await;
+            assert!(url.ends_with("/step2"), "{mode:?} : {url}");
+        }
+    }
+
+    /// Carte 679 : après le coup d'envoi, le match, dans les deux modes.
+    #[tokio::test]
+    async fn after_kick_off_continue_leads_to_the_match() {
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            let url = resumed_at(started(mode, true), &PlainCompetition).await;
+            assert!(url.ends_with("/live"), "{mode:?} : {url}");
+        }
+    }
+
+    /// Carte 679 : des coups de pouce offerts et non validés retiennent à
+    /// l'avant-match, dans les deux modes.
+    #[tokio::test]
+    async fn offered_inducements_not_yet_recorded_keep_the_pre_match() {
+        for mode in [EntryMode::SoloEntry, EntryMode::TeamEntry] {
+            let url = resumed_at(started(mode, true), &GenerousCompetition).await;
+            assert!(url.ends_with("/step2"), "{mode:?} : {url}");
+        }
+    }
+
+    #[test]
+    fn the_resume_url_is_the_match_or_the_pre_match() {
+        assert!(resume_url("s", "r", true).ends_with("/r/live"));
+        assert!(resume_url("s", "r", false).ends_with("/r/step2"));
     }
 
     /// Un brouillon hors calendrier d'avant la carte 552 garde la sélection.
